@@ -82,7 +82,8 @@ local function setBattery(b, value: number, active: boolean)
 	b.pct.Text = ("%d"):format(math.floor(value * 100))
 end
 
-function Watch.new(parent: Instance)
+-- opts.surface: disegna solo lo schermo (per la SurfaceGui sul quadrante 3D al polso)
+function Watch.new(parent: Instance, opts: { surface: boolean? }?)
 	local self = setmetatable({}, Watch)
 	local root = make("Frame", {
 		Name = "Smartwatch",
@@ -154,6 +155,14 @@ function Watch.new(parent: Instance)
 	local glass = make("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.9, BorderSizePixel = 0, ZIndex = 7 }, screen)
 	make("UIGradient", { Rotation = 60, Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.2), NumberSequenceKeypoint.new(0.35, 1), NumberSequenceKeypoint.new(1, 1) }) }, glass)
 	self.rank = label(root, { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -4), Size = UDim2.fromOffset(200, 12), TextSize = 10, TextColor3 = MUTED, ZIndex = 2 })
+
+	if opts and opts.surface then
+		screen.Parent = parent
+		screen.AnchorPoint = Vector2.zero
+		screen.Position = UDim2.fromOffset(0, 0)
+		root:Destroy()
+		self.root = screen
+	end
 
 	self.beatPhase = 0
 	self.lastAlert = ""

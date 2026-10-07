@@ -129,49 +129,21 @@ function Hud.new(player: Player, state: Folder)
 	}, gui)
 	make("UIListLayout", { Padding = UDim.new(0, 4), HorizontalAlignment = Enum.HorizontalAlignment.Center }, self.feed)
 
-	-- Smartwatch al polso: compare (con l'avambraccio) quando lo consulti col tasto G
-	local wrist = make("Frame", {
-		Name = "Polso",
-		AnchorPoint = Vector2.new(0, 1),
-		Position = UDim2.new(0, 40, 1, 520),
-		Size = UDim2.fromOffset(250, 470),
-		BackgroundTransparency = 1,
-	}, gui)
-	self.wrist = wrist
-	local sleeve = make("Frame", {
-		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 250),
-		Size = UDim2.fromOffset(170, 320),
-		BackgroundColor3 = Color3.fromRGB(46, 54, 40),
-		BorderSizePixel = 0,
-	}, wrist)
-	corner(sleeve, 40)
-	make("UIGradient", { Rotation = 0, Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, Color3.fromRGB(28, 32, 24)), ColorSequenceKeypoint.new(0.5, Color3.fromRGB(58, 68, 50)), ColorSequenceKeypoint.new(1, Color3.fromRGB(24, 28, 22)) }) }, sleeve)
-	make("Frame", { Position = UDim2.fromOffset(0, 0), Size = UDim2.new(1, 0, 0, 18), BackgroundColor3 = Color3.fromRGB(30, 34, 26), BorderSizePixel = 0 }, sleeve)
-	local skinFore = make("Frame", {
-		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 40),
-		Size = UDim2.fromOffset(120, 230),
-		BackgroundColor3 = Color3.fromRGB(200, 160, 130),
-		BorderSizePixel = 0,
-	}, wrist)
-	corner(skinFore, 50)
-	local hand = make("Frame", {
-		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 4, 0, 0),
-		Size = UDim2.fromOffset(132, 92),
-		BackgroundColor3 = Color3.fromRGB(205, 165, 134),
-		BorderSizePixel = 0,
-	}, wrist)
-	corner(hand, 40)
-	for _, f in { skinFore, hand } do
-		make("UIGradient", { Rotation = 0, Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, Color3.fromRGB(150, 150, 150)), ColorSequenceKeypoint.new(0.5, Color3.new(1, 1, 1)), ColorSequenceKeypoint.new(1, Color3.fromRGB(140, 140, 140)) }) }, f)
-	end
-	self.skin = { skinFore, hand }
-	self.watch = Watch.new(wrist)
-	self.watch.root.AnchorPoint = Vector2.new(0.5, 0)
-	self.watch.root.Position = UDim2.new(0.5, 0, 0, 30)
+	-- Smartwatch: i parametri sono disegnati sul quadrante 3D al polso sinistro del personaggio
+	-- (SurfaceGui nel PlayerGui con Adornee sullo schermo dell'orologio). G alza il braccio.
+	self.watchGui = make("SurfaceGui", {
+		Name = "SchermoOrologio",
+		Face = Enum.NormalId.Front,
+		SizingMode = Enum.SurfaceGuiSizingMode.FixedSize,
+		CanvasSize = Vector2.new(176, 176),
+		LightInfluence = 0,
+		Brightness = 1.4,
+		ResetOnSpawn = false,
+		AlwaysOnTop = false,
+	}, player:WaitForChild("PlayerGui"))
+	self.watch = Watch.new(self.watchGui, { surface = true })
 	self.watchShown = false
+
 	-- indicatore di avviso quando l'orologio è abbassato
 	self.watchAlert = make("TextLabel", {
 		AnchorPoint = Vector2.new(0, 1),
@@ -262,21 +234,7 @@ function Hud:notify(message: string)
 end
 
 function Hud:setWatchVisible(shown: boolean)
-	if self.watchShown == shown then
-		return
-	end
 	self.watchShown = shown
-	local char = self.player.Character
-	local hand = char and (char:FindFirstChild("LeftHand") or char:FindFirstChild("Left Arm"))
-	if hand and hand:IsA("BasePart") then
-		for _, f in self.skin do
-			f.BackgroundColor3 = hand.Color
-		end
-	end
-	TweenService:Create(self.wrist, TweenInfo.new(shown and 0.35 or 0.25, Enum.EasingStyle.Back, shown and Enum.EasingDirection.Out or Enum.EasingDirection.In), {
-		Position = shown and UDim2.new(0, 40, 1, 60) or UDim2.new(0, 40, 1, 520),
-		Rotation = shown and -8 or 0,
-	}):Play()
 end
 
 function Hud:pulse()
@@ -293,6 +251,12 @@ end
 -- vitals: { stamina, fear, nv, nvOn, exhausted, panic }
 function Hud:update(vitals)
 	local player, state = self.player, self.state
+	local char = player.Character
+	local arm = char and (char:FindFirstChild("LeftLowerArm") or char:FindFirstChild("Left Arm"))
+	local face = arm and arm:FindFirstChild("SchermoOrologio")
+	if self.watchGui.Adornee ~= face then
+		self.watchGui.Adornee = face
+	end
 	self.watch:update(vitals, player)
 	local health = player:GetAttribute("Health") or 100
 	self.blood.GroupTransparency = 1 - math.clamp((60 - health) / 50, 0, 1) * 0.85

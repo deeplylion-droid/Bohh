@@ -2286,7 +2286,7 @@ return function()
 
 	local remotes = Instance.new("Folder")
 	remotes.Name = "RakeRemotes"
-	for _, name in { "Notify", "Debrief", "OpenTablet", "FireDart", "CycleCameraType", "RotateCamera", "DartFx" } do
+	for _, name in { "Notify", "Debrief", "OpenTablet", "FireDart", "CycleCameraType", "RotateCamera", "DartFx", "AimTorch" } do
 		local remote = Instance.new("RemoteEvent")
 		remote.Name = name
 		remote.Parent = remotes
@@ -2402,6 +2402,9 @@ return function()
 	end)
 	remotes.CycleCameraType.OnServerEvent:Connect(function(player)
 		Team.cycleCamType(player)
+	end)
+	remotes.AimTorch.OnServerEvent:Connect(function(player, look)
+		Team.aimTorch(player, look)
 	end)
 	remotes.RotateCamera.OnServerEvent:Connect(function(player, id, dir)
 		Cameras.rotate(player, id, dir)
@@ -3388,7 +3391,8 @@ local function updateLight(dt: number, survivors)
 			local toRake = root.Position - s.head.Position
 			local d = toRake.Magnitude
 			if d < R.LIGHT_RANGE and d > 0.1 then
-				local angle = math.deg(math.acos(math.clamp(s.root.CFrame.LookVector:Dot(toRake.Unit), -1, 1)))
+				local aim = ctx.team.aimOf(s.player) or s.root.CFrame.LookVector
+				local angle = math.deg(math.acos(math.clamp(aim:Dot(toRake.Unit), -1, 1)))
 				if angle < R.LIGHT_ANGLE and Rake.visibleFrom(s.head.Position, { s.char }) then
 					exposedBy = s
 					break
@@ -3814,7 +3818,33 @@ local function torchLight(player: Player): SpotLight?
 	local char = player.Character
 	local tool = char and char:FindFirstChild("Torcia")
 	local lens = tool and tool:FindFirstChild("Lente")
-	return lens and lens:FindFirstChild("TorchLight") :: SpotLight?
+	local beam = lens and lens:FindFirstChild("Fascio")
+	return beam and beam:FindFirstChild("TorchLight") :: SpotLight?
+end
+
+-- Direzione in cui ogni giocatore punta la torcia (inviata dal client: segue la visuale, anche in verticale)
+local aims: { [Player]: Vector3 } = {}
+
+function Team.aimOf(player: Player): Vector3?
+	local aim = aims[player]
+	if aim then
+		return aim
+	end
+	local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+	return hrp and hrp.CFrame.LookVector
+end
+
+function Team.aimTorch(player: Player, look: any)
+	if typeof(look) ~= "Vector3" or look.Magnitude < 0.5 or look.Magnitude > 1.5 then
+		return
+	end
+	aims[player] = look.Unit
+	local light = torchLight(player)
+	local beam = light and light.Parent :: Attachment?
+	local lens = beam and beam.Parent :: BasePart?
+	if beam and lens then
+		beam.WorldCFrame = CFrame.lookAt(lens.Position, lens.Position + look.Unit)
+	end
 end
 
 function Team.setTorch(player: Player, on: boolean)
@@ -3836,7 +3866,7 @@ function Team.setTorch(player: Player, on: boolean)
 	local light = torchLight(player)
 	if light then
 		light.Enabled = on
-		local lens = light.Parent :: BasePart
+		local lens = (light.Parent :: Instance).Parent :: BasePart
 		lens.Material = on and Enum.Material.Neon or Enum.Material.Glass
 		local glow = lens:FindFirstChild("Alone") :: PointLight?
 		if glow then
@@ -3921,41 +3951,64 @@ function Team.equip(player: Player)
 	Team.attachWatch(char)
 end
 
--- Smartwatch 3D al polso sinistro (lo vedono tutti; il client lo mostra alzando il braccio)
+-- Smartwatch 3D al polso sinistro (lo vedono tutti). Il client disegna i parametri sullo schermo
+-- "SchermoOrologio" e, col tasto G, alza il braccio e avvicina la visuale al polso.
 function Team.attachWatch(char: Model)
 	local arm = char:FindFirstChild("LeftLowerArm") or char:FindFirstChild("Left Arm")
 	if not arm or not arm:IsA("BasePart") or arm:FindFirstChild("Orologio") then
 		return
 	end
 	local r15 = arm.Name == "LeftLowerArm"
-	local wristCF = arm.CFrame * CFrame.new(0, r15 and -arm.Size.Y * 0.32 or -arm.Size.Y * 0.38, 0)
-	local strap = make("Part", nil, {
-		Name = "Cinturino",
-		Size = Vector3.new(arm.Size.X + 0.08, 0.22, arm.Size.Z + 0.08),
-		CFrame = wristCF,
-		Color = Color3.fromRGB(26, 27, 29),
-		Material = Enum.Material.Rubber,
-	})
-	local case = make("Part", nil, {
-		Name = "Orologio",
-		Size = Vector3.new(0.42, 0.32, 0.12),
-		CFrame = wristCF * CFrame.new(-arm.Size.X / 2 - 0.06, 0, 0) * CFrame.Angles(0, math.pi / 2, 0),
-		Color = Color3.fromRGB(70, 74, 78),
-		Material = Enum.Material.Metal,
-	})
-	local screen = make("Part", nil, {
-		Name = "Schermo",
-		Size = Vector3.new(0.34, 0.24, 0.02),
-		CFrame = case.CFrame * CFrame.new(0, 0, 0.065),
-		Color = Color3.fromRGB(40, 140, 110),
-		Material = Enum.Material.Neon,
-	})
-	for _, p in { strap, case, screen } do
+	local wristCF = arm.CFrame * CFrame.new(0, -arm.Size.Y * (r15 and 0.3 or 0.38), 0)
+	-- il quadrante guarda verso l'esterno del braccio (-X)
+	local faceCF = wristCF * CFrame.new(-arm.Size.X / 2 - 0.07, 0, 0) * CFrame.Angles(0, math.pi / 2, 0)
+	local parts = {
+		make("Part", nil, {
+			Name = "Cinturino",
+			Size = Vector3.new(arm.Size.X + 0.1, 0.3, arm.Size.Z + 0.1),
+			CFrame = wristCF,
+			Color = Color3.fromRGB(24, 25, 27),
+			Material = Enum.Material.Rubber,
+		}),
+		make("Part", nil, {
+			Name = "Orologio",
+			Size = Vector3.new(0.66, 0.66, 0.14),
+			CFrame = faceCF,
+			Color = Color3.fromRGB(62, 66, 70),
+			Material = Enum.Material.Metal,
+		}),
+		make("Part", nil, {
+			Name = "Ghiera",
+			Shape = Enum.PartType.Cylinder,
+			Size = Vector3.new(0.05, 0.7, 0.7),
+			CFrame = faceCF * CFrame.new(0, 0, -0.06) * CFrame.Angles(0, math.pi / 2, 0),
+			Color = Color3.fromRGB(110, 114, 118),
+			Material = Enum.Material.Metal,
+		}),
+		make("Part", nil, {
+			Name = "SchermoOrologio",
+			Size = Vector3.new(0.56, 0.56, 0.02),
+			CFrame = faceCF * CFrame.new(0, 0, -0.08),
+			Color = Color3.fromRGB(6, 8, 9),
+			Material = Enum.Material.Glass,
+			Reflectance = 0.15,
+		}),
+		make("Part", nil, {
+			Name = "Corona",
+			Shape = Enum.PartType.Cylinder,
+			Size = Vector3.new(0.1, 0.12, 0.12),
+			CFrame = faceCF * CFrame.new(0.36, 0.08, 0),
+			Color = Color3.fromRGB(110, 114, 118),
+			Material = Enum.Material.Metal,
+		}),
+	}
+	for _, p in parts do
 		p.Anchored = false
 		p.CanCollide = false
 		p.CanQuery = false
 		p.CanTouch = false
 		p.Massless = true
+		p.CastShadow = false
 		p.Parent = arm
 		local weld = Instance.new("WeldConstraint")
 		weld.Part0 = arm
@@ -3976,9 +4029,14 @@ function Team.buildTools(player: Player, backpack: Instance)
 		Color = Color3.fromRGB(255, 244, 220),
 		Material = Enum.Material.Glass,
 	})
-	local beam = make("SpotLight", lens, {
+	-- il fascio sta su un Attachment orientato verso dove guarda il giocatore (vedi Team.aimTorch)
+	local aim = Instance.new("Attachment")
+	aim.Name = "Fascio"
+	aim.CFrame = CFrame.Angles(0, -math.pi / 2, 0)
+	aim.Parent = lens
+	local beam = make("SpotLight", aim, {
 		Name = "TorchLight",
-		Face = Enum.NormalId.Right,
+		Face = Enum.NormalId.Front,
 		Angle = 50,
 		Range = 60,
 		Brightness = 7,
@@ -4244,6 +4302,7 @@ end
 function Team.init(c)
 	ctx = c
 	Players.PlayerRemoving:Connect(function(player)
+		aims[player] = nil
 		downedToken[player] = nil
 		lastDart[player] = nil
 	end)
@@ -4273,7 +4332,7 @@ function Team.watchCharacter(player: Player, char: Model)
 end
 
 return Team
-]]></ProtectedString></Properties></Item></Item></Item><Item class="StarterPlayer" referent="RBX40"><Properties><string name="Name">StarterPlayer</string></Properties><Item class="StarterPlayerScripts" referent="RBX39"><Properties><string name="Name">StarterPlayerScripts</string></Properties><Item class="LocalScript" referent="RBX38"><Properties><string name="Name">RakeClient</string><ProtectedString name="Source"><![CDATA[-- Client di "The Rake": controlli, stamina e fiatone, Paura e allucinazioni, visore notturno,
+]]></ProtectedString></Properties></Item></Item></Item><Item class="StarterPlayer" referent="RBX41"><Properties><string name="Name">StarterPlayer</string></Properties><Item class="StarterPlayerScripts" referent="RBX40"><Properties><string name="Name">StarterPlayerScripts</string></Properties><Item class="LocalScript" referent="RBX39"><Properties><string name="Name">RakeClient</string><ProtectedString name="Source"><![CDATA[-- Client di "The Rake": controlli, stamina e fiatone, Paura e allucinazioni, visore notturno,
 -- fucile a dardi, tablet delle telecamere, atmosfera, animazione della creatura e HUD.
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -4296,6 +4355,7 @@ local Compass = require(script:WaitForChild("Compass"))
 local Gunfx = require(script:WaitForChild("Gunfx"))
 local Scares = require(script:WaitForChild("Scares"))
 local ArmPose = require(script:WaitForChild("ArmPose"))
+local WatchView = require(script:WaitForChild("WatchView"))
 
 local player = Players.LocalPlayer
 local mouse = player:GetMouse()
@@ -4319,6 +4379,9 @@ Scares.start(player, state, function()
 end)
 ArmPose.start(player, function()
 	return hud.watchShown
+end, remotes)
+WatchView.start(player, hud, function()
+	return tablet.isOpen or scope.active
 end)
 
 remotes.Notify.OnClientEvent:Connect(function(message)
@@ -4858,8 +4921,9 @@ function Ambience.start(player: Player, state: Folder, onHallucination: () -> ()
 				local base = light:GetAttribute("BaseBrightness") or light.Brightness
 				local f = 0.9 + math.noise(now * 3, seed) * 0.25
 				local holder = light.Parent
-				if rakePos and holder:IsA("BasePart") then
-					local d = (holder.Position - rakePos).Magnitude
+				local holderPos = holder and (holder:IsA("BasePart") and holder.Position or (holder:IsA("Attachment") and holder.WorldPosition or nil))
+				if rakePos and holderPos then
+					local d = (holderPos - rakePos).Magnitude
 					if d < 45 then
 						local k = 1 - d / 45
 						if math.random() < 0.15 + k * 0.4 then
@@ -4898,7 +4962,27 @@ local RunService = game:GetService("RunService")
 
 local ArmPose = {}
 
-function ArmPose.start(player: Player, watchShown: () -> boolean)
+function ArmPose.start(player: Player, watchShown: () -> boolean, remotes: Folder)
+	-- fascio della torcia: orientato ogni frame come la visuale (anche in verticale), e inviato al
+	-- server perché anche gli altri giocatori e la creatura lo vedano puntare dove guardi
+	local lastSent, lastLook = 0, Vector3.zero
+	RunService:BindToRenderStep("PuntaTorcia", Enum.RenderPriority.Camera.Value + 5, function()
+		local char = player.Character
+		local tool = char and char:FindFirstChild("Torcia")
+		local lens = tool and tool:FindFirstChild("Lente")
+		local beam = lens and lens:FindFirstChild("Fascio") :: Attachment?
+		if not beam or not lens or not lens:IsA("BasePart") then
+			return
+		end
+		local look = workspace.CurrentCamera.CFrame.LookVector
+		beam.WorldCFrame = CFrame.lookAt(lens.Position, lens.Position + look)
+		local now = os.clock()
+		if now - lastSent > 0.07 and look:Dot(lastLook) < 0.9995 then
+			lastSent, lastLook = now, look
+			remotes.AimTorch:FireServer(look)
+		end
+	end)
+
 	local originals: { [Motor6D]: CFrame } = {}
 	local watchBlend = 0
 
@@ -4934,14 +5018,17 @@ function ArmPose.start(player: Player, watchShown: () -> boolean)
 			right.C0 = originals[right] * CFrame.Angles(pitch, 0, 0)
 		end
 		local target = watchShown() and 1 or 0
-		watchBlend += (target - watchBlend) * math.min(1, dt * 10)
+		watchBlend = math.clamp(watchBlend + (target > watchBlend and dt / 0.45 or -dt / 0.3), 0, 1)
 		local left = motor(char, "LeftUpperArm", "LeftShoulder")
 		local elbow = motor(char, "LeftLowerArm", "LeftElbow")
+		-- braccio sinistro: spalla in avanti e verso il centro, gomito piegato, avambraccio ruotato
+		-- in modo che il quadrante (lato esterno del polso) guardi verso il viso
+		local e = watchBlend * watchBlend * (3 - 2 * watchBlend)
 		if left then
-			left.C0 = originals[left] * CFrame.Angles(1.35 * watchBlend, 0, -0.55 * watchBlend)
+			left.C0 = originals[left] * CFrame.Angles(1.25 * e, -0.5 * e, -0.35 * e)
 		end
 		if elbow then
-			elbow.C0 = originals[elbow] * CFrame.Angles(1.3 * watchBlend, 0, 0)
+			elbow.C0 = originals[elbow] * CFrame.Angles(1.45 * e, 1.2 * e, 0)
 		end
 	end)
 end
@@ -5987,49 +6074,21 @@ function Hud.new(player: Player, state: Folder)
 	}, gui)
 	make("UIListLayout", { Padding = UDim.new(0, 4), HorizontalAlignment = Enum.HorizontalAlignment.Center }, self.feed)
 
-	-- Smartwatch al polso: compare (con l'avambraccio) quando lo consulti col tasto G
-	local wrist = make("Frame", {
-		Name = "Polso",
-		AnchorPoint = Vector2.new(0, 1),
-		Position = UDim2.new(0, 40, 1, 520),
-		Size = UDim2.fromOffset(250, 470),
-		BackgroundTransparency = 1,
-	}, gui)
-	self.wrist = wrist
-	local sleeve = make("Frame", {
-		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 250),
-		Size = UDim2.fromOffset(170, 320),
-		BackgroundColor3 = Color3.fromRGB(46, 54, 40),
-		BorderSizePixel = 0,
-	}, wrist)
-	corner(sleeve, 40)
-	make("UIGradient", { Rotation = 0, Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, Color3.fromRGB(28, 32, 24)), ColorSequenceKeypoint.new(0.5, Color3.fromRGB(58, 68, 50)), ColorSequenceKeypoint.new(1, Color3.fromRGB(24, 28, 22)) }) }, sleeve)
-	make("Frame", { Position = UDim2.fromOffset(0, 0), Size = UDim2.new(1, 0, 0, 18), BackgroundColor3 = Color3.fromRGB(30, 34, 26), BorderSizePixel = 0 }, sleeve)
-	local skinFore = make("Frame", {
-		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 40),
-		Size = UDim2.fromOffset(120, 230),
-		BackgroundColor3 = Color3.fromRGB(200, 160, 130),
-		BorderSizePixel = 0,
-	}, wrist)
-	corner(skinFore, 50)
-	local hand = make("Frame", {
-		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 4, 0, 0),
-		Size = UDim2.fromOffset(132, 92),
-		BackgroundColor3 = Color3.fromRGB(205, 165, 134),
-		BorderSizePixel = 0,
-	}, wrist)
-	corner(hand, 40)
-	for _, f in { skinFore, hand } do
-		make("UIGradient", { Rotation = 0, Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, Color3.fromRGB(150, 150, 150)), ColorSequenceKeypoint.new(0.5, Color3.new(1, 1, 1)), ColorSequenceKeypoint.new(1, Color3.fromRGB(140, 140, 140)) }) }, f)
-	end
-	self.skin = { skinFore, hand }
-	self.watch = Watch.new(wrist)
-	self.watch.root.AnchorPoint = Vector2.new(0.5, 0)
-	self.watch.root.Position = UDim2.new(0.5, 0, 0, 30)
+	-- Smartwatch: i parametri sono disegnati sul quadrante 3D al polso sinistro del personaggio
+	-- (SurfaceGui nel PlayerGui con Adornee sullo schermo dell'orologio). G alza il braccio.
+	self.watchGui = make("SurfaceGui", {
+		Name = "SchermoOrologio",
+		Face = Enum.NormalId.Front,
+		SizingMode = Enum.SurfaceGuiSizingMode.FixedSize,
+		CanvasSize = Vector2.new(176, 176),
+		LightInfluence = 0,
+		Brightness = 1.4,
+		ResetOnSpawn = false,
+		AlwaysOnTop = false,
+	}, player:WaitForChild("PlayerGui"))
+	self.watch = Watch.new(self.watchGui, { surface = true })
 	self.watchShown = false
+
 	-- indicatore di avviso quando l'orologio è abbassato
 	self.watchAlert = make("TextLabel", {
 		AnchorPoint = Vector2.new(0, 1),
@@ -6120,21 +6179,7 @@ function Hud:notify(message: string)
 end
 
 function Hud:setWatchVisible(shown: boolean)
-	if self.watchShown == shown then
-		return
-	end
 	self.watchShown = shown
-	local char = self.player.Character
-	local hand = char and (char:FindFirstChild("LeftHand") or char:FindFirstChild("Left Arm"))
-	if hand and hand:IsA("BasePart") then
-		for _, f in self.skin do
-			f.BackgroundColor3 = hand.Color
-		end
-	end
-	TweenService:Create(self.wrist, TweenInfo.new(shown and 0.35 or 0.25, Enum.EasingStyle.Back, shown and Enum.EasingDirection.Out or Enum.EasingDirection.In), {
-		Position = shown and UDim2.new(0, 40, 1, 60) or UDim2.new(0, 40, 1, 520),
-		Rotation = shown and -8 or 0,
-	}):Play()
 end
 
 function Hud:pulse()
@@ -6151,6 +6196,12 @@ end
 -- vitals: { stamina, fear, nv, nvOn, exhausted, panic }
 function Hud:update(vitals)
 	local player, state = self.player, self.state
+	local char = player.Character
+	local arm = char and (char:FindFirstChild("LeftLowerArm") or char:FindFirstChild("Left Arm"))
+	local face = arm and arm:FindFirstChild("SchermoOrologio")
+	if self.watchGui.Adornee ~= face then
+		self.watchGui.Adornee = face
+	end
 	self.watch:update(vitals, player)
 	local health = player:GetAttribute("Health") or 100
 	self.blood.GroupTransparency = 1 - math.clamp((60 - health) / 50, 0, 1) * 0.85
@@ -7909,7 +7960,8 @@ local function setBattery(b, value: number, active: boolean)
 	b.pct.Text = ("%d"):format(math.floor(value * 100))
 end
 
-function Watch.new(parent: Instance)
+-- opts.surface: disegna solo lo schermo (per la SurfaceGui sul quadrante 3D al polso)
+function Watch.new(parent: Instance, opts: { surface: boolean? }?)
 	local self = setmetatable({}, Watch)
 	local root = make("Frame", {
 		Name = "Smartwatch",
@@ -7981,6 +8033,14 @@ function Watch.new(parent: Instance)
 	local glass = make("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.9, BorderSizePixel = 0, ZIndex = 7 }, screen)
 	make("UIGradient", { Rotation = 60, Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.2), NumberSequenceKeypoint.new(0.35, 1), NumberSequenceKeypoint.new(1, 1) }) }, glass)
 	self.rank = label(root, { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -4), Size = UDim2.fromOffset(200, 12), TextSize = 10, TextColor3 = MUTED, ZIndex = 2 })
+
+	if opts and opts.surface then
+		screen.Parent = parent
+		screen.AnchorPoint = Vector2.zero
+		screen.Position = UDim2.fromOffset(0, 0)
+		root:Destroy()
+		self.root = screen
+	end
 
 	self.beatPhase = 0
 	self.lastAlert = ""
@@ -8055,4 +8115,70 @@ function Watch:update(info, player: Player)
 end
 
 return Watch
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX38"><Properties><string name="Name">WatchView</string><ProtectedString name="Source"><![CDATA[-- Consultare lo smartwatch: con G il braccio sinistro del personaggio si alza (ArmPose) e la visuale
+-- si avvicina al polso fino a inquadrare il quadrante 3D con i parametri vitali; con G torna normale.
+local RunService = game:GetService("RunService")
+
+local WatchView = {}
+
+local ARM_PARTS = { "LeftUpperArm", "LeftLowerArm", "LeftHand", "Left Arm" }
+
+local function ease(t: number): number
+	return t * t * (3 - 2 * t)
+end
+
+function WatchView.start(player: Player, hud, isBlocked: () -> boolean)
+	local blend = 0
+	local fromCF: CFrame? = nil
+	local active = false
+
+	RunService:BindToRenderStep("VistaOrologio", Enum.RenderPriority.Camera.Value + 6, function(dt)
+		local char = player.Character
+		local hum = char and char:FindFirstChildOfClass("Humanoid")
+		if hud.watchShown and (player:GetAttribute("Status") ~= "OK" or isBlocked()) then
+			hud:setWatchVisible(false)
+		end
+		local want = hud.watchShown and 1 or 0
+		blend = math.clamp(blend + (want > blend and dt / 0.5 or -dt / 0.35), 0, 1)
+		local camera = workspace.CurrentCamera
+		if blend <= 0 then
+			if active then
+				active = false
+				camera.CameraType = Enum.CameraType.Custom
+				if hum then
+					camera.CameraSubject = hum
+				end
+			end
+			fromCF = nil
+			return
+		end
+		local arm = char and (char:FindFirstChild("LeftLowerArm") or char:FindFirstChild("Left Arm"))
+		local face = arm and arm:FindFirstChild("SchermoOrologio") :: BasePart?
+		if not face then
+			return
+		end
+		if not active then
+			active = true
+			fromCF = camera.CFrame
+			camera.CameraType = Enum.CameraType.Scriptable
+		end
+		-- il braccio e l'orologio restano visibili anche in prima persona
+		for _, name in ARM_PARTS do
+			local p = char:FindFirstChild(name)
+			if p and p:IsA("BasePart") then
+				p.LocalTransparencyModifier = 0
+				for _, d in p:GetChildren() do
+					if d:IsA("BasePart") then
+						d.LocalTransparencyModifier = 0
+					end
+				end
+			end
+		end
+		local normal = face.CFrame.LookVector
+		local goal = CFrame.lookAt(face.Position + normal * 1.35 + Vector3.new(0, 0.12, 0), face.Position)
+		camera.CFrame = (fromCF or camera.CFrame):Lerp(goal, ease(blend))
+	end)
+end
+
+return WatchView
 ]]></ProtectedString></Properties></Item></Item></Item></Item></roblox>

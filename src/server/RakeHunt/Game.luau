@@ -24,7 +24,7 @@ return function()
 
 	local remotes = Instance.new("Folder")
 	remotes.Name = "RakeRemotes"
-	for _, name in { "Notify", "Debrief", "OpenTablet", "FireDart", "CycleCameraType", "RotateCamera", "DartFx" } do
+	for _, name in { "Notify", "Debrief", "OpenTablet", "FireDart", "CycleCameraType", "RotateCamera", "DartFx", "AimTorch" } do
 		local remote = Instance.new("RemoteEvent")
 		remote.Name = name
 		remote.Parent = remotes
@@ -140,6 +140,9 @@ return function()
 	end)
 	remotes.CycleCameraType.OnServerEvent:Connect(function(player)
 		Team.cycleCamType(player)
+	end)
+	remotes.AimTorch.OnServerEvent:Connect(function(player, look)
+		Team.aimTorch(player, look)
 	end)
 	remotes.RotateCamera.OnServerEvent:Connect(function(player, id, dir)
 		Cameras.rotate(player, id, dir)

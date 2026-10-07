@@ -7,7 +7,27 @@ local RunService = game:GetService("RunService")
 
 local ArmPose = {}
 
-function ArmPose.start(player: Player, watchShown: () -> boolean)
+function ArmPose.start(player: Player, watchShown: () -> boolean, remotes: Folder)
+	-- fascio della torcia: orientato ogni frame come la visuale (anche in verticale), e inviato al
+	-- server perché anche gli altri giocatori e la creatura lo vedano puntare dove guardi
+	local lastSent, lastLook = 0, Vector3.zero
+	RunService:BindToRenderStep("PuntaTorcia", Enum.RenderPriority.Camera.Value + 5, function()
+		local char = player.Character
+		local tool = char and char:FindFirstChild("Torcia")
+		local lens = tool and tool:FindFirstChild("Lente")
+		local beam = lens and lens:FindFirstChild("Fascio") :: Attachment?
+		if not beam or not lens or not lens:IsA("BasePart") then
+			return
+		end
+		local look = workspace.CurrentCamera.CFrame.LookVector
+		beam.WorldCFrame = CFrame.lookAt(lens.Position, lens.Position + look)
+		local now = os.clock()
+		if now - lastSent > 0.07 and look:Dot(lastLook) < 0.9995 then
+			lastSent, lastLook = now, look
+			remotes.AimTorch:FireServer(look)
+		end
+	end)
+
 	local originals: { [Motor6D]: CFrame } = {}
 	local watchBlend = 0
 
@@ -43,14 +63,17 @@ function ArmPose.start(player: Player, watchShown: () -> boolean)
 			right.C0 = originals[right] * CFrame.Angles(pitch, 0, 0)
 		end
 		local target = watchShown() and 1 or 0
-		watchBlend += (target - watchBlend) * math.min(1, dt * 10)
+		watchBlend = math.clamp(watchBlend + (target > watchBlend and dt / 0.45 or -dt / 0.3), 0, 1)
 		local left = motor(char, "LeftUpperArm", "LeftShoulder")
 		local elbow = motor(char, "LeftLowerArm", "LeftElbow")
+		-- braccio sinistro: spalla in avanti e verso il centro, gomito piegato, avambraccio ruotato
+		-- in modo che il quadrante (lato esterno del polso) guardi verso il viso
+		local e = watchBlend * watchBlend * (3 - 2 * watchBlend)
 		if left then
-			left.C0 = originals[left] * CFrame.Angles(1.35 * watchBlend, 0, -0.55 * watchBlend)
+			left.C0 = originals[left] * CFrame.Angles(1.25 * e, -0.5 * e, -0.35 * e)
 		end
 		if elbow then
-			elbow.C0 = originals[elbow] * CFrame.Angles(1.3 * watchBlend, 0, 0)
+			elbow.C0 = originals[elbow] * CFrame.Angles(1.45 * e, 1.2 * e, 0)
 		end
 	end)
 end

@@ -332,7 +332,8 @@ local function updateLight(dt: number, survivors)
 			local toRake = root.Position - s.head.Position
 			local d = toRake.Magnitude
 			if d < R.LIGHT_RANGE and d > 0.1 then
-				local angle = math.deg(math.acos(math.clamp(s.root.CFrame.LookVector:Dot(toRake.Unit), -1, 1)))
+				local aim = ctx.team.aimOf(s.player) or s.root.CFrame.LookVector
+				local angle = math.deg(math.acos(math.clamp(aim:Dot(toRake.Unit), -1, 1)))
 				if angle < R.LIGHT_ANGLE and Rake.visibleFrom(s.head.Position, { s.char }) then
 					exposedBy = s
 					break

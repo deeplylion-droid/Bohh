@@ -196,8 +196,9 @@ function Ambience.start(player: Player, state: Folder, onHallucination: () -> ()
 				local base = light:GetAttribute("BaseBrightness") or light.Brightness
 				local f = 0.9 + math.noise(now * 3, seed) * 0.25
 				local holder = light.Parent
-				if rakePos and holder:IsA("BasePart") then
-					local d = (holder.Position - rakePos).Magnitude
+				local holderPos = holder and (holder:IsA("BasePart") and holder.Position or (holder:IsA("Attachment") and holder.WorldPosition or nil))
+				if rakePos and holderPos then
+					local d = (holderPos - rakePos).Magnitude
 					if d < 45 then
 						local k = 1 - d / 45
 						if math.random() < 0.15 + k * 0.4 then

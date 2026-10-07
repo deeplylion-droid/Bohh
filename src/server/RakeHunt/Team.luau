@@ -52,7 +52,33 @@ local function torchLight(player: Player): SpotLight?
 	local char = player.Character
 	local tool = char and char:FindFirstChild("Torcia")
 	local lens = tool and tool:FindFirstChild("Lente")
-	return lens and lens:FindFirstChild("TorchLight") :: SpotLight?
+	local beam = lens and lens:FindFirstChild("Fascio")
+	return beam and beam:FindFirstChild("TorchLight") :: SpotLight?
+end
+
+-- Direzione in cui ogni giocatore punta la torcia (inviata dal client: segue la visuale, anche in verticale)
+local aims: { [Player]: Vector3 } = {}
+
+function Team.aimOf(player: Player): Vector3?
+	local aim = aims[player]
+	if aim then
+		return aim
+	end
+	local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+	return hrp and hrp.CFrame.LookVector
+end
+
+function Team.aimTorch(player: Player, look: any)
+	if typeof(look) ~= "Vector3" or look.Magnitude < 0.5 or look.Magnitude > 1.5 then
+		return
+	end
+	aims[player] = look.Unit
+	local light = torchLight(player)
+	local beam = light and light.Parent :: Attachment?
+	local lens = beam and beam.Parent :: BasePart?
+	if beam and lens then
+		beam.WorldCFrame = CFrame.lookAt(lens.Position, lens.Position + look.Unit)
+	end
 end
 
 function Team.setTorch(player: Player, on: boolean)
@@ -74,7 +100,7 @@ function Team.setTorch(player: Player, on: boolean)
 	local light = torchLight(player)
 	if light then
 		light.Enabled = on
-		local lens = light.Parent :: BasePart
+		local lens = (light.Parent :: Instance).Parent :: BasePart
 		lens.Material = on and Enum.Material.Neon or Enum.Material.Glass
 		local glow = lens:FindFirstChild("Alone") :: PointLight?
 		if glow then
@@ -159,41 +185,64 @@ function Team.equip(player: Player)
 	Team.attachWatch(char)
 end
 
--- Smartwatch 3D al polso sinistro (lo vedono tutti; il client lo mostra alzando il braccio)
+-- Smartwatch 3D al polso sinistro (lo vedono tutti). Il client disegna i parametri sullo schermo
+-- "SchermoOrologio" e, col tasto G, alza il braccio e avvicina la visuale al polso.
 function Team.attachWatch(char: Model)
 	local arm = char:FindFirstChild("LeftLowerArm") or char:FindFirstChild("Left Arm")
 	if not arm or not arm:IsA("BasePart") or arm:FindFirstChild("Orologio") then
 		return
 	end
 	local r15 = arm.Name == "LeftLowerArm"
-	local wristCF = arm.CFrame * CFrame.new(0, r15 and -arm.Size.Y * 0.32 or -arm.Size.Y * 0.38, 0)
-	local strap = make("Part", nil, {
-		Name = "Cinturino",
-		Size = Vector3.new(arm.Size.X + 0.08, 0.22, arm.Size.Z + 0.08),
-		CFrame = wristCF,
-		Color = Color3.fromRGB(26, 27, 29),
-		Material = Enum.Material.Rubber,
-	})
-	local case = make("Part", nil, {
-		Name = "Orologio",
-		Size = Vector3.new(0.42, 0.32, 0.12),
-		CFrame = wristCF * CFrame.new(-arm.Size.X / 2 - 0.06, 0, 0) * CFrame.Angles(0, math.pi / 2, 0),
-		Color = Color3.fromRGB(70, 74, 78),
-		Material = Enum.Material.Metal,
-	})
-	local screen = make("Part", nil, {
-		Name = "Schermo",
-		Size = Vector3.new(0.34, 0.24, 0.02),
-		CFrame = case.CFrame * CFrame.new(0, 0, 0.065),
-		Color = Color3.fromRGB(40, 140, 110),
-		Material = Enum.Material.Neon,
-	})
-	for _, p in { strap, case, screen } do
+	local wristCF = arm.CFrame * CFrame.new(0, -arm.Size.Y * (r15 and 0.3 or 0.38), 0)
+	-- il quadrante guarda verso l'esterno del braccio (-X)
+	local faceCF = wristCF * CFrame.new(-arm.Size.X / 2 - 0.07, 0, 0) * CFrame.Angles(0, math.pi / 2, 0)
+	local parts = {
+		make("Part", nil, {
+			Name = "Cinturino",
+			Size = Vector3.new(arm.Size.X + 0.1, 0.3, arm.Size.Z + 0.1),
+			CFrame = wristCF,
+			Color = Color3.fromRGB(24, 25, 27),
+			Material = Enum.Material.Rubber,
+		}),
+		make("Part", nil, {
+			Name = "Orologio",
+			Size = Vector3.new(0.66, 0.66, 0.14),
+			CFrame = faceCF,
+			Color = Color3.fromRGB(62, 66, 70),
+			Material = Enum.Material.Metal,
+		}),
+		make("Part", nil, {
+			Name = "Ghiera",
+			Shape = Enum.PartType.Cylinder,
+			Size = Vector3.new(0.05, 0.7, 0.7),
+			CFrame = faceCF * CFrame.new(0, 0, -0.06) * CFrame.Angles(0, math.pi / 2, 0),
+			Color = Color3.fromRGB(110, 114, 118),
+			Material = Enum.Material.Metal,
+		}),
+		make("Part", nil, {
+			Name = "SchermoOrologio",
+			Size = Vector3.new(0.56, 0.56, 0.02),
+			CFrame = faceCF * CFrame.new(0, 0, -0.08),
+			Color = Color3.fromRGB(6, 8, 9),
+			Material = Enum.Material.Glass,
+			Reflectance = 0.15,
+		}),
+		make("Part", nil, {
+			Name = "Corona",
+			Shape = Enum.PartType.Cylinder,
+			Size = Vector3.new(0.1, 0.12, 0.12),
+			CFrame = faceCF * CFrame.new(0.36, 0.08, 0),
+			Color = Color3.fromRGB(110, 114, 118),
+			Material = Enum.Material.Metal,
+		}),
+	}
+	for _, p in parts do
 		p.Anchored = false
 		p.CanCollide = false
 		p.CanQuery = false
 		p.CanTouch = false
 		p.Massless = true
+		p.CastShadow = false
 		p.Parent = arm
 		local weld = Instance.new("WeldConstraint")
 		weld.Part0 = arm
@@ -214,9 +263,14 @@ function Team.buildTools(player: Player, backpack: Instance)
 		Color = Color3.fromRGB(255, 244, 220),
 		Material = Enum.Material.Glass,
 	})
-	local beam = make("SpotLight", lens, {
+	-- il fascio sta su un Attachment orientato verso dove guarda il giocatore (vedi Team.aimTorch)
+	local aim = Instance.new("Attachment")
+	aim.Name = "Fascio"
+	aim.CFrame = CFrame.Angles(0, -math.pi / 2, 0)
+	aim.Parent = lens
+	local beam = make("SpotLight", aim, {
 		Name = "TorchLight",
-		Face = Enum.NormalId.Right,
+		Face = Enum.NormalId.Front,
 		Angle = 50,
 		Range = 60,
 		Brightness = 7,
@@ -482,6 +536,7 @@ end
 function Team.init(c)
 	ctx = c
 	Players.PlayerRemoving:Connect(function(player)
+		aims[player] = nil
 		downedToken[player] = nil
 		lastDart[player] = nil
 	end)
