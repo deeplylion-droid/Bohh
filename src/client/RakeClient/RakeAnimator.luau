@@ -1,6 +1,6 @@
 -- Animazione di The Rake (solo client, Bone.Transform sulle 40 ossa): movimenti violenti e a scatti.
 -- La posa non viene interpolata: salta da una posa all'altra a intervalli irregolari (stop-motion),
--- con perturbazioni casuali enormi. Andatura sconclusionata, testa che ciondola e si capovolge,
+-- con perturbazioni casuali enormi (ma quando corre senza inseguirti galoppa in modo fluido). Andatura sconclusionata, testa che ciondola e si capovolge,
 -- convulsioni quando si mostra, braccia che si agitano quando carica, posa da jumpscare quando attacca.
 -- Le ossa importate sono ruotate di 180 gradi attorno a Y: gli angoli di progetto (x, y, z) diventano
 -- CFrame.Angles(-x, y, -z) nello spazio dell'osso.
@@ -50,6 +50,8 @@ function RakeAnimator.start(state: Folder)
 	local lastStatus = ""
 	local stateStart = 0
 	local nextCrack = 0
+	local gallop = 0
+	local gallopBlend = 0
 
 	local function clearEyes()
 		for _, e in eyes do
@@ -139,6 +141,56 @@ function RakeAnimator.start(state: Folder)
 				glow.Color = color
 			end
 		end
+
+		-- galoppo: quando corre senza inseguirti (fuga, riposizionamento) l'andatura è fluida e ritmica,
+		-- a quattro zampe, come un animale che galoppa (arti anteriori e posteriori a coppie sfasate,
+		-- schiena che si flette e si distende, rimbalzo del corpo, testa che bilancia)
+		local galloping = speed > 19 and status ~= "Aggressiva" and status ~= "Attacco" and status ~= "Stordita" and status ~= "Catturata" and not hum.PlatformStand
+		if galloping then
+			-- parametri tarati misurando le ossa vere sul server: busto quasi orizzontale, mani e piedi
+			-- che toccano terra senza affondare, zampe anteriori che appoggiano dopo le posteriori
+			gallop += dt * math.pi * 2 * math.clamp(speed / 11, 1.8, 2.8)
+			gallopBlend = math.min(1, gallopBlend + dt / 0.3)
+			local g = gallop
+			local sg, cg = math.sin(g), math.cos(g)
+			local front = g + math.pi - 2.5
+			local pose: { [string]: CFrame } = {}
+			local function set(name: string, x: number, y: number, z: number)
+				pose[name] = rot(x, y, z)
+			end
+			pose.Root = CFrame.new(0, 0.25 * math.abs(math.sin(g + 0.6)), 0) * rot(-0.85 + 0.03 * cg, 0, 0)
+			set("Spine1", -0.1 + 0.036 * sg, 0, 0)
+			set("Spine2", -0.05 + 0.03 * sg, 0, 0)
+			set("Spine3", 0.018 * sg, 0, 0)
+			set("Neck1", 0.9 - 0.12 * sg, 0, 0)
+			set("Neck2", 0.35, 0, 0)
+			local glance = status == "Fuga" and math.sin(now * 0.7) > 0.85 and 1.1 or 0 -- ogni tanto si guarda alle spalle
+			set("Head", 0.2 - 0.08 * sg, glance, 0)
+			set("Jaw", -0.25 - 0.1 * math.max(0, sg), 0, 0)
+			for side, off in { L = 0.3, R = 0 } do
+				local ff, hh = front + off, g + off
+				set("Shoulder" .. side, 1.42 + 0.26 * math.sin(ff), 0, 0)
+				set("Elbow" .. side, 0.66 - 0.15 * math.max(0, math.cos(ff)), 0, 0)
+				set("Wrist" .. side, -0.2, 0, 0)
+				set("Hip" .. side, 0.85 + 0.7 * math.sin(hh), 0, 0)
+				set("Knee" .. side, 0.55 - math.max(0, math.cos(hh)), 0, 0)
+				set("Ankle" .. side, 0.1 + 0.5 * math.max(0, math.cos(hh)), 0, 0)
+			end
+			for _, fg in FINGERS do
+				set(fg[1], 0.45, 0, 0)
+				set(fg[2], 0.6, 0, 0)
+			end
+			if gallopBlend < 1 then
+				local e = gallopBlend * gallopBlend * (3 - 2 * gallopBlend)
+				for name, cf in pose do
+					pose[name] = CFrame.new():Lerp(cf, e)
+				end
+			end
+			apply(pose)
+			nextSnap = 0
+			return
+		end
+		gallopBlend = 0
 
 		if now < nextSnap then
 			return -- mantiene la posa: movimento a scatti
