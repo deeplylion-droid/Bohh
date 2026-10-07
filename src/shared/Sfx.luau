@@ -1,14 +1,26 @@
--- Suoni dal foglio di effetti sintetizzato (Audio.luau): ogni effetto è un intervallo dello stesso file.
-local Audio = require(script.Parent:WaitForChild("Audio"))
-local Audio2 = require(script.Parent:WaitForChild("Audio2"))
+-- Suoni dai fogli di effetti sintetizzati (Audio, Audio2, Audio3): ogni effetto è un intervallo
+-- di uno dei file, riprodotto con Sound.PlaybackRegion.
+local Shared = script.Parent
+local SHEETS = {
+	require(Shared:WaitForChild("Audio")),
+	require(Shared:WaitForChild("Audio2")),
+	require(Shared:WaitForChild("Audio3")),
+}
 
 local Sfx = {}
 
-function Sfx.new(name: string, parent: Instance?, props: { [string]: any }?): Sound
-	local region, id = Audio.REGIONS[name], Audio.SFX
-	if not region then
-		region, id = Audio2.REGIONS[name], Audio2.SFX
+local function find(name: string)
+	for _, sheet in SHEETS do
+		local region = sheet.REGIONS[name]
+		if region then
+			return region, sheet.SFX
+		end
 	end
+	return nil, SHEETS[1].SFX
+end
+
+function Sfx.new(name: string, parent: Instance?, props: { [string]: any }?): Sound
+	local region, id = find(name)
 	local sound = Instance.new("Sound")
 	sound.Name = name
 	sound.SoundId = id
@@ -47,7 +59,7 @@ function Sfx.at(name: string, position: Vector3, props: { [string]: any }?)
 	local sound = Sfx.new(name, holder, props)
 	holder.Parent = workspace
 	sound:Play()
-	local region = Audio.REGIONS[name] or Audio2.REGIONS[name]
+	local region = find(name)
 	task.delay((region and region.length or 3) / math.max(sound.PlaybackSpeed, 0.1) + 0.5, function()
 		holder:Destroy()
 	end)

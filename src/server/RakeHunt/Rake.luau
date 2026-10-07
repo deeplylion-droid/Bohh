@@ -1,6 +1,12 @@
--- The Rake: creatura controllata dal server con una macchina a stati.
--- Inattiva -> Curiosa -> Territoriale -> Aggressiva in base all'aggressività, che cresce con la notte,
--- il rumore, le luci lontane e i giocatori isolati. Più gli stati speciali Fuga e Stordita.
+-- The Rake: creatura controllata dal server. Comportamento elusivo "colpisci e scappa":
+--   Vaga      → gira intorno alla tana finché non trova qualcuno
+--   Pedina    → segue il bersaglio alle spalle, fuori dalla sua vista, nascosto dietro gli alberi
+--   Mostra    → compare davanti al bersaglio, resta immobile a fissarlo, poi sparisce
+--   Carica    → scatta (più veloce di chi corre) verso dove il bersaglio sta andando, colpisce
+--   Finta     → carica e si ferma a pochi metri urlando, poi scappa
+--   Attacco   → resta sopra la vittima un istante (jumpscare), poi fugge
+--   Fuga      → corre lontano, fuori vista, e torna a pedinare
+-- Teme la luce diretta, sente spari e corse, scappa quando viene colpito da un dardo.
 local PathfindingService = game:GetService("PathfindingService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -19,15 +25,28 @@ local ctx
 local rng = Random.new()
 local hum: Humanoid, root: BasePart, head: BasePart
 local highlight: Highlight, capturePrompt: ProximityPrompt
-local footsteps: Sound?, callSound: Sound?, screechSound: Sound?
+local footsteps: Sound?, callSound: Sound?, screechSound: Sound?, jawSound: Sound?, growlSound: Sound?
 local brain: { [string]: any } = {}
-local rig
-local jawSound: Sound?, growlSound: Sound?
 local revealed = false
 local loopToken = nil
 
+-- Stato pubblicato per HUD e animazione dei client
+local MODE_STATE = {
+	Vaga = "Inattiva",
+	Pedina = "Curiosa",
+	Mostra = "Territoriale",
+	Carica = "Aggressiva",
+	Finta = "Aggressiva",
+	Attacco = "Attacco",
+	Fuga = "Fuga",
+}
+
 local function flat(v: Vector3): Vector3
 	return Vector3.new(v.X, 0, v.Z)
+end
+
+local function range(pair: { number }): number
+	return rng:NextNumber(pair[1], pair[2])
 end
 
 local function setState(name: string)
@@ -37,13 +56,32 @@ local function setState(name: string)
 	end
 end
 
+local function setMode(mode: string, duration: number?)
+	brain.mode = mode
+	brain.modeStart = os.clock()
+	brain.modeUntil = duration and os.clock() + duration or math.huge
+	brain.goal = nil
+	brain.seenTime = 0
+	brain.standing = false
+	if hum then
+		hum.AutoRotate = true
+	end
+	setState(MODE_STATE[mode] or "Inattiva")
+end
+
+local function playSound(s: Sound?)
+	if s then
+		s:Play()
+	end
+end
+
 ---------------------------------------------------------------------------------------------
 -- Modello
 
 local function build(pos: Vector3): Model
 	local m = Instance.new("Model")
 	m.Name = "TheRake"
-	rig = RakeRig.build(m, CFrame.new(pos + Vector3.new(0, RakeRig.ROOT_HEIGHT, 0)))
+	local rig = RakeRig.build(m, CFrame.new(pos + Vector3.new(0, RakeRig.ROOT_HEIGHT, 0)))
 	root = rig.root
 	head = rig.head
 
@@ -88,15 +126,10 @@ local function build(pos: Vector3): Model
 end
 
 ---------------------------------------------------------------------------------------------
--- Movimento con pathfinding
+-- Movimento
 
 local function computePath(dest: Vector3)
-	local path = PathfindingService:CreatePath({
-		AgentRadius = 2.5,
-		AgentHeight = 7,
-		AgentCanJump = false,
-		WaypointSpacing = 6,
-	})
+	local path = PathfindingService:CreatePath({ AgentRadius = 2.5, AgentHeight = 7, AgentCanJump = false, WaypointSpacing = 6 })
 	local ok = pcall(function()
 		path:ComputeAsync(root.Position, dest)
 	end)
@@ -110,9 +143,15 @@ local function computePath(dest: Vector3)
 	brain.pathTime = os.clock()
 end
 
-local function moveTo(dest: Vector3, speed: number)
+local function moveTo(dest: Vector3, speed: number, direct: boolean?)
 	hum.WalkSpeed = speed
-	if not brain.pathGoal or flat(brain.pathGoal - dest).Magnitude > 10 or os.clock() - brain.pathTime > 2 then
+	if direct then
+		brain.path = nil
+		hum:MoveTo(dest)
+		return
+	end
+	local refresh = speed >= R.CHASE_SPEED and 1 or 2
+	if not brain.pathGoal or flat(brain.pathGoal - dest).Magnitude > 8 or os.clock() - brain.pathTime > refresh then
 		computePath(dest)
 	end
 	local waypoints = brain.path
@@ -132,14 +171,27 @@ local function moveTo(dest: Vector3, speed: number)
 	end
 end
 
--- Fuori dall'area della stazione, salvo quando è Aggressiva
+local function stop()
+	hum.WalkSpeed = 0
+	hum:MoveTo(root.Position)
+end
+
+local function face(pos: Vector3)
+	hum.AutoRotate = false
+	local look = flat(pos - root.Position)
+	if look.Magnitude > 0.5 then
+		root.CFrame = CFrame.lookAt(root.Position, root.Position + look)
+	end
+end
+
 local function avoidStation(goal: Vector3): Vector3
-	if brain.state ~= "Aggressiva" and Forest.inStation(goal, 12) then
+	if Forest.inStation(goal, 12) then
 		local away = flat(goal - Forest.STATION)
 		if away.Magnitude < 1 then
 			away = Vector3.new(1, 0, 0)
 		end
-		return Forest.STATION + away.Unit * (Config.MAP.STATION_RADIUS + 18)
+		local p = Forest.STATION + away.Unit * (Config.MAP.STATION_RADIUS + 18)
+		return Forest.groundAt(p.X, p.Z)
 	end
 	return goal
 end
@@ -147,24 +199,24 @@ end
 ---------------------------------------------------------------------------------------------
 -- Percezione
 
-local function visibleFrom(origin: Vector3, ignore: { Instance }): boolean
-	if not Rake.model then
-		return false
-	end
+local function rayClear(from: Vector3, to: Vector3, ignore: { Instance }): boolean
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
 	params.FilterDescendantsInstances = ignore
+	local result = workspace:Raycast(from, to - from, params)
+	return result == nil or (Rake.model ~= nil and result.Instance:IsDescendantOf(Rake.model)) or (result.Position - to).Magnitude < 2
+end
+
+function Rake.visibleFrom(origin: Vector3, ignore: { Instance }): boolean
+	if not Rake.model then
+		return false
+	end
 	for _, target in { head.Position, root.Position } do
-		local result = workspace:Raycast(origin, target - origin, params)
-		if not result or result.Instance:IsDescendantOf(Rake.model) then
+		if rayClear(origin, target, ignore) then
 			return true
 		end
 	end
 	return false
-end
-
-function Rake.visibleFrom(origin: Vector3, ignore: { Instance }): boolean
-	return visibleFrom(origin, ignore)
 end
 
 function Rake.position(): Vector3?
@@ -174,7 +226,68 @@ function Rake.position(): Vector3?
 	return nil
 end
 
--- Il giocatore più "appetibile": isolato, lontano dalla stazione, con il nastro o una luce accesa
+-- Il giocatore vede il punto? (cono di 60 gradi davanti al personaggio e linea di vista)
+local function sees(s, pos: Vector3): boolean
+	if not s.head then
+		return false
+	end
+	local to = pos - s.head.Position
+	local d = to.Magnitude
+	if d > 90 or d < 0.1 then
+		return d < 0.1
+	end
+	local look = flat(s.root.CFrame.LookVector)
+	if look.Magnitude < 0.1 or math.deg(math.acos(math.clamp(look.Unit:Dot(flat(to).Unit), -1, 1))) > 60 then
+		return false
+	end
+	return rayClear(s.head.Position, pos, { s.char, ctx.cameras.folder() })
+end
+
+local function seenByAnyone(survivors, pos: Vector3): boolean
+	for _, s in survivors do
+		if sees(s, pos) then
+			return true
+		end
+	end
+	return false
+end
+
+-- Punto a distanza [rmin, rmax] dal bersaglio, dietro le sue spalle e nascosto a tutti
+local function hiddenSpot(survivors, target, rmin: number, rmax: number, spread: number): Vector3
+	local back = -flat(target.root.CFrame.LookVector)
+	if back.Magnitude < 0.1 then
+		back = Vector3.new(0, 0, 1)
+	end
+	local fallback
+	for _ = 1, 14 do
+		local dir = CFrame.Angles(0, rng:NextNumber(-spread, spread), 0) * back.Unit
+		local p = avoidStation(Forest.clampToMap(target.root.Position + dir * rng:NextNumber(rmin, rmax)))
+		if Forest.isDry(p) then
+			fallback = fallback or p
+			if not seenByAnyone(survivors, p + Vector3.new(0, 4, 0)) then
+				return p
+			end
+		end
+	end
+	return fallback or Forest.randomGround(rng, target.root.Position, rmin, rmax)
+end
+
+-- Punto davanti al bersaglio, nel suo campo visivo e con la vista libera
+local function revealSpot(target): Vector3?
+	local look = flat(target.root.CFrame.LookVector)
+	if look.Magnitude < 0.1 then
+		return nil
+	end
+	for _ = 1, 12 do
+		local dir = CFrame.Angles(0, rng:NextNumber(-0.45, 0.45), 0) * look.Unit
+		local p = avoidStation(Forest.clampToMap(target.root.Position + dir * rng:NextNumber(22, 32)))
+		if Forest.isDry(p) and target.head and rayClear(target.head.Position, p + Vector3.new(0, 5, 0), { target.char }) then
+			return p
+		end
+	end
+	return nil
+end
+
 local function pickTarget(survivors)
 	local best, bestScore = nil, -math.huge
 	for _, s in survivors do
@@ -184,15 +297,16 @@ local function pickTarget(survivors)
 				iso = math.min(iso, (other.root.Position - s.root.Position).Magnitude)
 			end
 		end
-		local score = iso - (s.root.Position - root.Position).Magnitude * 0.3
+		local d = (s.root.Position - root.Position).Magnitude
+		local score = iso * 0.8 - d * 0.5
 		if s.player:GetAttribute("CarryingTape") then
 			score += 60
 		end
-		if s.player:GetAttribute("TorchOn") then
-			score += 10
+		if Forest.inStation(s.root.Position) then
+			score -= 150
 		end
-		if Forest.inStation(s.root.Position) and brain.state ~= "Aggressiva" then
-			score -= 200
+		if brain.target == s.player then
+			score += 25 -- non cambia bersaglio di continuo
 		end
 		s.isolation = iso
 		if score > bestScore then
@@ -202,25 +316,13 @@ local function pickTarget(survivors)
 	return best
 end
 
+---------------------------------------------------------------------------------------------
+-- Reazioni
+
 local function flee(from: Vector3, duration: number)
-	brain.fleeUntil = os.clock() + duration
+	setMode("Fuga", duration)
 	brain.fleeFrom = from
-	brain.goal = nil
-end
-
-local function playSound(s: Sound?)
-	if s then
-		s:Play()
-	end
-end
-
--- Verso finto da un'altra direzione per depistare la squadra
-local function fakeCall()
-	Sfx.at("Call", Forest.randomGround(rng, root.Position, 80, 140) + Vector3.new(0, 5, 0), {
-		Volume = 2.2,
-		RollOffMinDistance = 12,
-		RollOffMaxDistance = 320,
-	})
+	brain.nextAction = os.clock() + duration + rng:NextNumber(4, 9)
 end
 
 local function updateLight(dt: number, survivors)
@@ -230,9 +332,8 @@ local function updateLight(dt: number, survivors)
 			local toRake = root.Position - s.head.Position
 			local d = toRake.Magnitude
 			if d < R.LIGHT_RANGE and d > 0.1 then
-				local look = s.root.CFrame.LookVector
-				local angle = math.deg(math.acos(math.clamp(look:Dot(toRake.Unit), -1, 1)))
-				if angle < R.LIGHT_ANGLE and visibleFrom(s.head.Position, { s.char }) then
+				local angle = math.deg(math.acos(math.clamp(s.root.CFrame.LookVector:Dot(toRake.Unit), -1, 1)))
+				if angle < R.LIGHT_ANGLE and Rake.visibleFrom(s.head.Position, { s.char }) then
 					exposedBy = s
 					break
 				end
@@ -243,8 +344,9 @@ local function updateLight(dt: number, survivors)
 		brain.light += dt
 		if brain.light >= R.LIGHT_TO_FLEE then
 			brain.light = 0
-			brain.aggression = math.max(0, brain.aggression - 12)
-			flee(exposedBy.root.Position, R.FLEE_TIME)
+			brain.aggression = math.max(0, brain.aggression - 8)
+			playSound(screechSound)
+			flee(exposedBy.root.Position, range(R.FLEE_TIME))
 			ctx.notify("🔦 La luce l'ha respinto! Ma tornerà…", exposedBy.player)
 		end
 	else
@@ -252,13 +354,23 @@ local function updateLight(dt: number, survivors)
 	end
 end
 
----------------------------------------------------------------------------------------------
--- Stordimento e cattura
+-- Rumori (spari, corse, laboratorio): la attirano verso la fonte
+function Rake.hearNoise(pos: Vector3, loudness: number)
+	if not Rake.model or brain.knockedUntil > 0 or brain.captured then
+		return
+	end
+	local d = (pos - root.Position).Magnitude
+	if d > 260 * loudness then
+		return
+	end
+	brain.aggression = math.min(100, brain.aggression + 6 * loudness)
+	brain.noise = pos
+	brain.noiseTime = os.clock()
+end
 
 local function knockout()
 	brain.knockedUntil = os.clock() + R.KNOCKOUT_TIME
-	hum.WalkSpeed = 0
-	hum:MoveTo(root.Position)
+	stop()
 	hum.PlatformStand = true
 	capturePrompt.Enabled = true
 	highlight.FillColor = Color3.fromRGB(255, 255, 255)
@@ -283,6 +395,7 @@ local function wake()
 	highlight.Enabled = revealed
 	ctx.notifyAll("⚠ The Rake si è risvegliato… ed è furioso!")
 	playSound(screechSound)
+	flee(root.Position, 6)
 end
 
 function Rake.hitByDart(player: Player)
@@ -293,9 +406,11 @@ function Rake.hitByDart(player: Player)
 	if brain.sedation >= R.DARTS_TO_KNOCKOUT then
 		knockout()
 	else
-		brain.aggression = math.min(100, brain.aggression + 6)
-		brain.staggerUntil = os.clock() + 0.7
+		brain.aggression = math.min(100, brain.aggression + 10)
 		ctx.notify(("🎯 Dardo a segno! Sedazione %d/%d"):format(math.floor(brain.sedation), R.DARTS_TO_KNOCKOUT), player)
+		-- colpito: scappa subito
+		local shooter = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+		flee(shooter and shooter.Position or root.Position, range(R.FLEE_TIME))
 	end
 end
 
@@ -315,6 +430,27 @@ end
 ---------------------------------------------------------------------------------------------
 -- Cervello
 
+local function chooseAction(now: number, target)
+	local p = brain.aggression / 100
+	local interval = R.ACTION_INTERVAL[1] + (R.ACTION_INTERVAL[2] - R.ACTION_INTERVAL[1]) * p
+	brain.nextAction = now + interval + rng:NextNumber(0, 4)
+	local roll = rng:NextNumber()
+	if roll < 0.45 - p * 0.3 then
+		local spot = revealSpot(target)
+		if spot then
+			brain.revealSpot = spot
+			setMode("Mostra", 9)
+			return
+		end
+	end
+	if roll < 0.7 - p * 0.25 then
+		setMode("Finta", R.CHARGE_TIMEOUT)
+	else
+		setMode("Carica", R.CHARGE_TIMEOUT)
+	end
+	playSound(growlSound)
+end
+
 local function step(dt: number)
 	local now = os.clock()
 	local b = brain
@@ -329,124 +465,152 @@ local function step(dt: number)
 	end
 
 	local survivors = ctx.team.standing()
-	updateLight(dt, survivors)
+	if b.mode ~= "Attacco" then
+		updateLight(dt, survivors)
+	end
 	b.sedation = math.max(0, b.sedation - R.SEDATION_DECAY * dt)
 
-	-- Aggressività: tempo, rumore, luci lontane, giocatori isolati
+	-- aggressività: tempo, rumore, giocatori isolati
 	local gain = R.AGGRESSION_PER_SECOND * (1 + ctx.nightProgress * 1.5) * ctx.aggressionMultiplier
 	local target = pickTarget(survivors)
 	for _, s in survivors do
 		local d = (s.root.Position - root.Position).Magnitude
-		if d < 140 then
-			if s.root.AssemblyLinearVelocity.Magnitude > Config.PLAYER.WALK_SPEED + 3 then
-				gain += 0.25
-			end
-			if s.player:GetAttribute("TorchOn") and d > R.LIGHT_RANGE then
-				gain += 0.1
-			end
+		if d < 160 and s.root.AssemblyLinearVelocity.Magnitude > Config.PLAYER.WALK_SPEED + 3 then
+			gain += 0.3
 		end
 		if s.isolation and s.isolation > 60 then
-			gain += 0.15
+			gain += 0.2
 		end
 	end
 	b.aggression = math.clamp(b.aggression + gain * dt, 0, 100)
+	b.target = target and target.player
 
-	local T = R.THRESHOLDS
-	if now < b.fleeUntil then
-		setState("Fuga")
-	elseif not target then
-		setState("Inattiva")
-	elseif b.aggression >= T.Aggressiva then
-		setState("Aggressiva")
-	elseif b.aggression >= T.Territoriale then
-		setState("Territoriale")
-	elseif b.aggression >= T.Curiosa then
-		setState("Curiosa")
-	else
-		setState("Inattiva")
+	if now >= b.modeUntil then
+		if b.mode == "Attacco" then
+			flee(root.Position, range(R.FLEE_TIME))
+		elseif b.mode == "Mostra" or b.mode == "Carica" or b.mode == "Finta" then
+			flee(target and target.root.Position or root.Position, range({ 5, 8 }))
+		else
+			setMode(target and "Pedina" or "Vaga")
+		end
+	end
+	if not target and b.mode ~= "Fuga" and b.mode ~= "Vaga" then
+		setMode("Vaga")
 	end
 
-	if now < b.staggerUntil then
-		hum.WalkSpeed = 0
-		return
-	end
-
-	local state = b.state
-	local goalReached = b.goal and flat(b.goal - root.Position).Magnitude < 6
-	if state == "Fuga" then
-		if not b.goal or goalReached then
-			local away = flat(root.Position - (b.fleeFrom or root.Position))
-			if away.Magnitude < 1 then
-				away = Vector3.new(rng:NextNumber(-1, 1), 0, rng:NextNumber(-1, 1))
+	local mode = b.mode
+	local reached = b.goal and flat(b.goal - root.Position).Magnitude < 5
+	if mode == "Vaga" then
+		if target then
+			setMode("Pedina")
+		else
+			if not b.goal or reached or now - (b.goalTime or 0) > 25 then
+				b.goal = avoidStation(Forest.randomGround(rng, b.lair, 0, 120))
+				b.goalTime = now
 			end
-			b.goal = Forest.clampToMap(root.Position + away.Unit * 110)
+			moveTo(b.goal, R.WALK_SPEED)
 		end
-		moveTo(b.goal, R.CHASE_SPEED)
-	elseif state == "Inattiva" then
-		if not b.goal or goalReached or now - b.goalTime > 25 then
-			b.goal = Forest.randomGround(rng, b.lair, 0, 120)
-			b.goalTime = now
-		end
-		moveTo(avoidStation(b.goal), R.WALK_SPEED)
-	elseif state == "Curiosa" then
-		-- Pedina il bersaglio restando a distanza, nascosto tra gli alberi
-		local t = target.root.Position
-		b.orbit += dt * 0.05
-		local dir = flat(root.Position - t)
-		if dir.Magnitude < 1 then
-			dir = Vector3.new(1, 0, 0)
-		end
-		dir = (CFrame.Angles(0, math.sin(b.orbit) * 0.6, 0) * dir.Unit)
-		b.goal = avoidStation(Forest.clampToMap(t + dir * 55))
-		local d = flat(t - root.Position).Magnitude
-		moveTo(b.goal, d < 45 and R.STALK_SPEED or R.WALK_SPEED)
-	elseif state == "Territoriale" then
-		-- Gira intorno al bersaglio e ogni tanto finge una carica
+	elseif mode == "Pedina" then
 		local t = target.root.Position
 		local d = flat(t - root.Position).Magnitude
-		if now < b.bluffUntil then
-			moveTo(t, R.CHASE_SPEED)
-			if d < 14 then
-				b.bluffUntil = 0
-				b.orbit += math.pi
+		-- lontano e invisibile: si riposiziona alle spalle del bersaglio
+		if d > 150 and not seenByAnyone(survivors, root.Position + Vector3.new(0, 3, 0)) then
+			local spot = hiddenSpot(survivors, target, 60, 80, 1.2)
+			root.CFrame = CFrame.new(spot + Vector3.new(0, RakeRig.ROOT_HEIGHT, 0))
+			b.goal = nil
+			b.pathGoal = nil
+		end
+		-- se si accorge di essere visto: di solito sparisce, a volte attacca
+		if sees(target, root.Position + Vector3.new(0, 3, 0)) then
+			b.seenTime += dt
+			if b.seenTime > 0.7 then
+				if rng:NextNumber() < 0.65 - b.aggression / 300 then
+					flee(t, range({ 5, 9 }))
+				else
+					setMode("Carica", R.CHARGE_TIMEOUT)
+					playSound(screechSound)
+				end
+				return
 			end
 		else
-			b.orbit += dt * 0.25
-			b.goal = avoidStation(Forest.clampToMap(t + Vector3.new(math.cos(b.orbit), 0, math.sin(b.orbit)) * 30))
-			moveTo(b.goal, R.STALK_SPEED)
-			if now > b.nextBluff then
-				b.nextBluff = now + rng:NextNumber(15, 35)
-				b.bluffUntil = now + 4
-				playSound(callSound)
+			b.seenTime = 0
+		end
+		if b.noise and now - (b.noiseTime or 0) < 6 then
+			b.goal = avoidStation(Forest.clampToMap(b.noise + Vector3.new(rng:NextNumber(-15, 15), 0, rng:NextNumber(-15, 15))))
+			b.goalTime = now
+			b.noise = nil
+		elseif not b.goal or reached or now - (b.goalTime or 0) > 4 then
+			b.goal = hiddenSpot(survivors, target, 32, 50, 0.9)
+			b.goalTime = now
+		end
+		moveTo(b.goal, d > 90 and R.CHASE_SPEED or R.STALK_SPEED)
+		if now >= (b.nextAction or 0) and d < 110 then
+			chooseAction(now, target)
+		end
+	elseif mode == "Mostra" then
+		local t = target.root.Position
+		local d = flat(t - root.Position).Magnitude
+		if not b.standing then
+			local spot = b.revealSpot or t
+			if flat(spot - root.Position).Magnitude < 4 or now - b.modeStart > 5 then
+				b.standing = true
+				b.modeUntil = now + range(R.REVEAL_TIME)
+				stop()
+				playSound(rng:NextNumber() < 0.5 and jawSound or growlSound)
+			else
+				moveTo(spot, R.CHASE_SPEED)
+			end
+		else
+			stop()
+			face(t)
+			if d < 14 then
+				setMode("Carica", R.CHARGE_TIMEOUT)
+				playSound(screechSound)
 			end
 		end
-	elseif state == "Aggressiva" then
-		if b.lastGrowl == nil or now - b.lastGrowl > 12 then
-			b.lastGrowl = now
-			playSound(growlSound)
-		end
-		local t = target.root.Position
-		moveTo(t, R.CHASE_SPEED)
-		if (t - root.Position).Magnitude < R.ATTACK_RANGE and now - b.lastAttack > R.ATTACK_COOLDOWN then
+	elseif mode == "Carica" or mode == "Finta" then
+		local vel = target.root.AssemblyLinearVelocity
+		local predicted = target.root.Position + Vector3.new(vel.X, 0, vel.Z) * 0.45
+		local d = (target.root.Position - root.Position).Magnitude
+		local direct = d < 35 and rayClear(root.Position + Vector3.new(0, 2, 0), target.root.Position, { target.char })
+		moveTo(predicted, R.CHASE_SPEED, direct)
+		if mode == "Finta" and d < 11 then
+			playSound(screechSound)
+			flee(target.root.Position, range({ 6, 10 }))
+		elseif d < R.ATTACK_RANGE then
 			b.lastAttack = now
 			playSound(screechSound)
 			ctx.team.down(target.player)
-			b.aggression = 40
-			flee(t, R.FLEE_TIME * 1.5)
+			b.aggression = 45
+			setMode("Attacco", R.ATTACK_PAUSE)
+			stop()
+			face(target.root.Position)
 		end
+	elseif mode == "Attacco" then
+		stop()
+	elseif mode == "Fuga" then
+		if not b.goal or reached then
+			local from = b.fleeFrom or root.Position
+			local away = flat(root.Position - from)
+			if away.Magnitude < 1 then
+				away = Vector3.new(rng:NextNumber(-1, 1), 0, rng:NextNumber(-1, 1))
+			end
+			b.goal = avoidStation(Forest.clampToMap(root.Position + (CFrame.Angles(0, rng:NextNumber(-0.6, 0.6), 0) * away.Unit) * rng:NextNumber(90, 140)))
+		end
+		moveTo(b.goal, R.CHASE_SPEED)
 	end
 
-	-- Tracce lasciate lungo il percorso e versi (a volte finti)
-	if state ~= "Fuga" and now - b.lastDrop > Config.EVIDENCE.DROP_INTERVAL then
+	-- tracce e versi
+	if mode ~= "Fuga" and mode ~= "Carica" and now - b.lastDrop > Config.EVIDENCE.DROP_INTERVAL then
 		b.lastDrop = now
 		ctx.evidence.dropNear(root.Position)
 	end
-	if state ~= "Inattiva" and now > b.nextCall then
+	if (mode == "Pedina" or mode == "Vaga") and now > b.nextCall then
 		b.nextCall = now + rng:NextNumber(18, 40)
 		local roll = rng:NextNumber()
-		if roll < 0.25 then
-			fakeCall()
-		elseif roll < 0.5 then
+		if roll < 0.3 then
+			Sfx.at("Call", Forest.randomGround(rng, root.Position, 80, 140) + Vector3.new(0, 5, 0), { Volume = 2.2, RollOffMinDistance = 12, RollOffMaxDistance = 320 })
+		elseif roll < 0.55 then
 			playSound(callSound)
 		elseif roll < 0.8 then
 			playSound(jawSound)
@@ -462,7 +626,7 @@ local function step(dt: number)
 		elseif not moving and footsteps.IsPlaying then
 			footsteps:Stop()
 		end
-		footsteps.PlaybackSpeed = hum.WalkSpeed > R.STALK_SPEED and 1.25 or 0.8
+		footsteps.PlaybackSpeed = hum.WalkSpeed >= R.CHASE_SPEED and 1.4 or 0.8
 	end
 end
 
@@ -477,23 +641,22 @@ function Rake.spawn(lair: Vector3)
 	local now = os.clock()
 	brain = {
 		state = "",
-		aggression = 10,
+		mode = "Vaga",
+		modeStart = now,
+		modeUntil = math.huge,
+		aggression = 15,
 		sedation = 0,
 		light = 0,
-		fleeUntil = 0,
-		fleeFrom = nil,
 		knockedUntil = 0,
-		staggerUntil = 0,
 		lastAttack = 0,
-		bluffUntil = 0,
-		nextBluff = now + 20,
+		nextAction = now + 25,
 		goal = nil,
 		goalTime = 0,
-		orbit = rng:NextNumber(0, math.pi * 2),
 		lair = lair,
 		lastDrop = now,
-		nextCall = now + 30,
+		nextCall = now + 20,
 		captured = false,
+		seenTime = 0,
 		path = nil,
 		pathIndex = 0,
 		pathGoal = nil,
@@ -504,7 +667,7 @@ function Rake.spawn(lair: Vector3)
 	m.Parent = ctx.world
 	root:SetNetworkOwner(nil)
 	Rake.model = m
-	setState("Inattiva")
+	setMode("Vaga")
 
 	capturePrompt.Triggered:Connect(function(player)
 		if brain.knockedUntil > 0 and not brain.captured and ctx.team.isStanding(player) then
@@ -521,7 +684,7 @@ function Rake.spawn(lair: Vector3)
 	task.spawn(function()
 		local last = os.clock()
 		while loopToken == token and m.Parent do
-			task.wait(0.2)
+			task.wait(0.15)
 			local now = os.clock()
 			local ok, err = pcall(step, now - last)
 			if not ok then

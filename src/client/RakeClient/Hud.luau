@@ -127,7 +127,7 @@ function Hud.new(player: Player, state: Folder)
 	-- In alto: fase, orario, obiettivo
 	local top = panel(gui, {
 		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 44),
+		Position = UDim2.new(0.5, 0, 0, 104),
 		Size = UDim2.new(0, 480, 0, 74),
 	})
 	padding(top, 10)
@@ -144,7 +144,7 @@ function Hud.new(player: Player, state: Folder)
 	-- Notifiche
 	self.feed = make("Frame", {
 		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 126),
+		Position = UDim2.new(0.5, 0, 0, 186),
 		Size = UDim2.new(0, 520, 0, 150),
 		BackgroundTransparency = 1,
 	}, gui)

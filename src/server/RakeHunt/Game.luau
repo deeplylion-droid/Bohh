@@ -24,7 +24,7 @@ return function()
 
 	local remotes = Instance.new("Folder")
 	remotes.Name = "RakeRemotes"
-	for _, name in { "Notify", "Debrief", "OpenTablet", "FireDart", "CycleCameraType", "RotateCamera" } do
+	for _, name in { "Notify", "Debrief", "OpenTablet", "FireDart", "CycleCameraType", "RotateCamera", "DartFx" } do
 		local remote = Instance.new("RemoteEvent")
 		remote.Name = name
 		remote.Parent = remotes

@@ -31,6 +31,8 @@ return {
 			{ name = "Miniera", pos = Vector3.new(250, 0, 230), radius = 45 },
 		},
 		LAKE = { center = Vector3.new(-235, 0, 205), radius = 55 },
+		-- Sentieri come coppie di indici di POIS (la stazione è collegata a tutti)
+		PATHS = { { 1, 2 }, { 1, 3 }, { 1, 4 }, { 1, 5 }, { 1, 6 }, { 2, 6 }, { 3, 4 }, { 4, 5 } },
 	},
 
 	-- Meteo estratto a ogni notte (weight = probabilità relativa, density = densità dell'atmosfera)
@@ -67,7 +69,8 @@ return {
 	EQUIPMENT = {
 		DARTS = 6,
 		DART_RANGE = 160,
-		DART_COOLDOWN = 1.2,
+		DART_COOLDOWN = 1.1, -- tempo per riarmare l'otturatore
+		DART_SPEED = 260, -- velocità del dardo in volo (stud/s)
 		TORCH_BATTERY = 180, -- secondi di luce
 		NIGHT_VISION_BATTERY = 60,
 		CAMERA_KITS = { Fissa = 2, IR = 1, Motorizzata = 1, Trappola = 1 },
@@ -100,17 +103,19 @@ return {
 	},
 
 	RAKE = {
-		WALK_SPEED = 11,
+		WALK_SPEED = 12,
 		STALK_SPEED = 16,
-		CHASE_SPEED = 23,
-		ATTACK_RANGE = 6,
-		ATTACK_COOLDOWN = 4,
-		AGGRESSION_PER_SECOND = 0.12, -- crescita di base, aumenta col passare della notte
-		THRESHOLDS = { Curiosa = 25, Territoriale = 50, Aggressiva = 78 },
-		LIGHT_RANGE = 35, -- una torcia puntata da questa distanza la mette in fuga
+		CHASE_SPEED = 27, -- più veloce di un giocatore che corre (20): la luce e i compagni sono la difesa
+		ATTACK_RANGE = 6.5,
+		ATTACK_PAUSE = 1.3, -- resta sopra la vittima (jumpscare) prima di fuggire
+		AGGRESSION_PER_SECOND = 0.2, -- crescita di base, aumenta col passare della notte
+		ACTION_INTERVAL = { 16, 6 }, -- secondi tra un'azione e l'altra (aggressività bassa -> alta)
+		REVEAL_TIME = { 2.5, 4 }, -- secondi in cui si mostra immobile prima di sparire
+		CHARGE_TIMEOUT = 9,
+		LIGHT_RANGE = 40, -- una torcia puntata da questa distanza la mette in fuga
 		LIGHT_ANGLE = 30,
-		LIGHT_TO_FLEE = 1.5, -- secondi di luce diretta necessari
-		FLEE_TIME = 8,
+		LIGHT_TO_FLEE = 1.2, -- secondi di luce diretta necessari
+		FLEE_TIME = { 8, 14 },
 		DARTS_TO_KNOCKOUT = 4,
 		SEDATION_DECAY = 0.01, -- dardi "smaltiti" al secondo
 		KNOCKOUT_TIME = 25,

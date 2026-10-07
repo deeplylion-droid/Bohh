@@ -240,6 +240,92 @@ SEGMENTS2 = [
     ("ScopeZoom", scope_zoom, 8.0, False),
 ]
 
+def echo(x, delays=((0.23, 0.35), (0.58, 0.22), (1.1, 0.12))):
+    out = np.copy(x)
+    for d, g in delays:
+        i = int(d * SR)
+        out[i:] += band(x, 150, 3000)[: len(x) - i] * g
+    return out
+
+
+def rifle_shot(d=2.8):
+    t = t_axis(d)
+    crack = band(noise(d), 1800, 9000) * np.exp(-t * 90)
+    boom = np.sin(2 * np.pi * (75 * np.exp(-t * 4) + 38) * t) * np.exp(-t * 9) * 1.4
+    body = band(noise(d), 120, 1400) * np.exp(-t * 16) * 0.9
+    hiss = band(noise(d), 3000, 9000) * np.exp(-t * 20) * 0.25
+    x = np.tanh((crack * 1.4 + boom + body + hiss) * 2.2)
+    x = echo(x)
+    return norm(reverb(x, 3.0, 0.32, predelay=0.04), 0.98)
+
+
+def bolt_cycle(d=0.6):
+    t = t_axis(d)
+    x = np.zeros_like(t)
+    for start, f in ((0.0, 2300), (0.2, 3100)):
+        i = int(start * SR)
+        tt = t[: len(t) - i]
+        clk = band(noise(len(tt) / SR), 1500, 8000) * np.exp(-tt * 260) + np.sin(2 * np.pi * f * tt) * np.exp(-tt * 45) * 0.35
+        x[i:] += clk
+    return norm(reverb(x, 0.5, 0.15), 0.85)
+
+
+def whoosh(d=0.4):
+    t = t_axis(d)
+    x = noise(d)
+    out = np.zeros_like(x)
+    for k in range(8):
+        seg = slice(int(k * len(x) / 8), int((k + 1) * len(x) / 8))
+        f = 3000 - k * 280
+        out[seg] = band(x, f * 0.6, f * 1.4)[seg]
+    return norm(out * np.sin(np.pi * t / d) ** 2, 0.6)
+
+
+def hit_wood(d=0.4):
+    t = t_axis(d)
+    x = np.sin(2 * np.pi * 190 * t) * np.exp(-t * 30) + band(noise(d), 800, 5000) * np.exp(-t * 90) * 0.8
+    return norm(reverb(x, 0.6, 0.2), 0.9)
+
+
+def hit_flesh(d=1.0):
+    t = t_axis(d)
+    thud = np.sin(2 * np.pi * 85 * t) * np.exp(-t * 22) + band(noise(d), 200, 1500) * np.exp(-t * 30) * 0.7
+    tt = t - 0.08
+    f0 = 1100 + 500 * np.exp(-np.clip(tt, 0, None) * 6)
+    yelp = np.tanh(sum(saw(f0 * r, t) for r in (1, 1.02, 1.5)) * 0.6) * np.clip(tt * 30, 0, 1) * np.exp(-np.clip(tt, 0, None) * 5)
+    x = thud + band(yelp, 500, 7000) * 0.7
+    return norm(reverb(x, 1.2, 0.3), 0.95)
+
+
+def jumpscare(d=1.5):
+    t = t_axis(d)
+    f0 = 700 + 300 * np.sin(2 * np.pi * 11 * t) + 400 * np.exp(-t * 2)
+    x = sum(saw(f0 * r, t) for r in (1.0, 1.03, 0.97, 1.51, 2.04, 0.5))
+    x += band(noise(d), 1000, 9000) * 2
+    x = np.tanh(x * 4) * env(len(t), 0.005, 0.5)
+    hit = np.sin(2 * np.pi * 50 * t) * np.exp(-t * 8) * 2
+    return norm(band(x, 200, 10000) + hit, 1.0)
+
+
+def sting(d=2.4):
+    t = t_axis(d)
+    freqs = (110, 116.5, 155.6, 233, 246.9, 311)
+    x = sum(saw(np.full(len(t), f), t) for f in freqs) / len(freqs)
+    x = band(x, 80, 5000) * np.exp(-t * 1.8)
+    x += band(noise(d), 300, 6000) * np.exp(-t * 14) * 0.8
+    return norm(reverb(np.tanh(x * 2.5), 2.5, 0.45), 0.95)
+
+
+SEGMENTS3 = [
+    ("RifleShot", rifle_shot, 0.0, False),
+    ("BoltCycle", bolt_cycle, 3.0, False),
+    ("DartWhoosh", whoosh, 4.0, False),
+    ("HitWood", hit_wood, 4.6, False),
+    ("HitFlesh", hit_flesh, 5.2, False),
+    ("Jumpscare", jumpscare, 6.4, False),
+    ("Sting", sting, 8.1, False),
+]
+
 SEGMENTS = [
     ("Screech", screech, 0.0, False),
     ("Call", call, 3.0, False),
@@ -310,6 +396,11 @@ def build_sheet(segments, total, path):
 
 def main():
     os.makedirs(OUT, exist_ok=True)
+    if "--sheet3" in sys.argv:
+        regions3 = build_sheet(SEGMENTS3, 10.6, os.path.join(OUT, "Sfx3.ogg"))
+        json.dump(regions3, open(os.path.join(OUT, "regions3.json"), "w"), indent=1)
+        print("Creato Sfx3.ogg")
+        return
     if "--sheet2" in sys.argv:
         regions2 = build_sheet(SEGMENTS2, 9.0, os.path.join(OUT, "Sfx2.ogg"))
         json.dump(regions2, open(os.path.join(OUT, "regions2.json"), "w"), indent=1)

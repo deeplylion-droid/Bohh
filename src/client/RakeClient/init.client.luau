@@ -17,7 +17,9 @@ local Ambience = require(script:WaitForChild("Ambience"))
 local RakeAnimator = require(script:WaitForChild("RakeAnimator"))
 local Scope = require(script:WaitForChild("Scope"))
 local CamFeed = require(script:WaitForChild("CamFeed"))
-local Gps = require(script:WaitForChild("Gps"))
+local Compass = require(script:WaitForChild("Compass"))
+local Gunfx = require(script:WaitForChild("Gunfx"))
+local Scares = require(script:WaitForChild("Scares"))
 
 local player = Players.LocalPlayer
 local mouse = player:GetMouse()
@@ -34,7 +36,11 @@ local scope = Scope.new(player)
 scope:bind()
 RakeAnimator.start(state)
 CamFeed.start(player)
-Gps.new(player, state, hud.gui)
+Compass.new(player, state, hud.gui)
+Gunfx.start(remotes)
+Scares.start(player, state, function()
+	hud:pulse()
+end)
 
 remotes.Notify.OnClientEvent:Connect(function(message)
 	hud:notify(message)
@@ -101,7 +107,7 @@ local function hookTool(tool: Instance)
 	hooked[tool] = true
 	if tool.Name == "Fucile a dardi" then
 		tool.Activated:Connect(function()
-			if not tablet.isOpen then
+			if not tablet.isOpen and Gunfx.fireLocal(tool, scope.active) then
 				remotes.FireDart:FireServer(mouse.Hit.Position)
 			end
 		end)

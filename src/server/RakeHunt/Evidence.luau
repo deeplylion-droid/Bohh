@@ -218,6 +218,7 @@ function Evidence.analyze(player: Player)
 		E.LAB_TIME
 	))
 	ctx.rake.addAggression(10)
+	ctx.rake.hearNoise(Forest.STATION, 1)
 	local light = Forest.labLight
 	task.spawn(function()
 		local finish = os.clock() + E.LAB_TIME

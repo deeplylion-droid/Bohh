@@ -1,7 +1,6 @@
 -- Tablet di sorveglianza: la visuale passa alla telecamera scelta, dentro la cornice di un tablet
 -- rinforzato, con scanline, rumore quando la creatura è vicina, visione IR, zoom e mini-mappa.
 -- Ogni frame è protetto da pcall: in caso di errore il tablet lo mostra e resta chiudibile.
-local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Lighting = game:GetService("Lighting")
 local ContextActionService = game:GetService("ContextActionService")
@@ -12,12 +11,11 @@ local SoundService = game:GetService("SoundService")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
 local Sfx = require(Shared:WaitForChild("Sfx"))
+local MapView = require(script.Parent:WaitForChild("MapView"))
 
 local Tablet = {}
 Tablet.__index = Tablet
 
-local MAP_PX = 190
-local HALF = Config.MAP.SIZE / 2
 local STATIC_LINES = 40
 local SCANLINES = 70
 local BEZEL = Color3.fromRGB(20, 21, 22)
@@ -49,10 +47,6 @@ end
 
 local function corner(parent: Instance, r: number)
 	make("UICorner", { CornerRadius = UDim.new(0, r) }, parent)
-end
-
-local function toMap(x: number, z: number): UDim2
-	return UDim2.fromOffset((x + HALF) / (HALF * 2) * MAP_PX, (z + HALF) / (HALF * 2) * MAP_PX)
 end
 
 local function rakeRoot(): BasePart?
@@ -175,40 +169,20 @@ function Tablet.new(player: Player, state: Folder, remotes: Folder)
 		TextYAlignment = Enum.TextYAlignment.Bottom,
 	})
 
-	-- mini-mappa
-	local map = make("Frame", {
-		AnchorPoint = Vector2.new(1, 1),
-		Position = UDim2.new(1, -20, 1, -20),
-		Size = UDim2.fromOffset(MAP_PX, MAP_PX),
-		BackgroundColor3 = Color3.fromRGB(6, 18, 10),
-		BackgroundTransparency = 0.25,
-		BorderSizePixel = 0,
-		ClipsDescendants = true,
-		ZIndex = 6,
-	}, screen)
-	make("UIStroke", { Color = GREEN, Transparency = 0.5 }, map)
-	self.dots = make("Folder", { Name = "Punti" }, map)
-	local lake = Config.MAP.LAKE
-	local lakeDot = make("Frame", {
+	-- mappa: piccola nell'angolo, a tutto schermo con M o con il tasto MAPPA
+	self.miniMap = MapView.new(screen, 230, 6)
+	self.miniMap.frame.AnchorPoint = Vector2.new(1, 1)
+	self.miniMap.frame.Position = UDim2.new(1, -18, 1, -18)
+	self.bigMapHolder = make("Frame", {
 		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = toMap(lake.center.X, lake.center.Z),
-		Size = UDim2.fromOffset(lake.radius / HALF * MAP_PX, lake.radius / HALF * MAP_PX),
-		BackgroundColor3 = Color3.fromRGB(30, 60, 90),
-		BorderSizePixel = 0,
-		ZIndex = 6,
-	}, map)
-	corner(lakeDot, 999)
-	for _, poi in Config.MAP.POIS do
-		local d = make("Frame", {
-			AnchorPoint = Vector2.new(0.5, 0.5),
-			Position = toMap(poi.pos.X, poi.pos.Z),
-			Size = UDim2.fromOffset(5, 5),
-			BackgroundColor3 = Color3.fromRGB(230, 220, 160),
-			BorderSizePixel = 0,
-			ZIndex = 7,
-		}, map)
-		label(d, { Text = poi.name, TextSize = 9, Font = Enum.Font.Code, Size = UDim2.fromOffset(110, 10), Position = UDim2.fromOffset(-52, 6), TextColor3 = Color3.fromRGB(200, 210, 170), ZIndex = 7 })
-	end
+		Position = UDim2.fromScale(0.5, 0.5),
+		Size = UDim2.fromScale(1, 1),
+		BackgroundColor3 = Color3.fromRGB(4, 8, 6),
+		Visible = false,
+		ZIndex = 20,
+	}, screen)
+	self.bigMap = nil
+	self.mapMode = false
 
 	-- cornice: marchio, sensore e tasti fisici
 	label(gui, { Text = "BLACKWOOD RANGER · TRK-7", Font = Enum.Font.GothamBold, TextSize = 13, TextColor3 = Color3.fromRGB(110, 112, 110), AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0.08, 0, 0.09, -2), Size = UDim2.fromOffset(260, 18), TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 8 })
@@ -251,8 +225,12 @@ function Tablet.new(player: Player, state: Folder, remotes: Folder)
 	key("▶", 170, function()
 		self:switch(1)
 	end)
+	local mapKey = key("MAPPA", 270, function()
+		self:toggleMap()
+	end)
+	mapKey.Size = UDim2.fromOffset(90, 36)
 	label(gui, {
-		Text = "Q/E camera · Z/C ruota · rotella zoom · T chiudi",
+		Text = "Q/E camera · Z/C ruota · rotella zoom · M mappa · T chiudi",
 		Font = Enum.Font.Gotham,
 		TextSize = 12,
 		TextColor3 = Color3.fromRGB(100, 104, 100),
@@ -342,6 +320,9 @@ function Tablet:open()
 	bind("TabletRotate", { Enum.KeyCode.Z, Enum.KeyCode.C }, function(code)
 		self:rotate(code == Enum.KeyCode.Z and -1 or 1)
 	end)
+	bind("TabletMap", { Enum.KeyCode.M }, function()
+		self:toggleMap()
+	end)
 	self.wheel = UserInputService.InputChanged:Connect(function(input)
 		if input.UserInputType == Enum.UserInputType.MouseWheel then
 			self.zoom = math.clamp(self.zoom + input.Position.Z * 0.25, 1, 3)
@@ -390,7 +371,7 @@ function Tablet:close()
 	self.cc.Enabled = false
 	self.staticSound:Stop()
 	RunService:UnbindFromRenderStep("RakeTablet")
-	for _, name in { "TabletPrev", "TabletNext", "TabletRotate" } do
+	for _, name in { "TabletPrev", "TabletNext", "TabletRotate", "TabletMap" } do
 		ContextActionService:UnbindAction(name)
 	end
 	if self.wheel then
@@ -527,77 +508,26 @@ function Tablet:render()
 	end
 
 	if os.clock() >= self.nextMap then
-		self.nextMap = os.clock() + 0.25
-		self:drawMap(m)
+		self.nextMap = os.clock() + 0.2
+		if self.mapMode and self.bigMap then
+			self.bigMap:update(self.player, self.state, m)
+		else
+			self.miniMap:update(self.player, self.state, m)
+		end
 	end
 end
 
-local function dot(parent: Instance, x: number, z: number, size: number, color: Color3, round: boolean?)
-	local f = make("Frame", {
-		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = toMap(x, z),
-		Size = UDim2.fromOffset(size, size),
-		BackgroundColor3 = color,
-		BorderSizePixel = 0,
-		ZIndex = 8,
-	}, parent)
-	if round then
-		corner(f, 999)
+function Tablet:toggleMap()
+	self.mapMode = not self.mapMode
+	if self.mapMode and not self.bigMap then
+		local size = math.floor(math.min(self.screen.AbsoluteSize.X, self.screen.AbsoluteSize.Y) * 0.92)
+		self.bigMap = MapView.new(self.bigMapHolder, math.max(size, 300), 21)
+		self.bigMap.frame.AnchorPoint = Vector2.new(0.5, 0.5)
+		self.bigMap.frame.Position = UDim2.fromScale(0.5, 0.5)
 	end
-	return f
-end
-
-function Tablet:drawMap(selected: Model?)
-	local layer = self.dots
-	layer:ClearAllChildren()
-	local state = self.state
-
-	local hintR = state:GetAttribute("HintR") or 0
-	if hintR > 0 then
-		local area = dot(layer, state:GetAttribute("HintX") or 0, state:GetAttribute("HintZ") or 0, hintR / HALF * MAP_PX, Color3.fromRGB(255, 40, 40), true)
-		area.BackgroundTransparency = 0.65
-		area.ZIndex = 7
-	end
-	local seenAt = state:GetAttribute("LastSeenTime") or 0
-	local age = workspace:GetServerTimeNow() - seenAt
-	if seenAt > 0 and age < 60 then
-		local x = dot(layer, state:GetAttribute("LastSeenX") or 0, state:GetAttribute("LastSeenZ") or 0, 9, Color3.fromRGB(255, 60, 60))
-		x.Rotation = 45
-		x.BackgroundTransparency = math.clamp(age / 60, 0, 0.8)
-	end
-	for _, m in self:cameras() do
-		local body = m:FindFirstChild("Body") :: BasePart
-		local color = Color3.fromRGB(90, 170, 255)
-		if not m:GetAttribute("Online") then
-			color = Color3.fromRGB(90, 90, 90)
-		elseif m:GetAttribute("Type") == "Trappola" then
-			color = Color3.fromRGB(255, 160, 60)
-		end
-		if m == selected then
-			color = Color3.fromRGB(255, 240, 80)
-		end
-		local d = dot(layer, body.Position.X, body.Position.Z, m == selected and 8 or 6, color, true)
-		local look = body.CFrame.LookVector
-		make("Frame", {
-			AnchorPoint = Vector2.new(0.5, 0.5),
-			Position = UDim2.new(0.5, look.X * 7, 0.5, look.Z * 7),
-			Size = UDim2.fromOffset(3, 3),
-			BackgroundColor3 = color,
-			BorderSizePixel = 0,
-			ZIndex = 8,
-		}, d)
-	end
-	for _, p in Players:GetPlayers() do
-		local hrp = p.Character and p.Character:FindFirstChild("HumanoidRootPart")
-		local status = p:GetAttribute("Status")
-		if hrp and status ~= "Fuori" then
-			local color = status == "Braccato" and Color3.fromRGB(255, 80, 80) or Color3.fromRGB(110, 230, 110)
-			if p == self.player then
-				color = Color3.fromRGB(255, 255, 255)
-			end
-			dot(layer, hrp.Position.X, hrp.Position.Z, 6, color, true)
-		end
-	end
+	self.bigMapHolder.Visible = self.mapMode
+	self.miniMap.frame.Visible = not self.mapMode
+	self.nextMap = 0
 end
 
 return Tablet

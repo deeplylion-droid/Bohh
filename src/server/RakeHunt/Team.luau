@@ -1,7 +1,6 @@
 -- La squadra: spawn, attrezzatura (torcia, telecamere, fucile a dardi), stato "Braccato" e rianimazione.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Debris = game:GetService("Debris")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
@@ -293,25 +292,26 @@ function Team.fireDart(player: Player, targetPos: any)
 	params.FilterDescendantsInstances = { char, ctx.cameras.folder() }
 	local result = workspace:Raycast(head.Position, dir, params)
 	local hitPos = result and result.Position or head.Position + dir
-
 	local muzzle = gun:FindFirstChild("Volata") :: BasePart?
 	local from = muzzle and muzzle.Position or head.Position
-	Sfx.at("DartShot", from, { Volume = 1.2, RollOffMaxDistance = 90 })
-	local length = (hitPos - from).Magnitude
-	local tracer = make("Part", workspace, {
-		Size = Vector3.new(0.08, 0.08, length),
-		CFrame = CFrame.lookAt(from, hitPos) * CFrame.new(0, 0, -length / 2),
-		Material = Enum.Material.Neon,
-		Color = Color3.fromRGB(180, 255, 120),
-		CanCollide = false,
-		CanQuery = false,
-		CastShadow = false,
-	})
-	Debris:AddItem(tracer, 0.12)
 
 	local rake = ctx.rake.model
-	if result and rake and result.Instance:IsDescendantOf(rake) then
-		ctx.rake.hitByDart(player)
+	local hitRake = result ~= nil and rake ~= nil and result.Instance:IsDescendantOf(rake)
+	local kind = "none"
+	if hitRake then
+		kind = "rake"
+	elseif result then
+		kind = result.Instance == workspace.Terrain and "terrain" or "wood"
+	end
+	-- effetti (fiammata, dardo in volo, impatto, rinculo) disegnati dai client
+	ctx.remotes.DartFx:FireAllClients(player, from, hitPos, kind, result and result.Normal or Vector3.yAxis, result and result.Instance or nil)
+	ctx.rake.hearNoise(from, 1)
+	if hitRake then
+		local travel = (hitPos - from).Magnitude / EQ.DART_SPEED
+		task.delay(travel, function()
+			Sfx.at("HitFlesh", hitPos, { Volume = 2, RollOffMaxDistance = 160 })
+			ctx.rake.hitByDart(player)
+		end)
 	end
 end
 

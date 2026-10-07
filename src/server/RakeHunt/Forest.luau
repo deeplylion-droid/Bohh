@@ -118,12 +118,9 @@ Forest.POIS = POIS
 Forest.STATION = POIS[1].pos
 
 local PATHS = {}
-for i = 2, #POIS do
-	table.insert(PATHS, { POIS[1].pos, POIS[i].pos })
+for _, pair in MAP.PATHS do
+	table.insert(PATHS, { POIS[pair[1]].pos, POIS[pair[2]].pos })
 end
-table.insert(PATHS, { POIS[2].pos, POIS[6].pos })
-table.insert(PATHS, { POIS[3].pos, POIS[4].pos })
-table.insert(PATHS, { POIS[4].pos, POIS[5].pos })
 Forest.PATHS = PATHS
 
 function Forest.distToSegment(p: Vector3, a: Vector3, b: Vector3): (number, number)
