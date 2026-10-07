@@ -430,7 +430,8 @@ function ArmPose.start(player: Player, watchShown: () -> boolean, remotes: Folde
 		end
 	end)
 
-	RunService:BindToRenderStep("BracciaPrimaPersona", Enum.RenderPriority.Camera.Value + 5, function(dt)
+	-- dopo tutti gli aggiornamenti della visuale, così il braccio usa la posizione definitiva della telecamera
+	RunService:BindToRenderStep("BracciaPrimaPersona", Enum.RenderPriority.Camera.Value + 20, function(dt)
 		local char = player.Character
 		if not char then
 			return

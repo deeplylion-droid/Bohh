@@ -216,7 +216,7 @@ function Team.attachWatch(char: Model)
 			Name = "Ghiera",
 			Shape = Enum.PartType.Cylinder,
 			Size = Vector3.new(0.05, 0.7, 0.7),
-			CFrame = faceCF * CFrame.new(0, 0, -0.06) * CFrame.Angles(0, math.pi / 2, 0),
+			CFrame = faceCF * CFrame.new(0, 0, -0.03) * CFrame.Angles(0, math.pi / 2, 0),
 			Color = Color3.fromRGB(110, 114, 118),
 			Material = Enum.Material.Metal,
 		}),

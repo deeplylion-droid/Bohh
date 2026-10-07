@@ -4074,7 +4074,7 @@ function Team.attachWatch(char: Model)
 			Name = "Ghiera",
 			Shape = Enum.PartType.Cylinder,
 			Size = Vector3.new(0.05, 0.7, 0.7),
-			CFrame = faceCF * CFrame.new(0, 0, -0.06) * CFrame.Angles(0, math.pi / 2, 0),
+			CFrame = faceCF * CFrame.new(0, 0, -0.03) * CFrame.Angles(0, math.pi / 2, 0),
 			Color = Color3.fromRGB(110, 114, 118),
 			Material = Enum.Material.Metal,
 		}),
@@ -4516,6 +4516,8 @@ end, function(screen)
 	if screen and hud.watchGui.Adornee ~= screen then
 		hud.watchGui.Adornee = screen
 	end
+	-- quadrante disegnato sopra a tutto mentre guardi il polso: niente sfarfallio con la ghiera
+	hud.watchGui.AlwaysOnTop = screen ~= nil
 end)
 
 remotes.Notify.OnClientEvent:Connect(function(message)
@@ -5519,7 +5521,8 @@ function ArmPose.start(player: Player, watchShown: () -> boolean, remotes: Folde
 		end
 	end)
 
-	RunService:BindToRenderStep("BracciaPrimaPersona", Enum.RenderPriority.Camera.Value + 5, function(dt)
+	-- dopo tutti gli aggiornamenti della visuale, così il braccio usa la posizione definitiva della telecamera
+	RunService:BindToRenderStep("BracciaPrimaPersona", Enum.RenderPriority.Camera.Value + 20, function(dt)
 		local char = player.Character
 		if not char then
 			return
@@ -7329,6 +7332,11 @@ local function r(amount: number): number
 	return (math.random() - 0.5) * 2 * amount
 end
 
+-- rumore ridotto per la camminata (inquietante ma non epilettica)
+local function rw(amount: number): number
+	return r(amount * 0.45)
+end
+
 local FINGERS = {}
 for f = 0, 3 do
 	for _, side in { "L", "R" } do
@@ -7350,6 +7358,9 @@ function RakeAnimator.start(state: Folder)
 	local nextCrack = 0
 	local gallop = 0
 	local gallopBlend = 0
+	local gallopUntil = 0
+	local current: { [string]: CFrame } = {}
+	local target: { [string]: CFrame } = {}
 
 	local function clearEyes()
 		for _, e in eyes do
@@ -7361,6 +7372,8 @@ function RakeAnimator.start(state: Folder)
 	local function attach(rake: Model)
 		model = rake
 		table.clear(bones)
+		table.clear(current)
+		table.clear(target)
 		clearEyes()
 		for _, d in rake:GetDescendants() do
 			if d:IsA("Bone") then
@@ -7389,9 +7402,21 @@ function RakeAnimator.start(state: Folder)
 		end
 	end
 
-	local function apply(pose: { [string]: CFrame })
+	-- Le pose calcolate diventano un "obiettivo" verso cui le ossa si muovono ogni fotogramma con una
+	-- rapidità diversa per stato: scatti secchi quando attacca, movimento morbido quando cammina o
+	-- galoppa. Così i cambi d'andatura non producono salti.
+	local smoothK = 1000
+	local function apply(pose: { [string]: CFrame }, k: number?)
+		target = pose
+		smoothK = k or 1000
+	end
+	local function blend(dt: number)
+		local a = 1 - math.exp(-dt * smoothK)
 		for name, bone in bones do
-			bone.Transform = pose[name] or CFrame.new()
+			local goal = target[name] or CFrame.new()
+			local cf = (current[name] or goal):Lerp(goal, a)
+			current[name] = cf
+			bone.Transform = cf
 		end
 	end
 
@@ -7443,11 +7468,19 @@ function RakeAnimator.start(state: Folder)
 		-- galoppo: quando corre senza inseguirti (fuga, riposizionamento) l'andatura è fluida e ritmica,
 		-- a quattro zampe, come un animale che galoppa (arti anteriori e posteriori a coppie sfasate,
 		-- schiena che si flette e si distende, rimbalzo del corpo, testa che bilancia)
-		local galloping = speed > 19 and status ~= "Aggressiva" and status ~= "Attacco" and status ~= "Stordita" and status ~= "Catturata" and not hum.PlatformStand
+		-- si galoppa quando la creatura corre (velocità impostata dal server, stabile, non quella misurata
+		-- che oscilla) e non sta caricando; si esce dal galoppo solo dopo mezzo secondo di condizione
+		-- falsa, così le due andature non si alternano a ogni curva o rallentamento
+		local wantGallop = hum.WalkSpeed >= 16 and speed > 5 and status ~= "Aggressiva" and status ~= "Attacco"
+			and status ~= "Stordita" and status ~= "Catturata" and not hum.PlatformStand
+		if wantGallop then
+			gallopUntil = now + 0.5
+		end
+		local galloping = now < gallopUntil and status ~= "Aggressiva" and status ~= "Attacco" and not hum.PlatformStand
 		if galloping then
 			-- parametri tarati misurando le ossa vere sul server: busto quasi orizzontale, mani e piedi
 			-- che toccano terra senza affondare, zampe anteriori che appoggiano dopo le posteriori
-			gallop += dt * math.pi * 2 * math.clamp(speed / 11, 1.8, 2.8)
+			gallop += dt * math.pi * 2 * math.clamp(math.max(hum.WalkSpeed, 16) / 11, 1.6, 2.6)
 			gallopBlend = math.min(1, gallopBlend + dt / 0.3)
 			local g = gallop
 			local sg, cg = math.sin(g), math.cos(g)
@@ -7478,20 +7511,16 @@ function RakeAnimator.start(state: Folder)
 				set(fg[1], 0.45, 0, 0)
 				set(fg[2], 0.6, 0, 0)
 			end
-			if gallopBlend < 1 then
-				local e = gallopBlend * gallopBlend * (3 - 2 * gallopBlend)
-				for name, cf in pose do
-					pose[name] = CFrame.new():Lerp(cf, e)
-				end
-			end
-			apply(pose)
+			apply(pose, gallopBlend < 1 and 8 or 40)
+			blend(dt)
 			nextSnap = 0
 			return
 		end
 		gallopBlend = 0
 
 		if now < nextSnap then
-			return -- mantiene la posa: movimento a scatti
+			blend(dt) -- mantiene l'obiettivo: movimento a scatti
+			return
 		end
 		local violent = status == "Aggressiva" or status == "Attacco"
 		local interval = violent and (0.025 + math.random() * 0.04) or (0.06 + math.random() * 0.12)
@@ -7520,7 +7549,8 @@ function RakeAnimator.start(state: Folder)
 				end
 			end
 			set("Jaw", -0.7 - math.random() * 0.2, 0, 0)
-			apply(pose)
+			apply(pose, 25)
+			blend(dt)
 			return
 		end
 
@@ -7611,34 +7641,37 @@ function RakeAnimator.start(state: Folder)
 		else
 			-- andatura sconclusionata: zoppa, contorta, con un braccio che si agita
 			local limp = 1 + 0.5 * math.max(0, math.sin(phase * 0.5))
-			set("Spine1", -0.15 + r(0.12), s * 0.3 * a + r(0.15), quirk.lean + s * 0.25 * a + r(0.12))
-			set("Spine2", -0.15 + r(0.12), r(0.2), -quirk.lean * 0.5 + r(0.15))
-			set("Spine3", -0.2 + r(0.12), r(0.2), r(0.15))
-			set("Neck1", 0.3 + r(0.15), r(0.15), 0)
-			set("Neck2", pitchToCam * 0.3 + r(0.2), (toCam.Magnitude < 70 and yawToCam * 0.4 or 0) + r(0.3), r(0.3))
-			set("Head", r(0.25), (toCam.Magnitude < 70 and yawToCam * 0.5 or r(0.6)), quirk.headFlip + r(0.25))
-			set("Jaw", -0.05 - math.abs(r(0.25)), 0, 0)
+			set("Spine1", -0.15 + rw(0.12), s * 0.3 * a + rw(0.15), quirk.lean + s * 0.25 * a + rw(0.12))
+			set("Spine2", -0.15 + rw(0.12), rw(0.2), -quirk.lean * 0.5 + rw(0.15))
+			set("Spine3", -0.2 + rw(0.12), rw(0.2), rw(0.15))
+			set("Neck1", 0.3 + rw(0.15), rw(0.15), 0)
+			set("Neck2", pitchToCam * 0.3 + rw(0.2), (toCam.Magnitude < 70 and yawToCam * 0.4 or 0) + rw(0.3), rw(0.3))
+			set("Head", rw(0.25), (toCam.Magnitude < 70 and yawToCam * 0.5 or rw(0.6)), quirk.headFlip + rw(0.25))
+			set("Jaw", -0.05 - math.abs(rw(0.25)), 0, 0)
 			local up = quirk.armUp
-			local flail = 1.4 + r(0.9)
-			set("ShoulderL", up == "L" and flail or (-s * 0.5 * a + r(0.35)), r(0.4), up == "L" and -0.7 + r(0.4) or -0.1 + r(0.2))
-			set("ShoulderR", up == "R" and flail or (s * 0.5 * a + r(0.35)), r(0.4), up == "R" and 0.7 + r(0.4) or 0.1 + r(0.2))
-			set("ElbowL", 0.2 + math.max(0, s) * 0.5 * a + r(0.45), 0, 0)
-			set("ElbowR", 0.2 + math.max(0, -s) * 0.5 * a + r(0.45), 0, 0)
-			set("WristL", r(0.6), r(0.5), 0)
-			set("WristR", r(0.6), r(0.5), 0)
-			set("HipL", s * 0.85 * a * limp + r(0.2), r(0.2), -0.1 + r(0.1))
-			set("HipR", -s * 0.55 * a + r(0.2), r(0.2), 0.1 + r(0.1))
-			set("KneeL", -math.max(0, c) * 1.3 * a * limp + r(0.2), 0, 0)
-			set("KneeR", -math.max(0, -c) * 0.9 * a + r(0.2), 0, 0)
-			set("AnkleL", math.max(0, c) * 0.5 * a + r(0.2), 0, 0)
-			set("AnkleR", math.max(0, -c) * 0.5 * a + r(0.2), 0, 0)
-			fingersOpen = 0.3 + r(0.4)
+			local flail = 1.2 + rw(0.5)
+			set("ShoulderL", up == "L" and flail or (-s * 0.5 * a + rw(0.35)), rw(0.4), up == "L" and -0.7 + rw(0.4) or -0.1 + rw(0.2))
+			set("ShoulderR", up == "R" and flail or (s * 0.5 * a + rw(0.35)), rw(0.4), up == "R" and 0.7 + rw(0.4) or 0.1 + rw(0.2))
+			set("ElbowL", 0.2 + math.max(0, s) * 0.5 * a + rw(0.45), 0, 0)
+			set("ElbowR", 0.2 + math.max(0, -s) * 0.5 * a + rw(0.45), 0, 0)
+			set("WristL", rw(0.6), rw(0.5), 0)
+			set("WristR", rw(0.6), rw(0.5), 0)
+			set("HipL", s * 0.85 * a * limp + rw(0.2), rw(0.2), -0.1 + rw(0.1))
+			set("HipR", -s * 0.55 * a + rw(0.2), rw(0.2), 0.1 + rw(0.1))
+			set("KneeL", -math.max(0, c) * 1.3 * a * limp + rw(0.2), 0, 0)
+			set("KneeR", -math.max(0, -c) * 0.9 * a + rw(0.2), 0, 0)
+			set("AnkleL", math.max(0, c) * 0.5 * a + rw(0.2), 0, 0)
+			set("AnkleR", math.max(0, -c) * 0.5 * a + rw(0.2), 0, 0)
+			fingersOpen = 0.3 + rw(0.4)
 		end
 		for _, f in FINGERS do
 			set(f[1], fingersOpen + r(0.5), 0, r(0.25))
 			set(f[2], fingersOpen * 1.3 + r(0.6), 0, 0)
 		end
-		apply(pose)
+		-- attacco e carica: scatti secchi (stop-motion); si mostra: convulsioni rapide; cammina: morbido
+		local k = (status == "Attacco" or status == "Aggressiva") and 1000 or status == "Territoriale" and speed < 3 and 30 or 9
+		apply(pose, k)
+		blend(dt)
 	end
 
 	RakeAnimator.update = update

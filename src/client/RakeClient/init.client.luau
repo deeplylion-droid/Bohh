@@ -72,6 +72,8 @@ end, function(screen)
 	if screen and hud.watchGui.Adornee ~= screen then
 		hud.watchGui.Adornee = screen
 	end
+	-- quadrante disegnato sopra a tutto mentre guardi il polso: niente sfarfallio con la ghiera
+	hud.watchGui.AlwaysOnTop = screen ~= nil
 end)
 
 remotes.Notify.OnClientEvent:Connect(function(message)
