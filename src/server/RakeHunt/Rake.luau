@@ -128,37 +128,98 @@ end
 ---------------------------------------------------------------------------------------------
 -- Movimento
 
+-- Zone sicure: la Ranger Station e tutti i luoghi chiave della mappa sono vietati alla creatura.
+-- Restituisce il luogo che contiene p (con margine) e il raggio della sua zona.
+local function safeZoneAt(p: Vector3, extra: number): (any, number)
+	for i, poi in Forest.POIS do
+		local r = (i == 1 and math.max(Config.MAP.STATION_RADIUS, poi.radius) or poi.radius) + extra
+		if flat(p - poi.pos).Magnitude < r then
+			return poi, r
+		end
+	end
+	return nil, 0
+end
+
+-- Sposta un punto fuori da ogni zona sicura (sul bordo, nella direzione da cui arriva)
+local function keepOut(p: Vector3, extra: number?): Vector3
+	local margin = extra or 6
+	local moved = false
+	for _ = 1, 4 do
+		local poi, r = safeZoneAt(p, margin)
+		if not poi then
+			break
+		end
+		local away = flat(p - poi.pos)
+		if away.Magnitude < 1 then
+			away = flat(root.Position - poi.pos)
+			if away.Magnitude < 1 then
+				away = Vector3.new(1, 0, 0)
+			end
+		end
+		p = poi.pos + away.Unit * (r + 0.5)
+		moved = true
+	end
+	return moved and Forest.groundAt(p.X, p.Z) or p
+end
+
+-- I tratti di percorso che attraversano un luogo sicuro diventano un arco lungo il suo bordo
+local function detour(points: { Vector3 }): { Vector3 }
+	local out = {}
+	local i = 1
+	while i <= #points do
+		local poi, r = safeZoneAt(points[i], 2)
+		if not poi then
+			table.insert(out, points[i])
+			i += 1
+		else
+			local j = i
+			while j < #points and safeZoneAt(points[j + 1], 2) == poi do
+				j += 1
+			end
+			local entry = points[i - 1] or root.Position
+			local exit = points[j + 1] or points[j]
+			local c = poi.pos
+			local radius = r + 3
+			local a0 = math.atan2(entry.Z - c.Z, entry.X - c.X)
+			local d = math.atan2(exit.Z - c.Z, exit.X - c.X) - a0
+			d = (d + math.pi) % (2 * math.pi) - math.pi
+			local n = math.max(1, math.ceil(math.abs(d) * radius / 6))
+			for k = 0, n do
+				local a = a0 + d * k / n
+				table.insert(out, Forest.groundAt(c.X + math.cos(a) * radius, c.Z + math.sin(a) * radius))
+			end
+			i = j + 1
+		end
+	end
+	return out
+end
+Rake._detour = detour
+
 local function computePath(dest: Vector3)
-	local path = PathfindingService:CreatePath({ AgentRadius = 2.5, AgentHeight = 7, AgentCanJump = false, WaypointSpacing = 6 })
+	local path = PathfindingService:CreatePath({
+		AgentRadius = 2.5,
+		AgentHeight = 7,
+		AgentCanJump = false,
+		WaypointSpacing = 6,
+	})
 	local ok = pcall(function()
 		path:ComputeAsync(root.Position, dest)
 	end)
 	if ok and path.Status == Enum.PathStatus.Success then
-		brain.path = path:GetWaypoints()
+		local points = {}
+		for _, w in path:GetWaypoints() do
+			table.insert(points, w.Position)
+		end
+		brain.path = {}
+		for _, p in detour(points) do
+			table.insert(brain.path, { Position = p })
+		end
 		brain.pathIndex = 2
 	else
 		brain.path = nil
 	end
 	brain.pathGoal = dest
 	brain.pathTime = os.clock()
-end
-
--- Zona iniziale (Ranger Station) vietata: ogni destinazione dentro il raggio viene spostata sul bordo
-local KEEP_OUT = Config.MAP.STATION_RADIUS + 6
-local function keepOut(p: Vector3, radius: number?): Vector3
-	local r = radius or KEEP_OUT
-	local away = flat(p - Forest.STATION)
-	if away.Magnitude >= r then
-		return p
-	end
-	if away.Magnitude < 1 then
-		away = flat(root.Position - Forest.STATION)
-		if away.Magnitude < 1 then
-			away = Vector3.new(1, 0, 0)
-		end
-	end
-	local edge = Forest.STATION + away.Unit * r
-	return Forest.groundAt(edge.X, edge.Z)
 end
 
 local function moveTo(dest: Vector3, speed: number, direct: boolean?)
@@ -204,15 +265,7 @@ local function face(pos: Vector3)
 end
 
 local function avoidStation(goal: Vector3): Vector3
-	if Forest.inStation(goal, 12) then
-		local away = flat(goal - Forest.STATION)
-		if away.Magnitude < 1 then
-			away = Vector3.new(1, 0, 0)
-		end
-		local p = Forest.STATION + away.Unit * (Config.MAP.STATION_RADIUS + 18)
-		return Forest.groundAt(p.X, p.Z)
-	end
-	return goal
+	return keepOut(goal, 18)
 end
 
 ---------------------------------------------------------------------------------------------
@@ -321,7 +374,7 @@ local function pickTarget(survivors)
 		if s.player:GetAttribute("CarryingTape") then
 			score += 60
 		end
-		if Forest.inStation(s.root.Position) then
+		if safeZoneAt(s.root.Position, 0) then
 			score -= 150
 		end
 		if brain.target == s.player then
@@ -594,10 +647,11 @@ local function step(dt: number)
 		local d = (target.root.Position - root.Position).Magnitude
 		local direct = d < 35 and rayClear(root.Position + Vector3.new(0, 2, 0), target.root.Position, { target.char })
 		moveTo(predicted, R.CHASE_SPEED, direct)
-		if Forest.inStation(target.root.Position, 2) and flat(root.Position - Forest.STATION).Magnitude < KEEP_OUT + 6 then
-			-- il bersaglio si è rifugiato alla stazione: la creatura si ferma al bordo e se ne va
+		local refuge, refugeR = safeZoneAt(target.root.Position, 2)
+		if refuge and flat(root.Position - refuge.pos).Magnitude < refugeR + 12 then
+			-- il bersaglio si è rifugiato in un luogo sicuro: la creatura si ferma al bordo e se ne va
 			playSound(growlSound)
-			flee(Forest.STATION, range({ 6, 10 }))
+			flee(refuge.pos, range({ 6, 10 }))
 		elseif mode == "Finta" and d < 11 then
 			playSound(screechSound)
 			flee(target.root.Position, range({ 6, 10 }))
@@ -624,16 +678,17 @@ local function step(dt: number)
 		moveTo(b.goal, R.CHASE_SPEED)
 	end
 
-	-- barriera: se per qualsiasi motivo (percorso, spinta) entra nella zona iniziale, viene rimessa fuori
-	local inside = flat(root.Position - Forest.STATION).Magnitude
-	if inside < Config.MAP.STATION_RADIUS + 3 then
-		local edge = keepOut(root.Position, Config.MAP.STATION_RADIUS + 4)
+	-- barriera: se per qualsiasi motivo (percorso, spinta, comparsa) entra in una zona sicura, viene
+	-- rimessa fuori
+	local zone = safeZoneAt(root.Position, 3)
+	if zone then
+		local edge = keepOut(root.Position, 4)
 		root.CFrame = CFrame.new(edge + Vector3.new(0, RakeRig.ROOT_HEIGHT, 0)) * root.CFrame.Rotation
 		root.AssemblyLinearVelocity = Vector3.zero
 		b.goal = nil
 		b.pathGoal = nil
 		if mode ~= "Fuga" then
-			flee(Forest.STATION, range({ 5, 8 }))
+			flee(zone.pos, range({ 5, 8 }))
 		end
 	end
 
@@ -675,6 +730,7 @@ end
 
 function Rake.spawn(lair: Vector3)
 	Rake.despawn()
+	lair = keepOut(lair, 10)
 	local now = os.clock()
 	brain = {
 		state = "",
