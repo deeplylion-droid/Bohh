@@ -21,7 +21,8 @@ local hum: Humanoid, root: BasePart, head: BasePart
 local highlight: Highlight, capturePrompt: ProximityPrompt
 local footsteps: Sound?, callSound: Sound?, screechSound: Sound?
 local brain: { [string]: any } = {}
-local EYE_COLORS, rig
+local rig
+local jawSound: Sound?, growlSound: Sound?
 local revealed = false
 local loopToken = nil
 
@@ -33,27 +34,11 @@ local function setState(name: string)
 	if brain.state ~= name then
 		brain.state = name
 		ctx.state:SetAttribute("RakeState", name)
-		local color = EYE_COLORS[name]
-		if rig and color then
-			for _, eye in rig.eyes do
-				eye.Color = color
-			end
-			rig.glow.Color = color
-		end
 	end
 end
 
 ---------------------------------------------------------------------------------------------
 -- Modello
-
-EYE_COLORS = {
-	Inattiva = Color3.fromRGB(255, 240, 220),
-	Curiosa = Color3.fromRGB(255, 240, 220),
-	Territoriale = Color3.fromRGB(255, 170, 70),
-	Aggressiva = Color3.fromRGB(255, 40, 30),
-	Fuga = Color3.fromRGB(255, 240, 220),
-	Stordita = Color3.fromRGB(60, 60, 60),
-}
 
 local function build(pos: Vector3): Model
 	local m = Instance.new("Model")
@@ -97,6 +82,8 @@ local function build(pos: Vector3): Model
 	footsteps = Sfx.new("Steps", root, { Volume = 1.2, RollOffMaxDistance = 110, PlaybackSpeed = 0.8 })
 	callSound = Sfx.new("Call", head, { Volume = 2.2, RollOffMinDistance = 12, RollOffMaxDistance = 320 })
 	screechSound = Sfx.new("Screech", head, { Volume = 2.5, RollOffMinDistance = 10, RollOffMaxDistance = 220 })
+	jawSound = Sfx.new("JawClicks", head, { Volume = 1.8, RollOffMinDistance = 6, RollOffMaxDistance = 90 })
+	growlSound = Sfx.new("Growl", head, { Volume = 2, RollOffMinDistance = 8, RollOffMaxDistance = 130 })
 	return m
 end
 
@@ -434,6 +421,10 @@ local function step(dt: number)
 			end
 		end
 	elseif state == "Aggressiva" then
+		if b.lastGrowl == nil or now - b.lastGrowl > 12 then
+			b.lastGrowl = now
+			playSound(growlSound)
+		end
 		local t = target.root.Position
 		moveTo(t, R.CHASE_SPEED)
 		if (t - root.Position).Magnitude < R.ATTACK_RANGE and now - b.lastAttack > R.ATTACK_COOLDOWN then
@@ -451,11 +442,16 @@ local function step(dt: number)
 		ctx.evidence.dropNear(root.Position)
 	end
 	if state ~= "Inattiva" and now > b.nextCall then
-		b.nextCall = now + rng:NextNumber(35, 70)
-		if rng:NextNumber() < 0.35 then
+		b.nextCall = now + rng:NextNumber(18, 40)
+		local roll = rng:NextNumber()
+		if roll < 0.25 then
 			fakeCall()
-		else
+		elseif roll < 0.5 then
 			playSound(callSound)
+		elseif roll < 0.8 then
+			playSound(jawSound)
+		else
+			playSound(growlSound)
 		end
 	end
 

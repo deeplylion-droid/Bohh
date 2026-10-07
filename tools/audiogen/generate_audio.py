@@ -181,6 +181,65 @@ def torch_click(d=0.25):
     return norm(x, 0.7)
 
 
+def dart_shot(d=0.6):
+    t = t_axis(d)
+    x = band(noise(d), 600, 7000) * np.exp(-t * 28)
+    x += np.sin(2 * np.pi * 140 * t) * np.exp(-t * 40) * 0.8
+    x[int(0.12 * SR):] += band(noise(d - 0.12), 2000, 6000)[: len(x) - int(0.12 * SR)] * np.exp(-t[: len(x) - int(0.12 * SR)] * 50) * 0.3
+    return norm(reverb(x, 0.6, 0.15), 0.9)
+
+
+def jaw_clicks(d=1.6):
+    x = np.zeros(int(d * SR))
+    k = 0.0
+    while k < d - 0.05:
+        i = int(k * SR)
+        n = int(0.025 * SR)
+        x[i:i + n] += band(noise(0.025), 1500, 7000)[:n] * np.hanning(n) * rng.uniform(0.5, 1)
+        k += rng.uniform(0.03, 0.09) if rng.random() > 0.15 else rng.uniform(0.15, 0.3)
+    return norm(reverb(x, 0.9, 0.3), 0.85)
+
+
+def growl(d=2.2):
+    t = t_axis(d)
+    f0 = 70 + 15 * np.sin(2 * np.pi * 1.3 * t) + 8 * rng.standard_normal(len(t)).cumsum() / SR * 30
+    x = saw(f0, t) * (0.6 + 0.4 * np.sin(2 * np.pi * 23 * t) ** 2)
+    x += band(noise(d), 200, 1200) * 0.6
+    x = np.tanh(band(x, 60, 1800) * 3) * env(len(t), 0.25, 0.7)
+    return norm(reverb(x, 1.4, 0.3), 0.9)
+
+
+def bone_crack(d=0.45):
+    x = np.zeros(int(d * SR))
+    for k in range(rng.integers(3, 6)):
+        i = int(rng.uniform(0, 0.25) * SR)
+        n = int(0.04 * SR)
+        x[i:i + n] += band(noise(0.04), 900, 6000)[:n] * np.exp(-np.arange(n) / SR * 120)
+    return norm(x, 0.9)
+
+
+def watch_beep(d=0.3):
+    t = t_axis(d)
+    x = np.sin(2 * np.pi * 3100 * t) * ((t < 0.07) | ((t > 0.12) & (t < 0.19)))
+    return norm(x * np.exp(-t * 3), 0.5)
+
+
+def scope_zoom(d=0.4):
+    t = t_axis(d)
+    x = band(noise(d), 1500, 5000) * np.exp(-((t - 0.15) / 0.08) ** 2) * 0.6
+    x += np.sin(2 * np.pi * (900 + 600 * t) * t) * np.exp(-t * 12) * 0.2
+    return norm(x, 0.6)
+
+
+SEGMENTS2 = [
+    ("DartShot", dart_shot, 0.0, False),
+    ("JawClicks", jaw_clicks, 1.0, False),
+    ("Growl", growl, 3.0, False),
+    ("BoneCrack", bone_crack, 6.0, False),
+    ("WatchBeep", watch_beep, 7.0, False),
+    ("ScopeZoom", scope_zoom, 8.0, False),
+]
+
 SEGMENTS = [
     ("Screech", screech, 0.0, False),
     ("Call", call, 3.0, False),
@@ -237,8 +296,25 @@ def encode(samples, path):
                     "-c:a", "libvorbis", "-q:a", "5", path], input=pcm, check=True)
 
 
+def build_sheet(segments, total, path):
+    data = np.zeros(int(total * SR))
+    regions = {}
+    for name, fn, start, loop in segments:
+        clip = fn()
+        i = int(start * SR)
+        data[i:i + len(clip)] += clip
+        regions[name] = {"start": start, "length": round(len(clip) / SR, 3), "loop": loop}
+    encode(data, path)
+    return regions
+
+
 def main():
     os.makedirs(OUT, exist_ok=True)
+    if "--sheet2" in sys.argv:
+        regions2 = build_sheet(SEGMENTS2, 9.0, os.path.join(OUT, "Sfx2.ogg"))
+        json.dump(regions2, open(os.path.join(OUT, "regions2.json"), "w"), indent=1)
+        print("Creato Sfx2.ogg")
+        return
     total = 36.0
     sheet = np.zeros(int(total * SR))
     regions = {}

@@ -1,13 +1,17 @@
 -- Suoni dal foglio di effetti sintetizzato (Audio.luau): ogni effetto è un intervallo dello stesso file.
 local Audio = require(script.Parent:WaitForChild("Audio"))
+local Audio2 = require(script.Parent:WaitForChild("Audio2"))
 
 local Sfx = {}
 
 function Sfx.new(name: string, parent: Instance?, props: { [string]: any }?): Sound
-	local region = Audio.REGIONS[name]
+	local region, id = Audio.REGIONS[name], Audio.SFX
+	if not region then
+		region, id = Audio2.REGIONS[name], Audio2.SFX
+	end
 	local sound = Instance.new("Sound")
 	sound.Name = name
-	sound.SoundId = Audio.SFX
+	sound.SoundId = id
 	sound.RollOffMode = Enum.RollOffMode.InverseTapered
 	sound.RollOffMinDistance = 6
 	sound.RollOffMaxDistance = 120
@@ -43,7 +47,7 @@ function Sfx.at(name: string, position: Vector3, props: { [string]: any }?)
 	local sound = Sfx.new(name, holder, props)
 	holder.Parent = workspace
 	sound:Play()
-	local region = Audio.REGIONS[name]
+	local region = Audio.REGIONS[name] or Audio2.REGIONS[name]
 	task.delay((region and region.length or 3) / math.max(sound.PlaybackSpeed, 0.1) + 0.5, function()
 		holder:Destroy()
 	end)

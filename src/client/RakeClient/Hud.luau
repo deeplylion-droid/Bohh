@@ -3,6 +3,8 @@ local Players = game:GetService("Players")
 local Lighting = game:GetService("Lighting")
 local TweenService = game:GetService("TweenService")
 
+local Watch = require(script.Parent:WaitForChild("Watch"))
+
 local Hud = {}
 Hud.__index = Hud
 
@@ -167,21 +169,8 @@ function Hud.new(player: Player, state: Folder)
 	text(right, { LayoutOrder = 8, Text = "SQUADRA", Font = Enum.Font.GothamBold, TextSize = 12, TextColor3 = MUTED })
 	self.team = text(right, { LayoutOrder = 9, TextSize = 13, AutomaticSize = Enum.AutomaticSize.Y, RichText = true })
 
-	-- Sinistra in basso: vitali e attrezzatura
-	local left = panel(gui, {
-		AnchorPoint = Vector2.new(0, 1),
-		Position = UDim2.new(0, 12, 1, -100),
-		Size = UDim2.new(0, 230, 0, 0),
-		AutomaticSize = Enum.AutomaticSize.Y,
-	})
-	padding(left, 10)
-	make("UIListLayout", { Padding = UDim.new(0, 3), SortOrder = Enum.SortOrder.LayoutOrder }, left)
-	self.stamina = bar(left, "Stamina", Color3.fromRGB(110, 180, 110), 1)
-	self.fear = bar(left, "Paura", Color3.fromRGB(150, 80, 170), 2)
-	self.torch = bar(left, "Torcia", Color3.fromRGB(230, 200, 110), 3)
-	self.nv = bar(left, "Visore notturno", Color3.fromRGB(90, 200, 120), 4)
-	self.gear = text(left, { LayoutOrder = 5, TextSize = 13, AutomaticSize = Enum.AutomaticSize.Y, RichText = true })
-	self.rank = text(left, { LayoutOrder = 6, TextSize = 12, TextColor3 = MUTED })
+	-- Sinistra in basso: smartwatch con vitali e attrezzatura
+	self.watch = Watch.new(gui)
 
 	-- Centro: messaggi grandi (briefing, braccato)
 	self.center = text(gui, {
@@ -272,8 +261,7 @@ local STATUS_TEXT = {
 -- vitals: { stamina, fear, nv, nvOn, exhausted, panic }
 function Hud:update(vitals)
 	local player, state = self.player, self.state
-	setBar(self.stamina, vitals.stamina / 100, vitals.exhausted and "· fiatone!" or nil)
-	setBar(self.fear, vitals.fear / 100, vitals.panic and "· PANICO" or nil)
+	self.watch:update(vitals, player)
 	self.vignette.GroupTransparency = 1 - math.clamp((vitals.fear - 30) / 70, 0, 1) * 0.85
 
 	local now = os.clock()
@@ -282,10 +270,6 @@ function Hud:update(vitals)
 	end
 	self.lastUpdate = now
 
-	local Config = vitals.config
-	local torch = player:GetAttribute("TorchBattery") or 0
-	setBar(self.torch, torch / Config.EQUIPMENT.TORCH_BATTERY, player:GetAttribute("TorchOn") and "· accesa" or nil)
-	setBar(self.nv, vitals.nv, vitals.nvOn and "· attivo" or "[N]")
 
 	local phase = state:GetAttribute("Phase") or "Attesa"
 	local timeLeft = state:GetAttribute("TimeLeft") or 0
@@ -318,22 +302,6 @@ function Hud:update(vitals)
 		table.insert(lines, ("%s %s"):format(STATUS_TEXT[p:GetAttribute("Status") or "Lobby"] or "", p.DisplayName))
 	end
 	self.team.Text = table.concat(lines, "\n")
-
-	local camType = player:GetAttribute("CamType") or "Fissa"
-	local kits = {}
-	for _, t in Config.CAMERAS.TYPES do
-		local n = player:GetAttribute("Kits_" .. t) or 0
-		table.insert(kits, t == camType and ("<b>%s %d</b>"):format(t, n) or ("%s %d"):format(t, n))
-	end
-	self.gear.Text = ("Dardi: <b>%d</b>   Campioni: <b>%d</b>\nCamere [R]: %s"):format(
-		player:GetAttribute("Darts") or 0,
-		player:GetAttribute("Samples") or 0,
-		table.concat(kits, " · ")
-	)
-	local stats = player:FindFirstChild("leaderstats")
-	local rank = stats and stats:FindFirstChild("Rango")
-	local level = stats and stats:FindFirstChild("Livello")
-	self.rank.Text = rank and level and ("%s · Livello %d · %d XP"):format(rank.Value, level.Value, player:GetAttribute("XP") or 0) or ""
 
 	-- Messaggio centrale
 	if status == "Braccato" then

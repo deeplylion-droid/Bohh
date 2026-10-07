@@ -37,9 +37,29 @@ function Models.load(): boolean
 	else
 		warn("[Modelli] Impossibile caricare i modelli 3D, uso forme semplici: " .. tostring(pack))
 	end
+	-- corpo della creatura (mesh con scheletro, asset separato)
+	local okBody, bodyPack = pcall(function()
+		return game:GetService("InsertService"):LoadAsset(require(script.Parent:WaitForChild("RakeAsset")).ASSET_ID)
+	end)
+	if okBody and bodyPack then
+		local body = bodyPack:FindFirstChildWhichIsA("MeshPart", true)
+		if body then
+			body.Anchored = true
+			body.CanCollide = false
+			body.CanTouch = false
+			body.Parent = f
+		end
+		bodyPack:Destroy()
+	else
+		warn("[Modelli] Impossibile caricare la creatura: " .. tostring(bodyPack))
+	end
 	f.Parent = ReplicatedStorage
 	folder = f
 	return ok
+end
+
+function Models.template(name: string): Instance?
+	return folder and folder:FindFirstChild(name)
 end
 
 function Models.info(name: string)

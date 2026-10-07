@@ -296,6 +296,7 @@ function Team.fireDart(player: Player, targetPos: any)
 
 	local muzzle = gun:FindFirstChild("Volata") :: BasePart?
 	local from = muzzle and muzzle.Position or head.Position
+	Sfx.at("DartShot", from, { Volume = 1.2, RollOffMaxDistance = 90 })
 	local length = (hitPos - from).Magnitude
 	local tracer = make("Part", workspace, {
 		Size = Vector3.new(0.08, 0.08, length),

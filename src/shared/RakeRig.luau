@@ -1,6 +1,8 @@
--- Scheletro di The Rake costruito con le mesh degli arti e giunture Motor6D (animate dai client).
--- Usato dal server per la creatura vera e dai client per le allucinazioni.
+-- Corpo di The Rake: radice invisibile (HumanoidRootPart) più la mesh con scheletro (40 ossa),
+-- animata dai client tramite Bone.Transform. Usato dal server per la creatura vera e dai client
+-- per le allucinazioni (sagoma nera ancorata).
 local Models = require(script.Parent:WaitForChild("Models"))
+local RakeAsset = require(script.Parent:WaitForChild("RakeAsset"))
 
 local RakeRig = {}
 
@@ -8,96 +10,50 @@ local RakeRig = {}
 RakeRig.HIP_HEIGHT = 2.7
 RakeRig.ROOT_HEIGHT = 3.7
 
-RakeRig.MOTORS = { "Waist", "Neck", "LShoulder", "RShoulder", "LElbow", "RElbow", "LHip", "RHip", "LKnee", "RKnee" }
-
-local function rad(d: number): number
-	return math.rad(d)
-end
-
 -- rootCF: CFrame del centro della radice. opts.ghost = sagoma nera ancorata (allucinazione).
 function RakeRig.build(model: Model, rootCF: CFrame, opts: { ghost: boolean? }?)
-	local ghost = opts and opts.ghost
+	local ghost = opts and opts.ghost or false
 	local root = Instance.new("Part")
 	root.Name = "HumanoidRootPart"
 	root.Size = Vector3.new(2, 2, 1)
 	root.Transparency = 1
 	root.CFrame = rootCF
-	root.Anchored = ghost or false
+	root.Anchored = ghost
 	root.CanCollide = not ghost
 	root.CanQuery = not ghost
 	root.Parent = model
 
-	local parts = {}
-	local function attach(meshName: string, partName: string, parent: BasePart, jointCF: CFrame, motorName: string): BasePart
-		local part = Models.mesh(meshName, jointCF, 1, {
-			Name = partName,
-			Anchored = false,
-			Massless = true,
-			CanCollide = false,
-			CanTouch = false,
-			CanQuery = not ghost,
-			CastShadow = true,
-		}, model)
-		if ghost then
-			(part :: any).TextureID = ""
-			part.Color = Color3.fromRGB(8, 8, 8)
-		end
-		local motor = Instance.new("Motor6D")
-		motor.Name = motorName
-		motor.Part0 = parent
-		motor.Part1 = part
-		motor.C0 = parent.CFrame:ToObjectSpace(jointCF)
-		motor.C1 = part.CFrame:ToObjectSpace(jointCF)
-		motor.Parent = part
-		parts[partName] = part
-		return part
+	local template = Models.template("Rake_Body")
+	local body: BasePart
+	if template then
+		body = (template :: BasePart):Clone()
+	else
+		body = Instance.new("Part")
+		body.Color = Color3.fromRGB(190, 184, 172)
+		body.Material = Enum.Material.SmoothPlastic
 	end
-
-	local torso = attach("Rake_Torso", "Torso", root, rootCF, "Waist")
-	local neck = rootCF * CFrame.new(0, 2.85, -1.15) * CFrame.Angles(rad(-8), 0, 0)
-	local head = attach("Rake_Head", "Head", torso, neck, "Neck")
-	for _, side in { -1, 1 } do
-		local prefix = side < 0 and "L" or "R"
-		local shoulder = rootCF * CFrame.new(side * 0.85, 2.7, -1.05) * CFrame.Angles(rad(18), 0, rad(side * 5))
-		local upper = attach("Rake_UpperArm", prefix .. "UpperArm", torso, shoulder, prefix .. "Shoulder")
-		local elbow = shoulder * CFrame.new(0, -2.35, 0) * CFrame.Angles(rad(28), 0, 0)
-		attach("Rake_Forearm", prefix .. "Forearm", upper, elbow, prefix .. "Elbow")
-		local hip = rootCF * CFrame.new(side * 0.45, -0.15, 0.1) * CFrame.Angles(rad(30), 0, rad(side * 3))
-		local thigh = attach("Rake_Thigh", prefix .. "Thigh", root, hip, prefix .. "Hip")
-		local knee = hip * CFrame.new(0, -1.95, 0) * CFrame.Angles(rad(-63), 0, 0)
-		attach("Rake_Shin", prefix .. "Shin", thigh, knee, prefix .. "Knee")
+	body.Name = "Body"
+	body.Size = RakeAsset.size
+	body.CFrame = rootCF * CFrame.new(RakeAsset.center - Vector3.new(0, RakeRig.ROOT_HEIGHT, 0))
+	body.Anchored = ghost
+	body.CanCollide = false
+	body.CanTouch = false
+	body.CanQuery = not ghost
+	body.Massless = true
+	body.CastShadow = true
+	if ghost then
+		(body :: any).TextureID = ""
+		body.Color = Color3.fromRGB(6, 6, 6)
 	end
-
-	-- Occhi luminosi (colore cambiato in base allo stato)
-	local eyes = {}
-	for _, side in { -1, 1 } do
-		local eye = Instance.new("Part")
-		eye.Name = "Occhio"
-		eye.Shape = Enum.PartType.Ball
-		eye.Size = Vector3.new(0.17, 0.17, 0.17)
-		eye.Material = Enum.Material.Neon
-		eye.Color = Color3.fromRGB(255, 240, 220)
-		eye.CanCollide = false
-		eye.CanQuery = false
-		eye.CanTouch = false
-		eye.Massless = true
-		eye.CFrame = neck * CFrame.new(side * 0.17, 0.92, -1.0)
+	body.Parent = model
+	if not ghost then
 		local weld = Instance.new("WeldConstraint")
-		weld.Part0 = head
-		weld.Part1 = eye
-		weld.Parent = eye
-		eye.Parent = model
-		table.insert(eyes, eye)
+		weld.Part0 = root
+		weld.Part1 = body
+		weld.Parent = body
 	end
-	local glow = Instance.new("PointLight")
-	glow.Name = "Bagliore"
-	glow.Range = 7
-	glow.Brightness = 1.2
-	glow.Color = Color3.fromRGB(255, 230, 210)
-	glow.Parent = eyes[1]
-
 	model.PrimaryPart = root
-	return { root = root, head = head, torso = torso, eyes = eyes, glow = glow, parts = parts }
+	return { root = root, body = body, head = body }
 end
 
 return RakeRig

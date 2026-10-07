@@ -15,6 +15,8 @@ local Hud = require(script:WaitForChild("Hud"))
 local Tablet = require(script:WaitForChild("Tablet"))
 local Ambience = require(script:WaitForChild("Ambience"))
 local RakeAnimator = require(script:WaitForChild("RakeAnimator"))
+local Scope = require(script:WaitForChild("Scope"))
+local CamFeed = require(script:WaitForChild("CamFeed"))
 
 local player = Players.LocalPlayer
 local mouse = player:GetMouse()
@@ -27,7 +29,10 @@ local NV_MAX = Config.EQUIPMENT.NIGHT_VISION_BATTERY
 Models.load()
 local hud = Hud.new(player, state)
 local tablet = Tablet.new(player, state, remotes)
-RakeAnimator.start()
+local scope = Scope.new(player)
+scope:bind()
+RakeAnimator.start(state)
+CamFeed.start(player)
 
 remotes.Notify.OnClientEvent:Connect(function(message)
 	hud:notify(message)
@@ -100,6 +105,7 @@ local function hookTool(tool: Instance)
 		end)
 	elseif tool.Name == "Tablet" then
 		tool.Activated:Connect(function()
+			scope:exit()
 			tablet:open()
 		end)
 	end
@@ -168,8 +174,35 @@ local function hallucinate()
 	local facing = Vector3.new(camera.CFrame.Position.X, ground.Y, camera.CFrame.Position.Z)
 	local ghost = Instance.new("Model")
 	ghost.Name = "Allucinazione"
-	RakeRig.build(ghost, CFrame.lookAt(ground, facing) * CFrame.new(0, RakeRig.ROOT_HEIGHT, 0), { ghost = true })
+	local rig = RakeRig.build(ghost, CFrame.lookAt(ground, facing) * CFrame.new(0, RakeRig.ROOT_HEIGHT, 0), { ghost = true })
+	-- posa storta: testa piegata, braccia aperte, mascella spalancata (ossa ruotate di 180 gradi)
+	for name, cf in {
+		Head = CFrame.Angles(-0.2, 0.3, -1.1),
+		Jaw = CFrame.Angles(0.7, 0, 0),
+		ShoulderL = CFrame.Angles(-1.2, 0, 0.5),
+		ShoulderR = CFrame.Angles(-0.4, 0, -0.9),
+	} do
+		local bone = rig.body:FindFirstChild(name, true)
+		if bone and bone:IsA("Bone") then
+			bone.Transform = cf
+		end
+	end
 	ghost.Parent = workspace
+	local headBone = rig.body:FindFirstChild("Head", true)
+	if headBone and headBone:IsA("Bone") then
+		for _, side in { -1, 1 } do
+			local eye = Instance.new("Part")
+			eye.Shape = Enum.PartType.Ball
+			eye.Size = Vector3.new(0.12, 0.12, 0.12)
+			eye.Material = Enum.Material.Neon
+			eye.Color = Color3.fromRGB(255, 245, 230)
+			eye.Anchored = true
+			eye.CanCollide = false
+			eye.CanQuery = false
+			eye.CFrame = headBone.TransformedWorldCFrame * CFrame.new(-side * 0.15, 0.34, 0.66)
+			eye.Parent = ghost
+		end
+	end
 	Debris:AddItem(ghost, 0.8)
 	whisperAt(ground + Vector3.new(0, 5, 0))
 end
@@ -312,7 +345,12 @@ RunService.RenderStepped:Connect(function(dt)
 		spectate()
 	end
 
+	scope.sway = math.clamp(fear / 100 + (exhausted and 0.6 or 0) + (sprinting and 0.4 or 0), 0, 1.5)
 	updateAmbience(dt, { exhausted = exhausted, panic = panic })
+	local closeness = 0
+	if root and hrp then
+		closeness = math.clamp(1 - (root.Position - hrp.Position).Magnitude / 60, 0, 1)
+	end
 	hud:update({
 		config = Config,
 		stamina = stamina,
@@ -321,5 +359,8 @@ RunService.RenderStepped:Connect(function(dt)
 		nvOn = nvOn,
 		exhausted = exhausted,
 		panic = panic,
+		closeness = closeness,
+		sprinting = sprinting,
+		dt = dt,
 	})
 end)

@@ -651,6 +651,9 @@ local function buildStation(parent: Instance)
 			TextColor3 = Color3.fromRGB(140, 255, 180),
 		})
 		make("PointLight", screen, { Range = 7, Brightness = 0.5, Color = Color3.fromRGB(80, 220, 150) })
+		-- i client ci mostrano le anteprime delle telecamere (CamFeed)
+		screen:SetAttribute("Index", i + 2)
+		CollectionService:AddTag(screen, "MonitorScreen")
 	end
 	local board = make("Part", m, {
 		Size = Vector3.new(9, 5, 0.2),

@@ -33,7 +33,22 @@ def upload(name, path):
     sys.exit("Timeout")
 
 
+def main_sheet2():
+    sfx2 = upload("TheRakeSfx2", os.path.join(AUDIO, "Sfx2.ogg"))
+    regions = json.load(open(os.path.join(AUDIO, "regions2.json")))
+    lines = ["-- Generato da tools/audiogen/upload_audio.py --sheet2: non modificare a mano.",
+             "-- Secondo foglio di effetti (fucile, creatura, orologio, mirino).", "return {",
+             '\tSFX = "rbxassetid://%s",' % sfx2, "\tREGIONS = {"]
+    for name, r in regions.items():
+        lines.append("\t\t%s = { start = %g, length = %g, loop = %s }," % (name, r["start"], r["length"], "true" if r["loop"] else "false"))
+    lines += ["\t},", "}", ""]
+    open(os.path.join(ROOT, "src", "shared", "Audio2.luau"), "w").write("\n".join(lines))
+    print("Scritto src/shared/Audio2.luau")
+
+
 def main():
+    if "--sheet2" in sys.argv:
+        return main_sheet2()
     sfx = upload("TheRakeSfx", os.path.join(AUDIO, "Sfx.ogg"))
     amb = upload("TheRakeAmbience", os.path.join(AUDIO, "Ambience.ogg"))
     regions = json.load(open(os.path.join(AUDIO, "regions.json")))
