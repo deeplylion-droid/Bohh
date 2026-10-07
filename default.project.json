@@ -1,21 +1,34 @@
 {
-  "name": "CoinRush",
+  "name": "TheRake",
   "tree": {
     "$className": "DataModel",
+    "Workspace": {
+      "$className": "Workspace",
+      "$properties": {
+        "StreamingEnabled": false
+      }
+    },
+    "Lighting": {
+      "$className": "Lighting"
+    },
     "ReplicatedStorage": {
+      "$className": "ReplicatedStorage",
       "Shared": {
         "$path": "src/shared"
       }
     },
     "ServerScriptService": {
-      "GameMode": {
-        "$path": "src/server/GameMode"
+      "$className": "ServerScriptService",
+      "RakeHunt": {
+        "$path": "src/server/RakeHunt"
       }
     },
     "StarterPlayer": {
+      "$className": "StarterPlayer",
       "StarterPlayerScripts": {
-        "HUD": {
-          "$path": "src/client/HUD.client.luau"
+        "$className": "StarterPlayerScripts",
+        "RakeClient": {
+          "$path": "src/client/RakeClient"
         }
       }
     }

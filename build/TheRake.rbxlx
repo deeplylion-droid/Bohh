@@ -1,0 +1,4144 @@
+<roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4"><Item class="Workspace" referent="RBX1"><Properties><string name="Name">Workspace</string><bool name="StreamingEnabled">false</bool></Properties></Item><Item class="Lighting" referent="RBX2"><Properties><string name="Name">Lighting</string></Properties></Item><Item class="ReplicatedStorage" referent="RBX5"><Properties><string name="Name">ReplicatedStorage</string></Properties><Item class="Folder" referent="RBX4"><Properties><string name="Name">Shared</string></Properties><Item class="ModuleScript" referent="RBX3"><Properties><string name="Name">Config</string><ProtectedString name="Source"><![CDATA[-- Impostazioni di "The Rake: Caccia nei Boschi". Modifica questi valori per bilanciare il gioco.
+-- Il modulo è condiviso: lo leggono sia il server sia i client.
+return {
+	-- Giocatori necessari per iniziare (il gioco è pensato per 1-8: imposta il massimo in Game Settings)
+	MIN_PLAYERS = 1,
+
+	-- Durate in secondi
+	BRIEFING = 30,
+	NIGHT_DURATION = 600, -- la notte va dalle 20:00 alle 06:00 in questo tempo reale
+	DEBRIEF = 15,
+
+	NIGHT_START_HOUR = 20,
+	NIGHT_HOURS = 10,
+
+	-- "Ricognizione", "Caccia", "Sopravvivenza", "Reperto" oppure nil per sceglierlo a caso
+	FORCED_OBJECTIVE = nil,
+	RECON_CAMERAS = 4, -- telecamere attive richieste dall'obiettivo Ricognizione
+	RECON_EVIDENCE = 3, -- prove richieste dall'obiettivo Ricognizione
+
+	MAP = {
+		SIZE = 800, -- lato del bosco in stud, centrato nell'origine
+		TREE_COUNT = 520,
+		PATH_WIDTH = 8,
+		STATION_RADIUS = 30, -- area sicura (finché la creatura non è Aggressiva)
+		-- Punti di interesse fissi; il primo è la Ranger Station (spawn, sala di controllo, laboratorio)
+		POIS = {
+			{ name = "Ranger Station", pos = Vector3.new(0, 0, 0), radius = 34 },
+			{ name = "Torre di avvistamento", pos = Vector3.new(210, 0, -230), radius = 18 },
+			{ name = "Campeggio abbandonato", pos = Vector3.new(-230, 0, -210), radius = 36 },
+			{ name = "Lago", pos = Vector3.new(-185, 0, 160), radius = 16 },
+			{ name = "Capanno", pos = Vector3.new(-40, 0, 300), radius = 18 },
+			{ name = "Miniera", pos = Vector3.new(250, 0, 230), radius = 45 },
+		},
+		LAKE = { center = Vector3.new(-235, 0, 205), radius = 55 },
+	},
+
+	-- Meteo estratto a ogni notte (weight = probabilità relativa)
+	WEATHER = {
+		{ name = "Sereno", weight = 4, fogEnd = 170, cameraNoise = 0 },
+		{ name = "Nebbia", weight = 3, fogEnd = 70, cameraNoise = 0.25 },
+		{ name = "Pioggia", weight = 2, fogEnd = 110, cameraNoise = 0.4 },
+	},
+
+	PLAYER = {
+		WALK_SPEED = 12,
+		SPRINT_SPEED = 20,
+		STAMINA_DRAIN = 22, -- al secondo mentre corri (stamina massima 100)
+		STAMINA_REGEN = 12,
+		DOWNED_TIME = 30, -- secondi per essere rianimati prima di essere eliminati
+		REVIVE_TIME = 3,
+		FEAR_SLOWDOWN = 0.7, -- moltiplicatore di velocità con la Paura al massimo
+	},
+
+	EQUIPMENT = {
+		DARTS = 6,
+		DART_RANGE = 160,
+		DART_COOLDOWN = 1.2,
+		TORCH_BATTERY = 180, -- secondi di luce
+		NIGHT_VISION_BATTERY = 60,
+		CAMERA_KITS = { Fissa = 2, IR = 1, Motorizzata = 1, Trappola = 1 },
+	},
+
+	CAMERAS = {
+		TYPES = { "Fissa", "IR", "Motorizzata", "Trappola" },
+		BATTERY = 300,
+		VIEW_RANGE = 70,
+		FOV = 70, -- gradi
+		NIGHT_RANGE_FACTOR = 0.45, -- portata delle camere non IR di notte
+		TRAP_RANGE = 35,
+		TRAP_COOLDOWN = 20,
+		TRAP_TRACKING = 10,
+		DISTORT_RANGE = 45, -- sotto questa distanza dalla creatura il feed si corrompe
+		COVERAGE_CELL = 25,
+	},
+
+	EVIDENCE = {
+		START_COUNT = 8,
+		MAX_ACTIVE = 16,
+		DROP_INTERVAL = 25, -- ogni quanto la creatura lascia una traccia
+		TRACKING = { Impronte = 8, Graffi = 8, Peli = 6, Sangue = 6, Carcassa = 12 },
+		NEEDS_LAB = { Peli = true, Sangue = true }, -- vanno analizzati alla Ranger Station
+		LAB_MULTIPLIER = 3,
+		LAB_TIME = 12,
+		FAKE_CHANCE = 0.2, -- probabilità che una traccia sia un depistaggio
+		SIGHTING_RATE = 3, -- tracciamento al secondo mentre una camera inquadra la creatura
+		REVEAL = { ZONE = 30, AREA = 65, EXACT = 100 }, -- soglie della barra di Tracciamento
+	},
+
+	RAKE = {
+		WALK_SPEED = 11,
+		STALK_SPEED = 16,
+		CHASE_SPEED = 23,
+		ATTACK_RANGE = 6,
+		ATTACK_COOLDOWN = 4,
+		AGGRESSION_PER_SECOND = 0.12, -- crescita di base, aumenta col passare della notte
+		THRESHOLDS = { Curiosa = 25, Territoriale = 50, Aggressiva = 78 },
+		LIGHT_RANGE = 35, -- una torcia puntata da questa distanza la mette in fuga
+		LIGHT_ANGLE = 30,
+		LIGHT_TO_FLEE = 1.5, -- secondi di luce diretta necessari
+		FLEE_TIME = 8,
+		DARTS_TO_KNOCKOUT = 4,
+		SEDATION_DECAY = 0.01, -- dardi "smaltiti" al secondo
+		KNOCKOUT_TIME = 25,
+		CAPTURE_TIME = 5,
+	},
+
+	XP = {
+		EVIDENCE = 15,
+		CAMERA_SIGHTING = 10,
+		REVIVE = 30,
+		CAPTURE = 150,
+		SURVIVE = 60,
+		WIN = 100,
+		LOSS_MULTIPLIER = 0.5, -- XP dimezzati in caso di sconfitta
+	},
+
+	RANKS = {
+		{ name = "Novizio", xp = 0 },
+		{ name = "Ricercatore", xp = 500 },
+		{ name = "Cacciatore", xp = 1500 },
+		{ name = "Veterano", xp = 4000 },
+		{ name = "Leggenda", xp = 10000 },
+	},
+
+	-- Suoni (lascia "" per disattivarli). Puoi sostituirli con audio dal Creator Store:
+	-- incolla "rbxassetid://NUMERO". Sono suoni 3D: si sente da che direzione arrivano.
+	SOUNDS = {
+		RAKE_STEPS = "rbxasset://sounds/action_footsteps_plastic.mp3",
+		RAKE_CALL = "", -- verso della creatura (consigliato: un urlo/stridio dal Creator Store)
+		RAKE_SCREECH = "", -- urlo durante l'attacco
+		TRAP_SNAP = "rbxasset://sounds/electronicpingshort.wav",
+	},
+}
+]]></ProtectedString></Properties></Item></Item></Item><Item class="ServerScriptService" referent="RBX14"><Properties><string name="Name">ServerScriptService</string></Properties><Item class="Script" referent="RBX13"><Properties><string name="Name">RakeHunt</string><ProtectedString name="Source"><![CDATA[-- The Rake: Caccia nei Boschi — ciclo della partita.
+-- Attesa -> Briefing (alla Ranger Station) -> Notte (caccia) -> Debriefing (XP e ranghi).
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Lighting = game:GetService("Lighting")
+
+local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+local Forest = require(script.Forest)
+local Rake = require(script.Rake)
+local Cameras = require(script.Cameras)
+local Evidence = require(script.Evidence)
+local Team = require(script.Team)
+local Objectives = require(script.Objectives)
+local Progression = require(script.Progression)
+
+Players.CharacterAutoLoads = false
+
+-- Stato condiviso letto dai client (attributi)
+local state = Instance.new("Folder")
+state.Name = "RakeState"
+state.Parent = ReplicatedStorage
+
+local remotes = Instance.new("Folder")
+remotes.Name = "RakeRemotes"
+for _, name in { "Notify", "Debrief", "OpenTablet", "FireDart", "CycleCameraType", "RotateCamera" } do
+	local remote = Instance.new("RemoteEvent")
+	remote.Name = name
+	remote.Parent = remotes
+end
+remotes.Parent = ReplicatedStorage
+
+local world = Instance.new("Folder")
+world.Name = "RakeHunt"
+world.Parent = workspace
+
+local rng = Random.new()
+
+local ctx = {
+	state = state,
+	remotes = remotes,
+	world = world,
+	round = { active = false, captured = false },
+	stats = {},
+	weather = Config.WEATHER[1],
+	aggressionMultiplier = 1,
+	nightProgress = 0,
+	forest = Forest,
+	rake = Rake,
+	cameras = Cameras,
+	evidence = Evidence,
+	team = Team,
+	objectives = Objectives,
+}
+
+function ctx.notify(text: string, player: Player)
+	remotes.Notify:FireClient(player, text)
+end
+
+function ctx.notifyAll(text: string)
+	remotes.Notify:FireAllClients(text)
+end
+
+function ctx.isNight(): boolean
+	return Lighting.ClockTime >= 19.5 or Lighting.ClockTime < 6
+end
+
+function ctx.credit(userId: number?, field: string)
+	local s = userId and ctx.stats[userId]
+	if s then
+		s[field] = (s[field] or 0) + 1
+	end
+end
+
+local revealed = { zone = false, area = false, exact = false }
+local nextAreaUpdate, nextPulse = 0, 0
+local areaMarker: BasePart? = nil
+
+function ctx.setLastSeen(pos: Vector3)
+	state:SetAttribute("LastSeenX", pos.X)
+	state:SetAttribute("LastSeenZ", pos.Z)
+	state:SetAttribute("LastSeenTime", workspace:GetServerTimeNow())
+end
+
+function ctx.addTracking(amount: number)
+	if not ctx.round.active then
+		return
+	end
+	local t = math.clamp((state:GetAttribute("Tracking") or 0) + amount, 0, 100)
+	state:SetAttribute("Tracking", t)
+	local R = Config.EVIDENCE.REVEAL
+	if t >= R.ZONE and not revealed.zone then
+		revealed.zone = true
+		local zone = Forest.biomeAt(ctx.round.lair)
+		state:SetAttribute("ZoneHint", zone)
+		ctx.notifyAll(("🗺 Tracciamento %d%%: la tana della creatura è nella zona \"%s\"."):format(R.ZONE, zone))
+	end
+	if t >= R.AREA and not revealed.area then
+		revealed.area = true
+		nextAreaUpdate = 0
+		ctx.notifyAll(("🗺 Tracciamento %d%%: l'area di caccia è segnata in rosso sulla mappa e nel bosco."):format(R.AREA))
+	end
+	if t >= R.EXACT and not revealed.exact then
+		revealed.exact = true
+		nextPulse = 0
+		ctx.notifyAll("🎯 Tracciamento completo: la posizione della creatura viene rivelata a intervalli!")
+	end
+end
+
+function ctx.onCapture(player: Player)
+	ctx.round.captured = true
+	ctx.credit(player.UserId, "capture")
+	ctx.notifyAll(("🏆 %s ha catturato The Rake!"):format(player.DisplayName))
+end
+
+for _, module in { Rake, Cameras, Evidence, Team, Objectives } do
+	module.init(ctx)
+end
+
+---------------------------------------------------------------------------------------------
+-- Mappa e luci
+
+Forest.build(world)
+Forest.regenerate(rng)
+
+local prompts = Forest.stationPrompts
+prompts.control.Triggered:Connect(function(player)
+	remotes.OpenTablet:FireClient(player)
+end)
+prompts.supply.Triggered:Connect(function(player)
+	Team.supply(player)
+end)
+prompts.lab.Triggered:Connect(function(player)
+	Evidence.analyze(player)
+end)
+
+remotes.FireDart.OnServerEvent:Connect(function(player, targetPos)
+	Team.fireDart(player, targetPos)
+end)
+remotes.CycleCameraType.OnServerEvent:Connect(function(player)
+	Team.cycleCamType(player)
+end)
+remotes.RotateCamera.OnServerEvent:Connect(function(player, id, dir)
+	Cameras.rotate(player, id, dir)
+end)
+
+Lighting.GlobalShadows = true
+Lighting.Ambient = Color3.fromRGB(14, 14, 20)
+Lighting.OutdoorAmbient = Color3.fromRGB(30, 32, 42)
+Lighting.FogColor = Color3.fromRGB(8, 10, 16)
+Lighting.FogStart = 0
+
+local function setDusk()
+	Lighting.ClockTime = 18.8
+	Lighting.Brightness = 1
+	Lighting.FogEnd = 300
+end
+
+local function applyNight(progress: number)
+	local hour = Config.NIGHT_START_HOUR + progress * Config.NIGHT_HOURS
+	Lighting.ClockTime = hour % 24
+	-- Verso l'alba la luce torna e la nebbia si dirada
+	local dawn = math.clamp((progress - 0.9) / 0.1, 0, 1)
+	Lighting.Brightness = 0.25 + dawn * 1.5
+	Lighting.FogEnd = ctx.weather.fogEnd + dawn * 300
+end
+
+setDusk()
+
+---------------------------------------------------------------------------------------------
+-- Giocatori
+
+local function setPhase(name: string)
+	state:SetAttribute("Phase", name)
+end
+
+local function newStats(player: Player)
+	ctx.stats[player.UserId] = { name = player.DisplayName, evidence = 0, sightings = 0, revives = 0, capture = 0 }
+end
+
+local function onPlayerAdded(player: Player)
+	player.CharacterAdded:Connect(function(char)
+		Team.watchCharacter(player, char)
+	end)
+	Progression.load(player)
+	local phase = state:GetAttribute("Phase")
+	if phase == "Briefing" or phase == "Notte" then
+		-- Chi entra a partita in corso si unisce alla squadra alla stazione
+		newStats(player)
+		Team.spawn(player, true)
+		ctx.notifyAll(("%s si è unito alla spedizione."):format(player.DisplayName))
+	else
+		Team.spawn(player, false)
+	end
+end
+
+Players.PlayerAdded:Connect(onPlayerAdded)
+for _, player in Players:GetPlayers() do
+	task.spawn(onPlayerAdded, player)
+end
+
+Players.PlayerRemoving:Connect(function(player)
+	Objectives.onDowned(player)
+	Progression.release(player)
+end)
+
+---------------------------------------------------------------------------------------------
+-- Ciclo della partita
+
+local function countdown(seconds: number)
+	for t = seconds, 1, -1 do
+		state:SetAttribute("TimeLeft", t)
+		task.wait(1)
+	end
+	state:SetAttribute("TimeLeft", 0)
+end
+
+local function chooseWeather()
+	local total = 0
+	for _, w in Config.WEATHER do
+		total += w.weight
+	end
+	local roll = rng:NextNumber(0, total)
+	for _, w in Config.WEATHER do
+		roll -= w.weight
+		if roll <= 0 then
+			return w
+		end
+	end
+	return Config.WEATHER[1]
+end
+
+local function resetState()
+	for name, value in {
+		Tracking = 0,
+		Evidence = 0,
+		Coverage = 0,
+		CamerasActive = 0,
+		ZoneHint = "",
+		HintX = 0,
+		HintZ = 0,
+		HintR = 0,
+		LastSeenTime = 0,
+		RakeState = "Assente",
+		ObjectiveProgress = "",
+	} do
+		state:SetAttribute(name, value)
+	end
+	revealed = { zone = false, area = false, exact = false }
+	if areaMarker then
+		areaMarker:Destroy()
+		areaMarker = nil
+	end
+end
+
+local function updateReveal()
+	local now = os.clock()
+	local pos = Rake.position()
+	if not pos then
+		return
+	end
+	if revealed.area and now >= nextAreaUpdate then
+		nextAreaUpdate = now + 20
+		local center = Forest.randomGround(rng, pos, 0, 35)
+		local radius = 70
+		state:SetAttribute("HintX", center.X)
+		state:SetAttribute("HintZ", center.Z)
+		state:SetAttribute("HintR", radius)
+		if not areaMarker then
+			areaMarker = Forest.make("Part", world, {
+				Name = "AreaDiCaccia",
+				Shape = Enum.PartType.Cylinder,
+				Material = Enum.Material.Neon,
+				Color = Color3.fromRGB(255, 40, 40),
+				Transparency = 0.85,
+				CanCollide = false,
+				CanQuery = false,
+				CastShadow = false,
+			})
+		end
+		local marker = areaMarker :: BasePart
+		marker.Size = Vector3.new(0.3, radius * 2, radius * 2)
+		marker.CFrame = CFrame.new(center.X, 0.3, center.Z) * CFrame.Angles(0, 0, math.pi / 2)
+	end
+	if revealed.exact and now >= nextPulse then
+		nextPulse = now + 30
+		Rake.setRevealed(true)
+		ctx.setLastSeen(pos)
+		task.delay(8, function()
+			Rake.setRevealed(false)
+		end)
+	end
+end
+
+local function runNight(): (string, string)
+	-- La tana è in un punto di interesse a caso (mai la stazione)
+	local poi = Forest.POIS[rng:NextInteger(2, #Forest.POIS)]
+	local lair = Forest.randomGround(rng, poi.pos, 50, 110)
+	ctx.round.lair = lair
+	ctx.round.active = true
+	Rake.spawn(lair)
+	Evidence.seed(lair)
+	setPhase("Notte")
+	ctx.notifyAll("🌲 Cala la notte. Qualcosa si muove tra gli alberi…")
+
+	local start = os.clock()
+	local last = start
+	while true do
+		task.wait(0.25)
+		local now = os.clock()
+		local dt = now - last
+		last = now
+		local progress = math.clamp((now - start) / Config.NIGHT_DURATION, 0, 1)
+		ctx.nightProgress = progress
+		applyNight(progress)
+		state:SetAttribute("TimeLeft", math.max(0, math.ceil(Config.NIGHT_DURATION - (now - start))))
+
+		Team.tick(dt)
+		Cameras.tick(dt)
+		updateReveal()
+		state:SetAttribute("ObjectiveProgress", Objectives.progressText())
+
+		local result, reason = Objectives.check()
+		if result then
+			return result, reason :: string
+		end
+		if #Players:GetPlayers() == 0 then
+			return "lose", "La squadra ha abbandonato il bosco."
+		end
+		if not Team.anyStanding() then
+			return "lose", "Tutta la squadra è stata abbattuta."
+		end
+		if progress >= 1 then
+			return Objectives.onDawn()
+		end
+	end
+end
+
+local function debrief(result: string, reason: string)
+	ctx.round.active = false
+	setPhase("Debriefing")
+	Rake.despawn()
+	state:SetAttribute("RakeState", "Assente")
+	local XP = Config.XP
+	local won = result == "win"
+	ctx.notifyAll((won and "✅ " or "❌ ") .. reason)
+
+	for _, player in Players:GetPlayers() do
+		local s = ctx.stats[player.UserId]
+		if s then
+			local survived = player:GetAttribute("Status") == "OK"
+			local breakdown = {
+				{ "Prove raccolte", s.evidence * XP.EVIDENCE },
+				{ "Telecamere utili", s.sightings * XP.CAMERA_SIGHTING },
+				{ "Rianimazioni", s.revives * XP.REVIVE },
+				{ "Cattura", s.capture * XP.CAPTURE },
+				{ "Sopravvivenza", survived and XP.SURVIVE or 0 },
+				{ "Obiettivo", won and XP.WIN or 0 },
+			}
+			local xp = 0
+			for _, row in breakdown do
+				xp += row[2]
+			end
+			if not won then
+				xp = math.floor(xp * XP.LOSS_MULTIPLIER)
+			end
+			Progression.award(player, xp, {
+				Runs = 1,
+				Wins = won and 1 or 0,
+				Captures = s.capture,
+				Evidence = s.evidence,
+				Revives = s.revives,
+			})
+			local profile = Progression.get(player)
+			local total = profile and profile.XP or xp
+			local rank, nextXp = Progression.rankFor(total)
+			remotes.Debrief:FireClient(player, {
+				won = won,
+				reason = reason,
+				objective = Objectives.current(),
+				xp = xp,
+				halved = not won,
+				breakdown = breakdown,
+				totalXP = total,
+				rank = rank,
+				nextXP = nextXp,
+				level = Progression.levelFor(total),
+			})
+		end
+	end
+	countdown(Config.DEBRIEF)
+end
+
+while true do
+	-- Attesa
+	setPhase("Attesa")
+	setDusk()
+	resetState()
+	while #Players:GetPlayers() < Config.MIN_PLAYERS do
+		state:SetAttribute("TimeLeft", 0)
+		task.wait(1)
+	end
+
+	-- Briefing: nuova foresta, meteo e obiettivo; tutti alla Ranger Station con l'attrezzatura
+	setPhase("Briefing")
+	ctx.round = { active = false, captured = false }
+	ctx.stats = {}
+	Rake.despawn()
+	Cameras.reset()
+	Evidence.reset()
+	Objectives.cleanup()
+	Forest.regenerate(rng)
+	ctx.weather = chooseWeather()
+	state:SetAttribute("Weather", ctx.weather.name)
+	Objectives.start(rng)
+	for _, player in Players:GetPlayers() do
+		newStats(player)
+		task.spawn(Team.spawn, player, true)
+	end
+	countdown(Config.BRIEFING)
+
+	local result, reason = runNight()
+	debrief(result, reason)
+
+	-- Pulizia e ritorno alla lobby
+	Objectives.cleanup()
+	Cameras.reset()
+	Evidence.reset()
+	resetState()
+	for _, player in Players:GetPlayers() do
+		task.spawn(Team.spawn, player, false)
+	end
+end
+]]></ProtectedString></Properties><Item class="ModuleScript" referent="RBX6"><Properties><string name="Name">Cameras</string><ProtectedString name="Source"><![CDATA[-- Telecamere di sorveglianza: piazzamento, batteria, rilevamento della creatura e copertura della mappa.
+-- Tipi: Fissa (economica), IR (vede di notte), Motorizzata (ruota dal tablet), Trappola (scatta sul movimento).
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+local Forest = require(script.Parent.Forest)
+
+local C = Config.CAMERAS
+local make = Forest.make
+
+local Cameras = {}
+
+local ctx
+local folder: Folder
+local nextId = 0
+local data: { [Model]: { useful: boolean, notified: number, lastSnap: number } } = {}
+local keyCells: { Vector3 } = {}
+
+local TYPE_COLORS = {
+	Fissa = Color3.fromRGB(70, 70, 75),
+	IR = Color3.fromRGB(40, 70, 45),
+	Motorizzata = Color3.fromRGB(60, 65, 95),
+	Trappola = Color3.fromRGB(110, 85, 45),
+}
+
+local function flat(v: Vector3): Vector3
+	return Vector3.new(v.X, 0, v.Z)
+end
+
+local function inCone(cf: CFrame, target: Vector3, range: number): boolean
+	local to = flat(target - cf.Position)
+	if to.Magnitude > range then
+		return false
+	end
+	if to.Magnitude < 1 then
+		return true
+	end
+	local look = flat(cf.LookVector).Unit
+	return math.deg(math.acos(math.clamp(look:Dot(to.Unit), -1, 1))) <= C.FOV / 2
+end
+
+function Cameras.init(c)
+	ctx = c
+	folder = make("Folder", ctx.world, { Name = "Telecamere" })
+	-- Celle "importanti" per la copertura: sentieri e punti di interesse
+	local half = Forest.HALF
+	local cell = C.COVERAGE_CELL
+	for x = -half + cell / 2, half, cell do
+		for z = -half + cell / 2, half, cell do
+			local p = Vector3.new(x, 0, z)
+			local _, poiDist = Forest.nearestPoi(p)
+			if not Forest.inLake(p) and (Forest.distToPath(p) < 14 or poiDist < 40) then
+				table.insert(keyCells, p)
+			end
+		end
+	end
+end
+
+function Cameras.folder(): Folder
+	return folder
+end
+
+function Cameras.updateCoverage()
+	local online = {}
+	for _, m in folder:GetChildren() do
+		if m:GetAttribute("Online") and m.PrimaryPart then
+			table.insert(online, m)
+		end
+	end
+	local covered = 0
+	for _, p in keyCells do
+		for _, m in online do
+			local range = m:GetAttribute("Type") == "Trappola" and C.TRAP_RANGE or C.VIEW_RANGE
+			if inCone(m.PrimaryPart.CFrame, p, range) then
+				covered += 1
+				break
+			end
+		end
+	end
+	ctx.state:SetAttribute("Coverage", #keyCells > 0 and math.floor(covered / #keyCells * 100 + 0.5) or 0)
+	ctx.state:SetAttribute("CamerasActive", #online)
+end
+
+function Cameras.reset()
+	folder:ClearAllChildren()
+	table.clear(data)
+	nextId = 0
+	Cameras.updateCoverage()
+end
+
+local function setOnline(m: Model, online: boolean)
+	m:SetAttribute("Online", online)
+	local led = m:FindFirstChild("Led") :: BasePart?
+	if led then
+		led.Color = online and Color3.fromRGB(255, 40, 40) or Color3.fromRGB(40, 40, 40)
+	end
+end
+
+function Cameras.recover(player: Player, m: Model)
+	if not m.Parent or not ctx.team.isStanding(player) then
+		return
+	end
+	local camType = m:GetAttribute("Type")
+	local key = "Kits_" .. camType
+	player:SetAttribute(key, (player:GetAttribute(key) or 0) + 1)
+	data[m] = nil
+	m:Destroy()
+	ctx.notify(("Telecamera %s recuperata (batteria ricaricata)."):format(camType), player)
+	Cameras.updateCoverage()
+end
+
+function Cameras.place(player: Player)
+	if not ctx.round.active then
+		ctx.notify("Le telecamere si piazzano durante la notte.", player)
+		return
+	end
+	local char = player.Character
+	local hrp = char and char:FindFirstChild("HumanoidRootPart") :: BasePart?
+	if not hrp or not ctx.team.isStanding(player) then
+		return
+	end
+	local camType = player:GetAttribute("CamType") or "Fissa"
+	local key = "Kits_" .. camType
+	local kits = player:GetAttribute(key) or 0
+	if kits <= 0 then
+		ctx.notify(("Non hai più telecamere %s: premi R per cambiare tipo."):format(camType), player)
+		return
+	end
+
+	local look = flat(hrp.CFrame.LookVector)
+	look = look.Magnitude > 0.1 and look.Unit or Vector3.new(0, 0, -1)
+	local base = hrp.Position + look * 3
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Include
+	params.FilterDescendantsInstances = { workspace.Terrain }
+	local ground = workspace:Raycast(base + Vector3.new(0, 6, 0), Vector3.new(0, -40, 0), params)
+	local y = ground and ground.Position.Y or 0
+
+	nextId += 1
+	local m = Instance.new("Model")
+	m.Name = "Cam" .. nextId
+	local bodyPos = Vector3.new(base.X, y + 3.8, base.Z)
+	local bodyCF = CFrame.lookAt(bodyPos, bodyPos + look)
+	make("Part", m, {
+		Name = "Treppiede",
+		Size = Vector3.new(0.3, 3.4, 0.3),
+		CFrame = CFrame.new(base.X, y + 1.7, base.Z),
+		Color = Color3.fromRGB(30, 30, 30),
+		CanCollide = false,
+		CanQuery = false,
+	})
+	local body = make("Part", m, {
+		Name = "Body",
+		Size = Vector3.new(1.2, 0.9, 1.6),
+		CFrame = bodyCF,
+		Color = TYPE_COLORS[camType] or TYPE_COLORS.Fissa,
+		Material = Enum.Material.Metal,
+		CanCollide = false,
+		CanQuery = false,
+	})
+	make("Part", m, {
+		Name = "Obiettivo",
+		Size = Vector3.new(0.6, 0.6, 0.2),
+		CFrame = bodyCF * CFrame.new(0, 0, -0.85),
+		Color = Color3.fromRGB(10, 10, 15),
+		Material = Enum.Material.Glass,
+		CanCollide = false,
+		CanQuery = false,
+	})
+	make("Part", m, {
+		Name = "Led",
+		Size = Vector3.new(0.18, 0.18, 0.18),
+		CFrame = bodyCF * CFrame.new(0.4, 0.35, -0.75),
+		Color = Color3.fromRGB(255, 40, 40),
+		Material = Enum.Material.Neon,
+		CanCollide = false,
+		CanQuery = false,
+	})
+	local flash = make("PointLight", body, { Range = 30, Brightness = 6, Enabled = false, Color = Color3.fromRGB(255, 255, 255) })
+	flash.Name = "Flash"
+	if Config.SOUNDS.TRAP_SNAP ~= "" and camType == "Trappola" then
+		make("Sound", body, { Name = "Scatto", SoundId = Config.SOUNDS.TRAP_SNAP, Volume = 1, RollOffMaxDistance = 60 })
+	end
+	m.PrimaryPart = body
+
+	local label = Forest.describe(base)
+	m:SetAttribute("Id", nextId)
+	m:SetAttribute("Type", camType)
+	m:SetAttribute("Owner", player.UserId)
+	m:SetAttribute("OwnerName", player.DisplayName)
+	m:SetAttribute("Battery", C.BATTERY)
+	m:SetAttribute("Online", true)
+	m:SetAttribute("Label", label)
+	m:SetAttribute("Sees", false)
+	m:SetAttribute("Yaw", math.deg(math.atan2(-look.X, -look.Z)))
+
+	local prompt = make("ProximityPrompt", body, {
+		ActionText = "Recupera",
+		ObjectText = ("Camera %d · %s"):format(nextId, camType),
+		HoldDuration = 1,
+		MaxActivationDistance = 8,
+		RequiresLineOfSight = false,
+	})
+	prompt.Triggered:Connect(function(p)
+		Cameras.recover(p, m)
+	end)
+
+	data[m] = { useful = false, notified = 0, lastSnap = 0 }
+	m.Parent = folder
+	player:SetAttribute(key, kits - 1)
+	ctx.notify(("📷 Camera %d (%s) piazzata %s."):format(nextId, camType, label), player)
+	Cameras.updateCoverage()
+end
+
+function Cameras.rotate(player: Player, id: any, dir: any)
+	if typeof(id) ~= "number" or (dir ~= 1 and dir ~= -1) then
+		return
+	end
+	for _, m in folder:GetChildren() do
+		if m:GetAttribute("Id") == id then
+			if m:GetAttribute("Type") ~= "Motorizzata" or not m:GetAttribute("Online") then
+				return
+			end
+			local yaw = (m:GetAttribute("Yaw") or 0) + dir * 20
+			m:SetAttribute("Yaw", yaw)
+			m:PivotTo(CFrame.new(m.PrimaryPart.Position) * CFrame.Angles(0, math.rad(yaw), 0))
+			Cameras.updateCoverage()
+			return
+		end
+	end
+end
+
+local function snap(m: Model, rakePos: Vector3)
+	local body = m.PrimaryPart
+	local flash = body:FindFirstChild("Flash") :: PointLight?
+	if flash then
+		flash.Enabled = true
+		task.delay(0.15, function()
+			flash.Enabled = false
+		end)
+	end
+	local sound = body:FindFirstChild("Scatto") :: Sound?
+	if sound then
+		sound:Play()
+	end
+	ctx.notifyAll(("📸 La camera trappola %d (%s) ha fotografato qualcosa!"):format(m:GetAttribute("Id"), m:GetAttribute("Label")))
+	ctx.addTracking(C.TRAP_TRACKING)
+	ctx.setLastSeen(rakePos)
+end
+
+function Cameras.tick(dt: number)
+	local rakePos = ctx.rake.position()
+	local night = ctx.isNight()
+	local noise = ctx.weather.cameraNoise
+	local now = os.clock()
+	local changed = false
+	for _, m in folder:GetChildren() do
+		local body = m.PrimaryPart
+		local info = data[m]
+		if not body or not info then
+			continue
+		end
+		local online = m:GetAttribute("Online")
+		if online then
+			local battery = math.max(0, m:GetAttribute("Battery") - dt)
+			m:SetAttribute("Battery", battery)
+			if battery <= 0 then
+				online = false
+				setOnline(m, false)
+				changed = true
+				ctx.notifyAll(("🔋 La camera %d (%s) si è scaricata."):format(m:GetAttribute("Id"), m:GetAttribute("Label")))
+			end
+		end
+
+		local camType = m:GetAttribute("Type")
+		local sees = false
+		if online and rakePos then
+			local range = camType == "Trappola" and C.TRAP_RANGE or C.VIEW_RANGE
+			if night and camType ~= "IR" and camType ~= "Trappola" then
+				range *= C.NIGHT_RANGE_FACTOR
+			end
+			range *= 1 - noise * 0.5
+			sees = inCone(body.CFrame, rakePos, range) and ctx.rake.visibleFrom(body.Position, { folder })
+		end
+
+		if camType == "Trappola" then
+			if sees and now - info.lastSnap > C.TRAP_COOLDOWN then
+				info.lastSnap = now
+				snap(m, rakePos)
+				if not info.useful then
+					info.useful = true
+					ctx.credit(m:GetAttribute("Owner"), "sightings")
+				end
+			end
+			sees = false
+		elseif sees then
+			ctx.addTracking(Config.EVIDENCE.SIGHTING_RATE * dt)
+			ctx.setLastSeen(rakePos)
+			if not info.useful then
+				info.useful = true
+				ctx.credit(m:GetAttribute("Owner"), "sightings")
+			end
+			if now - info.notified > 30 then
+				info.notified = now
+				ctx.notifyAll(("📹 Movimento sulla camera %d (%s)!"):format(m:GetAttribute("Id"), m:GetAttribute("Label")))
+			end
+		end
+		if m:GetAttribute("Sees") ~= sees then
+			m:SetAttribute("Sees", sees)
+		end
+	end
+	if changed then
+		Cameras.updateCoverage()
+	end
+end
+
+return Cameras
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX7"><Properties><string name="Name">Evidence</string><ProtectedString name="Source"><![CDATA[-- Prove e tracciamento: impronte, graffi, peli, sangue e carcasse lasciati dalla creatura.
+-- Peli e sangue vanno analizzati al laboratorio. Alcune tracce sono depistaggi.
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+local Forest = require(script.Parent.Forest)
+
+local E = Config.EVIDENCE
+local make = Forest.make
+
+local Evidence = {}
+
+local ctx
+local folder: Folder
+local rng = Random.new()
+local analyzing = false
+
+local DROP_TABLE = { "Impronte", "Impronte", "Impronte", "Graffi", "Graffi", "Peli", "Sangue", "Carcassa" }
+
+local builders = {}
+
+function builders.Impronte(m: Model, cf: CFrame): BasePart
+	local main
+	for i = 0, 2 do
+		local side = i % 2 == 0 and -0.6 or 0.6
+		local footprint = make("Part", m, {
+			Size = Vector3.new(1.1, 0.1, 1.9),
+			CFrame = cf * CFrame.new(side, 0.05, -i * 2.6),
+			Color = Color3.fromRGB(45, 32, 25),
+			Material = Enum.Material.Mud,
+			CanCollide = false,
+		})
+		for t = -1, 1 do
+			make("Part", m, {
+				Size = Vector3.new(0.15, 0.1, 0.8),
+				CFrame = cf * CFrame.new(side + t * 0.35, 0.06, -i * 2.6 - 1.3) * CFrame.Angles(0, t * 0.3, 0),
+				Color = Color3.fromRGB(35, 25, 20),
+				Material = Enum.Material.Mud,
+				CanCollide = false,
+			})
+		end
+		main = main or footprint
+	end
+	return main
+end
+
+function builders.Graffi(m: Model, cf: CFrame): BasePart
+	local stump = make("Part", m, {
+		Shape = Enum.PartType.Cylinder,
+		Size = Vector3.new(3, 2.4, 2.4),
+		CFrame = cf * CFrame.new(0, 1.5, 0) * CFrame.Angles(0, 0, math.pi / 2),
+		Color = Color3.fromRGB(80, 58, 40),
+		Material = Enum.Material.Wood,
+	})
+	for i = -1, 1 do
+		make("Part", m, {
+			Size = Vector3.new(0.12, 1.8, 0.08),
+			CFrame = cf * CFrame.new(i * 0.4, 1.6, -1.2) * CFrame.Angles(0, 0, 0.35),
+			Color = Color3.fromRGB(215, 190, 150),
+			Material = Enum.Material.Wood,
+			CanCollide = false,
+		})
+	end
+	return stump
+end
+
+function builders.Peli(m: Model, cf: CFrame): BasePart
+	local main
+	for i = 1, 3 do
+		local p = make("Part", m, {
+			Shape = Enum.PartType.Ball,
+			Size = Vector3.new(0.6, 0.6, 0.6),
+			CFrame = cf * CFrame.new(rng:NextNumber(-0.6, 0.6), 0.25, rng:NextNumber(-0.6, 0.6)),
+			Color = Color3.fromRGB(150, 145, 135),
+			Material = Enum.Material.Fabric,
+			CanCollide = false,
+		})
+		main = main or p
+	end
+	return main
+end
+
+function builders.Sangue(m: Model, cf: CFrame): BasePart
+	local main
+	for i = 1, 4 do
+		local d = rng:NextNumber(0.6, 2.2)
+		local p = make("Part", m, {
+			Shape = Enum.PartType.Cylinder,
+			Size = Vector3.new(0.08, d, d),
+			CFrame = cf * CFrame.new(rng:NextNumber(-1.5, 1.5), 0.05, -i * 0.9) * CFrame.Angles(0, 0, math.pi / 2),
+			Color = Color3.fromRGB(85, 10, 12),
+			Material = Enum.Material.Glass,
+			CanCollide = false,
+		})
+		main = main or p
+	end
+	return main
+end
+
+function builders.Carcassa(m: Model, cf: CFrame): BasePart
+	local body = make("Part", m, {
+		Size = Vector3.new(1.6, 1.3, 4),
+		CFrame = cf * CFrame.new(0, 0.65, 0) * CFrame.Angles(0, 0, 0.3),
+		Color = Color3.fromRGB(110, 75, 50),
+		Material = Enum.Material.Fabric,
+	})
+	make("Part", m, {
+		Size = Vector3.new(0.9, 0.9, 1.4),
+		CFrame = cf * CFrame.new(0.3, 0.45, -2.6) * CFrame.Angles(0.2, 0.4, 0),
+		Color = Color3.fromRGB(100, 70, 48),
+		Material = Enum.Material.Fabric,
+	})
+	for i = -1, 1 do
+		make("Part", m, {
+			Size = Vector3.new(0.2, 1.3, 0.2),
+			CFrame = cf * CFrame.new(-0.6, 1.2, i * 0.8) * CFrame.Angles(0, 0, -0.4),
+			Color = Color3.fromRGB(225, 215, 195),
+			CanCollide = false,
+		})
+	end
+	return body
+end
+
+local function groundY(pos: Vector3): number
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Include
+	params.FilterDescendantsInstances = { workspace.Terrain }
+	local hit = workspace:Raycast(Vector3.new(pos.X, 40, pos.Z), Vector3.new(0, -80, 0), params)
+	return hit and hit.Position.Y or 0
+end
+
+local function collect(player: Player, m: Model)
+	if not m.Parent or not ctx.round.active or not ctx.team.isStanding(player) then
+		return
+	end
+	local kind = m:GetAttribute("Type")
+	local fake = m:GetAttribute("Fake")
+	m:Destroy()
+	if fake then
+		ctx.notify("🐾 Traccia falsa! The Rake ti ha depistato.", player)
+		ctx.rake.addAggression(4)
+		return
+	end
+	ctx.credit(player.UserId, "evidence")
+	ctx.state:SetAttribute("Evidence", (ctx.state:GetAttribute("Evidence") or 0) + 1)
+	local value = E.TRACKING[kind] or 5
+	if E.NEEDS_LAB[kind] then
+		player:SetAttribute("Samples", (player:GetAttribute("Samples") or 0) + 1)
+		player:SetAttribute("SamplePoints", (player:GetAttribute("SamplePoints") or 0) + value * E.LAB_MULTIPLIER)
+		ctx.notify(("🧪 Campione raccolto (%s): portalo al laboratorio della Ranger Station."):format(kind), player)
+	else
+		ctx.addTracking(value)
+		ctx.notify(("🔎 Prova raccolta: %s (+%d%% tracciamento)"):format(kind, value), player)
+	end
+end
+
+function Evidence.spawn(kind: string, pos: Vector3, fake: boolean)
+	local existing = folder:GetChildren()
+	if #existing >= E.MAX_ACTIVE then
+		existing[1]:Destroy()
+	end
+	local m = Instance.new("Model")
+	m.Name = kind
+	local cf = CFrame.new(pos.X, groundY(pos), pos.Z) * CFrame.Angles(0, rng:NextNumber(0, math.pi * 2), 0)
+	local main = builders[kind](m, cf)
+	m:SetAttribute("Type", kind)
+	m:SetAttribute("Fake", fake)
+	local prompt = make("ProximityPrompt", main, {
+		ActionText = "Raccogli",
+		ObjectText = "Prova: " .. kind,
+		HoldDuration = 1.5,
+		MaxActivationDistance = 9,
+		RequiresLineOfSight = false,
+	})
+	prompt.Triggered:Connect(function(player)
+		collect(player, m)
+	end)
+	m.Parent = folder
+end
+
+-- Lascia una traccia vicino alla creatura (o un depistaggio lontano)
+function Evidence.dropNear(pos: Vector3)
+	if rng:NextNumber() < E.FAKE_CHANCE then
+		local fakePos = Forest.randomGround(rng, pos, 80, 150)
+		Evidence.spawn(rng:NextNumber() < 0.6 and "Impronte" or "Graffi", fakePos, true)
+	else
+		Evidence.spawn(DROP_TABLE[rng:NextInteger(1, #DROP_TABLE)], Forest.randomGround(rng, pos, 2, 6), false)
+	end
+end
+
+-- Tracce iniziali intorno alla tana
+function Evidence.seed(lair: Vector3)
+	for _ = 1, E.START_COUNT do
+		Evidence.spawn(DROP_TABLE[rng:NextInteger(1, #DROP_TABLE)], Forest.randomGround(rng, lair, 15, 130), false)
+	end
+end
+
+function Evidence.analyze(player: Player)
+	if not ctx.round.active or not ctx.team.isStanding(player) then
+		return
+	end
+	local samples = player:GetAttribute("Samples") or 0
+	if samples <= 0 then
+		ctx.notify("Non hai campioni da analizzare: raccogli peli o sangue nel bosco.", player)
+		return
+	end
+	if analyzing then
+		ctx.notify("Il laboratorio è già occupato.", player)
+		return
+	end
+	analyzing = true
+	local points = player:GetAttribute("SamplePoints") or 0
+	player:SetAttribute("Samples", 0)
+	player:SetAttribute("SamplePoints", 0)
+	ctx.notifyAll(("🔬 Analisi di %d campion%s in corso (%d s)… il generatore fa rumore e attira la creatura!"):format(
+		samples,
+		samples == 1 and "e" or "i",
+		E.LAB_TIME
+	))
+	ctx.rake.addAggression(10)
+	local light = Forest.labLight
+	task.spawn(function()
+		local finish = os.clock() + E.LAB_TIME
+		while os.clock() < finish and ctx.round.active do
+			if light then
+				light.Color = light.Color == Color3.fromRGB(120, 200, 255) and Color3.fromRGB(255, 80, 80) or Color3.fromRGB(120, 200, 255)
+			end
+			task.wait(0.4)
+		end
+		if light then
+			light.Color = Color3.fromRGB(120, 200, 255)
+		end
+		analyzing = false
+		if ctx.round.active then
+			ctx.addTracking(points)
+			ctx.notifyAll(("🔬 Analisi completata: +%d%% tracciamento."):format(points))
+		end
+	end)
+end
+
+function Evidence.init(c)
+	ctx = c
+	folder = make("Folder", ctx.world, { Name = "Prove" })
+end
+
+function Evidence.reset()
+	folder:ClearAllChildren()
+	analyzing = false
+end
+
+return Evidence
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX8"><Properties><string name="Name">Forest</string><ProtectedString name="Source"><![CDATA[-- Il bosco: terreno, sentieri e punti di interesse (creati una volta) e alberi (rigenerati a ogni notte).
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+
+local MAP = Config.MAP
+local SIZE = MAP.SIZE
+local HALF = SIZE / 2
+local POIS = MAP.POIS
+local LAKE = MAP.LAKE
+
+local Forest = {}
+Forest.HALF = HALF
+Forest.POIS = POIS
+Forest.STATION = POIS[1].pos
+
+-- Sentieri: dalla stazione a ogni punto di interesse, più qualche collegamento esterno
+local PATHS = {}
+for i = 2, #POIS do
+	table.insert(PATHS, { POIS[1].pos, POIS[i].pos })
+end
+table.insert(PATHS, { POIS[2].pos, POIS[6].pos }) -- torre - miniera
+table.insert(PATHS, { POIS[3].pos, POIS[4].pos }) -- campeggio - lago
+table.insert(PATHS, { POIS[4].pos, POIS[5].pos }) -- lago - capanno
+Forest.PATHS = PATHS
+
+local DENSITY = { ["Pineta fitta"] = 1, ["Ruderi del campeggio"] = 0.6, Palude = 0.55, Miniera = 0.45 }
+
+local WOOD = Color3.fromRGB(105, 75, 50)
+local DARK_WOOD = Color3.fromRGB(70, 50, 35)
+
+local function make(className: string, parent: Instance?, props: { [string]: any }): any
+	local inst = Instance.new(className)
+	if inst:IsA("BasePart") then
+		inst.Anchored = true
+		inst.TopSurface = Enum.SurfaceType.Smooth
+		inst.BottomSurface = Enum.SurfaceType.Smooth
+	end
+	for key, value in props do
+		(inst :: any)[key] = value
+	end
+	inst.Parent = parent
+	return inst
+end
+Forest.make = make
+
+local function flat(v: Vector3): Vector3
+	return Vector3.new(v.X, 0, v.Z)
+end
+
+function Forest.biomeAt(pos: Vector3): string
+	if pos.X >= 0 and pos.Z < 0 then
+		return "Pineta fitta"
+	elseif pos.X < 0 and pos.Z < 0 then
+		return "Ruderi del campeggio"
+	elseif pos.X < 0 then
+		return "Palude"
+	end
+	return "Miniera"
+end
+
+function Forest.distToSegment(p: Vector3, a: Vector3, b: Vector3): number
+	local ab = flat(b - a)
+	local ap = flat(p - a)
+	local t = math.clamp(ap:Dot(ab) / ab:Dot(ab), 0, 1)
+	return (ap - ab * t).Magnitude
+end
+
+function Forest.distToPath(p: Vector3): number
+	local best = math.huge
+	for _, seg in PATHS do
+		best = math.min(best, Forest.distToSegment(p, seg[1], seg[2]))
+	end
+	return best
+end
+
+function Forest.inLake(p: Vector3, margin: number?): boolean
+	return (flat(p) - flat(LAKE.center)).Magnitude < LAKE.radius + (margin or 0)
+end
+
+function Forest.inStation(p: Vector3, margin: number?): boolean
+	return flat(p - Forest.STATION).Magnitude < MAP.STATION_RADIUS + (margin or 0)
+end
+
+function Forest.inBounds(p: Vector3, margin: number?): boolean
+	local limit = HALF - (margin or 0)
+	return math.abs(p.X) < limit and math.abs(p.Z) < limit
+end
+
+-- Terreno libero da POI, sentieri e lago (dove possono crescere gli alberi)
+function Forest.isOpenGround(p: Vector3, margin: number): boolean
+	for _, poi in POIS do
+		if flat(p - poi.pos).Magnitude < poi.radius + margin then
+			return false
+		end
+	end
+	return not Forest.inLake(p, margin) and Forest.distToPath(p) >= MAP.PATH_WIDTH / 2 + margin
+end
+
+function Forest.clampToMap(p: Vector3): Vector3
+	local limit = HALF - 15
+	return Vector3.new(math.clamp(p.X, -limit, limit), 0, math.clamp(p.Z, -limit, limit))
+end
+
+-- Punto a terra casuale tra minR e maxR da center, dentro la mappa e fuori dal lago
+function Forest.randomGround(rng: Random, center: Vector3, minR: number, maxR: number): Vector3
+	local p = center
+	for _ = 1, 25 do
+		local angle = rng:NextNumber(0, math.pi * 2)
+		local r = rng:NextNumber(minR, maxR)
+		p = Forest.clampToMap(center + Vector3.new(math.cos(angle) * r, 0, math.sin(angle) * r))
+		if not Forest.inLake(p, 4) then
+			return p
+		end
+	end
+	return Forest.clampToMap(p)
+end
+
+function Forest.nearestPoi(pos: Vector3)
+	local best, bestDist = POIS[1], math.huge
+	for _, poi in POIS do
+		local d = flat(pos - poi.pos).Magnitude
+		if d < bestDist then
+			best, bestDist = poi, d
+		end
+	end
+	return best, bestDist
+end
+
+-- Descrizione leggibile di una posizione ("vicino a Lago" oppure il bioma)
+function Forest.describe(pos: Vector3): string
+	local poi, dist = Forest.nearestPoi(pos)
+	if dist < poi.radius + 45 then
+		return "vicino a " .. poi.name
+	end
+	return Forest.biomeAt(pos)
+end
+
+---------------------------------------------------------------------------------------------
+-- Costruzione della mappa (una volta sola)
+
+local function buildTerrain()
+	local terrain = workspace.Terrain
+	terrain:Clear()
+	local depth = 12
+	local y = -depth / 2
+	terrain:FillBlock(CFrame.new(0, y, 0), Vector3.new(SIZE + 120, depth, SIZE + 120), Enum.Material.Grass)
+	local q = HALF / 2
+	terrain:FillBlock(CFrame.new(-q, y, -q), Vector3.new(HALF, depth, HALF), Enum.Material.LeafyGrass)
+	terrain:FillBlock(CFrame.new(-q, y, q), Vector3.new(HALF, depth, HALF), Enum.Material.Mud)
+	terrain:FillBlock(CFrame.new(q, y, q), Vector3.new(HALF, depth, HALF), Enum.Material.Slate)
+
+	for _, seg in PATHS do
+		local a, b = seg[1], seg[2]
+		local mid = (a + b) / 2
+		local length = flat(b - a).Magnitude
+		local cf = CFrame.lookAt(Vector3.new(mid.X, y, mid.Z), Vector3.new(b.X, y, b.Z))
+		terrain:FillBlock(cf, Vector3.new(MAP.PATH_WIDTH, depth, length + MAP.PATH_WIDTH), Enum.Material.Ground)
+	end
+	-- La stazione su un piazzale di terra battuta
+	terrain:FillCylinder(CFrame.new(0, y, 0), depth, MAP.STATION_RADIUS + 4, Enum.Material.Ground)
+
+	-- Lago
+	local c = LAKE.center
+	terrain:FillCylinder(CFrame.new(c.X, y, c.Z), depth + 1, LAKE.radius, Enum.Material.Air)
+	terrain:FillCylinder(CFrame.new(c.X, -6.5, c.Z), 11, LAKE.radius, Enum.Material.Water)
+end
+
+local function buildStation(parent: Instance)
+	local m = make("Model", parent, { Name = "RangerStation" })
+	local W, D, H = 44, 32, 12
+	local wall = Color3.fromRGB(95, 80, 60)
+	make("Part", m, {
+		Name = "Pavimento",
+		Size = Vector3.new(W, 1, D),
+		CFrame = CFrame.new(0, 0.5, 0),
+		Color = WOOD,
+		Material = Enum.Material.WoodPlanks,
+	})
+	local function wallPart(size: Vector3, pos: Vector3)
+		return make("Part", m, { Size = size, CFrame = CFrame.new(pos), Color = wall, Material = Enum.Material.WoodPlanks })
+	end
+	local wy = 1 + H / 2
+	wallPart(Vector3.new(W, H, 1), Vector3.new(0, wy, -D / 2 + 0.5))
+	wallPart(Vector3.new(1, H, D), Vector3.new(-W / 2 + 0.5, wy, 0))
+	wallPart(Vector3.new(1, H, D), Vector3.new(W / 2 - 0.5, wy, 0))
+	local door = 8
+	local side = (W - door) / 2
+	wallPart(Vector3.new(side, H, 1), Vector3.new(-(door / 2 + side / 2), wy, D / 2 - 0.5))
+	wallPart(Vector3.new(side, H, 1), Vector3.new(door / 2 + side / 2, wy, D / 2 - 0.5))
+	local lintel = wallPart(Vector3.new(door, H - 8, 1), Vector3.new(0, 1 + 8 + (H - 8) / 2, D / 2 - 0.5))
+	make("Part", m, {
+		Name = "Tetto",
+		Size = Vector3.new(W + 4, 1, D + 4),
+		CFrame = CFrame.new(0, 1 + H + 0.5, 0),
+		Color = DARK_WOOD,
+		Material = Enum.Material.Wood,
+	})
+
+	local sign = make("SurfaceGui", lintel, { Face = Enum.NormalId.Back, PixelsPerStud = 40 })
+	make("TextLabel", sign, {
+		Size = UDim2.fromScale(1, 1),
+		BackgroundTransparency = 1,
+		Text = "RANGER STATION",
+		TextScaled = true,
+		Font = Enum.Font.GothamBold,
+		TextColor3 = Color3.fromRGB(235, 220, 180),
+	})
+
+	local lamp = make("Part", m, {
+		Name = "Lampada",
+		Size = Vector3.new(3, 0.4, 3),
+		CFrame = CFrame.new(0, H + 0.6, 0),
+		Material = Enum.Material.Neon,
+		Color = Color3.fromRGB(255, 220, 160),
+		CanCollide = false,
+	})
+	make("PointLight", lamp, { Range = 40, Brightness = 1.6, Color = Color3.fromRGB(255, 210, 150), Shadows = true })
+	local porch = make("Part", m, {
+		Name = "LucePortico",
+		Size = Vector3.new(1, 1, 0.4),
+		CFrame = CFrame.new(0, 10, D / 2 + 0.3),
+		Material = Enum.Material.Neon,
+		Color = Color3.fromRGB(255, 220, 160),
+		CanCollide = false,
+	})
+	make("PointLight", porch, { Range = 26, Brightness = 1.2, Color = Color3.fromRGB(255, 200, 140) })
+
+	make("SpawnLocation", m, {
+		Name = "Spawn",
+		Size = Vector3.new(6, 0.4, 6),
+		CFrame = CFrame.new(0, 1.2, 6),
+		Neutral = true,
+		Duration = 0,
+		Color = Color3.fromRGB(80, 90, 70),
+		Material = Enum.Material.Fabric,
+	})
+
+	local function prompt(part: BasePart, action: string, object: string)
+		return make("ProximityPrompt", part, {
+			ActionText = action,
+			ObjectText = object,
+			HoldDuration = 0.3,
+			MaxActivationDistance = 9,
+			RequiresLineOfSight = false,
+		})
+	end
+
+	local desk = make("Part", m, {
+		Name = "SalaDiControllo",
+		Size = Vector3.new(12, 3, 3),
+		CFrame = CFrame.new(0, 2.5, -D / 2 + 3),
+		Color = Color3.fromRGB(60, 60, 65),
+		Material = Enum.Material.Metal,
+	})
+	for i = -1, 1 do
+		local screen = make("Part", m, {
+			Size = Vector3.new(3.2, 2.2, 0.3),
+			CFrame = CFrame.new(i * 3.8, 5.2, -D / 2 + 2.2),
+			Material = Enum.Material.Neon,
+			Color = Color3.fromRGB(40, 90, 70),
+		})
+		make("PointLight", screen, { Range = 8, Brightness = 0.6, Color = Color3.fromRGB(80, 200, 140) })
+	end
+
+	local crate = make("Part", m, {
+		Name = "Rifornimento",
+		Size = Vector3.new(4, 3, 4),
+		CFrame = CFrame.new(-W / 2 + 4, 2.5, 0),
+		Color = Color3.fromRGB(70, 90, 55),
+		Material = Enum.Material.Wood,
+	})
+	local lab = make("Part", m, {
+		Name = "Laboratorio",
+		Size = Vector3.new(4, 3, 8),
+		CFrame = CFrame.new(W / 2 - 4, 2.5, -4),
+		Color = Color3.fromRGB(200, 205, 210),
+		Material = Enum.Material.SmoothPlastic,
+	})
+	local labLight = make("Part", m, {
+		Name = "LuceLaboratorio",
+		Size = Vector3.new(0.8, 0.8, 0.8),
+		CFrame = CFrame.new(W / 2 - 4, 4.4, -4),
+		Material = Enum.Material.Neon,
+		Color = Color3.fromRGB(120, 200, 255),
+		Shape = Enum.PartType.Ball,
+	})
+
+	Forest.stationPrompts = {
+		control = prompt(desk, "Apri il tablet", "Sala di controllo"),
+		supply = prompt(crate, "Rifornisciti", "Dardi, torcia e visore"),
+		lab = prompt(lab, "Analizza campioni", "Laboratorio"),
+	}
+	Forest.labLight = labLight
+end
+
+local function buildTower(parent: Instance, pos: Vector3)
+	local m = make("Model", parent, { Name = "Torre" })
+	local h = 22
+	for _, x in { -4, 4 } do
+		for _, z in { -4, 4 } do
+			make("Part", m, { Size = Vector3.new(1, h, 1), CFrame = CFrame.new(pos + Vector3.new(x, h / 2, z)), Color = WOOD, Material = Enum.Material.Wood })
+			make("Part", m, { Size = Vector3.new(0.6, 7, 0.6), CFrame = CFrame.new(pos + Vector3.new(x, h + 4.5, z)), Color = WOOD, Material = Enum.Material.Wood })
+		end
+	end
+	make("Part", m, { Size = Vector3.new(10, 1, 10), CFrame = CFrame.new(pos + Vector3.new(0, h + 0.5, 0)), Color = WOOD, Material = Enum.Material.WoodPlanks })
+	make("Part", m, { Size = Vector3.new(11, 0.6, 11), CFrame = CFrame.new(pos + Vector3.new(0, h + 8.3, 0)), Color = DARK_WOOD, Material = Enum.Material.Wood })
+	make("Part", m, { Size = Vector3.new(10, 3, 0.4), CFrame = CFrame.new(pos + Vector3.new(0, h + 2.5, -4.8)), Color = WOOD, Material = Enum.Material.Wood })
+	make("Part", m, { Size = Vector3.new(0.4, 3, 10), CFrame = CFrame.new(pos + Vector3.new(-4.8, h + 2.5, 0)), Color = WOOD, Material = Enum.Material.Wood })
+	make("Part", m, { Size = Vector3.new(0.4, 3, 10), CFrame = CFrame.new(pos + Vector3.new(4.8, h + 2.5, 0)), Color = WOOD, Material = Enum.Material.Wood })
+	make("TrussPart", m, { Size = Vector3.new(2, h, 2), CFrame = CFrame.new(pos + Vector3.new(0, h / 2, 6)), Color = DARK_WOOD })
+end
+
+local function buildCamp(parent: Instance, pos: Vector3)
+	local m = make("Model", parent, { Name = "Campeggio" })
+	local tents = {
+		{ Vector3.new(-14, 0, -8), 25, Color3.fromRGB(120, 60, 40) },
+		{ Vector3.new(10, 0, -14), -40, Color3.fromRGB(60, 80, 110) },
+		{ Vector3.new(14, 0, 10), 70, Color3.fromRGB(110, 110, 60) },
+	}
+	for i, t in tents do
+		local base = CFrame.new(pos + t[1]) * CFrame.Angles(0, math.rad(t[2]), 0)
+		local h, len, d = 4, 7, 3
+		make("WedgePart", m, { Size = Vector3.new(len, h, d), CFrame = base * CFrame.new(0, h / 2, -d / 2), Color = t[3], Material = Enum.Material.Fabric })
+		if i ~= 2 then -- una tenda è crollata a metà
+			make("WedgePart", m, {
+				Size = Vector3.new(len, h, d),
+				CFrame = base * CFrame.new(0, h / 2, d / 2) * CFrame.Angles(0, math.pi, 0),
+				Color = t[3],
+				Material = Enum.Material.Fabric,
+			})
+		end
+	end
+	for i = 0, 5 do
+		local a = i / 6 * math.pi * 2
+		make("Part", m, {
+			Size = Vector3.new(1.2, 0.8, 1.2),
+			CFrame = CFrame.new(pos + Vector3.new(math.cos(a) * 2, 0.4, math.sin(a) * 2)),
+			Color = Color3.fromRGB(90, 90, 90),
+			Material = Enum.Material.Slate,
+		})
+	end
+	local embers = make("Part", m, {
+		Size = Vector3.new(2, 0.3, 2),
+		CFrame = CFrame.new(pos + Vector3.new(0, 0.2, 0)),
+		Color = Color3.fromRGB(150, 50, 20),
+		Material = Enum.Material.Neon,
+		CanCollide = false,
+	})
+	make("PointLight", embers, { Range = 10, Brightness = 0.8, Color = Color3.fromRGB(255, 120, 50) })
+	make("Part", m, { Size = Vector3.new(8, 0.5, 3), CFrame = CFrame.new(pos + Vector3.new(-4, 2.8, 12)), Color = WOOD, Material = Enum.Material.WoodPlanks })
+	make("Part", m, { Size = Vector3.new(8, 0.4, 1), CFrame = CFrame.new(pos + Vector3.new(-4, 1.6, 10.3)), Color = WOOD, Material = Enum.Material.WoodPlanks })
+	make("Part", m, { Size = Vector3.new(0.5, 2.6, 0.5), CFrame = CFrame.new(pos + Vector3.new(-7.5, 1.3, 12)), Color = WOOD })
+	make("Part", m, { Size = Vector3.new(0.5, 2.6, 0.5), CFrame = CFrame.new(pos + Vector3.new(-0.5, 1.3, 12)), Color = WOOD })
+end
+
+local function buildDock(parent: Instance, pos: Vector3)
+	local m = make("Model", parent, { Name = "Pontile" })
+	local dir = flat(LAKE.center - pos).Unit
+	local start = pos + dir * 6
+	local cf = CFrame.lookAt(start, start + dir)
+	local length = 22
+	make("Part", m, {
+		Size = Vector3.new(5, 0.5, length),
+		CFrame = cf * CFrame.new(0, 0.5, -length / 2),
+		Color = WOOD,
+		Material = Enum.Material.WoodPlanks,
+	})
+	for i = 1, 3 do
+		for _, x in { -2.2, 2.2 } do
+			make("Part", m, {
+				Size = Vector3.new(0.6, 8, 0.6),
+				CFrame = cf * CFrame.new(x, -2.5, -i * length / 3),
+				Color = DARK_WOOD,
+				Material = Enum.Material.Wood,
+			})
+		end
+	end
+	make("Part", m, {
+		Size = Vector3.new(3, 1, 7),
+		CFrame = cf * CFrame.new(4.5, -0.6, -length + 4) * CFrame.Angles(0, 0.3, 0.15),
+		Color = Color3.fromRGB(90, 60, 40),
+		Material = Enum.Material.Wood,
+	})
+end
+
+local function buildCabin(parent: Instance, pos: Vector3)
+	local m = make("Model", parent, { Name = "Capanno" })
+	local cf = CFrame.lookAt(pos, Vector3.new(Forest.STATION.X, 0, Forest.STATION.Z))
+	local W, D, H = 14, 12, 9
+	local function part(size: Vector3, offset: Vector3, color: Color3?)
+		return make("Part", m, { Size = size, CFrame = cf * CFrame.new(offset), Color = color or DARK_WOOD, Material = Enum.Material.WoodPlanks })
+	end
+	part(Vector3.new(W, 1, D), Vector3.new(0, 0.5, 0), WOOD)
+	part(Vector3.new(W, H, 1), Vector3.new(0, 1 + H / 2, D / 2 - 0.5))
+	part(Vector3.new(1, H, D), Vector3.new(-W / 2 + 0.5, 1 + H / 2, 0))
+	part(Vector3.new(1, H, D), Vector3.new(W / 2 - 0.5, 1 + H / 2, 0))
+	part(Vector3.new(5, H, 1), Vector3.new(-4.5, 1 + H / 2, -D / 2 + 0.5))
+	part(Vector3.new(5, H, 1), Vector3.new(4.5, 1 + H / 2, -D / 2 + 0.5))
+	part(Vector3.new(4, 2, 1), Vector3.new(0, H, -D / 2 + 0.5))
+	part(Vector3.new(W + 2, 1, D + 2), Vector3.new(0, H + 1.5, 0), Color3.fromRGB(55, 45, 40))
+	part(Vector3.new(4, 2.6, 2.5), Vector3.new(3, 2.3, 2), WOOD)
+end
+
+local function buildMine(parent: Instance, pos: Vector3)
+	local m = make("Model", parent, { Name = "Miniera" })
+	local cf = CFrame.lookAt(pos, Vector3.new(Forest.STATION.X, 0, Forest.STATION.Z))
+	local back = -cf.LookVector
+	local terrain = workspace.Terrain
+	terrain:FillBall(pos + back * 16 + Vector3.new(0, -4, 0), 20, Enum.Material.Rock)
+	terrain:FillBall(pos + back * 22 + cf.RightVector * 14 + Vector3.new(0, -6, 0), 16, Enum.Material.Rock)
+	terrain:FillBall(pos + back * 22 - cf.RightVector * 14 + Vector3.new(0, -6, 0), 15, Enum.Material.Rock)
+	local function part(size: Vector3, offset: Vector3, color: Color3, material: Enum.Material?)
+		return make("Part", m, { Size = size, CFrame = cf * CFrame.new(offset), Color = color, Material = material or Enum.Material.Wood })
+	end
+	part(Vector3.new(1.2, 10, 1.2), Vector3.new(-4, 5, 0), DARK_WOOD)
+	part(Vector3.new(1.2, 10, 1.2), Vector3.new(4, 5, 0), DARK_WOOD)
+	part(Vector3.new(10, 1.2, 1.4), Vector3.new(0, 10.4, 0), DARK_WOOD)
+	part(Vector3.new(7, 9.6, 0.6), Vector3.new(0, 4.8, 1.2), Color3.fromRGB(8, 8, 10), Enum.Material.SmoothPlastic)
+	part(Vector3.new(0.4, 0.3, 26), Vector3.new(-1.4, 0.15, -12), Color3.fromRGB(70, 60, 55), Enum.Material.Metal)
+	part(Vector3.new(0.4, 0.3, 26), Vector3.new(1.4, 0.15, -12), Color3.fromRGB(70, 60, 55), Enum.Material.Metal)
+	part(Vector3.new(3.6, 2.4, 4.5), Vector3.new(0, 1.6, -9), Color3.fromRGB(80, 70, 60), Enum.Material.CorrodedMetal)
+	local lantern = part(Vector3.new(0.6, 0.9, 0.6), Vector3.new(3, 8.5, -0.8), Color3.fromRGB(255, 170, 80), Enum.Material.Neon)
+	make("PointLight", lantern, { Range = 12, Brightness = 0.7, Color = Color3.fromRGB(255, 160, 80) })
+end
+
+local function buildBounds(parent: Instance)
+	local m = make("Model", parent, { Name = "Confini" })
+	local h = 120
+	for _, info in {
+		{ Vector3.new(SIZE + 20, h, 2), Vector3.new(0, h / 2, HALF + 1) },
+		{ Vector3.new(SIZE + 20, h, 2), Vector3.new(0, h / 2, -HALF - 1) },
+		{ Vector3.new(2, h, SIZE + 20), Vector3.new(HALF + 1, h / 2, 0) },
+		{ Vector3.new(2, h, SIZE + 20), Vector3.new(-HALF - 1, h / 2, 0) },
+	} do
+		make("Part", m, { Size = info[1], CFrame = CFrame.new(info[2]), Transparency = 1, CanQuery = false })
+	end
+end
+
+function Forest.build(world: Instance)
+	local props = make("Folder", world, { Name = "Mappa" })
+	buildTerrain()
+	buildStation(props)
+	buildTower(props, POIS[2].pos)
+	buildCamp(props, POIS[3].pos)
+	buildDock(props, POIS[4].pos)
+	buildCabin(props, POIS[5].pos)
+	buildMine(props, POIS[6].pos)
+	buildBounds(props)
+	Forest.trees = make("Folder", world, { Name = "Alberi" })
+end
+
+---------------------------------------------------------------------------------------------
+-- Alberi procedurali
+
+local function pine(folder: Instance, p: Vector3, rng: Random)
+	local h = rng:NextNumber(20, 32)
+	local trunk = rng:NextNumber(1.8, 2.6)
+	make("Part", folder, {
+		Shape = Enum.PartType.Cylinder,
+		Size = Vector3.new(h, trunk, trunk),
+		CFrame = CFrame.new(p + Vector3.new(0, h / 2, 0)) * CFrame.Angles(0, 0, math.pi / 2),
+		Color = DARK_WOOD,
+		Material = Enum.Material.Wood,
+		CastShadow = false,
+	})
+	local green = Color3.fromRGB(25 + rng:NextInteger(0, 15), 50 + rng:NextInteger(0, 20), 32)
+	for i, layer in { { 0.42, 13 }, { 0.62, 10 }, { 0.82, 6.5 } } do
+		local d = layer[2] * (h / 26)
+		make("Part", folder, {
+			Shape = Enum.PartType.Cylinder,
+			Size = Vector3.new(5 - i * 0.6, d, d),
+			CFrame = CFrame.new(p + Vector3.new(0, h * layer[1], 0)) * CFrame.Angles(0, 0, math.pi / 2),
+			Color = green,
+			Material = Enum.Material.Grass,
+			CanCollide = false,
+			CastShadow = false,
+		})
+	end
+end
+
+local function broadleaf(folder: Instance, p: Vector3, rng: Random)
+	local h = rng:NextNumber(14, 20)
+	make("Part", folder, {
+		Shape = Enum.PartType.Cylinder,
+		Size = Vector3.new(h, 2, 2),
+		CFrame = CFrame.new(p + Vector3.new(0, h / 2, 0)) * CFrame.Angles(0, 0, math.pi / 2),
+		Color = WOOD,
+		Material = Enum.Material.Wood,
+		CastShadow = false,
+	})
+	local d = rng:NextNumber(11, 16)
+	make("Part", folder, {
+		Shape = Enum.PartType.Ball,
+		Size = Vector3.new(d, d, d),
+		CFrame = CFrame.new(p + Vector3.new(0, h, 0)),
+		Color = Color3.fromRGB(45, 65 + rng:NextInteger(0, 20), 35),
+		Material = Enum.Material.Grass,
+		CanCollide = false,
+		CastShadow = false,
+	})
+end
+
+local function deadTree(folder: Instance, p: Vector3, rng: Random)
+	local h = rng:NextNumber(12, 20)
+	local gray = Color3.fromRGB(85, 80, 72)
+	make("Part", folder, {
+		Shape = Enum.PartType.Cylinder,
+		Size = Vector3.new(h, 1.5, 1.5),
+		CFrame = CFrame.new(p + Vector3.new(0, h / 2, 0)) * CFrame.Angles(0, 0, math.pi / 2 + rng:NextNumber(-0.08, 0.08)),
+		Color = gray,
+		Material = Enum.Material.Wood,
+		CastShadow = false,
+	})
+	for _, side in { -1, 1 } do
+		make("Part", folder, {
+			Size = Vector3.new(0.6, rng:NextNumber(4, 7), 0.6),
+			CFrame = CFrame.new(p + Vector3.new(0, h * rng:NextNumber(0.6, 0.85), 0))
+				* CFrame.Angles(0, rng:NextNumber(0, math.pi * 2), side * math.rad(40))
+				* CFrame.new(0, 2.5, 0),
+			Color = gray,
+			Material = Enum.Material.Wood,
+			CanCollide = false,
+			CastShadow = false,
+		})
+	end
+end
+
+local function rock(folder: Instance, p: Vector3, rng: Random)
+	local s = rng:NextNumber(3, 7)
+	make("Part", folder, {
+		Size = Vector3.new(s * rng:NextNumber(0.8, 1.4), s * 0.7, s),
+		CFrame = CFrame.new(p + Vector3.new(0, s * 0.25, 0))
+			* CFrame.Angles(rng:NextNumber(-0.3, 0.3), rng:NextNumber(0, math.pi), rng:NextNumber(-0.3, 0.3)),
+		Color = Color3.fromRGB(95, 95, 100),
+		Material = Enum.Material.Slate,
+		CastShadow = false,
+	})
+end
+
+function Forest.regenerate(rng: Random)
+	local folder = Forest.trees
+	folder:ClearAllChildren()
+	local target = MAP.TREE_COUNT
+	local placed, attempts = 0, 0
+	while placed < target and attempts < target * 8 do
+		attempts += 1
+		local p = Vector3.new(rng:NextNumber(-HALF + 6, HALF - 6), 0, rng:NextNumber(-HALF + 6, HALF - 6))
+		local biome = Forest.biomeAt(p)
+		if rng:NextNumber() <= DENSITY[biome] and Forest.isOpenGround(p, 4) then
+			placed += 1
+			if biome == "Pineta fitta" then
+				pine(folder, p, rng)
+			elseif biome == "Ruderi del campeggio" then
+				if rng:NextNumber() < 0.5 then broadleaf(folder, p, rng) else pine(folder, p, rng) end
+			elseif biome == "Palude" then
+				deadTree(folder, p, rng)
+			else
+				if rng:NextNumber() < 0.35 then rock(folder, p, rng) else pine(folder, p, rng) end
+			end
+		end
+		if attempts % 200 == 0 then
+			task.wait()
+		end
+	end
+end
+
+return Forest
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX9"><Properties><string name="Name">Objectives</string><ProtectedString name="Source"><![CDATA[-- Obiettivi di partita: Ricognizione, Caccia, Sopravvivenza, Reperto.
+-- La cattura della creatura vale come vittoria con qualsiasi obiettivo.
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+local Forest = require(script.Parent.Forest)
+
+local make = Forest.make
+
+local Objectives = {}
+
+local LIST = { "Ricognizione", "Caccia", "Sopravvivenza", "Reperto" }
+
+local ctx
+local current = "Caccia"
+local tape: Model? = nil
+local tapePoi = ""
+
+local function tapeCarrier(): Player?
+	for _, player in Players:GetPlayers() do
+		if player:GetAttribute("CarryingTape") then
+			return player
+		end
+	end
+	return nil
+end
+
+local function setCarrierHighlight(player: Player, on: boolean)
+	local char = player.Character
+	if not char then
+		return
+	end
+	local existing = char:FindFirstChild("NastroHighlight")
+	if on and not existing then
+		make("Highlight", char, {
+			Name = "NastroHighlight",
+			FillTransparency = 1,
+			OutlineColor = Color3.fromRGB(255, 70, 70),
+		})
+	elseif not on and existing then
+		existing:Destroy()
+	end
+end
+
+local function spawnTape(pos: Vector3)
+	if tape then
+		tape:Destroy()
+	end
+	local m = Instance.new("Model")
+	m.Name = "NastroAudio"
+	local part = make("Part", m, {
+		Name = "Nastro",
+		Size = Vector3.new(1.2, 0.35, 0.8),
+		CFrame = CFrame.new(pos + Vector3.new(0, 0.4, 0)),
+		Color = Color3.fromRGB(20, 20, 20),
+		Material = Enum.Material.SmoothPlastic,
+	})
+	make("Part", m, {
+		Size = Vector3.new(0.8, 0.05, 0.5),
+		CFrame = CFrame.new(pos + Vector3.new(0, 0.6, 0)),
+		Color = Color3.fromRGB(200, 40, 40),
+		Material = Enum.Material.Neon,
+		CanCollide = false,
+	})
+	make("PointLight", part, { Range = 7, Brightness = 0.8, Color = Color3.fromRGB(255, 60, 60) })
+	local prompt = make("ProximityPrompt", part, {
+		ActionText = "Prendi",
+		ObjectText = "Nastro audio",
+		HoldDuration = 1,
+		MaxActivationDistance = 9,
+		RequiresLineOfSight = false,
+	})
+	prompt.Triggered:Connect(function(player)
+		if not ctx.round.active or not ctx.team.isStanding(player) or tape ~= m then
+			return
+		end
+		m:Destroy()
+		tape = nil
+		player:SetAttribute("CarryingTape", true)
+		setCarrierHighlight(player, true)
+		ctx.notifyAll(("📼 %s ha il nastro audio! Riportatelo alla Ranger Station."):format(player.DisplayName))
+	end)
+	m.Parent = ctx.world
+	tape = m
+end
+
+function Objectives.init(c)
+	ctx = c
+end
+
+function Objectives.start(rng: Random)
+	current = Config.FORCED_OBJECTIVE or LIST[rng:NextInteger(1, #LIST)]
+	ctx.aggressionMultiplier = current == "Sopravvivenza" and 1.5 or 1
+	local text
+	if current == "Ricognizione" then
+		text = ("Piazza %d telecamere attive e documenta %d prove."):format(Config.RECON_CAMERAS, Config.RECON_EVIDENCE)
+	elseif current == "Caccia" then
+		text = "Trova The Rake, stordiscilo con i dardi tranquillanti e catturalo."
+	elseif current == "Sopravvivenza" then
+		text = "Resta vivo fino all'alba. Stanotte la creatura è più aggressiva."
+	else
+		local poi = Forest.POIS[rng:NextInteger(2, #Forest.POIS)]
+		tapePoi = poi.name
+		-- Sul lato del punto di interesse rivolto verso la stazione (mai dentro rocce o acqua)
+		local toStation = (Forest.STATION - poi.pos) * Vector3.new(1, 0, 1)
+		local side = Vector3.new(-toStation.Z, 0, toStation.X).Unit
+		local sign = rng:NextNumber() < 0.5 and -1 or 1
+		spawnTape(poi.pos + toStation.Unit * rng:NextNumber(10, 14) + side * sign * rng:NextNumber(3.5, 6))
+		text = ("Recupera il nastro audio (%s) e riportalo alla Ranger Station."):format(tapePoi)
+	end
+	ctx.state:SetAttribute("Objective", current)
+	ctx.state:SetAttribute("ObjectiveText", text)
+end
+
+function Objectives.current(): string
+	return current
+end
+
+function Objectives.progressText(): string
+	local s = ctx.state
+	if current == "Ricognizione" then
+		return ("Camere attive %d/%d · Prove %d/%d"):format(
+			s:GetAttribute("CamerasActive") or 0,
+			Config.RECON_CAMERAS,
+			s:GetAttribute("Evidence") or 0,
+			Config.RECON_EVIDENCE
+		)
+	elseif current == "Caccia" then
+		return ("Tracciamento %d%%"):format(math.floor(s:GetAttribute("Tracking") or 0))
+	elseif current == "Sopravvivenza" then
+		return "Resisti fino alle 06:00"
+	end
+	local carrier = tapeCarrier()
+	return carrier and ("Il nastro è in mano a %s"):format(carrier.DisplayName) or ("Il nastro è %s"):format(tape and "nel bosco" or "perso")
+end
+
+-- Restituisce "win" e una descrizione quando l'obiettivo è completato
+function Objectives.check(): (string?, string?)
+	if ctx.round.captured then
+		return "win", "The Rake è stato catturato!"
+	end
+	local s = ctx.state
+	if current == "Ricognizione" then
+		if (s:GetAttribute("CamerasActive") or 0) >= Config.RECON_CAMERAS and (s:GetAttribute("Evidence") or 0) >= Config.RECON_EVIDENCE then
+			return "win", "Ricognizione completata: il bosco è sotto sorveglianza."
+		end
+	elseif current == "Reperto" then
+		local carrier = tapeCarrier()
+		if carrier and ctx.team.isStanding(carrier) then
+			local hrp = carrier.Character and carrier.Character:FindFirstChild("HumanoidRootPart")
+			if hrp and Forest.inStation(hrp.Position) then
+				return "win", ("%s ha riportato il nastro alla Ranger Station."):format(carrier.DisplayName)
+			end
+		end
+	end
+	return nil, nil
+end
+
+function Objectives.onDawn(): (string, string)
+	if current == "Sopravvivenza" then
+		return "win", "È l'alba: la squadra è sopravvissuta alla notte."
+	end
+	return "lose", "È sorta l'alba prima che completaste l'obiettivo."
+end
+
+-- Chi porta il nastro e viene colpito lo lascia cadere
+function Objectives.onDowned(player: Player)
+	if not player:GetAttribute("CarryingTape") then
+		return
+	end
+	player:SetAttribute("CarryingTape", false)
+	setCarrierHighlight(player, false)
+	local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+	if hrp and ctx.round.active then
+		spawnTape(Vector3.new(hrp.Position.X, 0, hrp.Position.Z))
+		ctx.notifyAll("📼 Il nastro è caduto a terra!")
+	end
+end
+
+function Objectives.cleanup()
+	if tape then
+		tape:Destroy()
+		tape = nil
+	end
+	for _, player in Players:GetPlayers() do
+		player:SetAttribute("CarryingTape", false)
+		setCarrierHighlight(player, false)
+	end
+end
+
+return Objectives
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX10"><Properties><string name="Name">Progression</string><ProtectedString name="Source"><![CDATA[-- Progressione persistente (DataStore): XP, livello e rango "Criptidologo".
+-- In Studio serve "Enable Studio Access to API Services", altrimenti i dati restano solo in memoria.
+local DataStoreService = game:GetService("DataStoreService")
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+
+local Progression = {}
+
+local DEFAULT = { XP = 0, Runs = 0, Wins = 0, Captures = 0, Evidence = 0, Revives = 0 }
+
+local store: DataStore? = nil
+do
+	local ok, result = pcall(function()
+		return DataStoreService:GetDataStore("RakeHunt_Profili_v1")
+	end)
+	if ok then
+		store = result
+	end
+end
+
+local profiles: { [Player]: { [string]: number } } = {}
+
+local function key(player: Player): string
+	return "p_" .. player.UserId
+end
+
+function Progression.rankFor(xp: number): (string, number?)
+	local name, nextXp = Config.RANKS[1].name, nil
+	for i, rank in Config.RANKS do
+		if xp >= rank.xp then
+			name = rank.name
+			nextXp = Config.RANKS[i + 1] and Config.RANKS[i + 1].xp or nil
+		end
+	end
+	return name, nextXp
+end
+
+function Progression.levelFor(xp: number): number
+	return math.floor(math.sqrt(xp / 40)) + 1
+end
+
+local function refresh(player: Player)
+	local data = profiles[player]
+	local stats = player:FindFirstChild("leaderstats")
+	if not data or not stats then
+		return
+	end
+	local rank = Progression.rankFor(data.XP)
+	;(stats:FindFirstChild("Rango") :: StringValue).Value = rank
+	;(stats:FindFirstChild("Livello") :: IntValue).Value = Progression.levelFor(data.XP)
+	player:SetAttribute("XP", data.XP)
+end
+
+function Progression.load(player: Player)
+	local data = table.clone(DEFAULT)
+	if store then
+		local ok, saved = pcall(function()
+			return (store :: DataStore):GetAsync(key(player))
+		end)
+		if ok and type(saved) == "table" then
+			for k, v in saved do
+				data[k] = v
+			end
+		elseif not ok then
+			warn("[Progressione] Caricamento fallito per " .. player.Name .. ": " .. tostring(saved))
+		end
+	end
+	profiles[player] = data
+
+	local stats = Instance.new("Folder")
+	stats.Name = "leaderstats"
+	local rank = Instance.new("StringValue")
+	rank.Name = "Rango"
+	rank.Parent = stats
+	local level = Instance.new("IntValue")
+	level.Name = "Livello"
+	level.Parent = stats
+	stats.Parent = player
+	refresh(player)
+end
+
+function Progression.get(player: Player)
+	return profiles[player]
+end
+
+function Progression.save(player: Player)
+	local data = profiles[player]
+	if not store or not data then
+		return
+	end
+	local ok, err = pcall(function()
+		(store :: DataStore):SetAsync(key(player), data)
+	end)
+	if not ok then
+		warn("[Progressione] Salvataggio fallito per " .. player.Name .. ": " .. tostring(err))
+	end
+end
+
+function Progression.award(player: Player, xp: number, counters: { [string]: number })
+	local data = profiles[player]
+	if not data then
+		return
+	end
+	data.XP += xp
+	for k, v in counters do
+		data[k] = (data[k] or 0) + v
+	end
+	refresh(player)
+	task.spawn(Progression.save, player)
+end
+
+function Progression.release(player: Player)
+	Progression.save(player)
+	profiles[player] = nil
+end
+
+game:BindToClose(function()
+	for _, player in Players:GetPlayers() do
+		Progression.save(player)
+	end
+end)
+
+return Progression
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX11"><Properties><string name="Name">Rake</string><ProtectedString name="Source"><![CDATA[-- The Rake: creatura controllata dal server con una macchina a stati.
+-- Inattiva -> Curiosa -> Territoriale -> Aggressiva in base all'aggressività, che cresce con la notte,
+-- il rumore, le luci lontane e i giocatori isolati. Più gli stati speciali Fuga e Stordita.
+local PathfindingService = game:GetService("PathfindingService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Debris = game:GetService("Debris")
+
+local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+local Forest = require(script.Parent.Forest)
+
+local R = Config.RAKE
+local HIP_HEIGHT = 2.6
+
+local Rake = {}
+Rake.model = nil :: Model?
+
+local ctx
+local rng = Random.new()
+local hum: Humanoid, root: BasePart, head: BasePart
+local highlight: Highlight, capturePrompt: ProximityPrompt
+local footsteps: Sound?, callSound: Sound?, screechSound: Sound?
+local brain: { [string]: any } = {}
+local revealed = false
+local loopToken = nil
+
+local function flat(v: Vector3): Vector3
+	return Vector3.new(v.X, 0, v.Z)
+end
+
+local function setState(name: string)
+	if brain.state ~= name then
+		brain.state = name
+		ctx.state:SetAttribute("RakeState", name)
+	end
+end
+
+---------------------------------------------------------------------------------------------
+-- Modello
+
+local function build(pos: Vector3): Model
+	local m = Instance.new("Model")
+	m.Name = "TheRake"
+
+	local rootCF = CFrame.new(pos + Vector3.new(0, HIP_HEIGHT + 1, 0))
+	root = Instance.new("Part")
+	root.Name = "HumanoidRootPart"
+	root.Size = Vector3.new(2, 2, 1)
+	root.Transparency = 1
+	root.CFrame = rootCF
+	root.Parent = m
+
+	local skin = Color3.fromRGB(196, 190, 180)
+	local function limb(name: string, size: Vector3, offset: CFrame, color: Color3, material: Enum.Material?, shape: Enum.PartType?)
+		local p = Instance.new("Part")
+		p.Name = name
+		if shape then
+			p.Shape = shape
+		end
+		p.Size = size
+		p.Color = color
+		p.Material = material or Enum.Material.SmoothPlastic
+		p.CanCollide = false
+		p.Massless = true
+		p.CastShadow = true
+		p.CFrame = rootCF * offset
+		local weld = Instance.new("WeldConstraint")
+		weld.Part0 = root
+		weld.Part1 = p
+		weld.Parent = p
+		p.Parent = m
+		return p
+	end
+
+	for _, x in { -0.55, 0.55 } do
+		limb("Gamba", Vector3.new(0.6, 3, 0.6), CFrame.new(x, -2.1, 0), skin)
+		local arm = CFrame.new(x * 1.85, 0.3, -0.5) * CFrame.Angles(math.rad(15), 0, 0)
+		limb("Braccio", Vector3.new(0.4, 3.6, 0.4), arm, skin)
+		for i = -1, 1 do
+			limb("Artiglio", Vector3.new(0.12, 0.9, 0.12), arm * CFrame.new(i * 0.13, -2.1, -0.1), Color3.fromRGB(25, 20, 20))
+		end
+	end
+	limb("Torso", Vector3.new(1.5, 2.8, 0.9), CFrame.new(0, 0.8, -0.2) * CFrame.Angles(math.rad(-20), 0, 0), skin)
+	head = limb("Head", Vector3.new(1.2, 1.4, 1.2), CFrame.new(0, 2.6, -0.75), skin)
+	for _, x in { -0.28, 0.28 } do
+		limb("Occhio", Vector3.new(0.3, 0.3, 0.3), CFrame.new(x, 2.75, -1.33), Color3.fromRGB(255, 245, 225), Enum.Material.Neon, Enum.PartType.Ball)
+	end
+	limb("Bocca", Vector3.new(0.7, 0.15, 0.1), CFrame.new(0, 2.3, -1.36), Color3.fromRGB(10, 5, 5))
+
+	local glow = Instance.new("PointLight")
+	glow.Range = 6
+	glow.Brightness = 0.8
+	glow.Color = Color3.fromRGB(255, 230, 210)
+	glow.Parent = head
+
+	hum = Instance.new("Humanoid")
+	hum.RigType = Enum.HumanoidRigType.R15
+	hum.HipHeight = HIP_HEIGHT
+	hum.MaxHealth = 1e6
+	hum.Health = 1e6
+	hum.WalkSpeed = R.WALK_SPEED
+	hum.UseJumpPower = true
+	hum.JumpPower = 0
+	hum.AutoJumpEnabled = false
+	hum.BreakJointsOnDeath = false
+	hum.RequiresNeck = false
+	hum.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+	hum.HealthDisplayType = Enum.HumanoidHealthDisplayType.AlwaysOff
+	hum.Parent = m
+
+	highlight = Instance.new("Highlight")
+	highlight.Enabled = false
+	highlight.FillTransparency = 0.7
+	highlight.FillColor = Color3.fromRGB(255, 60, 60)
+	highlight.OutlineColor = Color3.fromRGB(255, 80, 80)
+	highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+	highlight.Parent = m
+
+	capturePrompt = Instance.new("ProximityPrompt")
+	capturePrompt.ActionText = "Cattura"
+	capturePrompt.ObjectText = "The Rake (stordito)"
+	capturePrompt.HoldDuration = R.CAPTURE_TIME
+	capturePrompt.MaxActivationDistance = 12
+	capturePrompt.RequiresLineOfSight = false
+	capturePrompt.Enabled = false
+	capturePrompt.Parent = root
+
+	local function sound(id: string, parent: Instance, props: { [string]: any }): Sound?
+		if id == "" then
+			return nil
+		end
+		local s = Instance.new("Sound")
+		s.SoundId = id
+		s.RollOffMode = Enum.RollOffMode.InverseTapered
+		s.RollOffMinDistance = 8
+		s.RollOffMaxDistance = 120
+		for k, v in props do
+			(s :: any)[k] = v
+		end
+		s.Parent = parent
+		return s
+	end
+	footsteps = sound(Config.SOUNDS.RAKE_STEPS, root, { Looped = true, Volume = 0.9, PlaybackSpeed = 0.65 })
+	callSound = sound(Config.SOUNDS.RAKE_CALL, head, { Volume = 2, RollOffMaxDistance = 250 })
+	screechSound = sound(Config.SOUNDS.RAKE_SCREECH, head, { Volume = 2 })
+
+	m.PrimaryPart = root
+	return m
+end
+
+---------------------------------------------------------------------------------------------
+-- Movimento con pathfinding
+
+local function computePath(dest: Vector3)
+	local path = PathfindingService:CreatePath({
+		AgentRadius = 2.5,
+		AgentHeight = 7,
+		AgentCanJump = false,
+		WaypointSpacing = 6,
+	})
+	local ok = pcall(function()
+		path:ComputeAsync(root.Position, dest)
+	end)
+	if ok and path.Status == Enum.PathStatus.Success then
+		brain.path = path:GetWaypoints()
+		brain.pathIndex = 2
+	else
+		brain.path = nil
+	end
+	brain.pathGoal = dest
+	brain.pathTime = os.clock()
+end
+
+local function moveTo(dest: Vector3, speed: number)
+	hum.WalkSpeed = speed
+	if not brain.pathGoal or flat(brain.pathGoal - dest).Magnitude > 10 or os.clock() - brain.pathTime > 2 then
+		computePath(dest)
+	end
+	local waypoints = brain.path
+	if waypoints and waypoints[brain.pathIndex] then
+		local wp = waypoints[brain.pathIndex].Position
+		if flat(wp - root.Position).Magnitude < 4 then
+			brain.pathIndex += 1
+			local nextWp = waypoints[brain.pathIndex]
+			if nextWp then
+				hum:MoveTo(nextWp.Position)
+			end
+		else
+			hum:MoveTo(wp)
+		end
+	else
+		hum:MoveTo(dest)
+	end
+end
+
+-- Fuori dall'area della stazione, salvo quando è Aggressiva
+local function avoidStation(goal: Vector3): Vector3
+	if brain.state ~= "Aggressiva" and Forest.inStation(goal, 12) then
+		local away = flat(goal - Forest.STATION)
+		if away.Magnitude < 1 then
+			away = Vector3.new(1, 0, 0)
+		end
+		return Forest.STATION + away.Unit * (Config.MAP.STATION_RADIUS + 18)
+	end
+	return goal
+end
+
+---------------------------------------------------------------------------------------------
+-- Percezione
+
+local function visibleFrom(origin: Vector3, ignore: { Instance }): boolean
+	if not Rake.model then
+		return false
+	end
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = ignore
+	for _, target in { head.Position, root.Position } do
+		local result = workspace:Raycast(origin, target - origin, params)
+		if not result or result.Instance:IsDescendantOf(Rake.model) then
+			return true
+		end
+	end
+	return false
+end
+
+function Rake.visibleFrom(origin: Vector3, ignore: { Instance }): boolean
+	return visibleFrom(origin, ignore)
+end
+
+function Rake.position(): Vector3?
+	if Rake.model and root and root.Parent then
+		return root.Position
+	end
+	return nil
+end
+
+-- Il giocatore più "appetibile": isolato, lontano dalla stazione, con il nastro o una luce accesa
+local function pickTarget(survivors)
+	local best, bestScore = nil, -math.huge
+	for _, s in survivors do
+		local iso = 150
+		for _, other in survivors do
+			if other ~= s then
+				iso = math.min(iso, (other.root.Position - s.root.Position).Magnitude)
+			end
+		end
+		local score = iso - (s.root.Position - root.Position).Magnitude * 0.3
+		if s.player:GetAttribute("CarryingTape") then
+			score += 60
+		end
+		if s.player:GetAttribute("TorchOn") then
+			score += 10
+		end
+		if Forest.inStation(s.root.Position) and brain.state ~= "Aggressiva" then
+			score -= 200
+		end
+		s.isolation = iso
+		if score > bestScore then
+			best, bestScore = s, score
+		end
+	end
+	return best
+end
+
+local function flee(from: Vector3, duration: number)
+	brain.fleeUntil = os.clock() + duration
+	brain.fleeFrom = from
+	brain.goal = nil
+end
+
+local function playSound(s: Sound?)
+	if s then
+		s:Play()
+	end
+end
+
+-- Verso finto da un'altra direzione per depistare la squadra
+local function fakeCall()
+	if Config.SOUNDS.RAKE_CALL == "" then
+		return
+	end
+	local pos = Forest.randomGround(rng, root.Position, 80, 140)
+	local emitter = Instance.new("Part")
+	emitter.Anchored = true
+	emitter.CanCollide = false
+	emitter.CanQuery = false
+	emitter.Transparency = 1
+	emitter.Size = Vector3.new(1, 1, 1)
+	emitter.CFrame = CFrame.new(pos + Vector3.new(0, 5, 0))
+	local s = Instance.new("Sound")
+	s.SoundId = Config.SOUNDS.RAKE_CALL
+	s.Volume = 2
+	s.RollOffMaxDistance = 250
+	s.Parent = emitter
+	emitter.Parent = workspace
+	s:Play()
+	Debris:AddItem(emitter, 8)
+end
+
+local function updateLight(dt: number, survivors)
+	local exposedBy = nil
+	for _, s in survivors do
+		if s.player:GetAttribute("TorchOn") and s.head then
+			local toRake = root.Position - s.head.Position
+			local d = toRake.Magnitude
+			if d < R.LIGHT_RANGE and d > 0.1 then
+				local look = s.root.CFrame.LookVector
+				local angle = math.deg(math.acos(math.clamp(look:Dot(toRake.Unit), -1, 1)))
+				if angle < R.LIGHT_ANGLE and visibleFrom(s.head.Position, { s.char }) then
+					exposedBy = s
+					break
+				end
+			end
+		end
+	end
+	if exposedBy then
+		brain.light += dt
+		if brain.light >= R.LIGHT_TO_FLEE then
+			brain.light = 0
+			brain.aggression = math.max(0, brain.aggression - 12)
+			flee(exposedBy.root.Position, R.FLEE_TIME)
+			ctx.notify("🔦 La luce l'ha respinto! Ma tornerà…", exposedBy.player)
+		end
+	else
+		brain.light = math.max(0, brain.light - dt * 0.5)
+	end
+end
+
+---------------------------------------------------------------------------------------------
+-- Stordimento e cattura
+
+local function knockout()
+	brain.knockedUntil = os.clock() + R.KNOCKOUT_TIME
+	hum.WalkSpeed = 0
+	hum:MoveTo(root.Position)
+	hum.PlatformStand = true
+	capturePrompt.Enabled = true
+	highlight.FillColor = Color3.fromRGB(255, 255, 255)
+	highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+	highlight.Enabled = true
+	if footsteps then
+		footsteps:Stop()
+	end
+	setState("Stordita")
+	ctx.notifyAll(("💤 The Rake è a terra! Catturalo (tieni premuto E) entro %d secondi."):format(R.KNOCKOUT_TIME))
+end
+
+local function wake()
+	brain.knockedUntil = 0
+	brain.sedation = 1
+	brain.aggression = 90
+	hum.PlatformStand = false
+	hum:ChangeState(Enum.HumanoidStateType.GettingUp)
+	capturePrompt.Enabled = false
+	highlight.FillColor = Color3.fromRGB(255, 60, 60)
+	highlight.OutlineColor = Color3.fromRGB(255, 80, 80)
+	highlight.Enabled = revealed
+	ctx.notifyAll("⚠ The Rake si è risvegliato… ed è furioso!")
+	playSound(screechSound)
+end
+
+function Rake.hitByDart(player: Player)
+	if not Rake.model or brain.knockedUntil > 0 or brain.captured then
+		return
+	end
+	brain.sedation += 1
+	if brain.sedation >= R.DARTS_TO_KNOCKOUT then
+		knockout()
+	else
+		brain.aggression = math.min(100, brain.aggression + 6)
+		brain.staggerUntil = os.clock() + 0.7
+		ctx.notify(("🎯 Dardo a segno! Sedazione %d/%d"):format(math.floor(brain.sedation), R.DARTS_TO_KNOCKOUT), player)
+	end
+end
+
+function Rake.addAggression(amount: number)
+	if brain.aggression then
+		brain.aggression = math.clamp(brain.aggression + amount, 0, 100)
+	end
+end
+
+function Rake.setRevealed(on: boolean)
+	revealed = on
+	if highlight and brain.knockedUntil == 0 then
+		highlight.Enabled = on
+	end
+end
+
+---------------------------------------------------------------------------------------------
+-- Cervello
+
+local function step(dt: number)
+	local now = os.clock()
+	local b = brain
+	if b.captured then
+		return
+	end
+	if b.knockedUntil > 0 then
+		if now < b.knockedUntil then
+			return
+		end
+		wake()
+	end
+
+	local survivors = ctx.team.standing()
+	updateLight(dt, survivors)
+	b.sedation = math.max(0, b.sedation - R.SEDATION_DECAY * dt)
+
+	-- Aggressività: tempo, rumore, luci lontane, giocatori isolati
+	local gain = R.AGGRESSION_PER_SECOND * (1 + ctx.nightProgress * 1.5) * ctx.aggressionMultiplier
+	local target = pickTarget(survivors)
+	for _, s in survivors do
+		local d = (s.root.Position - root.Position).Magnitude
+		if d < 140 then
+			if s.root.AssemblyLinearVelocity.Magnitude > Config.PLAYER.WALK_SPEED + 3 then
+				gain += 0.25
+			end
+			if s.player:GetAttribute("TorchOn") and d > R.LIGHT_RANGE then
+				gain += 0.1
+			end
+		end
+		if s.isolation and s.isolation > 60 then
+			gain += 0.15
+		end
+	end
+	b.aggression = math.clamp(b.aggression + gain * dt, 0, 100)
+
+	local T = R.THRESHOLDS
+	if now < b.fleeUntil then
+		setState("Fuga")
+	elseif not target then
+		setState("Inattiva")
+	elseif b.aggression >= T.Aggressiva then
+		setState("Aggressiva")
+	elseif b.aggression >= T.Territoriale then
+		setState("Territoriale")
+	elseif b.aggression >= T.Curiosa then
+		setState("Curiosa")
+	else
+		setState("Inattiva")
+	end
+
+	if now < b.staggerUntil then
+		hum.WalkSpeed = 0
+		return
+	end
+
+	local state = b.state
+	local goalReached = b.goal and flat(b.goal - root.Position).Magnitude < 6
+	if state == "Fuga" then
+		if not b.goal or goalReached then
+			local away = flat(root.Position - (b.fleeFrom or root.Position))
+			if away.Magnitude < 1 then
+				away = Vector3.new(rng:NextNumber(-1, 1), 0, rng:NextNumber(-1, 1))
+			end
+			b.goal = Forest.clampToMap(root.Position + away.Unit * 110)
+		end
+		moveTo(b.goal, R.CHASE_SPEED)
+	elseif state == "Inattiva" then
+		if not b.goal or goalReached or now - b.goalTime > 25 then
+			b.goal = Forest.randomGround(rng, b.lair, 0, 120)
+			b.goalTime = now
+		end
+		moveTo(avoidStation(b.goal), R.WALK_SPEED)
+	elseif state == "Curiosa" then
+		-- Pedina il bersaglio restando a distanza, nascosto tra gli alberi
+		local t = target.root.Position
+		b.orbit += dt * 0.05
+		local dir = flat(root.Position - t)
+		if dir.Magnitude < 1 then
+			dir = Vector3.new(1, 0, 0)
+		end
+		dir = (CFrame.Angles(0, math.sin(b.orbit) * 0.6, 0) * dir.Unit)
+		b.goal = avoidStation(Forest.clampToMap(t + dir * 55))
+		local d = flat(t - root.Position).Magnitude
+		moveTo(b.goal, d < 45 and R.STALK_SPEED or R.WALK_SPEED)
+	elseif state == "Territoriale" then
+		-- Gira intorno al bersaglio e ogni tanto finge una carica
+		local t = target.root.Position
+		local d = flat(t - root.Position).Magnitude
+		if now < b.bluffUntil then
+			moveTo(t, R.CHASE_SPEED)
+			if d < 14 then
+				b.bluffUntil = 0
+				b.orbit += math.pi
+			end
+		else
+			b.orbit += dt * 0.25
+			b.goal = avoidStation(Forest.clampToMap(t + Vector3.new(math.cos(b.orbit), 0, math.sin(b.orbit)) * 30))
+			moveTo(b.goal, R.STALK_SPEED)
+			if now > b.nextBluff then
+				b.nextBluff = now + rng:NextNumber(15, 35)
+				b.bluffUntil = now + 4
+				playSound(callSound)
+			end
+		end
+	elseif state == "Aggressiva" then
+		local t = target.root.Position
+		moveTo(t, R.CHASE_SPEED)
+		if (t - root.Position).Magnitude < R.ATTACK_RANGE and now - b.lastAttack > R.ATTACK_COOLDOWN then
+			b.lastAttack = now
+			playSound(screechSound)
+			ctx.team.down(target.player)
+			b.aggression = 40
+			flee(t, R.FLEE_TIME * 1.5)
+		end
+	end
+
+	-- Tracce lasciate lungo il percorso e versi (a volte finti)
+	if state ~= "Fuga" and now - b.lastDrop > Config.EVIDENCE.DROP_INTERVAL then
+		b.lastDrop = now
+		ctx.evidence.dropNear(root.Position)
+	end
+	if state ~= "Inattiva" and now > b.nextCall then
+		b.nextCall = now + rng:NextNumber(35, 70)
+		if rng:NextNumber() < 0.35 then
+			fakeCall()
+		else
+			playSound(callSound)
+		end
+	end
+
+	if footsteps then
+		local moving = root.AssemblyLinearVelocity.Magnitude > 2
+		if moving and not footsteps.IsPlaying then
+			footsteps:Play()
+		elseif not moving and footsteps.IsPlaying then
+			footsteps:Stop()
+		end
+		footsteps.PlaybackSpeed = hum.WalkSpeed > R.STALK_SPEED and 0.9 or 0.65
+	end
+end
+
+---------------------------------------------------------------------------------------------
+
+function Rake.init(c)
+	ctx = c
+end
+
+function Rake.spawn(lair: Vector3)
+	Rake.despawn()
+	local now = os.clock()
+	brain = {
+		state = "",
+		aggression = 10,
+		sedation = 0,
+		light = 0,
+		fleeUntil = 0,
+		fleeFrom = nil,
+		knockedUntil = 0,
+		staggerUntil = 0,
+		lastAttack = 0,
+		bluffUntil = 0,
+		nextBluff = now + 20,
+		goal = nil,
+		goalTime = 0,
+		orbit = rng:NextNumber(0, math.pi * 2),
+		lair = lair,
+		lastDrop = now,
+		nextCall = now + 30,
+		captured = false,
+		path = nil,
+		pathIndex = 0,
+		pathGoal = nil,
+		pathTime = 0,
+	}
+	revealed = false
+	local m = build(lair)
+	m.Parent = ctx.world
+	root:SetNetworkOwner(nil)
+	Rake.model = m
+	setState("Inattiva")
+
+	capturePrompt.Triggered:Connect(function(player)
+		if brain.knockedUntil > 0 and not brain.captured and ctx.team.isStanding(player) then
+			brain.captured = true
+			capturePrompt.Enabled = false
+			root.Anchored = true
+			setState("Catturata")
+			ctx.onCapture(player)
+		end
+	end)
+
+	local token = {}
+	loopToken = token
+	task.spawn(function()
+		local last = os.clock()
+		while loopToken == token and m.Parent do
+			task.wait(0.2)
+			local now = os.clock()
+			local ok, err = pcall(step, now - last)
+			if not ok then
+				warn("[TheRake] " .. tostring(err))
+			end
+			last = now
+		end
+	end)
+end
+
+function Rake.despawn()
+	loopToken = nil
+	if Rake.model then
+		Rake.model:Destroy()
+		Rake.model = nil
+	end
+end
+
+return Rake
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX12"><Properties><string name="Name">Team</string><ProtectedString name="Source"><![CDATA[-- La squadra: spawn, attrezzatura (torcia, telecamere, fucile a dardi), stato "Braccato" e rianimazione.
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Debris = game:GetService("Debris")
+
+local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+local Forest = require(script.Parent.Forest)
+
+local EQ = Config.EQUIPMENT
+local P = Config.PLAYER
+local make = Forest.make
+
+local Team = {}
+
+local ctx
+local downedToken: { [Player]: any } = {}
+local lastDart: { [Player]: number } = {}
+
+-- Stati del giocatore (attributo "Status"): Lobby, OK, Braccato, Fuori
+
+function Team.isStanding(player: Player): boolean
+	return player:GetAttribute("Status") == "OK"
+end
+
+function Team.isDowned(player: Player): boolean
+	return player:GetAttribute("Status") == "Braccato"
+end
+
+-- Giocatori in piedi durante la notte, con le parti del personaggio già risolte
+function Team.standing()
+	local list = {}
+	for _, player in Players:GetPlayers() do
+		if Team.isStanding(player) then
+			local char = player.Character
+			local hrp = char and char:FindFirstChild("HumanoidRootPart")
+			local hum = char and char:FindFirstChildOfClass("Humanoid")
+			if hrp and hum and hum.Health > 0 then
+				table.insert(list, { player = player, char = char, root = hrp, head = char:FindFirstChild("Head") })
+			end
+		end
+	end
+	return list
+end
+
+function Team.anyStanding(): boolean
+	return #Team.standing() > 0
+end
+
+local function torchLight(player: Player): SpotLight?
+	local head = player.Character and player.Character:FindFirstChild("Head")
+	return head and head:FindFirstChild("TorchLight") :: SpotLight?
+end
+
+function Team.setTorch(player: Player, on: boolean)
+	if on and (player:GetAttribute("TorchBattery") or 0) <= 0 then
+		ctx.notify("🔦 Torcia scarica: ricaricala al Rifornimento della Ranger Station.", player)
+		on = false
+	end
+	if on and not Team.isStanding(player) then
+		on = false
+	end
+	player:SetAttribute("TorchOn", on)
+	local light = torchLight(player)
+	if light then
+		light.Enabled = on
+	end
+end
+
+local function newTool(name: string, tip: string, size: Vector3, color: Color3): (Tool, BasePart)
+	local tool = Instance.new("Tool")
+	tool.Name = name
+	tool.ToolTip = tip
+	tool.CanBeDropped = false
+	tool.RequiresHandle = true
+	local handle = Instance.new("Part")
+	handle.Name = "Handle"
+	handle.Size = size
+	handle.Color = color
+	handle.Material = Enum.Material.Metal
+	handle.CanCollide = false
+	handle.Massless = true
+	handle.Parent = tool
+	return tool, handle
+end
+
+function Team.equip(player: Player)
+	local char = player.Character
+	local backpack = player:FindFirstChildOfClass("Backpack")
+	if not char or not backpack then
+		return
+	end
+	for _, container in { backpack, char } do
+		for _, item in container:GetChildren() do
+			if item:IsA("Tool") then
+				item:Destroy()
+			end
+		end
+	end
+
+	player:SetAttribute("Darts", EQ.DARTS)
+	player:SetAttribute("TorchBattery", EQ.TORCH_BATTERY)
+	player:SetAttribute("TorchOn", false)
+	player:SetAttribute("Samples", 0)
+	player:SetAttribute("SamplePoints", 0)
+	player:SetAttribute("CarryingTape", false)
+	player:SetAttribute("CamType", "Fissa")
+	for camType, count in EQ.CAMERA_KITS do
+		player:SetAttribute("Kits_" .. camType, count)
+	end
+	player:SetAttribute("SupplyTick", os.clock())
+
+	local head = char:FindFirstChild("Head")
+	if head and not head:FindFirstChild("TorchLight") then
+		make("SpotLight", head, {
+			Name = "TorchLight",
+			Face = Enum.NormalId.Front,
+			Angle = 55,
+			Range = 45,
+			Brightness = 5,
+			Shadows = true,
+			Color = Color3.fromRGB(255, 240, 210),
+			Enabled = false,
+		})
+	end
+
+	local torch = newTool("Torcia", "Clic: accendi/spegni la torcia", Vector3.new(0.35, 0.35, 1.4), Color3.fromRGB(30, 30, 30))
+	torch.Activated:Connect(function()
+		Team.setTorch(player, not player:GetAttribute("TorchOn"))
+	end)
+	torch.Unequipped:Connect(function()
+		Team.setTorch(player, false)
+	end)
+	torch.Parent = backpack
+
+	local camera = newTool("Telecamera", "Clic: piazza una telecamera · R: cambia tipo", Vector3.new(1, 0.8, 1.2), Color3.fromRGB(70, 70, 75))
+	camera.Activated:Connect(function()
+		ctx.cameras.place(player)
+	end)
+	camera.Parent = backpack
+
+	local gun = newTool("Fucile a dardi", "Clic: spara un dardo tranquillante", Vector3.new(0.4, 0.6, 2.4), Color3.fromRGB(45, 60, 40))
+	gun.Parent = backpack
+end
+
+function Team.spawn(player: Player, equip: boolean)
+	if not player.Parent then
+		return
+	end
+	downedToken[player] = nil
+	player:SetAttribute("Status", equip and "OK" or "Lobby")
+	player:SetAttribute("TorchOn", false)
+	player:SetAttribute("CarryingTape", false)
+	player:LoadCharacter()
+	if equip then
+		Team.equip(player)
+	end
+end
+
+function Team.cycleCamType(player: Player)
+	local types = Config.CAMERAS.TYPES
+	local current = table.find(types, player:GetAttribute("CamType")) or 1
+	for i = 1, #types do
+		local candidate = types[(current + i - 1) % #types + 1]
+		if (player:GetAttribute("Kits_" .. candidate) or 0) > 0 then
+			player:SetAttribute("CamType", candidate)
+			return
+		end
+	end
+end
+
+function Team.supply(player: Player)
+	if not ctx.round.active or not Team.isStanding(player) then
+		ctx.notify("Il rifornimento è disponibile durante la notte.", player)
+		return
+	end
+	player:SetAttribute("Darts", EQ.DARTS)
+	player:SetAttribute("TorchBattery", EQ.TORCH_BATTERY)
+	player:SetAttribute("SupplyTick", os.clock())
+	ctx.notify("🎒 Rifornimento completato: dardi, torcia e visore notturno carichi.", player)
+end
+
+function Team.fireDart(player: Player, targetPos: any)
+	if typeof(targetPos) ~= "Vector3" or not ctx.round.active or not Team.isStanding(player) then
+		return
+	end
+	local char = player.Character
+	local gun = char and char:FindFirstChild("Fucile a dardi")
+	local head = char and char:FindFirstChild("Head") :: BasePart?
+	if not gun or not head then
+		return
+	end
+	local now = os.clock()
+	if now - (lastDart[player] or 0) < EQ.DART_COOLDOWN then
+		return
+	end
+	local ammo = player:GetAttribute("Darts") or 0
+	if ammo <= 0 then
+		ctx.notify("Dardi finiti: torna al Rifornimento.", player)
+		return
+	end
+	lastDart[player] = now
+	player:SetAttribute("Darts", ammo - 1)
+
+	local dir = targetPos - head.Position
+	if dir.Magnitude < 0.1 then
+		return
+	end
+	dir = dir.Unit * EQ.DART_RANGE
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = { char, ctx.cameras.folder() }
+	local result = workspace:Raycast(head.Position, dir, params)
+	local hitPos = result and result.Position or head.Position + dir
+
+	local handle = gun:FindFirstChild("Handle") :: BasePart?
+	local from = handle and handle.Position or head.Position
+	local length = (hitPos - from).Magnitude
+	local tracer = make("Part", workspace, {
+		Size = Vector3.new(0.08, 0.08, length),
+		CFrame = CFrame.lookAt(from, hitPos) * CFrame.new(0, 0, -length / 2),
+		Material = Enum.Material.Neon,
+		Color = Color3.fromRGB(180, 255, 120),
+		CanCollide = false,
+		CanQuery = false,
+		CastShadow = false,
+	})
+	Debris:AddItem(tracer, 0.12)
+
+	local rake = ctx.rake.model
+	if result and rake and result.Instance:IsDescendantOf(rake) then
+		ctx.rake.hitByDart(player)
+	end
+end
+
+local function clearRevivePrompt(player: Player)
+	local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+	local prompt = hrp and hrp:FindFirstChild("RevivePrompt")
+	if prompt then
+		prompt:Destroy()
+	end
+end
+
+function Team.eliminate(player: Player)
+	downedToken[player] = nil
+	player:SetAttribute("Status", "Fuori")
+	clearRevivePrompt(player)
+	ctx.objectives.onDowned(player)
+	local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+	if hum and hum.Health > 0 then
+		hum.Health = 0
+	end
+	ctx.notifyAll(("💀 %s non ce l'ha fatta."):format(player.DisplayName))
+end
+
+function Team.revive(player: Player, reviver: Player)
+	if not Team.isDowned(player) then
+		return
+	end
+	downedToken[player] = nil
+	clearRevivePrompt(player)
+	player:SetAttribute("Status", "OK")
+	local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+	if hum then
+		hum.PlatformStand = false
+		hum.WalkSpeed = P.WALK_SPEED
+		hum.JumpPower = 50
+		hum.JumpHeight = 7.2
+		hum:ChangeState(Enum.HumanoidStateType.GettingUp)
+	end
+	ctx.credit(reviver.UserId, "revives")
+	ctx.notifyAll(("❤ %s ha rianimato %s!"):format(reviver.DisplayName, player.DisplayName))
+end
+
+function Team.down(player: Player)
+	if not Team.isStanding(player) then
+		return
+	end
+	local char = player.Character
+	local hum = char and char:FindFirstChildOfClass("Humanoid")
+	local hrp = char and char:FindFirstChild("HumanoidRootPart")
+	if not hum or not hrp then
+		return
+	end
+	player:SetAttribute("Status", "Braccato")
+	Team.setTorch(player, false)
+	hum:UnequipTools()
+	hum.WalkSpeed = 0
+	hum.JumpPower = 0
+	hum.JumpHeight = 0
+	hum.PlatformStand = true
+	ctx.objectives.onDowned(player)
+
+	local token = {}
+	downedToken[player] = token
+	player:SetAttribute("DownedUntil", workspace:GetServerTimeNow() + P.DOWNED_TIME)
+	local prompt = make("ProximityPrompt", hrp, {
+		Name = "RevivePrompt",
+		ActionText = "Rianima",
+		ObjectText = player.DisplayName,
+		HoldDuration = P.REVIVE_TIME,
+		MaxActivationDistance = 9,
+		RequiresLineOfSight = false,
+	})
+	prompt.Triggered:Connect(function(reviver)
+		if reviver ~= player and Team.isStanding(reviver) then
+			Team.revive(player, reviver)
+		end
+	end)
+	ctx.notifyAll(("⚠ %s è stato colpito! Rianimalo entro %d secondi."):format(player.DisplayName, P.DOWNED_TIME))
+
+	task.delay(P.DOWNED_TIME, function()
+		if downedToken[player] == token and Team.isDowned(player) then
+			Team.eliminate(player)
+		end
+	end)
+end
+
+function Team.tick(dt: number)
+	for _, player in Players:GetPlayers() do
+		if player:GetAttribute("TorchOn") then
+			local battery = math.max(0, (player:GetAttribute("TorchBattery") or 0) - dt)
+			player:SetAttribute("TorchBattery", battery)
+			if battery <= 0 then
+				Team.setTorch(player, false)
+				ctx.notify("🔦 La torcia si è scaricata.", player)
+			end
+		end
+	end
+end
+
+function Team.init(c)
+	ctx = c
+	Players.PlayerRemoving:Connect(function(player)
+		downedToken[player] = nil
+		lastDart[player] = nil
+	end)
+end
+
+-- Collega gli eventi del personaggio (morte durante la notte = fuori dalla partita)
+function Team.watchCharacter(player: Player, char: Model)
+	local hum = char:WaitForChild("Humanoid", 10) :: Humanoid?
+	if not hum then
+		return
+	end
+	hum.Died:Connect(function()
+		local status = player:GetAttribute("Status")
+		if ctx.round.active and (status == "OK" or status == "Braccato") then
+			downedToken[player] = nil
+			player:SetAttribute("Status", "Fuori")
+			player:SetAttribute("TorchOn", false)
+			ctx.objectives.onDowned(player)
+		elseif not ctx.round.active then
+			task.delay(3, function()
+				if player.Parent and player.Character == char and not ctx.round.active then
+					Team.spawn(player, ctx.state:GetAttribute("Phase") == "Briefing")
+				end
+			end)
+		end
+	end)
+end
+
+return Team
+]]></ProtectedString></Properties></Item></Item></Item><Item class="StarterPlayer" referent="RBX19"><Properties><string name="Name">StarterPlayer</string></Properties><Item class="StarterPlayerScripts" referent="RBX18"><Properties><string name="Name">StarterPlayerScripts</string></Properties><Item class="LocalScript" referent="RBX17"><Properties><string name="Name">RakeClient</string><ProtectedString name="Source"><![CDATA[-- Client di "The Rake": controlli, stamina e fiatone, Paura e allucinazioni, visore notturno,
+-- fucile a dardi, tablet delle telecamere e HUD.
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Lighting = game:GetService("Lighting")
+local ContextActionService = game:GetService("ContextActionService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Debris = game:GetService("Debris")
+
+local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+local Hud = require(script:WaitForChild("Hud"))
+local Tablet = require(script:WaitForChild("Tablet"))
+
+local player = Players.LocalPlayer
+local mouse = player:GetMouse()
+local state = ReplicatedStorage:WaitForChild("RakeState")
+local remotes = ReplicatedStorage:WaitForChild("RakeRemotes")
+
+local P = Config.PLAYER
+local NV_MAX = Config.EQUIPMENT.NIGHT_VISION_BATTERY
+
+local hud = Hud.new(player, state)
+local tablet = Tablet.new(player, state, remotes, hud)
+
+remotes.Notify.OnClientEvent:Connect(function(message)
+	hud:notify(message)
+end)
+remotes.Debrief.OnClientEvent:Connect(function(data)
+	tablet:close()
+	hud:showDebrief(data)
+end)
+remotes.OpenTablet.OnClientEvent:Connect(function()
+	tablet:open()
+end)
+
+---------------------------------------------------------------------------------------------
+-- Controlli
+
+local sprintHeld = false
+local nvOn = false
+local nvBattery = NV_MAX
+
+ContextActionService:BindAction("Scatto", function(_, inputState)
+	sprintHeld = inputState == Enum.UserInputState.Begin
+	return Enum.ContextActionResult.Pass
+end, true, Enum.KeyCode.LeftShift, Enum.KeyCode.ButtonL3)
+ContextActionService:SetTitle("Scatto", "Corri")
+
+ContextActionService:BindAction("Tablet", function(_, inputState)
+	if inputState == Enum.UserInputState.Begin then
+		tablet:toggle()
+	end
+	return Enum.ContextActionResult.Sink
+end, true, Enum.KeyCode.T, Enum.KeyCode.ButtonY)
+ContextActionService:SetTitle("Tablet", "Tablet")
+
+ContextActionService:BindAction("Visore", function(_, inputState)
+	if inputState == Enum.UserInputState.Begin then
+		if not nvOn and nvBattery <= 0 then
+			hud:notify("Visore notturno scarico: ricaricalo al Rifornimento.")
+		else
+			nvOn = not nvOn
+		end
+	end
+	return Enum.ContextActionResult.Sink
+end, true, Enum.KeyCode.N, Enum.KeyCode.ButtonX)
+ContextActionService:SetTitle("Visore", "Visore")
+
+ContextActionService:BindAction("TipoCamera", function(_, inputState)
+	if inputState == Enum.UserInputState.Begin then
+		remotes.CycleCameraType:FireServer()
+	end
+	return Enum.ContextActionResult.Sink
+end, true, Enum.KeyCode.R, Enum.KeyCode.ButtonB)
+ContextActionService:SetTitle("TipoCamera", "Tipo cam")
+
+player:GetAttributeChangedSignal("SupplyTick"):Connect(function()
+	nvBattery = NV_MAX
+end)
+
+-- Il fucile a dardi mira dove punta il mouse (o il tocco)
+local hooked = setmetatable({}, { __mode = "k" })
+local function hookTool(tool: Instance)
+	if not tool:IsA("Tool") or hooked[tool] then
+		return
+	end
+	hooked[tool] = true
+	if tool.Name == "Fucile a dardi" then
+		tool.Activated:Connect(function()
+			if not tablet.isOpen then
+				remotes.FireDart:FireServer(mouse.Hit.Position)
+			end
+		end)
+	end
+end
+
+local function watchContainer(container: Instance)
+	for _, child in container:GetChildren() do
+		hookTool(child)
+	end
+	container.ChildAdded:Connect(hookTool)
+end
+
+player.CharacterAdded:Connect(function(char)
+	tablet:close()
+	watchContainer(char)
+	watchContainer(player:WaitForChild("Backpack"))
+end)
+if player.Character then
+	watchContainer(player.Character)
+	watchContainer(player:WaitForChild("Backpack"))
+end
+
+---------------------------------------------------------------------------------------------
+-- Effetti locali
+
+local nvEffect = Instance.new("ColorCorrectionEffect")
+nvEffect.Name = "VisoreNotturno"
+nvEffect.TintColor = Color3.fromRGB(130, 255, 150)
+nvEffect.Brightness = 0.3
+nvEffect.Contrast = 0.25
+nvEffect.Saturation = -1
+nvEffect.Enabled = false
+nvEffect.Parent = Lighting
+
+local fearEffect = Instance.new("ColorCorrectionEffect")
+fearEffect.Name = "Paura"
+fearEffect.Parent = Lighting
+
+local function rakeRoot(): BasePart?
+	local folder = workspace:FindFirstChild("RakeHunt")
+	local rake = folder and folder:FindFirstChild("TheRake")
+	return rake and rake:FindFirstChild("HumanoidRootPart") :: BasePart?
+end
+
+-- Allucinazione: una sagoma della creatura appare per un istante tra gli alberi (solo per te)
+local function hallucinate()
+	local camera = workspace.CurrentCamera
+	local look = camera.CFrame.LookVector * Vector3.new(1, 0, 1)
+	if look.Magnitude < 0.1 then
+		return
+	end
+	local dir = CFrame.Angles(0, math.rad(math.random(-35, 35)), 0) * look.Unit
+	local pos = camera.CFrame.Position + dir * math.random(25, 40)
+	local ghost = Instance.new("Model")
+	local function part(size: Vector3, offset: Vector3, color: Color3, neon: boolean?)
+		local p = Instance.new("Part")
+		p.Anchored = true
+		p.CanCollide = false
+		p.CanQuery = false
+		p.CastShadow = false
+		p.Size = size
+		p.Color = color
+		p.Material = neon and Enum.Material.Neon or Enum.Material.SmoothPlastic
+		p.CFrame = CFrame.lookAt(Vector3.new(pos.X, 0, pos.Z), Vector3.new(camera.CFrame.Position.X, 0, camera.CFrame.Position.Z))
+			* CFrame.new(offset)
+		p.Parent = ghost
+	end
+	local dark = Color3.fromRGB(10, 10, 10)
+	part(Vector3.new(1.5, 3, 0.9), Vector3.new(0, 4.4, 0), dark)
+	part(Vector3.new(1.2, 1.4, 1.2), Vector3.new(0, 6.4, -0.3), dark)
+	part(Vector3.new(0.6, 3, 0.6), Vector3.new(-0.5, 1.5, 0), dark)
+	part(Vector3.new(0.6, 3, 0.6), Vector3.new(0.5, 1.5, 0), dark)
+	part(Vector3.new(0.3, 0.3, 0.1), Vector3.new(-0.28, 6.6, -0.95), Color3.fromRGB(255, 245, 225), true)
+	part(Vector3.new(0.3, 0.3, 0.1), Vector3.new(0.28, 6.6, -0.95), Color3.fromRGB(255, 245, 225), true)
+	ghost.Parent = camera
+	Debris:AddItem(ghost, 0.7)
+	hud:pulse()
+end
+
+local function spectate()
+	local camera = workspace.CurrentCamera
+	local subject = camera.CameraSubject
+	if subject and subject:IsA("Humanoid") and subject.Health > 0 and subject.Parent ~= player.Character then
+		return
+	end
+	for _, other in Players:GetPlayers() do
+		local hum = other ~= player and other.Character and other.Character:FindFirstChildOfClass("Humanoid")
+		if hum and hum.Health > 0 and other:GetAttribute("Status") ~= "Fuori" then
+			camera.CameraSubject = hum
+			return
+		end
+	end
+end
+
+---------------------------------------------------------------------------------------------
+-- Ciclo per frame: stamina, paura, velocità, visore
+
+local stamina, fear = 100, 0
+local exhausted, panic = false, false
+local nextHallucination = 0
+
+RunService.RenderStepped:Connect(function(dt)
+	local char = player.Character
+	local hum = char and char:FindFirstChildOfClass("Humanoid")
+	local hrp = char and char:FindFirstChild("HumanoidRootPart") :: BasePart?
+	local status = player:GetAttribute("Status") or "Lobby"
+	local phase = state:GetAttribute("Phase")
+
+	-- Stamina e fiatone
+	local moving = hum ~= nil and hum.MoveDirection.Magnitude > 0.1
+	local sprinting = sprintHeld and moving and not exhausted and stamina > 0 and (status == "OK" or status == "Lobby")
+	if sprinting then
+		stamina -= P.STAMINA_DRAIN * dt
+		if stamina <= 0 then
+			stamina = 0
+			exhausted = true
+		end
+	else
+		stamina = math.min(100, stamina + P.STAMINA_REGEN * dt)
+		if exhausted and stamina >= 35 then
+			exhausted = false
+		end
+	end
+
+	-- Paura: sale al buio, da soli e con la creatura vicina; scende vicino ai compagni e alle luci
+	if phase == "Notte" and status == "OK" and hrp then
+		local pos = hrp.Position
+		local dark = Lighting.ClockTime >= 19.5 or Lighting.ClockTime < 6
+		local atStation = Vector3.new(pos.X, 0, pos.Z).Magnitude < Config.MAP.STATION_RADIUS
+		local lit = player:GetAttribute("TorchOn") or nvOn or atStation
+		local mates = 0
+		for _, other in Players:GetPlayers() do
+			local otherRoot = other ~= player and other.Character and other.Character:FindFirstChild("HumanoidRootPart")
+			if otherRoot and other:GetAttribute("Status") == "OK" and (otherRoot.Position - pos).Magnitude < 25 then
+				mates += 1
+			end
+		end
+		local rate = 0
+		if dark and not lit then
+			rate += 5
+		end
+		rate += mates == 0 and 2.5 or -4 * mates
+		if lit then
+			rate -= 3
+		end
+		if atStation then
+			rate -= 10
+		end
+		local root = rakeRoot()
+		if root then
+			local d = (root.Position - pos).Magnitude
+			if d < 70 then
+				rate += (70 - d) / 70 * 30
+			end
+		end
+		fear = math.clamp(fear + rate * dt, 0, 100)
+	else
+		fear = math.max(0, fear - 20 * dt)
+	end
+	if fear >= 100 then
+		panic = true
+	elseif fear < 70 then
+		panic = false
+	end
+	if panic and os.clock() > nextHallucination then
+		nextHallucination = os.clock() + math.random(5, 11)
+		hallucinate()
+	end
+	local fearAmount = math.clamp((fear - 40) / 60, 0, 1)
+	fearEffect.Saturation = -0.6 * fearAmount
+	fearEffect.Contrast = 0.2 * fearAmount
+
+	-- Velocità (il server la azzera quando sei braccato)
+	if hum then
+		if status == "Braccato" or tablet.isOpen then
+			hum.WalkSpeed = 0
+		elseif status == "OK" or status == "Lobby" then
+			local speed = sprinting and P.SPRINT_SPEED or P.WALK_SPEED
+			if exhausted then
+				speed = P.WALK_SPEED * 0.8
+			end
+			if panic then
+				speed *= P.FEAR_SLOWDOWN
+			end
+			hum.WalkSpeed = speed
+		end
+	end
+
+	-- Visore notturno
+	if nvOn then
+		nvBattery -= dt
+		if nvBattery <= 0 then
+			nvBattery = 0
+			nvOn = false
+			hud:notify("Visore notturno scarico.")
+		end
+	end
+	nvEffect.Enabled = nvOn and not tablet.isOpen
+
+	if status == "Fuori" and phase == "Notte" and not tablet.isOpen then
+		spectate()
+	end
+
+	hud:update({
+		config = Config,
+		stamina = stamina,
+		fear = fear,
+		nv = nvBattery / NV_MAX,
+		nvOn = nvOn,
+		exhausted = exhausted,
+		panic = panic,
+	})
+end)
+]]></ProtectedString></Properties><Item class="ModuleScript" referent="RBX15"><Properties><string name="Name">Hud</string><ProtectedString name="Source"><![CDATA[-- HUD minimale: fase e obiettivo, barre del giocatore, stato della caccia, squadra, notifiche e debriefing.
+local Players = game:GetService("Players")
+local Lighting = game:GetService("Lighting")
+local TweenService = game:GetService("TweenService")
+
+local Hud = {}
+Hud.__index = Hud
+
+local TEXT = Color3.fromRGB(222, 226, 214)
+local MUTED = Color3.fromRGB(150, 156, 145)
+local PANEL = Color3.fromRGB(12, 15, 13)
+
+local function make(className: string, props: { [string]: any }, parent: Instance?): any
+	local inst = Instance.new(className)
+	for k, v in props do
+		(inst :: any)[k] = v
+	end
+	inst.Parent = parent
+	return inst
+end
+
+local function corner(parent: Instance, radius: number?)
+	make("UICorner", { CornerRadius = UDim.new(0, radius or 8) }, parent)
+end
+
+local function padding(parent: Instance, px: number)
+	make("UIPadding", {
+		PaddingLeft = UDim.new(0, px),
+		PaddingRight = UDim.new(0, px),
+		PaddingTop = UDim.new(0, px),
+		PaddingBottom = UDim.new(0, px),
+	}, parent)
+end
+
+local function panel(parent: Instance, props: { [string]: any }): Frame
+	local f = make("Frame", props, parent)
+	f.BackgroundColor3 = PANEL
+	f.BackgroundTransparency = 0.3
+	f.BorderSizePixel = 0
+	corner(f)
+	return f
+end
+
+local function text(parent: Instance, props: { [string]: any }): TextLabel
+	local t = make("TextLabel", {
+		BackgroundTransparency = 1,
+		Font = Enum.Font.Gotham,
+		TextColor3 = TEXT,
+		TextSize = 14,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		TextWrapped = true,
+		Size = UDim2.new(1, 0, 0, 18),
+	}, parent)
+	for k, v in props do
+		(t :: any)[k] = v
+	end
+	return t
+end
+
+local function bar(parent: Instance, name: string, color: Color3, order: number)
+	local holder = make("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 30), LayoutOrder = order }, parent)
+	local label = text(holder, { Text = name, Size = UDim2.new(1, 0, 0, 14), TextSize = 12, TextColor3 = MUTED })
+	local back = make("Frame", {
+		Position = UDim2.new(0, 0, 0, 16),
+		Size = UDim2.new(1, 0, 0, 9),
+		BackgroundColor3 = Color3.fromRGB(40, 44, 40),
+		BorderSizePixel = 0,
+	}, holder)
+	corner(back, 4)
+	local fill = make("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = color, BorderSizePixel = 0 }, back)
+	corner(fill, 4)
+	return { label = label, fill = fill, name = name }
+end
+
+local function setBar(b, value: number, suffix: string?)
+	b.fill.Size = UDim2.fromScale(math.clamp(value, 0, 1), 1)
+	b.label.Text = suffix and (b.name .. "  " .. suffix) or b.name
+end
+
+local function edgeFrame(parent: Instance, size: UDim2, pos: UDim2, rotation: number): Frame
+	local f = make("Frame", {
+		Size = size,
+		Position = pos,
+		BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+		BorderSizePixel = 0,
+		BackgroundTransparency = 0,
+	}, parent)
+	make("UIGradient", {
+		Rotation = rotation,
+		Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(1, 1) }),
+	}, f)
+	return f
+end
+
+function Hud.new(player: Player, state: Folder)
+	local self = setmetatable({}, Hud)
+	self.player = player
+	self.state = state
+
+	local gui = make("ScreenGui", {
+		Name = "RakeHUD",
+		ResetOnSpawn = false,
+		IgnoreGuiInset = true,
+		ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+	}, player:WaitForChild("PlayerGui"))
+	self.gui = gui
+
+	-- Vignetta della paura
+	local vignette = make("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 0 }, gui)
+	edgeFrame(vignette, UDim2.fromScale(0.35, 1), UDim2.fromScale(0, 0), 0)
+	edgeFrame(vignette, UDim2.fromScale(0.35, 1), UDim2.fromScale(0.65, 0), 180)
+	edgeFrame(vignette, UDim2.fromScale(1, 0.35), UDim2.fromScale(0, 0), 90)
+	edgeFrame(vignette, UDim2.fromScale(1, 0.35), UDim2.fromScale(0, 0.65), 270)
+	self.vignette = make("CanvasGroup", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, GroupTransparency = 1, ZIndex = 0 }, gui)
+	vignette.Parent = self.vignette
+
+	self.flash = make("Frame", {
+		Size = UDim2.fromScale(1, 1),
+		BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		ZIndex = 20,
+	}, gui)
+
+	-- In alto: fase, orario, obiettivo
+	local top = panel(gui, {
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, 0, 0, 44),
+		Size = UDim2.new(0, 480, 0, 74),
+	})
+	padding(top, 10)
+	self.phase = text(top, { Font = Enum.Font.GothamBold, TextSize = 17, Size = UDim2.new(1, 0, 0, 20), TextXAlignment = Enum.TextXAlignment.Center })
+	self.objective = text(top, { Position = UDim2.new(0, 0, 0, 22), Size = UDim2.new(1, 0, 0, 18), TextXAlignment = Enum.TextXAlignment.Center })
+	self.progress = text(top, {
+		Position = UDim2.new(0, 0, 0, 40),
+		Size = UDim2.new(1, 0, 0, 16),
+		TextSize = 13,
+		TextColor3 = MUTED,
+		TextXAlignment = Enum.TextXAlignment.Center,
+	})
+
+	-- Notifiche
+	self.feed = make("Frame", {
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, 0, 0, 126),
+		Size = UDim2.new(0, 520, 0, 150),
+		BackgroundTransparency = 1,
+	}, gui)
+	make("UIListLayout", { Padding = UDim.new(0, 4), HorizontalAlignment = Enum.HorizontalAlignment.Center }, self.feed)
+
+	-- Destra: tracciamento e squadra
+	local right = panel(gui, {
+		AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.new(1, -12, 0, 130),
+		Size = UDim2.new(0, 230, 0, 300),
+		AutomaticSize = Enum.AutomaticSize.Y,
+	})
+	padding(right, 10)
+	make("UIListLayout", { Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder }, right)
+	self.tracking = bar(right, "Tracciamento", Color3.fromRGB(200, 70, 60), 1)
+	self.zone = text(right, { LayoutOrder = 2, TextSize = 13 })
+	self.coverage = text(right, { LayoutOrder = 3, TextSize = 13 })
+	self.cams = text(right, { LayoutOrder = 4, TextSize = 13 })
+	self.evidence = text(right, { LayoutOrder = 5, TextSize = 13 })
+	self.threat = text(right, { LayoutOrder = 6, TextSize = 13 })
+	self.weather = text(right, { LayoutOrder = 7, TextSize = 13 })
+	text(right, { LayoutOrder = 8, Text = "SQUADRA", Font = Enum.Font.GothamBold, TextSize = 12, TextColor3 = MUTED })
+	self.team = text(right, { LayoutOrder = 9, TextSize = 13, AutomaticSize = Enum.AutomaticSize.Y, RichText = true })
+
+	-- Sinistra in basso: vitali e attrezzatura
+	local left = panel(gui, {
+		AnchorPoint = Vector2.new(0, 1),
+		Position = UDim2.new(0, 12, 1, -100),
+		Size = UDim2.new(0, 230, 0, 0),
+		AutomaticSize = Enum.AutomaticSize.Y,
+	})
+	padding(left, 10)
+	make("UIListLayout", { Padding = UDim.new(0, 3), SortOrder = Enum.SortOrder.LayoutOrder }, left)
+	self.stamina = bar(left, "Stamina", Color3.fromRGB(110, 180, 110), 1)
+	self.fear = bar(left, "Paura", Color3.fromRGB(150, 80, 170), 2)
+	self.torch = bar(left, "Torcia", Color3.fromRGB(230, 200, 110), 3)
+	self.nv = bar(left, "Visore notturno", Color3.fromRGB(90, 200, 120), 4)
+	self.gear = text(left, { LayoutOrder = 5, TextSize = 13, AutomaticSize = Enum.AutomaticSize.Y, RichText = true })
+	self.rank = text(left, { LayoutOrder = 6, TextSize = 12, TextColor3 = MUTED })
+
+	-- Centro: messaggi grandi (briefing, braccato)
+	self.center = text(gui, {
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.62),
+		Size = UDim2.new(0, 620, 0, 120),
+		TextSize = 20,
+		Font = Enum.Font.GothamBold,
+		TextXAlignment = Enum.TextXAlignment.Center,
+		TextStrokeTransparency = 0.4,
+		RichText = true,
+	})
+
+	-- Debriefing
+	local debrief = panel(gui, {
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.5),
+		Size = UDim2.new(0, 400, 0, 0),
+		AutomaticSize = Enum.AutomaticSize.Y,
+		Visible = false,
+		BackgroundTransparency = 0.1,
+		ZIndex = 10,
+	})
+	padding(debrief, 16)
+	self.debrief = debrief
+	self.debriefText = text(debrief, {
+		Size = UDim2.new(1, 0, 0, 0),
+		AutomaticSize = Enum.AutomaticSize.Y,
+		RichText = true,
+		TextSize = 15,
+		ZIndex = 11,
+	})
+
+	self.lastUpdate = 0
+	state:GetAttributeChangedSignal("Phase"):Connect(function()
+		if state:GetAttribute("Phase") ~= "Debriefing" then
+			debrief.Visible = false
+		end
+	end)
+	return self
+end
+
+function Hud:notify(message: string)
+	local label = text(self.feed, {
+		Text = message,
+		Size = UDim2.new(1, 0, 0, 0),
+		AutomaticSize = Enum.AutomaticSize.Y,
+		TextXAlignment = Enum.TextXAlignment.Center,
+		TextSize = 15,
+		TextStrokeTransparency = 0.5,
+	})
+	local children = {}
+	for _, c in self.feed:GetChildren() do
+		if c:IsA("TextLabel") then
+			table.insert(children, c)
+		end
+	end
+	if #children > 5 then
+		children[1]:Destroy()
+	end
+	task.delay(6, function()
+		if label.Parent then
+			local tween = TweenService:Create(label, TweenInfo.new(0.8), { TextTransparency = 1, TextStrokeTransparency = 1 })
+			tween:Play()
+			tween.Completed:Wait()
+			label:Destroy()
+		end
+	end)
+end
+
+function Hud:pulse()
+	self.flash.BackgroundTransparency = 0.2
+	TweenService:Create(self.flash, TweenInfo.new(0.6), { BackgroundTransparency = 1 }):Play()
+end
+
+local function clock(): string
+	local t = Lighting.ClockTime
+	return ("%02d:%02d"):format(math.floor(t), math.floor((t % 1) * 60))
+end
+
+local STATUS_TEXT = {
+	OK = "<font color=\"#8fd18f\">●</font>",
+	Braccato = "<font color=\"#ff7060\">⚠ braccato</font>",
+	Fuori = "<font color=\"#888888\">✖ fuori</font>",
+	Lobby = "<font color=\"#aaaaaa\">○</font>",
+}
+
+-- vitals: { stamina, fear, nv, nvOn, exhausted, panic }
+function Hud:update(vitals)
+	local player, state = self.player, self.state
+	setBar(self.stamina, vitals.stamina / 100, vitals.exhausted and "· fiatone!" or nil)
+	setBar(self.fear, vitals.fear / 100, vitals.panic and "· PANICO" or nil)
+	self.vignette.GroupTransparency = 1 - math.clamp((vitals.fear - 30) / 70, 0, 1) * 0.85
+
+	local now = os.clock()
+	if now - self.lastUpdate < 0.15 then
+		return
+	end
+	self.lastUpdate = now
+
+	local Config = vitals.config
+	local torch = player:GetAttribute("TorchBattery") or 0
+	setBar(self.torch, torch / Config.EQUIPMENT.TORCH_BATTERY, player:GetAttribute("TorchOn") and "· accesa" or nil)
+	setBar(self.nv, vitals.nv, vitals.nvOn and "· attivo" or "[N]")
+
+	local phase = state:GetAttribute("Phase") or "Attesa"
+	local timeLeft = state:GetAttribute("TimeLeft") or 0
+	local status = player:GetAttribute("Status") or "Lobby"
+	if phase == "Attesa" then
+		self.phase.Text = "In attesa di giocatori…"
+	elseif phase == "Briefing" then
+		self.phase.Text = ("Briefing — si parte tra %d s"):format(timeLeft)
+	elseif phase == "Notte" then
+		self.phase.Text = ("Notte · %s · alba tra %d:%02d"):format(clock(), timeLeft // 60, timeLeft % 60)
+	else
+		self.phase.Text = ("Debriefing · %d s"):format(timeLeft)
+	end
+	local objective = state:GetAttribute("Objective")
+	self.objective.Text = objective and phase ~= "Attesa" and (objective .. ": " .. (state:GetAttribute("ObjectiveText") or "")) or ""
+	self.progress.Text = phase == "Notte" and (state:GetAttribute("ObjectiveProgress") or "") or ""
+
+	local tracking = state:GetAttribute("Tracking") or 0
+	setBar(self.tracking, tracking / 100, ("%d%%"):format(math.floor(tracking)))
+	local zone = state:GetAttribute("ZoneHint") or ""
+	self.zone.Text = "Zona di caccia: " .. (zone ~= "" and zone or "sconosciuta")
+	self.coverage.Text = ("Copertura mappa: %d%%"):format(state:GetAttribute("Coverage") or 0)
+	self.cams.Text = ("Telecamere attive: %d"):format(state:GetAttribute("CamerasActive") or 0)
+	self.evidence.Text = ("Prove documentate: %d"):format(state:GetAttribute("Evidence") or 0)
+	self.threat.Text = "Minaccia: " .. (state:GetAttribute("RakeState") or "Assente")
+	self.weather.Text = "Meteo: " .. (state:GetAttribute("Weather") or "—")
+
+	local lines = {}
+	for _, p in Players:GetPlayers() do
+		table.insert(lines, ("%s %s"):format(STATUS_TEXT[p:GetAttribute("Status") or "Lobby"] or "", p.DisplayName))
+	end
+	self.team.Text = table.concat(lines, "\n")
+
+	local camType = player:GetAttribute("CamType") or "Fissa"
+	local kits = {}
+	for _, t in Config.CAMERAS.TYPES do
+		local n = player:GetAttribute("Kits_" .. t) or 0
+		table.insert(kits, t == camType and ("<b>%s %d</b>"):format(t, n) or ("%s %d"):format(t, n))
+	end
+	self.gear.Text = ("Dardi: <b>%d</b>   Campioni: <b>%d</b>\nCamere [R]: %s"):format(
+		player:GetAttribute("Darts") or 0,
+		player:GetAttribute("Samples") or 0,
+		table.concat(kits, " · ")
+	)
+	local stats = player:FindFirstChild("leaderstats")
+	local rank = stats and stats:FindFirstChild("Rango")
+	local level = stats and stats:FindFirstChild("Livello")
+	self.rank.Text = rank and level and ("%s · Livello %d · %d XP"):format(rank.Value, level.Value, player:GetAttribute("XP") or 0) or ""
+
+	-- Messaggio centrale
+	if status == "Braccato" then
+		local left = math.max(0, math.ceil((player:GetAttribute("DownedUntil") or 0) - workspace:GetServerTimeNow()))
+		self.center.Text = ("<font color=\"#ff6a5a\">SEI STATO COLPITO</font>\nUn compagno deve rianimarti entro %d s"):format(left)
+	elseif status == "Fuori" and phase == "Notte" then
+		self.center.Text = "Sei fuori gioco. Osservi i compagni: puoi aprire il tablet [T] per aiutarli."
+	elseif phase == "Briefing" then
+		self.center.Text = "<font size=\"16\">1 Torcia · 2 Telecamera · 3 Fucile a dardi\n"
+			.. "Shift scatto · T tablet · N visore · R tipo di camera · E interagisci</font>"
+	else
+		self.center.Text = ""
+	end
+end
+
+function Hud:showDebrief(data)
+	local lines = {
+		data.won and "<font size=\"22\" color=\"#8fd18f\"><b>MISSIONE COMPIUTA</b></font>"
+			or "<font size=\"22\" color=\"#ff7060\"><b>MISSIONE FALLITA</b></font>",
+		data.reason,
+		"",
+		"<b>Obiettivo:</b> " .. tostring(data.objective),
+		"",
+	}
+	for _, row in data.breakdown do
+		table.insert(lines, ("%s: +%d XP"):format(row[1], row[2]))
+	end
+	table.insert(lines, "")
+	table.insert(lines, ("<b>Totale: +%d XP</b>%s"):format(data.xp, data.halved and " (dimezzati per la sconfitta)" or ""))
+	table.insert(lines, ("Rango: <b>%s</b> · Livello %d · %d XP"):format(data.rank, data.level, data.totalXP))
+	if data.nextXP then
+		table.insert(lines, ("Prossimo rango a %d XP"):format(data.nextXP))
+	end
+	self.debriefText.Text = table.concat(lines, "\n")
+	self.debrief.Visible = true
+end
+
+return Hud
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX16"><Properties><string name="Name">Tablet</string><ProtectedString name="Source"><![CDATA[-- Tablet di sorveglianza: mostra i feed delle telecamere (la visuale si sposta sulla camera),
+-- con interferenze quando la creatura è vicina, visione IR e una mini-mappa del bosco.
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Lighting = game:GetService("Lighting")
+local ContextActionService = game:GetService("ContextActionService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+
+local Tablet = {}
+Tablet.__index = Tablet
+
+local MAP_PX = 210
+local HALF = Config.MAP.SIZE / 2
+local STATIC_LINES = 36
+
+local function make(className: string, props: { [string]: any }, parent: Instance?): any
+	local inst = Instance.new(className)
+	for k, v in props do
+		(inst :: any)[k] = v
+	end
+	inst.Parent = parent
+	return inst
+end
+
+local function label(parent: Instance, props: { [string]: any }): TextLabel
+	local t = make("TextLabel", {
+		BackgroundTransparency = 1,
+		Font = Enum.Font.Code,
+		TextColor3 = Color3.fromRGB(220, 235, 220),
+		TextSize = 16,
+		TextStrokeTransparency = 0.5,
+	}, parent)
+	for k, v in props do
+		(t :: any)[k] = v
+	end
+	return t
+end
+
+local function button(parent: Instance, text: string, pos: UDim2, callback: () -> ())
+	local b = make("TextButton", {
+		Text = text,
+		Font = Enum.Font.GothamBold,
+		TextSize = 18,
+		TextColor3 = Color3.fromRGB(230, 235, 225),
+		BackgroundColor3 = Color3.fromRGB(25, 30, 28),
+		BackgroundTransparency = 0.2,
+		Size = UDim2.new(0, 64, 0, 44),
+		Position = pos,
+		AnchorPoint = Vector2.new(0.5, 1),
+		AutoButtonColor = true,
+	}, parent)
+	make("UICorner", { CornerRadius = UDim.new(0, 8) }, b)
+	b.Activated:Connect(callback)
+	return b
+end
+
+local function toMap(x: number, z: number): UDim2
+	return UDim2.fromOffset((x + HALF) / (HALF * 2) * MAP_PX, (z + HALF) / (HALF * 2) * MAP_PX)
+end
+
+function Tablet.new(player: Player, state: Folder, remotes: Folder, hud)
+	local self = setmetatable({}, Tablet)
+	self.player = player
+	self.state = state
+	self.remotes = remotes
+	self.hud = hud
+	self.isOpen = false
+	self.index = 1
+	self.nextMap = 0
+
+	local gui = make("ScreenGui", {
+		Name = "RakeTablet",
+		ResetOnSpawn = false,
+		IgnoreGuiInset = true,
+		Enabled = false,
+		DisplayOrder = 5,
+	}, player:WaitForChild("PlayerGui"))
+	self.gui = gui
+
+	self.black = make("Frame", {
+		Size = UDim2.fromScale(1, 1),
+		BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+		BorderSizePixel = 0,
+		Visible = false,
+	}, gui)
+	self.snow = make("Frame", {
+		Size = UDim2.fromScale(1, 1),
+		BackgroundColor3 = Color3.fromRGB(160, 160, 160),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+	}, gui)
+	self.lines = {}
+	for i = 1, STATIC_LINES do
+		self.lines[i] = make("Frame", {
+			Size = UDim2.new(1, 0, 0, 2),
+			BackgroundColor3 = Color3.fromRGB(230, 230, 230),
+			BorderSizePixel = 0,
+			Visible = false,
+		}, gui)
+	end
+	-- Cornice del tablet
+	make("UIStroke", { Thickness = 14, Color = Color3.fromRGB(18, 18, 18) }, make("Frame", {
+		Size = UDim2.new(1, -14, 1, -14),
+		Position = UDim2.fromOffset(7, 7),
+		BackgroundTransparency = 1,
+	}, gui))
+
+	self.header = label(gui, {
+		Position = UDim2.fromOffset(28, 22),
+		Size = UDim2.new(1, -300, 0, 24),
+		TextXAlignment = Enum.TextXAlignment.Left,
+	})
+	self.rec = label(gui, {
+		AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.new(1, -28, 0, 22),
+		Size = UDim2.new(0, 200, 0, 24),
+		TextXAlignment = Enum.TextXAlignment.Right,
+		TextColor3 = Color3.fromRGB(255, 70, 70),
+	})
+	self.alert = label(gui, {
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, 0, 0, 56),
+		Size = UDim2.new(0, 500, 0, 30),
+		TextSize = 22,
+		TextColor3 = Color3.fromRGB(255, 80, 70),
+		Font = Enum.Font.GothamBold,
+	})
+	self.message = label(gui, {
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.45),
+		Size = UDim2.new(0, 600, 0, 80),
+		TextSize = 22,
+		TextWrapped = true,
+	})
+	self.hint = label(gui, {
+		AnchorPoint = Vector2.new(0.5, 1),
+		Position = UDim2.new(0.5, 0, 1, -82),
+		Size = UDim2.new(0, 600, 0, 20),
+		TextSize = 13,
+		TextColor3 = Color3.fromRGB(170, 180, 170),
+		Text = "Q/E cambia camera · Z/C ruota (motorizzata) · T chiudi",
+	})
+
+	button(gui, "◀", UDim2.new(0.5, -150, 1, -26), function() self:switch(-1) end)
+	self.rotL = button(gui, "⟲", UDim2.new(0.5, -75, 1, -26), function() self:rotate(-1) end)
+	self.rotR = button(gui, "⟳", UDim2.new(0.5, 75, 1, -26), function() self:rotate(1) end)
+	button(gui, "▶", UDim2.new(0.5, 150, 1, -26), function() self:switch(1) end)
+	button(gui, "✕", UDim2.new(0.5, 0, 1, -26), function() self:close() end)
+
+	-- Mini-mappa
+	local map = make("Frame", {
+		AnchorPoint = Vector2.new(1, 1),
+		Position = UDim2.new(1, -24, 1, -24),
+		Size = UDim2.fromOffset(MAP_PX, MAP_PX),
+		BackgroundColor3 = Color3.fromRGB(14, 24, 16),
+		BackgroundTransparency = 0.15,
+		BorderSizePixel = 0,
+		ClipsDescendants = true,
+	}, gui)
+	make("UIStroke", { Color = Color3.fromRGB(90, 120, 90) }, map)
+	self.map = map
+	self.dots = make("Folder", { Name = "Punti" }, map)
+	for _, poi in Config.MAP.POIS do
+		local dot = make("Frame", {
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = toMap(poi.pos.X, poi.pos.Z),
+			Size = UDim2.fromOffset(6, 6),
+			BackgroundColor3 = Color3.fromRGB(230, 220, 170),
+			BorderSizePixel = 0,
+			ZIndex = 2,
+		}, map)
+		label(dot, {
+			Text = poi.name,
+			TextSize = 10,
+			Font = Enum.Font.Gotham,
+			Size = UDim2.fromOffset(120, 12),
+			Position = UDim2.fromOffset(-57, 7),
+			TextColor3 = Color3.fromRGB(200, 200, 170),
+		})
+	end
+	local lake = Config.MAP.LAKE
+	local lakeDot = make("Frame", {
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = toMap(lake.center.X, lake.center.Z),
+		Size = UDim2.fromOffset(lake.radius / HALF * MAP_PX, lake.radius / HALF * MAP_PX),
+		BackgroundColor3 = Color3.fromRGB(40, 70, 110),
+		BorderSizePixel = 0,
+	}, map)
+	make("UICorner", { CornerRadius = UDim.new(1, 0) }, lakeDot)
+
+	self.cc = make("ColorCorrectionEffect", { Name = "TabletFeed", Enabled = false }, Lighting)
+	return self
+end
+
+function Tablet:cameras(): { Model }
+	local folder = workspace:FindFirstChild("RakeHunt") and workspace.RakeHunt:FindFirstChild("Telecamere")
+	local list = {}
+	if folder then
+		for _, m in folder:GetChildren() do
+			if m:IsA("Model") and m.PrimaryPart then
+				table.insert(list, m)
+			end
+		end
+	end
+	table.sort(list, function(a, b)
+		return (a:GetAttribute("Id") or 0) < (b:GetAttribute("Id") or 0)
+	end)
+	return list
+end
+
+function Tablet:current(): Model?
+	local list = self:cameras()
+	if #list == 0 then
+		return nil
+	end
+	self.index = (self.index - 1) % #list + 1
+	return list[self.index]
+end
+
+function Tablet:switch(dir: number)
+	self.index += dir
+end
+
+function Tablet:rotate(dir: number)
+	local m = self:current()
+	if m and m:GetAttribute("Type") == "Motorizzata" then
+		self.remotes.RotateCamera:FireServer(m:GetAttribute("Id"), dir)
+	end
+end
+
+function Tablet:toggle()
+	if self.isOpen then
+		self:close()
+	else
+		self:open()
+	end
+end
+
+function Tablet:open()
+	if self.isOpen or self.player:GetAttribute("Status") == "Braccato" then
+		return
+	end
+	self.isOpen = true
+	self.gui.Enabled = true
+	local camera = workspace.CurrentCamera
+	self.savedFov = camera.FieldOfView
+	camera.CameraType = Enum.CameraType.Scriptable
+
+	ContextActionService:BindActionAtPriority("TabletPrev", function(_, inputState)
+		if inputState == Enum.UserInputState.Begin then
+			self:switch(-1)
+		end
+		return Enum.ContextActionResult.Sink
+	end, false, 3000, Enum.KeyCode.Q, Enum.KeyCode.Left, Enum.KeyCode.DPadLeft)
+	ContextActionService:BindActionAtPriority("TabletNext", function(_, inputState)
+		if inputState == Enum.UserInputState.Begin then
+			self:switch(1)
+		end
+		return Enum.ContextActionResult.Sink
+	end, false, 3000, Enum.KeyCode.E, Enum.KeyCode.Right, Enum.KeyCode.DPadRight)
+	ContextActionService:BindActionAtPriority("TabletRotate", function(_, inputState, input)
+		if inputState == Enum.UserInputState.Begin then
+			self:rotate(input.KeyCode == Enum.KeyCode.Z and -1 or 1)
+		end
+		return Enum.ContextActionResult.Sink
+	end, false, 3000, Enum.KeyCode.Z, Enum.KeyCode.C)
+
+	RunService:BindToRenderStep("RakeTablet", Enum.RenderPriority.Camera.Value + 1, function()
+		self:render()
+	end)
+end
+
+function Tablet:close()
+	if not self.isOpen then
+		return
+	end
+	self.isOpen = false
+	self.gui.Enabled = false
+	self.cc.Enabled = false
+	RunService:UnbindFromRenderStep("RakeTablet")
+	for _, name in { "TabletPrev", "TabletNext", "TabletRotate" } do
+		ContextActionService:UnbindAction(name)
+	end
+	local camera = workspace.CurrentCamera
+	camera.CameraType = Enum.CameraType.Custom
+	camera.FieldOfView = self.savedFov or 70
+	local hum = self.player.Character and self.player.Character:FindFirstChildOfClass("Humanoid")
+	if hum then
+		camera.CameraSubject = hum
+	end
+end
+
+local function rakeRoot(): BasePart?
+	local folder = workspace:FindFirstChild("RakeHunt")
+	local rake = folder and folder:FindFirstChild("TheRake")
+	return rake and rake:FindFirstChild("HumanoidRootPart") :: BasePart?
+end
+
+function Tablet:setStatic(noise: number)
+	self.snow.BackgroundTransparency = 1 - noise * 0.45
+	for _, line in self.lines do
+		if math.random() < noise then
+			line.Visible = true
+			line.Position = UDim2.fromScale(0, math.random())
+			line.BackgroundTransparency = 0.2 + math.random() * 0.6
+			line.Size = UDim2.new(1, 0, 0, math.random(1, 4))
+		else
+			line.Visible = false
+		end
+	end
+end
+
+function Tablet:render()
+	if self.player:GetAttribute("Status") == "Braccato" then
+		self:close()
+		return
+	end
+	local camera = workspace.CurrentCamera
+	local m = self:current()
+	local blink = os.clock() % 1 < 0.5
+	self.alert.Text = ""
+	self.rotL.Visible = false
+	self.rotR.Visible = false
+
+	if not m then
+		self.black.Visible = true
+		self.cc.Enabled = false
+		self:setStatic(0.15)
+		self.header.Text = "NESSUNA TELECAMERA"
+		self.rec.Text = ""
+		self.message.Text = "Nessuna telecamera piazzata.\nEquipaggia la Telecamera [2] e fai clic per piazzarla."
+	else
+		local id = m:GetAttribute("Id") or 0
+		local camType = m:GetAttribute("Type") or "Fissa"
+		local online = m:GetAttribute("Online")
+		local battery = (m:GetAttribute("Battery") or 0) / Config.CAMERAS.BATTERY
+		self.header.Text = ("CAM %02d · %s · %s · batt. %d%%"):format(id, string.upper(camType), m:GetAttribute("Label") or "", math.floor(battery * 100))
+
+		if not online then
+			self.black.Visible = true
+			self.cc.Enabled = false
+			self:setStatic(0.6)
+			self.rec.Text = ""
+			self.message.Text = "NESSUN SEGNALE\nBatteria esaurita: recupera la camera per ricaricarla."
+		elseif camType == "Trappola" then
+			self.black.Visible = true
+			self.cc.Enabled = false
+			self:setStatic(0.05)
+			self.rec.Text = blink and "● ARMATA" or ""
+			self.message.Text = "Camera trappola: nessun feed live.\nScatta una foto quando rileva movimento davanti a sé."
+		else
+			self.black.Visible = false
+			self.message.Text = ""
+			self.rec.Text = blink and "● REC" or ""
+			local body = m.PrimaryPart :: BasePart
+			local noise = 0
+			local root = rakeRoot()
+			if root then
+				noise = math.clamp(1 - (root.Position - body.Position).Magnitude / Config.CAMERAS.DISTORT_RANGE, 0, 1)
+			end
+			for _, w in Config.WEATHER do
+				if w.name == self.state:GetAttribute("Weather") then
+					noise = math.max(noise, w.cameraNoise * 0.4)
+				end
+			end
+			local jitter = noise * 0.03
+			camera.CFrame = body.CFrame
+				* CFrame.new(0, 0, -1)
+				* CFrame.Angles((math.random() - 0.5) * jitter, (math.random() - 0.5) * jitter, 0)
+			camera.FieldOfView = Config.CAMERAS.FOV
+			self:setStatic(noise)
+
+			local night = Lighting.ClockTime >= 19.5 or Lighting.ClockTime < 6
+			local cc = self.cc
+			cc.Enabled = true
+			if camType == "IR" then
+				cc.TintColor = Color3.fromRGB(150, 255, 160)
+				cc.Brightness = 0.35
+				cc.Contrast = 0.35
+				cc.Saturation = -1
+			else
+				cc.TintColor = Color3.fromRGB(255, 255, 255)
+				cc.Brightness = night and -0.05 or 0
+				cc.Contrast = 0.15 + noise * 0.5
+				cc.Saturation = -0.6
+			end
+			if m:GetAttribute("Sees") then
+				self.alert.Text = "⚠ MOVIMENTO RILEVATO"
+			elseif noise > 0.45 then
+				self.alert.Text = blink and "INTERFERENZA" or ""
+			end
+			local motorized = camType == "Motorizzata"
+			self.rotL.Visible = motorized
+			self.rotR.Visible = motorized
+		end
+	end
+
+	if os.clock() >= self.nextMap then
+		self.nextMap = os.clock() + 0.25
+		self:drawMap(m)
+	end
+end
+
+local function dot(parent: Instance, x: number, z: number, size: number, color: Color3, round: boolean?)
+	local f = make("Frame", {
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = toMap(x, z),
+		Size = UDim2.fromOffset(size, size),
+		BackgroundColor3 = color,
+		BorderSizePixel = 0,
+		ZIndex = 3,
+	}, parent)
+	if round then
+		make("UICorner", { CornerRadius = UDim.new(1, 0) }, f)
+	end
+	return f
+end
+
+function Tablet:drawMap(selected: Model?)
+	local layer = self.dots
+	layer:ClearAllChildren()
+	local state = self.state
+
+	local hintR = state:GetAttribute("HintR") or 0
+	if hintR > 0 then
+		local size = hintR / HALF * MAP_PX
+		local area = dot(layer, state:GetAttribute("HintX") or 0, state:GetAttribute("HintZ") or 0, size, Color3.fromRGB(255, 40, 40), true)
+		area.BackgroundTransparency = 0.65
+		area.ZIndex = 1
+	end
+	local seenAt = state:GetAttribute("LastSeenTime") or 0
+	local age = workspace:GetServerTimeNow() - seenAt
+	if seenAt > 0 and age < 60 then
+		local x = dot(layer, state:GetAttribute("LastSeenX") or 0, state:GetAttribute("LastSeenZ") or 0, 9, Color3.fromRGB(255, 60, 60))
+		x.Rotation = 45
+		x.BackgroundTransparency = math.clamp(age / 60, 0, 0.8)
+	end
+
+	for _, m in self:cameras() do
+		local body = m.PrimaryPart
+		local color = Color3.fromRGB(90, 160, 255)
+		if not m:GetAttribute("Online") then
+			color = Color3.fromRGB(90, 90, 90)
+		elseif m:GetAttribute("Type") == "Trappola" then
+			color = Color3.fromRGB(255, 160, 60)
+		end
+		if m == selected then
+			color = Color3.fromRGB(255, 240, 80)
+		end
+		local d = dot(layer, body.Position.X, body.Position.Z, m == selected and 8 or 6, color, true)
+		local look = body.CFrame.LookVector
+		local tick = make("Frame", {
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.new(0.5, look.X * 7, 0.5, look.Z * 7),
+			Size = UDim2.fromOffset(3, 3),
+			BackgroundColor3 = color,
+			BorderSizePixel = 0,
+		}, d)
+		tick.ZIndex = 3
+	end
+
+	for _, p in Players:GetPlayers() do
+		local hrp = p.Character and p.Character:FindFirstChild("HumanoidRootPart")
+		local status = p:GetAttribute("Status")
+		if hrp and status ~= "Fuori" then
+			local color = status == "Braccato" and Color3.fromRGB(255, 80, 80) or Color3.fromRGB(110, 230, 110)
+			if p == self.player then
+				color = Color3.fromRGB(255, 255, 255)
+			end
+			dot(layer, hrp.Position.X, hrp.Position.Z, 6, color, true)
+		end
+	end
+end
+
+return Tablet
+]]></ProtectedString></Properties></Item></Item></Item></Item></roblox>

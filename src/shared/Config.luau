@@ -1,23 +1,133 @@
--- Impostazioni della modalità "Coin Rush". Modifica questi valori per bilanciare il gioco.
+-- Impostazioni di "The Rake: Caccia nei Boschi". Modifica questi valori per bilanciare il gioco.
+-- Il modulo è condiviso: lo leggono sia il server sia i client.
 return {
-	-- Giocatori necessari per avviare un round (metti 2+ per un server pubblico)
+	-- Giocatori necessari per iniziare (il gioco è pensato per 1-8: imposta il massimo in Game Settings)
 	MIN_PLAYERS = 1,
 
 	-- Durate in secondi
-	INTERMISSION = 15,
-	ROUND_DURATION = 90,
-	RESULTS_DURATION = 6,
+	BRIEFING = 30,
+	NIGHT_DURATION = 600, -- la notte va dalle 20:00 alle 06:00 in questo tempo reale
+	DEBRIEF = 15,
 
-	-- Monete
-	COIN_SPAWN_INTERVAL = 1.2,
-	MAX_COINS = 25,
-	COIN_VALUE = 1,
+	NIGHT_START_HOUR = 20,
+	NIGHT_HOURS = 10,
 
-	-- Arena (generata automaticamente in Workspace se non esiste)
-	ARENA_CENTER = Vector3.new(0, 200, 0),
-	ARENA_SIZE = 120,
-	PILLAR_COUNT = 14,
+	-- "Ricognizione", "Caccia", "Sopravvivenza", "Reperto" oppure nil per sceglierlo a caso
+	FORCED_OBJECTIVE = nil,
+	RECON_CAMERAS = 4, -- telecamere attive richieste dall'obiettivo Ricognizione
+	RECON_EVIDENCE = 3, -- prove richieste dall'obiettivo Ricognizione
 
-	-- Sotto questa distanza dal pavimento dell'arena il giocatore è eliminato
-	FALL_LIMIT = 25,
+	MAP = {
+		SIZE = 800, -- lato del bosco in stud, centrato nell'origine
+		TREE_COUNT = 520,
+		PATH_WIDTH = 8,
+		STATION_RADIUS = 30, -- area sicura (finché la creatura non è Aggressiva)
+		-- Punti di interesse fissi; il primo è la Ranger Station (spawn, sala di controllo, laboratorio)
+		POIS = {
+			{ name = "Ranger Station", pos = Vector3.new(0, 0, 0), radius = 34 },
+			{ name = "Torre di avvistamento", pos = Vector3.new(210, 0, -230), radius = 18 },
+			{ name = "Campeggio abbandonato", pos = Vector3.new(-230, 0, -210), radius = 36 },
+			{ name = "Lago", pos = Vector3.new(-185, 0, 160), radius = 16 },
+			{ name = "Capanno", pos = Vector3.new(-40, 0, 300), radius = 18 },
+			{ name = "Miniera", pos = Vector3.new(250, 0, 230), radius = 45 },
+		},
+		LAKE = { center = Vector3.new(-235, 0, 205), radius = 55 },
+	},
+
+	-- Meteo estratto a ogni notte (weight = probabilità relativa)
+	WEATHER = {
+		{ name = "Sereno", weight = 4, fogEnd = 170, cameraNoise = 0 },
+		{ name = "Nebbia", weight = 3, fogEnd = 70, cameraNoise = 0.25 },
+		{ name = "Pioggia", weight = 2, fogEnd = 110, cameraNoise = 0.4 },
+	},
+
+	PLAYER = {
+		WALK_SPEED = 12,
+		SPRINT_SPEED = 20,
+		STAMINA_DRAIN = 22, -- al secondo mentre corri (stamina massima 100)
+		STAMINA_REGEN = 12,
+		DOWNED_TIME = 30, -- secondi per essere rianimati prima di essere eliminati
+		REVIVE_TIME = 3,
+		FEAR_SLOWDOWN = 0.7, -- moltiplicatore di velocità con la Paura al massimo
+	},
+
+	EQUIPMENT = {
+		DARTS = 6,
+		DART_RANGE = 160,
+		DART_COOLDOWN = 1.2,
+		TORCH_BATTERY = 180, -- secondi di luce
+		NIGHT_VISION_BATTERY = 60,
+		CAMERA_KITS = { Fissa = 2, IR = 1, Motorizzata = 1, Trappola = 1 },
+	},
+
+	CAMERAS = {
+		TYPES = { "Fissa", "IR", "Motorizzata", "Trappola" },
+		BATTERY = 300,
+		VIEW_RANGE = 70,
+		FOV = 70, -- gradi
+		NIGHT_RANGE_FACTOR = 0.45, -- portata delle camere non IR di notte
+		TRAP_RANGE = 35,
+		TRAP_COOLDOWN = 20,
+		TRAP_TRACKING = 10,
+		DISTORT_RANGE = 45, -- sotto questa distanza dalla creatura il feed si corrompe
+		COVERAGE_CELL = 25,
+	},
+
+	EVIDENCE = {
+		START_COUNT = 8,
+		MAX_ACTIVE = 16,
+		DROP_INTERVAL = 25, -- ogni quanto la creatura lascia una traccia
+		TRACKING = { Impronte = 8, Graffi = 8, Peli = 6, Sangue = 6, Carcassa = 12 },
+		NEEDS_LAB = { Peli = true, Sangue = true }, -- vanno analizzati alla Ranger Station
+		LAB_MULTIPLIER = 3,
+		LAB_TIME = 12,
+		FAKE_CHANCE = 0.2, -- probabilità che una traccia sia un depistaggio
+		SIGHTING_RATE = 3, -- tracciamento al secondo mentre una camera inquadra la creatura
+		REVEAL = { ZONE = 30, AREA = 65, EXACT = 100 }, -- soglie della barra di Tracciamento
+	},
+
+	RAKE = {
+		WALK_SPEED = 11,
+		STALK_SPEED = 16,
+		CHASE_SPEED = 23,
+		ATTACK_RANGE = 6,
+		ATTACK_COOLDOWN = 4,
+		AGGRESSION_PER_SECOND = 0.12, -- crescita di base, aumenta col passare della notte
+		THRESHOLDS = { Curiosa = 25, Territoriale = 50, Aggressiva = 78 },
+		LIGHT_RANGE = 35, -- una torcia puntata da questa distanza la mette in fuga
+		LIGHT_ANGLE = 30,
+		LIGHT_TO_FLEE = 1.5, -- secondi di luce diretta necessari
+		FLEE_TIME = 8,
+		DARTS_TO_KNOCKOUT = 4,
+		SEDATION_DECAY = 0.01, -- dardi "smaltiti" al secondo
+		KNOCKOUT_TIME = 25,
+		CAPTURE_TIME = 5,
+	},
+
+	XP = {
+		EVIDENCE = 15,
+		CAMERA_SIGHTING = 10,
+		REVIVE = 30,
+		CAPTURE = 150,
+		SURVIVE = 60,
+		WIN = 100,
+		LOSS_MULTIPLIER = 0.5, -- XP dimezzati in caso di sconfitta
+	},
+
+	RANKS = {
+		{ name = "Novizio", xp = 0 },
+		{ name = "Ricercatore", xp = 500 },
+		{ name = "Cacciatore", xp = 1500 },
+		{ name = "Veterano", xp = 4000 },
+		{ name = "Leggenda", xp = 10000 },
+	},
+
+	-- Suoni (lascia "" per disattivarli). Puoi sostituirli con audio dal Creator Store:
+	-- incolla "rbxassetid://NUMERO". Sono suoni 3D: si sente da che direzione arrivano.
+	SOUNDS = {
+		RAKE_STEPS = "rbxasset://sounds/action_footsteps_plastic.mp3",
+		RAKE_CALL = "", -- verso della creatura (consigliato: un urlo/stridio dal Creator Store)
+		RAKE_SCREECH = "", -- urlo durante l'attacco
+		TRAP_SNAP = "rbxasset://sounds/electronicpingshort.wav",
+	},
 }
