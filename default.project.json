@@ -1,0 +1,23 @@
+{
+  "name": "CoinRush",
+  "tree": {
+    "$className": "DataModel",
+    "ReplicatedStorage": {
+      "Shared": {
+        "$path": "src/shared"
+      }
+    },
+    "ServerScriptService": {
+      "GameMode": {
+        "$path": "src/server/GameMode"
+      }
+    },
+    "StarterPlayer": {
+      "StarterPlayerScripts": {
+        "HUD": {
+          "$path": "src/client/HUD.client.luau"
+        }
+      }
+    }
+  }
+}
