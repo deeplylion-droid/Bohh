@@ -26,6 +26,10 @@ script, quindi funziona anche partendo da un luogo vuoto ("Baseplate").
 
 ## Installazione
 
+**Il modo più semplice**: scarica `build/CoinRush.rbxlx`, aprilo con Roblox Studio (doppio
+clic o *File → Open from File*) e pubblicalo con *File → Publish to Roblox*.
+Se modifichi gli script in `src/`, rigenera il file con `python3 tools/build_place.py`.
+
 **Con Rojo** (consigliato):
 
 ```sh
