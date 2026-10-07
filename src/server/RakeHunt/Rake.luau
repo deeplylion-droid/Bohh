@@ -143,7 +143,26 @@ local function computePath(dest: Vector3)
 	brain.pathTime = os.clock()
 end
 
+-- Zona iniziale (Ranger Station) vietata: ogni destinazione dentro il raggio viene spostata sul bordo
+local KEEP_OUT = Config.MAP.STATION_RADIUS + 6
+local function keepOut(p: Vector3, radius: number?): Vector3
+	local r = radius or KEEP_OUT
+	local away = flat(p - Forest.STATION)
+	if away.Magnitude >= r then
+		return p
+	end
+	if away.Magnitude < 1 then
+		away = flat(root.Position - Forest.STATION)
+		if away.Magnitude < 1 then
+			away = Vector3.new(1, 0, 0)
+		end
+	end
+	local edge = Forest.STATION + away.Unit * r
+	return Forest.groundAt(edge.X, edge.Z)
+end
+
 local function moveTo(dest: Vector3, speed: number, direct: boolean?)
+	dest = keepOut(dest)
 	hum.WalkSpeed = speed
 	if direct then
 		brain.path = nil
@@ -575,7 +594,11 @@ local function step(dt: number)
 		local d = (target.root.Position - root.Position).Magnitude
 		local direct = d < 35 and rayClear(root.Position + Vector3.new(0, 2, 0), target.root.Position, { target.char })
 		moveTo(predicted, R.CHASE_SPEED, direct)
-		if mode == "Finta" and d < 11 then
+		if Forest.inStation(target.root.Position, 2) and flat(root.Position - Forest.STATION).Magnitude < KEEP_OUT + 6 then
+			-- il bersaglio si è rifugiato alla stazione: la creatura si ferma al bordo e se ne va
+			playSound(growlSound)
+			flee(Forest.STATION, range({ 6, 10 }))
+		elseif mode == "Finta" and d < 11 then
 			playSound(screechSound)
 			flee(target.root.Position, range({ 6, 10 }))
 		elseif d < R.ATTACK_RANGE then
@@ -599,6 +622,19 @@ local function step(dt: number)
 			b.goal = avoidStation(Forest.clampToMap(root.Position + (CFrame.Angles(0, rng:NextNumber(-0.6, 0.6), 0) * away.Unit) * rng:NextNumber(90, 140)))
 		end
 		moveTo(b.goal, R.CHASE_SPEED)
+	end
+
+	-- barriera: se per qualsiasi motivo (percorso, spinta) entra nella zona iniziale, viene rimessa fuori
+	local inside = flat(root.Position - Forest.STATION).Magnitude
+	if inside < Config.MAP.STATION_RADIUS + 3 then
+		local edge = keepOut(root.Position, Config.MAP.STATION_RADIUS + 4)
+		root.CFrame = CFrame.new(edge + Vector3.new(0, RakeRig.ROOT_HEIGHT, 0)) * root.CFrame.Rotation
+		root.AssemblyLinearVelocity = Vector3.zero
+		b.goal = nil
+		b.pathGoal = nil
+		if mode ~= "Fuga" then
+			flee(Forest.STATION, range({ 5, 8 }))
+		end
 	end
 
 	-- tracce e versi

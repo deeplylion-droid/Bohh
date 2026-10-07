@@ -4,7 +4,7 @@
 --  - braccio sinistro (tasto G): una copia del braccio della skin agganciata alla telecamera, messa in
 --    posa con cinematica inversa (spalla, gomito) dal fianco fino a davanti agli occhi, con il quadrante
 --    dell'orologio rivolto verso di te;
---  - braccia sempre visibili in prima persona.
+--  - in prima persona si vede solo il braccio che regge torcia o fucile.
 -- Le pose si ottengono riscrivendo il C0 delle giunture: Part1 = Part0 * C0 * Transform * C1⁻¹,
 -- quindi C0 = Part0⁻¹ * Part1(desiderato) * C1 * Transform⁻¹ (annulla anche l'animazione di camminata).
 -- Le giunture possono essere Motor6D (avatar classici) o AnimationConstraint (nuove giunture degli
@@ -47,7 +47,8 @@ function ArmPose.getTransform(joint: Instance): CFrame
 	return CFrame.identity
 end
 
-local VISIBLE = { "LeftUpperArm", "LeftLowerArm", "LeftHand", "RightUpperArm", "RightLowerArm", "RightHand", "Left Arm", "Right Arm" }
+local RIGHT_ARM = { "RightUpperArm", "RightLowerArm", "RightHand", "Right Arm" }
+local LEFT_ARM = { "LeftUpperArm", "LeftLowerArm", "LeftHand", "Left Arm" }
 
 -- Direzione (sullo schermo) in cui compare il quadrante: x e y per ogni stud di profondità
 ArmPose.WATCH_RAY = Vector3.new(0.04, -0.34, 1)
@@ -332,6 +333,23 @@ function ArmPose.solveViewmodel(char: Model, cam: CFrame): { [string]: CFrame }?
 	return { ["Left Arm"] = cam * rel }
 end
 
+-- Posa del braccio rispetto alla telecamera, calcolata una volta quando alzi il polso (sguardo
+-- orizzontale): da lì in poi il braccio è rigidamente agganciato alla visuale e non trema con i
+-- movimenti del busto o dell'animazione di camminata.
+function ArmPose.relativeGoal(char: Model, cam: CFrame): { [string]: CFrame }?
+	local look = cam.LookVector
+	local camH = CFrame.new(cam.Position) * CFrame.Angles(0, math.atan2(-look.X, -look.Z), 0)
+	local goal = ArmPose.solveViewmodel(char, camH)
+	if not goal then
+		return nil
+	end
+	local rel = {}
+	for name, cf in goal do
+		rel[name] = camH:ToObjectSpace(cf)
+	end
+	return rel
+end
+
 -- Mette il braccio in posa: e = 0 parte dalla posizione del braccio vero (che pende lungo il fianco),
 -- e = 1 è il braccio alzato davanti agli occhi. L'interpolazione è gerarchica (spalla → avambraccio →
 -- mano) così il gomito resta attaccato durante il movimento.
@@ -464,8 +482,17 @@ function ArmPose.start(player: Player, watchShown: () -> boolean, remotes: Folde
 			end
 			if not vm then
 				vm = ArmPose.buildViewmodel(char, camera)
+				if vm then
+					vm.rel = ArmPose.relativeGoal(char, cam)
+				end
 			end
-			local goal = vm and ArmPose.solveViewmodel(char, cam)
+			local goal = nil
+			if vm and vm.rel then
+				goal = {}
+				for name, rel in vm.rel do
+					goal[name] = cam * rel
+				end
+			end
 			if vm and goal then
 				ArmPose.poseViewmodel(vm, char, goal, watchBlend * watchBlend * (3 - 2 * watchBlend))
 				shown = true
@@ -477,16 +504,24 @@ function ArmPose.start(player: Player, watchShown: () -> boolean, remotes: Folde
 		end
 		onScreen(shown and vm and vm.screen or nil)
 
-		-- braccia (e orologio) visibili in prima persona; il braccio sinistro vero si nasconde quando
-		-- c'è la sua copia davanti alla telecamera
-		for _, name in VISIBLE do
+		-- braccio destro visibile in prima persona solo con torcia o fucile in mano; il sinistro resta
+		-- nascosto (lo si vede solo come copia quando guardi l'orologio)
+		for _, name in RIGHT_ARM do
 			local p = char:FindFirstChild(name)
 			if p and p:IsA("BasePart") then
-				local hidden = shown and (name == "LeftUpperArm" or name == "LeftLowerArm" or name == "LeftHand" or name == "Left Arm")
-				p.LocalTransparencyModifier = hidden and 1 or 0
-				for _, d in p:GetChildren() do
-					if d:IsA("BasePart") then
-						d.LocalTransparencyModifier = hidden and 1 or 0
+				local show = holding ~= nil and status == "OK"
+				p.LocalTransparencyModifier = show and 0 or 1
+			end
+		end
+		if shown then
+			for _, name in LEFT_ARM do
+				local p = char:FindFirstChild(name)
+				if p and p:IsA("BasePart") then
+					p.LocalTransparencyModifier = 1
+					for _, d in p:GetChildren() do
+						if d:IsA("BasePart") then
+							d.LocalTransparencyModifier = 1
+						end
 					end
 				end
 			end

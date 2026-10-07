@@ -3202,7 +3202,26 @@ local function computePath(dest: Vector3)
 	brain.pathTime = os.clock()
 end
 
+-- Zona iniziale (Ranger Station) vietata: ogni destinazione dentro il raggio viene spostata sul bordo
+local KEEP_OUT = Config.MAP.STATION_RADIUS + 6
+local function keepOut(p: Vector3, radius: number?): Vector3
+	local r = radius or KEEP_OUT
+	local away = flat(p - Forest.STATION)
+	if away.Magnitude >= r then
+		return p
+	end
+	if away.Magnitude < 1 then
+		away = flat(root.Position - Forest.STATION)
+		if away.Magnitude < 1 then
+			away = Vector3.new(1, 0, 0)
+		end
+	end
+	local edge = Forest.STATION + away.Unit * r
+	return Forest.groundAt(edge.X, edge.Z)
+end
+
 local function moveTo(dest: Vector3, speed: number, direct: boolean?)
+	dest = keepOut(dest)
 	hum.WalkSpeed = speed
 	if direct then
 		brain.path = nil
@@ -3634,7 +3653,11 @@ local function step(dt: number)
 		local d = (target.root.Position - root.Position).Magnitude
 		local direct = d < 35 and rayClear(root.Position + Vector3.new(0, 2, 0), target.root.Position, { target.char })
 		moveTo(predicted, R.CHASE_SPEED, direct)
-		if mode == "Finta" and d < 11 then
+		if Forest.inStation(target.root.Position, 2) and flat(root.Position - Forest.STATION).Magnitude < KEEP_OUT + 6 then
+			-- il bersaglio si è rifugiato alla stazione: la creatura si ferma al bordo e se ne va
+			playSound(growlSound)
+			flee(Forest.STATION, range({ 6, 10 }))
+		elseif mode == "Finta" and d < 11 then
 			playSound(screechSound)
 			flee(target.root.Position, range({ 6, 10 }))
 		elseif d < R.ATTACK_RANGE then
@@ -3658,6 +3681,19 @@ local function step(dt: number)
 			b.goal = avoidStation(Forest.clampToMap(root.Position + (CFrame.Angles(0, rng:NextNumber(-0.6, 0.6), 0) * away.Unit) * rng:NextNumber(90, 140)))
 		end
 		moveTo(b.goal, R.CHASE_SPEED)
+	end
+
+	-- barriera: se per qualsiasi motivo (percorso, spinta) entra nella zona iniziale, viene rimessa fuori
+	local inside = flat(root.Position - Forest.STATION).Magnitude
+	if inside < Config.MAP.STATION_RADIUS + 3 then
+		local edge = keepOut(root.Position, Config.MAP.STATION_RADIUS + 4)
+		root.CFrame = CFrame.new(edge + Vector3.new(0, RakeRig.ROOT_HEIGHT, 0)) * root.CFrame.Rotation
+		root.AssemblyLinearVelocity = Vector3.zero
+		b.goal = nil
+		b.pathGoal = nil
+		if mode ~= "Fuga" then
+			flee(Forest.STATION, range({ 5, 8 }))
+		end
 	end
 
 	-- tracce e versi
@@ -5001,7 +5037,7 @@ return Ambience
 --  - braccio sinistro (tasto G): una copia del braccio della skin agganciata alla telecamera, messa in
 --    posa con cinematica inversa (spalla, gomito) dal fianco fino a davanti agli occhi, con il quadrante
 --    dell'orologio rivolto verso di te;
---  - braccia sempre visibili in prima persona.
+--  - in prima persona si vede solo il braccio che regge torcia o fucile.
 -- Le pose si ottengono riscrivendo il C0 delle giunture: Part1 = Part0 * C0 * Transform * C1⁻¹,
 -- quindi C0 = Part0⁻¹ * Part1(desiderato) * C1 * Transform⁻¹ (annulla anche l'animazione di camminata).
 -- Le giunture possono essere Motor6D (avatar classici) o AnimationConstraint (nuove giunture degli
@@ -5044,7 +5080,8 @@ function ArmPose.getTransform(joint: Instance): CFrame
 	return CFrame.identity
 end
 
-local VISIBLE = { "LeftUpperArm", "LeftLowerArm", "LeftHand", "RightUpperArm", "RightLowerArm", "RightHand", "Left Arm", "Right Arm" }
+local RIGHT_ARM = { "RightUpperArm", "RightLowerArm", "RightHand", "Right Arm" }
+local LEFT_ARM = { "LeftUpperArm", "LeftLowerArm", "LeftHand", "Left Arm" }
 
 -- Direzione (sullo schermo) in cui compare il quadrante: x e y per ogni stud di profondità
 ArmPose.WATCH_RAY = Vector3.new(0.04, -0.34, 1)
@@ -5329,6 +5366,23 @@ function ArmPose.solveViewmodel(char: Model, cam: CFrame): { [string]: CFrame }?
 	return { ["Left Arm"] = cam * rel }
 end
 
+-- Posa del braccio rispetto alla telecamera, calcolata una volta quando alzi il polso (sguardo
+-- orizzontale): da lì in poi il braccio è rigidamente agganciato alla visuale e non trema con i
+-- movimenti del busto o dell'animazione di camminata.
+function ArmPose.relativeGoal(char: Model, cam: CFrame): { [string]: CFrame }?
+	local look = cam.LookVector
+	local camH = CFrame.new(cam.Position) * CFrame.Angles(0, math.atan2(-look.X, -look.Z), 0)
+	local goal = ArmPose.solveViewmodel(char, camH)
+	if not goal then
+		return nil
+	end
+	local rel = {}
+	for name, cf in goal do
+		rel[name] = camH:ToObjectSpace(cf)
+	end
+	return rel
+end
+
 -- Mette il braccio in posa: e = 0 parte dalla posizione del braccio vero (che pende lungo il fianco),
 -- e = 1 è il braccio alzato davanti agli occhi. L'interpolazione è gerarchica (spalla → avambraccio →
 -- mano) così il gomito resta attaccato durante il movimento.
@@ -5461,8 +5515,17 @@ function ArmPose.start(player: Player, watchShown: () -> boolean, remotes: Folde
 			end
 			if not vm then
 				vm = ArmPose.buildViewmodel(char, camera)
+				if vm then
+					vm.rel = ArmPose.relativeGoal(char, cam)
+				end
 			end
-			local goal = vm and ArmPose.solveViewmodel(char, cam)
+			local goal = nil
+			if vm and vm.rel then
+				goal = {}
+				for name, rel in vm.rel do
+					goal[name] = cam * rel
+				end
+			end
 			if vm and goal then
 				ArmPose.poseViewmodel(vm, char, goal, watchBlend * watchBlend * (3 - 2 * watchBlend))
 				shown = true
@@ -5474,16 +5537,24 @@ function ArmPose.start(player: Player, watchShown: () -> boolean, remotes: Folde
 		end
 		onScreen(shown and vm and vm.screen or nil)
 
-		-- braccia (e orologio) visibili in prima persona; il braccio sinistro vero si nasconde quando
-		-- c'è la sua copia davanti alla telecamera
-		for _, name in VISIBLE do
+		-- braccio destro visibile in prima persona solo con torcia o fucile in mano; il sinistro resta
+		-- nascosto (lo si vede solo come copia quando guardi l'orologio)
+		for _, name in RIGHT_ARM do
 			local p = char:FindFirstChild(name)
 			if p and p:IsA("BasePart") then
-				local hidden = shown and (name == "LeftUpperArm" or name == "LeftLowerArm" or name == "LeftHand" or name == "Left Arm")
-				p.LocalTransparencyModifier = hidden and 1 or 0
-				for _, d in p:GetChildren() do
-					if d:IsA("BasePart") then
-						d.LocalTransparencyModifier = hidden and 1 or 0
+				local show = holding ~= nil and status == "OK"
+				p.LocalTransparencyModifier = show and 0 or 1
+			end
+		end
+		if shown then
+			for _, name in LEFT_ARM do
+				local p = char:FindFirstChild(name)
+				if p and p:IsA("BasePart") then
+					p.LocalTransparencyModifier = 1
+					for _, d in p:GetChildren() do
+						if d:IsA("BasePart") then
+							d.LocalTransparencyModifier = 1
+						end
 					end
 				end
 			end
