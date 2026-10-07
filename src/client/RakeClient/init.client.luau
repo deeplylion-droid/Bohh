@@ -20,6 +20,7 @@ local CamFeed = require(script:WaitForChild("CamFeed"))
 local Compass = require(script:WaitForChild("Compass"))
 local Gunfx = require(script:WaitForChild("Gunfx"))
 local Scares = require(script:WaitForChild("Scares"))
+local ArmPose = require(script:WaitForChild("ArmPose"))
 
 local player = Players.LocalPlayer
 local mouse = player:GetMouse()
@@ -40,6 +41,9 @@ Compass.new(player, state, hud.gui)
 Gunfx.start(remotes)
 Scares.start(player, state, function()
 	hud:pulse()
+end)
+ArmPose.start(player, function()
+	return hud.watchShown
 end)
 
 remotes.Notify.OnClientEvent:Connect(function(message)
@@ -85,6 +89,15 @@ ContextActionService:BindAction("Visore", function(_, inputState)
 	return Enum.ContextActionResult.Sink
 end, true, Enum.KeyCode.N, Enum.KeyCode.ButtonX)
 ContextActionService:SetTitle("Visore", "Visore")
+
+-- G: alzi il polso e guardi lo smartwatch (di nuovo G per abbassarlo)
+ContextActionService:BindAction("Orologio", function(_, inputState)
+	if inputState == Enum.UserInputState.Begin then
+		hud:setWatchVisible(not hud.watchShown)
+	end
+	return Enum.ContextActionResult.Sink
+end, true, Enum.KeyCode.G, Enum.KeyCode.DPadUp)
+ContextActionService:SetTitle("Orologio", "Orologio")
 
 ContextActionService:BindAction("TipoCamera", function(_, inputState)
 	if inputState == Enum.UserInputState.Begin then

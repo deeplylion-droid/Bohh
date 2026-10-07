@@ -153,7 +153,53 @@ function Team.equip(player: Player)
 		player:SetAttribute("Kits_" .. camType, count)
 	end
 	player:SetAttribute("SupplyTick", os.clock())
+	player:SetAttribute("Health", P.HEALTH)
+	player:SetAttribute("LastHit", 0)
 	Team.buildTools(player, backpack)
+	Team.attachWatch(char)
+end
+
+-- Smartwatch 3D al polso sinistro (lo vedono tutti; il client lo mostra alzando il braccio)
+function Team.attachWatch(char: Model)
+	local arm = char:FindFirstChild("LeftLowerArm") or char:FindFirstChild("Left Arm")
+	if not arm or not arm:IsA("BasePart") or arm:FindFirstChild("Orologio") then
+		return
+	end
+	local r15 = arm.Name == "LeftLowerArm"
+	local wristCF = arm.CFrame * CFrame.new(0, r15 and -arm.Size.Y * 0.32 or -arm.Size.Y * 0.38, 0)
+	local strap = make("Part", nil, {
+		Name = "Cinturino",
+		Size = Vector3.new(arm.Size.X + 0.08, 0.22, arm.Size.Z + 0.08),
+		CFrame = wristCF,
+		Color = Color3.fromRGB(26, 27, 29),
+		Material = Enum.Material.Rubber,
+	})
+	local case = make("Part", nil, {
+		Name = "Orologio",
+		Size = Vector3.new(0.42, 0.32, 0.12),
+		CFrame = wristCF * CFrame.new(-arm.Size.X / 2 - 0.06, 0, 0) * CFrame.Angles(0, math.pi / 2, 0),
+		Color = Color3.fromRGB(70, 74, 78),
+		Material = Enum.Material.Metal,
+	})
+	local screen = make("Part", nil, {
+		Name = "Schermo",
+		Size = Vector3.new(0.34, 0.24, 0.02),
+		CFrame = case.CFrame * CFrame.new(0, 0, 0.065),
+		Color = Color3.fromRGB(40, 140, 110),
+		Material = Enum.Material.Neon,
+	})
+	for _, p in { strap, case, screen } do
+		p.Anchored = false
+		p.CanCollide = false
+		p.CanQuery = false
+		p.CanTouch = false
+		p.Massless = true
+		p.Parent = arm
+		local weld = Instance.new("WeldConstraint")
+		weld.Part0 = arm
+		weld.Part1 = p
+		weld.Parent = p
+	end
 end
 
 -- Crea gli attrezzi nello zaino (separato da equip per poterlo provare senza un giocatore vero)
@@ -257,7 +303,8 @@ function Team.supply(player: Player)
 	player:SetAttribute("Darts", EQ.DARTS)
 	player:SetAttribute("TorchBattery", EQ.TORCH_BATTERY)
 	player:SetAttribute("SupplyTick", os.clock())
-	ctx.notify("🎒 Rifornimento completato: dardi, torcia e visore notturno carichi.", player)
+	player:SetAttribute("Health", P.HEALTH)
+	ctx.notify("🎒 Rifornimento completato: dardi, torcia, visore e kit medico.", player)
 end
 
 function Team.fireDart(player: Player, targetPos: any)
@@ -342,6 +389,7 @@ function Team.revive(player: Player, reviver: Player)
 	downedToken[player] = nil
 	clearRevivePrompt(player)
 	player:SetAttribute("Status", "OK")
+	player:SetAttribute("Health", P.REVIVE_HEALTH)
 	local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
 	if hum then
 		hum.PlatformStand = false
@@ -352,6 +400,21 @@ function Team.revive(player: Player, reviver: Player)
 	end
 	ctx.credit(reviver.UserId, "revives")
 	ctx.notifyAll(("❤ %s ha rianimato %s!"):format(reviver.DisplayName, player.DisplayName))
+end
+
+-- Ferita: toglie salute; a zero il giocatore è a terra (Braccato)
+function Team.hurt(player: Player, amount: number, from: Vector3?)
+	if not Team.isStanding(player) then
+		return
+	end
+	local health = math.max(0, (player:GetAttribute("Health") or P.HEALTH) - amount)
+	player:SetAttribute("Health", health)
+	player:SetAttribute("LastHit", os.clock())
+	if health <= 0 then
+		Team.down(player)
+	else
+		ctx.notify(("🩸 Sei stato ferito! Salute %d%%"):format(math.floor(health)), player)
+	end
 end
 
 function Team.down(player: Player)
@@ -399,7 +462,12 @@ function Team.down(player: Player)
 end
 
 function Team.tick(dt: number)
+	local now = os.clock()
 	for _, player in Players:GetPlayers() do
+		local health = player:GetAttribute("Health")
+		if Team.isStanding(player) and health and health < P.HEALTH and now - (player:GetAttribute("LastHit") or 0) > P.REGEN_DELAY then
+			player:SetAttribute("Health", math.min(P.HEALTH, health + P.HEALTH_REGEN * dt))
+		end
 		if player:GetAttribute("TorchOn") then
 			local battery = math.max(0, (player:GetAttribute("TorchBattery") or 0) - dt)
 			player:SetAttribute("TorchBattery", battery)

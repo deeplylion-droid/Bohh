@@ -61,6 +61,10 @@ return {
 		SPRINT_SPEED = 20,
 		STAMINA_DRAIN = 22, -- al secondo mentre corri (stamina massima 100)
 		STAMINA_REGEN = 12,
+		HEALTH = 100,
+		HEALTH_REGEN = 1.5, -- salute al secondo recuperata...
+		REGEN_DELAY = 12, -- ...dopo questi secondi senza essere colpiti
+		REVIVE_HEALTH = 40,
 		DOWNED_TIME = 30, -- secondi per essere rianimati prima di essere eliminati
 		REVIVE_TIME = 3,
 		FEAR_SLOWDOWN = 0.7, -- moltiplicatore di velocità con la Paura al massimo
@@ -107,7 +111,8 @@ return {
 		STALK_SPEED = 16,
 		CHASE_SPEED = 27, -- più veloce di un giocatore che corre (20): la luce e i compagni sono la difesa
 		ATTACK_RANGE = 6.5,
-		ATTACK_PAUSE = 1.3, -- resta sopra la vittima (jumpscare) prima di fuggire
+		ATTACK_PAUSE = 1.0, -- resta sopra la vittima (jumpscare) prima di fuggire
+		DAMAGE = { 16, 22 }, -- salute tolta a ogni attacco: servono 5-6 attacchi per finire a terra
 		AGGRESSION_PER_SECOND = 0.2, -- crescita di base, aumenta col passare della notte
 		ACTION_INTERVAL = { 16, 6 }, -- secondi tra un'azione e l'altra (aggressività bassa -> alta)
 		REVEAL_TIME = { 2.5, 4 }, -- secondi in cui si mostra immobile prima di sparire

@@ -86,8 +86,8 @@ function Watch.new(parent: Instance)
 	local self = setmetatable({}, Watch)
 	local root = make("Frame", {
 		Name = "Smartwatch",
-		AnchorPoint = Vector2.new(0, 1),
-		Position = UDim2.new(0, 26, 1, -18),
+		AnchorPoint = Vector2.new(0, 0),
+		Position = UDim2.new(0, 0, 0, 0),
 		Size = UDim2.fromOffset(210, 290),
 		BackgroundTransparency = 1,
 	}, parent)
@@ -146,7 +146,7 @@ function Watch.new(parent: Instance)
 	label(screen, { AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0.5, 36, 0, 90), Size = UDim2.fromOffset(30, 12), Text = "BPM", TextSize = 8, TextColor3 = MUTED, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 4 })
 	self.torch = battery(screen, UDim2.fromOffset(32, 104), "T")
 	self.nv = battery(screen, UDim2.fromOffset(92, 104), "V")
-	self.gear = label(screen, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 122), Size = UDim2.fromOffset(130, 12), TextSize = 10, TextColor3 = TEXT, ZIndex = 4 })
+	self.gear = label(screen, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 122), Size = UDim2.fromOffset(140, 12), TextSize = 10, TextColor3 = TEXT, RichText = true, ZIndex = 4 })
 	self.status = label(screen, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 136), Size = UDim2.fromOffset(120, 12), Font = Enum.Font.GothamBold, TextSize = 10, TextColor3 = TEAL, ZIndex = 4 })
 	self.alarm = make("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = RED, BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 5 }, screen)
 	self.sos = label(self.alarm, { Size = UDim2.fromScale(1, 1), Text = "SOS", Font = Enum.Font.GothamBlack, TextSize = 44, TextTransparency = 1, ZIndex = 6 })
@@ -185,11 +185,13 @@ function Watch:update(info, player: Player)
 
 	setBattery(self.torch, (player:GetAttribute("TorchBattery") or 0) / info.config.EQUIPMENT.TORCH_BATTERY, player:GetAttribute("TorchOn") == true)
 	setBattery(self.nv, info.nv, info.nvOn)
-	self.gear.Text = ("DARDI %d · %s %d · CAMP %d"):format(
+	local health = math.floor(player:GetAttribute("Health") or 100)
+	self.gear.Text = ("<font color=\"%s\">VITA %d%%</font> · DARDI %d · %s %d"):format(
+		health < 40 and "#ff5a46" or "#78e6be",
+		health,
 		player:GetAttribute("Darts") or 0,
 		string.upper(string.sub(player:GetAttribute("CamType") or "Fissa", 1, 4)),
-		player:GetAttribute("Kits_" .. (player:GetAttribute("CamType") or "Fissa")) or 0,
-		player:GetAttribute("Samples") or 0
+		player:GetAttribute("Kits_" .. (player:GetAttribute("CamType") or "Fissa")) or 0
 	)
 
 	local alert = ""
@@ -197,6 +199,8 @@ function Watch:update(info, player: Player)
 		alert = "SOS"
 	elseif info.panic then
 		alert = "PANICO"
+	elseif (player:GetAttribute("Health") or 100) < 35 then
+		alert = "FERITO"
 	elseif info.closeness > 0.3 then
 		alert = "MOVIMENTO VICINO"
 	elseif info.exhausted then

@@ -31,19 +31,24 @@ function Scares.start(player: Player, state: Folder, onFlash: () -> ())
 	red.Parent = gui
 	local active = false
 
-	local function jumpscare()
+	local function jumpscare(duration: number)
 		local root, head = rakeParts()
 		local char = player.Character
 		local hrp = char and char:FindFirstChild("HumanoidRootPart") :: BasePart?
 		if active or not root or not head or not hrp or (root.Position - hrp.Position).Magnitude > 18 then
 			return
 		end
+		-- spinta all'indietro
+		local away = (hrp.Position - root.Position) * Vector3.new(1, 0, 1)
+		if away.Magnitude > 0.1 then
+			hrp.AssemblyLinearVelocity = away.Unit * 45 + Vector3.new(0, 18, 0)
+		end
 		active = true
 		local camera = workspace.CurrentCamera
 		local savedType, savedFov = camera.CameraType, camera.FieldOfView
 		camera.CameraType = Enum.CameraType.Scriptable
 		camera.FieldOfView = 52
-		Sfx.new("Jumpscare", SoundService, { Volume = 2.6, PlayOnRemove = true }):Destroy()
+		Sfx.new("Jumpscare", SoundService, { Volume = duration > 1 and 2.6 or 1.8, PlaybackSpeed = duration > 1 and 1 or 1.15, PlayOnRemove = true }):Destroy()
 		onFlash()
 		local start = os.clock()
 		RunService:BindToRenderStep("Jumpscare", Enum.RenderPriority.Camera.Value + 10, function()
@@ -51,12 +56,12 @@ function Scares.start(player: Player, state: Folder, onFlash: () -> ())
 			local headCF = head.TransformedWorldCFrame
 			local face = root.CFrame.LookVector
 			local eyePos = headCF.Position
-			local shake = math.max(0.05, 0.35 * (1 - t / 1.3))
+			local shake = math.max(0.05, 0.35 * (1 - t / duration))
 			local camPos = eyePos + face * (2.2 - math.min(t, 0.25) * 2) + Vector3.new(0, 0.15, 0)
 			camera.CFrame = CFrame.lookAt(camPos, eyePos) * CFrame.Angles((math.random() - 0.5) * shake, (math.random() - 0.5) * shake, (math.random() - 0.5) * shake * 1.5)
 			red.BackgroundTransparency = (math.floor(t * 18) % 2 == 0) and 0.55 or 0.85
 		end)
-		task.delay(1.3, function()
+		task.delay(duration, function()
 			RunService:UnbindFromRenderStep("Jumpscare")
 			red.BackgroundTransparency = 1
 			camera.CameraType = savedType == Enum.CameraType.Scriptable and Enum.CameraType.Custom or savedType
@@ -69,9 +74,15 @@ function Scares.start(player: Player, state: Folder, onFlash: () -> ())
 		end)
 	end
 
+	-- ogni ferita: jumpscare breve; a terra: jumpscare completo
+	player:GetAttributeChangedSignal("LastHit"):Connect(function()
+		if (player:GetAttribute("LastHit") or 0) > 0 and player:GetAttribute("Status") == "OK" then
+			jumpscare(0.7)
+		end
+	end)
 	player:GetAttributeChangedSignal("Status"):Connect(function()
 		if player:GetAttribute("Status") == "Braccato" then
-			jumpscare()
+			jumpscare(1.3)
 		end
 	end)
 

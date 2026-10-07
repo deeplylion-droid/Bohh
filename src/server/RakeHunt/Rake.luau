@@ -580,7 +580,7 @@ local function step(dt: number)
 		elseif d < R.ATTACK_RANGE then
 			b.lastAttack = now
 			playSound(screechSound)
-			ctx.team.down(target.player)
+			ctx.team.hurt(target.player, range(R.DAMAGE), root.Position)
 			b.aggression = 45
 			setMode("Attacco", R.ATTACK_PAUSE)
 			stop()

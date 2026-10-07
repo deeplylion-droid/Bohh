@@ -169,6 +169,30 @@ function Tablet.new(player: Player, state: Folder, remotes: Folder)
 		TextYAlignment = Enum.TextYAlignment.Bottom,
 	})
 
+	-- pannello obiettivi e stato della caccia
+	local panel = make("Frame", {
+		Position = UDim2.fromOffset(22, 48),
+		Size = UDim2.fromOffset(280, 0),
+		AutomaticSize = Enum.AutomaticSize.Y,
+		BackgroundColor3 = Color3.fromRGB(4, 14, 8),
+		BackgroundTransparency = 0.25,
+		ZIndex = 6,
+	}, screen)
+	corner(panel, 8)
+	make("UIStroke", { Color = GREEN, Transparency = 0.6 }, panel)
+	make("UIPadding", { PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10), PaddingTop = UDim.new(0, 8), PaddingBottom = UDim.new(0, 8) }, panel)
+	self.panelText = label(panel, {
+		Size = UDim2.new(1, 0, 0, 0),
+		AutomaticSize = Enum.AutomaticSize.Y,
+		TextSize = 13,
+		TextWrapped = true,
+		RichText = true,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		TextYAlignment = Enum.TextYAlignment.Top,
+		ZIndex = 7,
+	})
+	self.panel = panel
+
 	-- mappa: piccola nell'angolo, a tutto schermo con M o con il tasto MAPPA
 	self.miniMap = MapView.new(screen, 230, 6)
 	self.miniMap.frame.AnchorPoint = Vector2.new(1, 1)
@@ -509,12 +533,44 @@ function Tablet:render()
 
 	if os.clock() >= self.nextMap then
 		self.nextMap = os.clock() + 0.2
+		self:updatePanel()
 		if self.mapMode and self.bigMap then
 			self.bigMap:update(self.player, self.state, m)
 		else
 			self.miniMap:update(self.player, self.state, m)
 		end
 	end
+end
+
+local STATUS_TEXT = {
+	OK = "<font color=\"#8fe6a0\">●</font>",
+	Braccato = "<font color=\"#ff7060\">⚠</font>",
+	Fuori = "<font color=\"#888888\">✖</font>",
+	Lobby = "<font color=\"#aaaaaa\">○</font>",
+}
+
+function Tablet:updatePanel()
+	local state = self.state
+	local tracking = math.floor(state:GetAttribute("Tracking") or 0)
+	local bar = string.rep("█", math.floor(tracking / 10)) .. string.rep("░", 10 - math.floor(tracking / 10))
+	local zone = state:GetAttribute("ZoneHint") or ""
+	local lines = {
+		("<b>OBIETTIVO · %s</b>"):format(string.upper(state:GetAttribute("Objective") or "—")),
+		state:GetAttribute("ObjectiveText") or "",
+		("<font color=\"#ffd75a\">%s</font>"):format(state:GetAttribute("ObjectiveProgress") or ""),
+		"",
+		("TRACCIAMENTO %s %d%%"):format(bar, tracking),
+		"ZONA DI CACCIA: " .. (zone ~= "" and string.upper(zone) or "SCONOSCIUTA"),
+		("COPERTURA %d%% · CAMERE %d · PROVE %d"):format(state:GetAttribute("Coverage") or 0, state:GetAttribute("CamerasActive") or 0, state:GetAttribute("Evidence") or 0),
+		("MINACCIA: %s · METEO: %s"):format(string.upper(state:GetAttribute("RakeState") or "—"), string.upper(state:GetAttribute("Weather") or "—")),
+		"",
+		"<b>SQUADRA</b>",
+	}
+	for _, p in game:GetService("Players"):GetPlayers() do
+		table.insert(lines, ("%s %s  %d%%"):format(STATUS_TEXT[p:GetAttribute("Status") or "Lobby"] or "", p.DisplayName, math.floor(p:GetAttribute("Health") or 100)))
+	end
+	self.panelText.Text = table.concat(lines, "\n")
+	self.panel.Visible = not self.mapMode
 end
 
 function Tablet:toggleMap()

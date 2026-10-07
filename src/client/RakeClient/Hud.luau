@@ -1,5 +1,4 @@
 -- HUD minimale: fase e obiettivo, barre del giocatore, stato della caccia, squadra, notifiche e debriefing.
-local Players = game:GetService("Players")
 local Lighting = game:GetService("Lighting")
 local TweenService = game:GetService("TweenService")
 
@@ -57,26 +56,6 @@ local function text(parent: Instance, props: { [string]: any }): TextLabel
 		(t :: any)[k] = v
 	end
 	return t
-end
-
-local function bar(parent: Instance, name: string, color: Color3, order: number)
-	local holder = make("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 30), LayoutOrder = order }, parent)
-	local label = text(holder, { Text = name, Size = UDim2.new(1, 0, 0, 14), TextSize = 12, TextColor3 = MUTED })
-	local back = make("Frame", {
-		Position = UDim2.new(0, 0, 0, 16),
-		Size = UDim2.new(1, 0, 0, 9),
-		BackgroundColor3 = Color3.fromRGB(40, 44, 40),
-		BorderSizePixel = 0,
-	}, holder)
-	corner(back, 4)
-	local fill = make("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = color, BorderSizePixel = 0 }, back)
-	corner(fill, 4)
-	return { label = label, fill = fill, name = name }
-end
-
-local function setBar(b, value: number, suffix: string?)
-	b.fill.Size = UDim2.fromScale(math.clamp(value, 0, 1), 1)
-	b.label.Text = suffix and (b.name .. "  " .. suffix) or b.name
 end
 
 local function edgeFrame(parent: Instance, size: UDim2, pos: UDim2, rotation: number): Frame
@@ -150,27 +129,68 @@ function Hud.new(player: Player, state: Folder)
 	}, gui)
 	make("UIListLayout", { Padding = UDim.new(0, 4), HorizontalAlignment = Enum.HorizontalAlignment.Center }, self.feed)
 
-	-- Destra: tracciamento e squadra
-	local right = panel(gui, {
-		AnchorPoint = Vector2.new(1, 0),
-		Position = UDim2.new(1, -12, 0, 130),
-		Size = UDim2.new(0, 230, 0, 300),
-		AutomaticSize = Enum.AutomaticSize.Y,
-	})
-	padding(right, 10)
-	make("UIListLayout", { Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder }, right)
-	self.tracking = bar(right, "Tracciamento", Color3.fromRGB(200, 70, 60), 1)
-	self.zone = text(right, { LayoutOrder = 2, TextSize = 13 })
-	self.coverage = text(right, { LayoutOrder = 3, TextSize = 13 })
-	self.cams = text(right, { LayoutOrder = 4, TextSize = 13 })
-	self.evidence = text(right, { LayoutOrder = 5, TextSize = 13 })
-	self.threat = text(right, { LayoutOrder = 6, TextSize = 13 })
-	self.weather = text(right, { LayoutOrder = 7, TextSize = 13 })
-	text(right, { LayoutOrder = 8, Text = "SQUADRA", Font = Enum.Font.GothamBold, TextSize = 12, TextColor3 = MUTED })
-	self.team = text(right, { LayoutOrder = 9, TextSize = 13, AutomaticSize = Enum.AutomaticSize.Y, RichText = true })
-
-	-- Sinistra in basso: smartwatch con vitali e attrezzatura
-	self.watch = Watch.new(gui)
+	-- Smartwatch al polso: compare (con l'avambraccio) quando lo consulti col tasto G
+	local wrist = make("Frame", {
+		Name = "Polso",
+		AnchorPoint = Vector2.new(0, 1),
+		Position = UDim2.new(0, 40, 1, 520),
+		Size = UDim2.fromOffset(250, 470),
+		BackgroundTransparency = 1,
+	}, gui)
+	self.wrist = wrist
+	local sleeve = make("Frame", {
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, 0, 0, 250),
+		Size = UDim2.fromOffset(170, 320),
+		BackgroundColor3 = Color3.fromRGB(46, 54, 40),
+		BorderSizePixel = 0,
+	}, wrist)
+	corner(sleeve, 40)
+	make("UIGradient", { Rotation = 0, Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, Color3.fromRGB(28, 32, 24)), ColorSequenceKeypoint.new(0.5, Color3.fromRGB(58, 68, 50)), ColorSequenceKeypoint.new(1, Color3.fromRGB(24, 28, 22)) }) }, sleeve)
+	make("Frame", { Position = UDim2.fromOffset(0, 0), Size = UDim2.new(1, 0, 0, 18), BackgroundColor3 = Color3.fromRGB(30, 34, 26), BorderSizePixel = 0 }, sleeve)
+	local skinFore = make("Frame", {
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, 0, 0, 40),
+		Size = UDim2.fromOffset(120, 230),
+		BackgroundColor3 = Color3.fromRGB(200, 160, 130),
+		BorderSizePixel = 0,
+	}, wrist)
+	corner(skinFore, 50)
+	local hand = make("Frame", {
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, 4, 0, 0),
+		Size = UDim2.fromOffset(132, 92),
+		BackgroundColor3 = Color3.fromRGB(205, 165, 134),
+		BorderSizePixel = 0,
+	}, wrist)
+	corner(hand, 40)
+	for _, f in { skinFore, hand } do
+		make("UIGradient", { Rotation = 0, Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, Color3.fromRGB(150, 150, 150)), ColorSequenceKeypoint.new(0.5, Color3.new(1, 1, 1)), ColorSequenceKeypoint.new(1, Color3.fromRGB(140, 140, 140)) }) }, f)
+	end
+	self.skin = { skinFore, hand }
+	self.watch = Watch.new(wrist)
+	self.watch.root.AnchorPoint = Vector2.new(0.5, 0)
+	self.watch.root.Position = UDim2.new(0.5, 0, 0, 30)
+	self.watchShown = false
+	-- indicatore di avviso quando l'orologio è abbassato
+	self.watchAlert = make("TextLabel", {
+		AnchorPoint = Vector2.new(0, 1),
+		Position = UDim2.new(0, 20, 1, -20),
+		Size = UDim2.fromOffset(120, 26),
+		BackgroundColor3 = Color3.fromRGB(10, 12, 12),
+		BackgroundTransparency = 0.35,
+		Font = Enum.Font.GothamBold,
+		TextSize = 13,
+		TextColor3 = Color3.fromRGB(255, 90, 70),
+		Visible = false,
+	}, gui)
+	corner(self.watchAlert, 8)
+	-- bordo di sangue quando la salute è bassa
+	self.blood = make("CanvasGroup", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, GroupTransparency = 1, ZIndex = 0 }, gui)
+	for _, info in { { 0, UDim2.fromScale(0.3, 1), UDim2.fromScale(0, 0) }, { 180, UDim2.fromScale(0.3, 1), UDim2.fromScale(0.7, 0) }, { 90, UDim2.fromScale(1, 0.3), UDim2.fromScale(0, 0) }, { 270, UDim2.fromScale(1, 0.3), UDim2.fromScale(0, 0.7) } } do
+		local f = make("Frame", { Size = info[2], Position = info[3], BackgroundColor3 = Color3.fromRGB(120, 0, 0), BorderSizePixel = 0 }, self.blood)
+		make("UIGradient", { Rotation = info[1], Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(1, 1) }) }, f)
+	end
 
 	-- Centro: messaggi grandi (briefing, braccato)
 	self.center = text(gui, {
@@ -241,6 +261,24 @@ function Hud:notify(message: string)
 	end)
 end
 
+function Hud:setWatchVisible(shown: boolean)
+	if self.watchShown == shown then
+		return
+	end
+	self.watchShown = shown
+	local char = self.player.Character
+	local hand = char and (char:FindFirstChild("LeftHand") or char:FindFirstChild("Left Arm"))
+	if hand and hand:IsA("BasePart") then
+		for _, f in self.skin do
+			f.BackgroundColor3 = hand.Color
+		end
+	end
+	TweenService:Create(self.wrist, TweenInfo.new(shown and 0.35 or 0.25, Enum.EasingStyle.Back, shown and Enum.EasingDirection.Out or Enum.EasingDirection.In), {
+		Position = shown and UDim2.new(0, 40, 1, 60) or UDim2.new(0, 40, 1, 520),
+		Rotation = shown and -8 or 0,
+	}):Play()
+end
+
 function Hud:pulse()
 	self.flash.BackgroundTransparency = 0.2
 	TweenService:Create(self.flash, TweenInfo.new(0.6), { BackgroundTransparency = 1 }):Play()
@@ -251,17 +289,13 @@ local function clock(): string
 	return ("%02d:%02d"):format(math.floor(t), math.floor((t % 1) * 60))
 end
 
-local STATUS_TEXT = {
-	OK = "<font color=\"#8fd18f\">●</font>",
-	Braccato = "<font color=\"#ff7060\">⚠ braccato</font>",
-	Fuori = "<font color=\"#888888\">✖ fuori</font>",
-	Lobby = "<font color=\"#aaaaaa\">○</font>",
-}
 
 -- vitals: { stamina, fear, nv, nvOn, exhausted, panic }
 function Hud:update(vitals)
 	local player, state = self.player, self.state
 	self.watch:update(vitals, player)
+	local health = player:GetAttribute("Health") or 100
+	self.blood.GroupTransparency = 1 - math.clamp((60 - health) / 50, 0, 1) * 0.85
 	self.vignette.GroupTransparency = 1 - math.clamp((vitals.fear - 30) / 70, 0, 1) * 0.85
 
 	local now = os.clock()
@@ -287,21 +321,10 @@ function Hud:update(vitals)
 	self.objective.Text = objective and phase ~= "Attesa" and (objective .. ": " .. (state:GetAttribute("ObjectiveText") or "")) or ""
 	self.progress.Text = phase == "Notte" and (state:GetAttribute("ObjectiveProgress") or "") or ""
 
-	local tracking = state:GetAttribute("Tracking") or 0
-	setBar(self.tracking, tracking / 100, ("%d%%"):format(math.floor(tracking)))
-	local zone = state:GetAttribute("ZoneHint") or ""
-	self.zone.Text = "Zona di caccia: " .. (zone ~= "" and zone or "sconosciuta")
-	self.coverage.Text = ("Copertura mappa: %d%%"):format(state:GetAttribute("Coverage") or 0)
-	self.cams.Text = ("Telecamere attive: %d"):format(state:GetAttribute("CamerasActive") or 0)
-	self.evidence.Text = ("Prove documentate: %d"):format(state:GetAttribute("Evidence") or 0)
-	self.threat.Text = "Minaccia: " .. (state:GetAttribute("RakeState") or "Assente")
-	self.weather.Text = "Meteo: " .. (state:GetAttribute("Weather") or "—")
-
-	local lines = {}
-	for _, p in Players:GetPlayers() do
-		table.insert(lines, ("%s %s"):format(STATUS_TEXT[p:GetAttribute("Status") or "Lobby"] or "", p.DisplayName))
-	end
-	self.team.Text = table.concat(lines, "\n")
+	-- avviso dell'orologio quando non lo stai guardando
+	local alert = self.watch.lastAlert or ""
+	self.watchAlert.Visible = not self.watchShown and alert ~= "" and alert ~= "OK" and os.clock() % 1 < 0.6
+	self.watchAlert.Text = "⌚ " .. alert .. "  [G]"
 
 	-- Messaggio centrale
 	if status == "Braccato" then
@@ -311,7 +334,7 @@ function Hud:update(vitals)
 		self.center.Text = "Sei fuori gioco. Osservi i compagni: puoi aprire il tablet [T] per aiutarli."
 	elseif phase == "Briefing" then
 		self.center.Text = "<font size=\"16\">1 Torcia · 2 Telecamera · 3 Fucile a dardi · 4 Tablet\n"
-			.. "Shift scatto · T tablet · N visore · R tipo di camera · E interagisci</font>"
+			.. "Shift scatto · T tablet · G orologio · N visore · R tipo camera · tasto destro mirino</font>"
 	else
 		self.center.Text = ""
 	end

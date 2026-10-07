@@ -158,6 +158,10 @@ return {
 		SPRINT_SPEED = 20,
 		STAMINA_DRAIN = 22, -- al secondo mentre corri (stamina massima 100)
 		STAMINA_REGEN = 12,
+		HEALTH = 100,
+		HEALTH_REGEN = 1.5, -- salute al secondo recuperata...
+		REGEN_DELAY = 12, -- ...dopo questi secondi senza essere colpiti
+		REVIVE_HEALTH = 40,
 		DOWNED_TIME = 30, -- secondi per essere rianimati prima di essere eliminati
 		REVIVE_TIME = 3,
 		FEAR_SLOWDOWN = 0.7, -- moltiplicatore di velocità con la Paura al massimo
@@ -204,7 +208,8 @@ return {
 		STALK_SPEED = 16,
 		CHASE_SPEED = 27, -- più veloce di un giocatore che corre (20): la luce e i compagni sono la difesa
 		ATTACK_RANGE = 6.5,
-		ATTACK_PAUSE = 1.3, -- resta sopra la vittima (jumpscare) prima di fuggire
+		ATTACK_PAUSE = 1.0, -- resta sopra la vittima (jumpscare) prima di fuggire
+		DAMAGE = { 16, 22 }, -- salute tolta a ogni attacco: servono 5-6 attacchi per finire a terra
 		AGGRESSION_PER_SECOND = 0.2, -- crescita di base, aumenta col passare della notte
 		ACTION_INTERVAL = { 16, 6 }, -- secondi tra un'azione e l'altra (aggressività bassa -> alta)
 		REVEAL_TIME = { 2.5, 4 }, -- secondi in cui si mostra immobile prima di sparire
@@ -3631,7 +3636,7 @@ local function step(dt: number)
 		elseif d < R.ATTACK_RANGE then
 			b.lastAttack = now
 			playSound(screechSound)
-			ctx.team.down(target.player)
+			ctx.team.hurt(target.player, range(R.DAMAGE), root.Position)
 			b.aggression = 45
 			setMode("Attacco", R.ATTACK_PAUSE)
 			stop()
@@ -3910,7 +3915,53 @@ function Team.equip(player: Player)
 		player:SetAttribute("Kits_" .. camType, count)
 	end
 	player:SetAttribute("SupplyTick", os.clock())
+	player:SetAttribute("Health", P.HEALTH)
+	player:SetAttribute("LastHit", 0)
 	Team.buildTools(player, backpack)
+	Team.attachWatch(char)
+end
+
+-- Smartwatch 3D al polso sinistro (lo vedono tutti; il client lo mostra alzando il braccio)
+function Team.attachWatch(char: Model)
+	local arm = char:FindFirstChild("LeftLowerArm") or char:FindFirstChild("Left Arm")
+	if not arm or not arm:IsA("BasePart") or arm:FindFirstChild("Orologio") then
+		return
+	end
+	local r15 = arm.Name == "LeftLowerArm"
+	local wristCF = arm.CFrame * CFrame.new(0, r15 and -arm.Size.Y * 0.32 or -arm.Size.Y * 0.38, 0)
+	local strap = make("Part", nil, {
+		Name = "Cinturino",
+		Size = Vector3.new(arm.Size.X + 0.08, 0.22, arm.Size.Z + 0.08),
+		CFrame = wristCF,
+		Color = Color3.fromRGB(26, 27, 29),
+		Material = Enum.Material.Rubber,
+	})
+	local case = make("Part", nil, {
+		Name = "Orologio",
+		Size = Vector3.new(0.42, 0.32, 0.12),
+		CFrame = wristCF * CFrame.new(-arm.Size.X / 2 - 0.06, 0, 0) * CFrame.Angles(0, math.pi / 2, 0),
+		Color = Color3.fromRGB(70, 74, 78),
+		Material = Enum.Material.Metal,
+	})
+	local screen = make("Part", nil, {
+		Name = "Schermo",
+		Size = Vector3.new(0.34, 0.24, 0.02),
+		CFrame = case.CFrame * CFrame.new(0, 0, 0.065),
+		Color = Color3.fromRGB(40, 140, 110),
+		Material = Enum.Material.Neon,
+	})
+	for _, p in { strap, case, screen } do
+		p.Anchored = false
+		p.CanCollide = false
+		p.CanQuery = false
+		p.CanTouch = false
+		p.Massless = true
+		p.Parent = arm
+		local weld = Instance.new("WeldConstraint")
+		weld.Part0 = arm
+		weld.Part1 = p
+		weld.Parent = p
+	end
 end
 
 -- Crea gli attrezzi nello zaino (separato da equip per poterlo provare senza un giocatore vero)
@@ -4014,7 +4065,8 @@ function Team.supply(player: Player)
 	player:SetAttribute("Darts", EQ.DARTS)
 	player:SetAttribute("TorchBattery", EQ.TORCH_BATTERY)
 	player:SetAttribute("SupplyTick", os.clock())
-	ctx.notify("🎒 Rifornimento completato: dardi, torcia e visore notturno carichi.", player)
+	player:SetAttribute("Health", P.HEALTH)
+	ctx.notify("🎒 Rifornimento completato: dardi, torcia, visore e kit medico.", player)
 end
 
 function Team.fireDart(player: Player, targetPos: any)
@@ -4099,6 +4151,7 @@ function Team.revive(player: Player, reviver: Player)
 	downedToken[player] = nil
 	clearRevivePrompt(player)
 	player:SetAttribute("Status", "OK")
+	player:SetAttribute("Health", P.REVIVE_HEALTH)
 	local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
 	if hum then
 		hum.PlatformStand = false
@@ -4109,6 +4162,21 @@ function Team.revive(player: Player, reviver: Player)
 	end
 	ctx.credit(reviver.UserId, "revives")
 	ctx.notifyAll(("❤ %s ha rianimato %s!"):format(reviver.DisplayName, player.DisplayName))
+end
+
+-- Ferita: toglie salute; a zero il giocatore è a terra (Braccato)
+function Team.hurt(player: Player, amount: number, from: Vector3?)
+	if not Team.isStanding(player) then
+		return
+	end
+	local health = math.max(0, (player:GetAttribute("Health") or P.HEALTH) - amount)
+	player:SetAttribute("Health", health)
+	player:SetAttribute("LastHit", os.clock())
+	if health <= 0 then
+		Team.down(player)
+	else
+		ctx.notify(("🩸 Sei stato ferito! Salute %d%%"):format(math.floor(health)), player)
+	end
 end
 
 function Team.down(player: Player)
@@ -4156,7 +4224,12 @@ function Team.down(player: Player)
 end
 
 function Team.tick(dt: number)
+	local now = os.clock()
 	for _, player in Players:GetPlayers() do
+		local health = player:GetAttribute("Health")
+		if Team.isStanding(player) and health and health < P.HEALTH and now - (player:GetAttribute("LastHit") or 0) > P.REGEN_DELAY then
+			player:SetAttribute("Health", math.min(P.HEALTH, health + P.HEALTH_REGEN * dt))
+		end
 		if player:GetAttribute("TorchOn") then
 			local battery = math.max(0, (player:GetAttribute("TorchBattery") or 0) - dt)
 			player:SetAttribute("TorchBattery", battery)
@@ -4200,7 +4273,7 @@ function Team.watchCharacter(player: Player, char: Model)
 end
 
 return Team
-]]></ProtectedString></Properties></Item></Item></Item><Item class="StarterPlayer" referent="RBX39"><Properties><string name="Name">StarterPlayer</string></Properties><Item class="StarterPlayerScripts" referent="RBX38"><Properties><string name="Name">StarterPlayerScripts</string></Properties><Item class="LocalScript" referent="RBX37"><Properties><string name="Name">RakeClient</string><ProtectedString name="Source"><![CDATA[-- Client di "The Rake": controlli, stamina e fiatone, Paura e allucinazioni, visore notturno,
+]]></ProtectedString></Properties></Item></Item></Item><Item class="StarterPlayer" referent="RBX40"><Properties><string name="Name">StarterPlayer</string></Properties><Item class="StarterPlayerScripts" referent="RBX39"><Properties><string name="Name">StarterPlayerScripts</string></Properties><Item class="LocalScript" referent="RBX38"><Properties><string name="Name">RakeClient</string><ProtectedString name="Source"><![CDATA[-- Client di "The Rake": controlli, stamina e fiatone, Paura e allucinazioni, visore notturno,
 -- fucile a dardi, tablet delle telecamere, atmosfera, animazione della creatura e HUD.
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -4222,6 +4295,7 @@ local CamFeed = require(script:WaitForChild("CamFeed"))
 local Compass = require(script:WaitForChild("Compass"))
 local Gunfx = require(script:WaitForChild("Gunfx"))
 local Scares = require(script:WaitForChild("Scares"))
+local ArmPose = require(script:WaitForChild("ArmPose"))
 
 local player = Players.LocalPlayer
 local mouse = player:GetMouse()
@@ -4242,6 +4316,9 @@ Compass.new(player, state, hud.gui)
 Gunfx.start(remotes)
 Scares.start(player, state, function()
 	hud:pulse()
+end)
+ArmPose.start(player, function()
+	return hud.watchShown
 end)
 
 remotes.Notify.OnClientEvent:Connect(function(message)
@@ -4287,6 +4364,15 @@ ContextActionService:BindAction("Visore", function(_, inputState)
 	return Enum.ContextActionResult.Sink
 end, true, Enum.KeyCode.N, Enum.KeyCode.ButtonX)
 ContextActionService:SetTitle("Visore", "Visore")
+
+-- G: alzi il polso e guardi lo smartwatch (di nuovo G per abbassarlo)
+ContextActionService:BindAction("Orologio", function(_, inputState)
+	if inputState == Enum.UserInputState.Begin then
+		hud:setWatchVisible(not hud.watchShown)
+	end
+	return Enum.ContextActionResult.Sink
+end, true, Enum.KeyCode.G, Enum.KeyCode.DPadUp)
+ContextActionService:SetTitle("Orologio", "Orologio")
 
 ContextActionService:BindAction("TipoCamera", function(_, inputState)
 	if inputState == Enum.UserInputState.Begin then
@@ -4803,7 +4889,65 @@ function Ambience.start(player: Player, state: Folder, onHallucination: () -> ()
 end
 
 return Ambience
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX26"><Properties><string name="Name">CamFeed</string><ProtectedString name="Source"><![CDATA[-- Anteprime delle telecamere sui monitor della Ranger Station (solo client).
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX26"><Properties><string name="Name">ArmPose</string><ProtectedString name="Source"><![CDATA[-- Pose delle braccia (client, sul proprio personaggio R15):
+--  - braccio destro: con torcia o fucile in mano segue la visuale anche in verticale, così il fascio
+--    della torcia illumina dove guardi;
+--  - braccio sinistro: si alza davanti al viso quando guardi lo smartwatch.
+-- Modifica il C0 delle giunture partendo da quello originale, così si somma alle animazioni.
+local RunService = game:GetService("RunService")
+
+local ArmPose = {}
+
+function ArmPose.start(player: Player, watchShown: () -> boolean)
+	local originals: { [Motor6D]: CFrame } = {}
+	local watchBlend = 0
+
+	local function motor(char: Model, partName: string, jointName: string): Motor6D?
+		local part = char:FindFirstChild(partName)
+		local joint = part and part:FindFirstChild(jointName)
+		if joint and joint:IsA("Motor6D") then
+			if not originals[joint] then
+				originals[joint] = joint.C0
+			end
+			return joint
+		end
+		return nil
+	end
+
+	player.CharacterAdded:Connect(function()
+		table.clear(originals)
+	end)
+
+	RunService.Stepped:Connect(function(_, dt)
+		local char = player.Character
+		if not char then
+			return
+		end
+		local camera = workspace.CurrentCamera
+		local holding = char:FindFirstChild("Torcia") or char:FindFirstChild("Fucile a dardi")
+		local right = motor(char, "RightUpperArm", "RightShoulder")
+		if right then
+			local pitch = 0
+			if holding and player:GetAttribute("Status") == "OK" then
+				pitch = math.clamp(math.asin(math.clamp(camera.CFrame.LookVector.Y, -1, 1)), -1.1, 1.2)
+			end
+			right.C0 = originals[right] * CFrame.Angles(pitch, 0, 0)
+		end
+		local target = watchShown() and 1 or 0
+		watchBlend += (target - watchBlend) * math.min(1, dt * 10)
+		local left = motor(char, "LeftUpperArm", "LeftShoulder")
+		local elbow = motor(char, "LeftLowerArm", "LeftElbow")
+		if left then
+			left.C0 = originals[left] * CFrame.Angles(1.35 * watchBlend, 0, -0.55 * watchBlend)
+		end
+		if elbow then
+			elbow.C0 = originals[elbow] * CFrame.Angles(1.3 * watchBlend, 0, 0)
+		end
+	end)
+end
+
+return ArmPose
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX27"><Properties><string name="Name">CamFeed</string><ProtectedString name="Source"><![CDATA[-- Anteprime delle telecamere sui monitor della Ranger Station (solo client).
 -- Ogni monitor ha un ViewportFrame con una ricostruzione della scena davanti alla telecamera:
 -- terreno campionato, alberi/rocce/costruzioni clonati una volta, creatura (con la sua posa) e
 -- compagni aggiornati 10 volte al secondo. I feed si attivano solo vicino alla stazione.
@@ -5189,7 +5333,7 @@ function CamFeed.start(player: Player)
 end
 
 return CamFeed
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX27"><Properties><string name="Name">Compass</string><ProtectedString name="Source"><![CDATA[-- Bussola in alto, trasparente: tacche e punti cardinali, icone dei punti di interesse con la
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX28"><Properties><string name="Name">Compass</string><ProtectedString name="Source"><![CDATA[-- Bussola in alto, trasparente: tacche e punti cardinali, icone dei punti di interesse con la
 -- distanza in metri, la destinazione (che indica la direzione del sentiero da seguire e la
 -- distanza lungo il percorso), compagni, area di caccia e ultimo avvistamento.
 local Players = game:GetService("Players")
@@ -5425,7 +5569,7 @@ function Compass:update()
 end
 
 return Compass
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX28"><Properties><string name="Name">Gunfx</string><ProtectedString name="Source"><![CDATA[-- Effetti del fucile a dardi (client): fiammata con luce che illumina il bosco, fumo, rinculo
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX29"><Properties><string name="Name">Gunfx</string><ProtectedString name="Source"><![CDATA[-- Effetti del fucile a dardi (client): fiammata con luce che illumina il bosco, fumo, rinculo
 -- (la canna sale e torna giù a metà), sobbalzo dell'arma, lampo e colpo di zoom, sparo con eco e
 -- otturatore, dardo visibile in volo che resta conficcato dove colpisce, conferma del colpo.
 local Players = game:GetService("Players")
@@ -5712,8 +5856,7 @@ function Gunfx.start(remotes: Folder)
 end
 
 return Gunfx
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX29"><Properties><string name="Name">Hud</string><ProtectedString name="Source"><![CDATA[-- HUD minimale: fase e obiettivo, barre del giocatore, stato della caccia, squadra, notifiche e debriefing.
-local Players = game:GetService("Players")
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX30"><Properties><string name="Name">Hud</string><ProtectedString name="Source"><![CDATA[-- HUD minimale: fase e obiettivo, barre del giocatore, stato della caccia, squadra, notifiche e debriefing.
 local Lighting = game:GetService("Lighting")
 local TweenService = game:GetService("TweenService")
 
@@ -5771,26 +5914,6 @@ local function text(parent: Instance, props: { [string]: any }): TextLabel
 		(t :: any)[k] = v
 	end
 	return t
-end
-
-local function bar(parent: Instance, name: string, color: Color3, order: number)
-	local holder = make("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 30), LayoutOrder = order }, parent)
-	local label = text(holder, { Text = name, Size = UDim2.new(1, 0, 0, 14), TextSize = 12, TextColor3 = MUTED })
-	local back = make("Frame", {
-		Position = UDim2.new(0, 0, 0, 16),
-		Size = UDim2.new(1, 0, 0, 9),
-		BackgroundColor3 = Color3.fromRGB(40, 44, 40),
-		BorderSizePixel = 0,
-	}, holder)
-	corner(back, 4)
-	local fill = make("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = color, BorderSizePixel = 0 }, back)
-	corner(fill, 4)
-	return { label = label, fill = fill, name = name }
-end
-
-local function setBar(b, value: number, suffix: string?)
-	b.fill.Size = UDim2.fromScale(math.clamp(value, 0, 1), 1)
-	b.label.Text = suffix and (b.name .. "  " .. suffix) or b.name
 end
 
 local function edgeFrame(parent: Instance, size: UDim2, pos: UDim2, rotation: number): Frame
@@ -5864,27 +5987,68 @@ function Hud.new(player: Player, state: Folder)
 	}, gui)
 	make("UIListLayout", { Padding = UDim.new(0, 4), HorizontalAlignment = Enum.HorizontalAlignment.Center }, self.feed)
 
-	-- Destra: tracciamento e squadra
-	local right = panel(gui, {
-		AnchorPoint = Vector2.new(1, 0),
-		Position = UDim2.new(1, -12, 0, 130),
-		Size = UDim2.new(0, 230, 0, 300),
-		AutomaticSize = Enum.AutomaticSize.Y,
-	})
-	padding(right, 10)
-	make("UIListLayout", { Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder }, right)
-	self.tracking = bar(right, "Tracciamento", Color3.fromRGB(200, 70, 60), 1)
-	self.zone = text(right, { LayoutOrder = 2, TextSize = 13 })
-	self.coverage = text(right, { LayoutOrder = 3, TextSize = 13 })
-	self.cams = text(right, { LayoutOrder = 4, TextSize = 13 })
-	self.evidence = text(right, { LayoutOrder = 5, TextSize = 13 })
-	self.threat = text(right, { LayoutOrder = 6, TextSize = 13 })
-	self.weather = text(right, { LayoutOrder = 7, TextSize = 13 })
-	text(right, { LayoutOrder = 8, Text = "SQUADRA", Font = Enum.Font.GothamBold, TextSize = 12, TextColor3 = MUTED })
-	self.team = text(right, { LayoutOrder = 9, TextSize = 13, AutomaticSize = Enum.AutomaticSize.Y, RichText = true })
-
-	-- Sinistra in basso: smartwatch con vitali e attrezzatura
-	self.watch = Watch.new(gui)
+	-- Smartwatch al polso: compare (con l'avambraccio) quando lo consulti col tasto G
+	local wrist = make("Frame", {
+		Name = "Polso",
+		AnchorPoint = Vector2.new(0, 1),
+		Position = UDim2.new(0, 40, 1, 520),
+		Size = UDim2.fromOffset(250, 470),
+		BackgroundTransparency = 1,
+	}, gui)
+	self.wrist = wrist
+	local sleeve = make("Frame", {
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, 0, 0, 250),
+		Size = UDim2.fromOffset(170, 320),
+		BackgroundColor3 = Color3.fromRGB(46, 54, 40),
+		BorderSizePixel = 0,
+	}, wrist)
+	corner(sleeve, 40)
+	make("UIGradient", { Rotation = 0, Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, Color3.fromRGB(28, 32, 24)), ColorSequenceKeypoint.new(0.5, Color3.fromRGB(58, 68, 50)), ColorSequenceKeypoint.new(1, Color3.fromRGB(24, 28, 22)) }) }, sleeve)
+	make("Frame", { Position = UDim2.fromOffset(0, 0), Size = UDim2.new(1, 0, 0, 18), BackgroundColor3 = Color3.fromRGB(30, 34, 26), BorderSizePixel = 0 }, sleeve)
+	local skinFore = make("Frame", {
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, 0, 0, 40),
+		Size = UDim2.fromOffset(120, 230),
+		BackgroundColor3 = Color3.fromRGB(200, 160, 130),
+		BorderSizePixel = 0,
+	}, wrist)
+	corner(skinFore, 50)
+	local hand = make("Frame", {
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, 4, 0, 0),
+		Size = UDim2.fromOffset(132, 92),
+		BackgroundColor3 = Color3.fromRGB(205, 165, 134),
+		BorderSizePixel = 0,
+	}, wrist)
+	corner(hand, 40)
+	for _, f in { skinFore, hand } do
+		make("UIGradient", { Rotation = 0, Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, Color3.fromRGB(150, 150, 150)), ColorSequenceKeypoint.new(0.5, Color3.new(1, 1, 1)), ColorSequenceKeypoint.new(1, Color3.fromRGB(140, 140, 140)) }) }, f)
+	end
+	self.skin = { skinFore, hand }
+	self.watch = Watch.new(wrist)
+	self.watch.root.AnchorPoint = Vector2.new(0.5, 0)
+	self.watch.root.Position = UDim2.new(0.5, 0, 0, 30)
+	self.watchShown = false
+	-- indicatore di avviso quando l'orologio è abbassato
+	self.watchAlert = make("TextLabel", {
+		AnchorPoint = Vector2.new(0, 1),
+		Position = UDim2.new(0, 20, 1, -20),
+		Size = UDim2.fromOffset(120, 26),
+		BackgroundColor3 = Color3.fromRGB(10, 12, 12),
+		BackgroundTransparency = 0.35,
+		Font = Enum.Font.GothamBold,
+		TextSize = 13,
+		TextColor3 = Color3.fromRGB(255, 90, 70),
+		Visible = false,
+	}, gui)
+	corner(self.watchAlert, 8)
+	-- bordo di sangue quando la salute è bassa
+	self.blood = make("CanvasGroup", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, GroupTransparency = 1, ZIndex = 0 }, gui)
+	for _, info in { { 0, UDim2.fromScale(0.3, 1), UDim2.fromScale(0, 0) }, { 180, UDim2.fromScale(0.3, 1), UDim2.fromScale(0.7, 0) }, { 90, UDim2.fromScale(1, 0.3), UDim2.fromScale(0, 0) }, { 270, UDim2.fromScale(1, 0.3), UDim2.fromScale(0, 0.7) } } do
+		local f = make("Frame", { Size = info[2], Position = info[3], BackgroundColor3 = Color3.fromRGB(120, 0, 0), BorderSizePixel = 0 }, self.blood)
+		make("UIGradient", { Rotation = info[1], Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(1, 1) }) }, f)
+	end
 
 	-- Centro: messaggi grandi (briefing, braccato)
 	self.center = text(gui, {
@@ -5955,6 +6119,24 @@ function Hud:notify(message: string)
 	end)
 end
 
+function Hud:setWatchVisible(shown: boolean)
+	if self.watchShown == shown then
+		return
+	end
+	self.watchShown = shown
+	local char = self.player.Character
+	local hand = char and (char:FindFirstChild("LeftHand") or char:FindFirstChild("Left Arm"))
+	if hand and hand:IsA("BasePart") then
+		for _, f in self.skin do
+			f.BackgroundColor3 = hand.Color
+		end
+	end
+	TweenService:Create(self.wrist, TweenInfo.new(shown and 0.35 or 0.25, Enum.EasingStyle.Back, shown and Enum.EasingDirection.Out or Enum.EasingDirection.In), {
+		Position = shown and UDim2.new(0, 40, 1, 60) or UDim2.new(0, 40, 1, 520),
+		Rotation = shown and -8 or 0,
+	}):Play()
+end
+
 function Hud:pulse()
 	self.flash.BackgroundTransparency = 0.2
 	TweenService:Create(self.flash, TweenInfo.new(0.6), { BackgroundTransparency = 1 }):Play()
@@ -5965,17 +6147,13 @@ local function clock(): string
 	return ("%02d:%02d"):format(math.floor(t), math.floor((t % 1) * 60))
 end
 
-local STATUS_TEXT = {
-	OK = "<font color=\"#8fd18f\">●</font>",
-	Braccato = "<font color=\"#ff7060\">⚠ braccato</font>",
-	Fuori = "<font color=\"#888888\">✖ fuori</font>",
-	Lobby = "<font color=\"#aaaaaa\">○</font>",
-}
 
 -- vitals: { stamina, fear, nv, nvOn, exhausted, panic }
 function Hud:update(vitals)
 	local player, state = self.player, self.state
 	self.watch:update(vitals, player)
+	local health = player:GetAttribute("Health") or 100
+	self.blood.GroupTransparency = 1 - math.clamp((60 - health) / 50, 0, 1) * 0.85
 	self.vignette.GroupTransparency = 1 - math.clamp((vitals.fear - 30) / 70, 0, 1) * 0.85
 
 	local now = os.clock()
@@ -6001,21 +6179,10 @@ function Hud:update(vitals)
 	self.objective.Text = objective and phase ~= "Attesa" and (objective .. ": " .. (state:GetAttribute("ObjectiveText") or "")) or ""
 	self.progress.Text = phase == "Notte" and (state:GetAttribute("ObjectiveProgress") or "") or ""
 
-	local tracking = state:GetAttribute("Tracking") or 0
-	setBar(self.tracking, tracking / 100, ("%d%%"):format(math.floor(tracking)))
-	local zone = state:GetAttribute("ZoneHint") or ""
-	self.zone.Text = "Zona di caccia: " .. (zone ~= "" and zone or "sconosciuta")
-	self.coverage.Text = ("Copertura mappa: %d%%"):format(state:GetAttribute("Coverage") or 0)
-	self.cams.Text = ("Telecamere attive: %d"):format(state:GetAttribute("CamerasActive") or 0)
-	self.evidence.Text = ("Prove documentate: %d"):format(state:GetAttribute("Evidence") or 0)
-	self.threat.Text = "Minaccia: " .. (state:GetAttribute("RakeState") or "Assente")
-	self.weather.Text = "Meteo: " .. (state:GetAttribute("Weather") or "—")
-
-	local lines = {}
-	for _, p in Players:GetPlayers() do
-		table.insert(lines, ("%s %s"):format(STATUS_TEXT[p:GetAttribute("Status") or "Lobby"] or "", p.DisplayName))
-	end
-	self.team.Text = table.concat(lines, "\n")
+	-- avviso dell'orologio quando non lo stai guardando
+	local alert = self.watch.lastAlert or ""
+	self.watchAlert.Visible = not self.watchShown and alert ~= "" and alert ~= "OK" and os.clock() % 1 < 0.6
+	self.watchAlert.Text = "⌚ " .. alert .. "  [G]"
 
 	-- Messaggio centrale
 	if status == "Braccato" then
@@ -6025,7 +6192,7 @@ function Hud:update(vitals)
 		self.center.Text = "Sei fuori gioco. Osservi i compagni: puoi aprire il tablet [T] per aiutarli."
 	elseif phase == "Briefing" then
 		self.center.Text = "<font size=\"16\">1 Torcia · 2 Telecamera · 3 Fucile a dardi · 4 Tablet\n"
-			.. "Shift scatto · T tablet · N visore · R tipo di camera · E interagisci</font>"
+			.. "Shift scatto · T tablet · G orologio · N visore · R tipo camera · tasto destro mirino</font>"
 	else
 		self.center.Text = ""
 	end
@@ -6054,7 +6221,7 @@ function Hud:showDebrief(data)
 end
 
 return Hud
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX30"><Properties><string name="Name">MapView</string><ProtectedString name="Source"><![CDATA[-- Mappa del tablet: biomi, lago, sentieri, punti di interesse (toccali per sceglierli come
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX31"><Properties><string name="Name">MapView</string><ProtectedString name="Source"><![CDATA[-- Mappa del tablet: biomi, lago, sentieri, punti di interesse (toccali per sceglierli come
 -- destinazione), percorso giallo da seguire, la tua freccia, compagni, telecamere con il loro
 -- cono visivo, area di caccia e ultimo avvistamento.
 local Players = game:GetService("Players")
@@ -6326,7 +6493,7 @@ function MapView:update(player: Player, state: Folder, selectedCam: Model?)
 end
 
 return MapView
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX31"><Properties><string name="Name">Nav</string><ProtectedString name="Source"><![CDATA[-- Navigazione condivisa da bussola e mappa del tablet: destinazione scelta (o automatica in base
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX32"><Properties><string name="Name">Nav</string><ProtectedString name="Source"><![CDATA[-- Navigazione condivisa da bussola e mappa del tablet: destinazione scelta (o automatica in base
 -- all'obiettivo) e percorso lungo la rete dei sentieri (Dijkstra sui punti di interesse).
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -6494,7 +6661,7 @@ function Nav.nextWaypoint(points: { Vector3 }, from: Vector3): Vector3
 end
 
 return Nav
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX32"><Properties><string name="Name">RakeAnimator</string><ProtectedString name="Source"><![CDATA[-- Animazione di The Rake (solo client, Bone.Transform sulle 40 ossa): movimenti violenti e a scatti.
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX33"><Properties><string name="Name">RakeAnimator</string><ProtectedString name="Source"><![CDATA[-- Animazione di The Rake (solo client, Bone.Transform sulle 40 ossa): movimenti violenti e a scatti.
 -- La posa non viene interpolata: salta da una posa all'altra a intervalli irregolari (stop-motion),
 -- con perturbazioni casuali enormi. Andatura sconclusionata, testa che ciondola e si capovolge,
 -- convulsioni quando si mostra, braccia che si agitano quando carica, posa da jumpscare quando attacca.
@@ -6794,7 +6961,7 @@ function RakeAnimator.start(state: Folder)
 end
 
 return RakeAnimator
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX33"><Properties><string name="Name">Scares</string><ProtectedString name="Source"><![CDATA[-- Spaventi locali: jumpscare quando la creatura ti abbatte (la visuale viene strappata sulla sua
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX34"><Properties><string name="Name">Scares</string><ProtectedString name="Source"><![CDATA[-- Spaventi locali: jumpscare quando la creatura ti abbatte (la visuale viene strappata sulla sua
 -- faccia, urlo distorto, tremore e lampi rossi) e stacco musicale quando ti si mostra davanti.
 local RunService = game:GetService("RunService")
 local SoundService = game:GetService("SoundService")
@@ -6827,19 +6994,24 @@ function Scares.start(player: Player, state: Folder, onFlash: () -> ())
 	red.Parent = gui
 	local active = false
 
-	local function jumpscare()
+	local function jumpscare(duration: number)
 		local root, head = rakeParts()
 		local char = player.Character
 		local hrp = char and char:FindFirstChild("HumanoidRootPart") :: BasePart?
 		if active or not root or not head or not hrp or (root.Position - hrp.Position).Magnitude > 18 then
 			return
 		end
+		-- spinta all'indietro
+		local away = (hrp.Position - root.Position) * Vector3.new(1, 0, 1)
+		if away.Magnitude > 0.1 then
+			hrp.AssemblyLinearVelocity = away.Unit * 45 + Vector3.new(0, 18, 0)
+		end
 		active = true
 		local camera = workspace.CurrentCamera
 		local savedType, savedFov = camera.CameraType, camera.FieldOfView
 		camera.CameraType = Enum.CameraType.Scriptable
 		camera.FieldOfView = 52
-		Sfx.new("Jumpscare", SoundService, { Volume = 2.6, PlayOnRemove = true }):Destroy()
+		Sfx.new("Jumpscare", SoundService, { Volume = duration > 1 and 2.6 or 1.8, PlaybackSpeed = duration > 1 and 1 or 1.15, PlayOnRemove = true }):Destroy()
 		onFlash()
 		local start = os.clock()
 		RunService:BindToRenderStep("Jumpscare", Enum.RenderPriority.Camera.Value + 10, function()
@@ -6847,12 +7019,12 @@ function Scares.start(player: Player, state: Folder, onFlash: () -> ())
 			local headCF = head.TransformedWorldCFrame
 			local face = root.CFrame.LookVector
 			local eyePos = headCF.Position
-			local shake = math.max(0.05, 0.35 * (1 - t / 1.3))
+			local shake = math.max(0.05, 0.35 * (1 - t / duration))
 			local camPos = eyePos + face * (2.2 - math.min(t, 0.25) * 2) + Vector3.new(0, 0.15, 0)
 			camera.CFrame = CFrame.lookAt(camPos, eyePos) * CFrame.Angles((math.random() - 0.5) * shake, (math.random() - 0.5) * shake, (math.random() - 0.5) * shake * 1.5)
 			red.BackgroundTransparency = (math.floor(t * 18) % 2 == 0) and 0.55 or 0.85
 		end)
-		task.delay(1.3, function()
+		task.delay(duration, function()
 			RunService:UnbindFromRenderStep("Jumpscare")
 			red.BackgroundTransparency = 1
 			camera.CameraType = savedType == Enum.CameraType.Scriptable and Enum.CameraType.Custom or savedType
@@ -6865,9 +7037,15 @@ function Scares.start(player: Player, state: Folder, onFlash: () -> ())
 		end)
 	end
 
+	-- ogni ferita: jumpscare breve; a terra: jumpscare completo
+	player:GetAttributeChangedSignal("LastHit"):Connect(function()
+		if (player:GetAttribute("LastHit") or 0) > 0 and player:GetAttribute("Status") == "OK" then
+			jumpscare(0.7)
+		end
+	end)
 	player:GetAttributeChangedSignal("Status"):Connect(function()
 		if player:GetAttribute("Status") == "Braccato" then
-			jumpscare()
+			jumpscare(1.3)
 		end
 	end)
 
@@ -6895,7 +7073,7 @@ function Scares.start(player: Player, state: Folder, onFlash: () -> ())
 end
 
 return Scares
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX34"><Properties><string name="Name">Scope</string><ProtectedString name="Source"><![CDATA[-- Mirino telescopico del fucile a dardi: tasto destro (o pulsante "Mirino") con il fucile in mano.
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX35"><Properties><string name="Name">Scope</string><ProtectedString name="Source"><![CDATA[-- Mirino telescopico del fucile a dardi: tasto destro (o pulsante "Mirino") con il fucile in mano.
 -- Prima persona, zoom 2x-8x con la rotella, reticolo con tacche, oscillazione del respiro che
 -- cresce con paura e fiatone, leggera intensificazione della luce.
 local RunService = game:GetService("RunService")
@@ -7058,7 +7236,7 @@ function Scope:bind()
 end
 
 return Scope
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX35"><Properties><string name="Name">Tablet</string><ProtectedString name="Source"><![CDATA[-- Tablet di sorveglianza: la visuale passa alla telecamera scelta, dentro la cornice di un tablet
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX36"><Properties><string name="Name">Tablet</string><ProtectedString name="Source"><![CDATA[-- Tablet di sorveglianza: la visuale passa alla telecamera scelta, dentro la cornice di un tablet
 -- rinforzato, con scanline, rumore quando la creatura è vicina, visione IR, zoom e mini-mappa.
 -- Ogni frame è protetto da pcall: in caso di errore il tablet lo mostra e resta chiudibile.
 local RunService = game:GetService("RunService")
@@ -7228,6 +7406,30 @@ function Tablet.new(player: Player, state: Folder, remotes: Folder)
 		TextXAlignment = Enum.TextXAlignment.Left,
 		TextYAlignment = Enum.TextYAlignment.Bottom,
 	})
+
+	-- pannello obiettivi e stato della caccia
+	local panel = make("Frame", {
+		Position = UDim2.fromOffset(22, 48),
+		Size = UDim2.fromOffset(280, 0),
+		AutomaticSize = Enum.AutomaticSize.Y,
+		BackgroundColor3 = Color3.fromRGB(4, 14, 8),
+		BackgroundTransparency = 0.25,
+		ZIndex = 6,
+	}, screen)
+	corner(panel, 8)
+	make("UIStroke", { Color = GREEN, Transparency = 0.6 }, panel)
+	make("UIPadding", { PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10), PaddingTop = UDim.new(0, 8), PaddingBottom = UDim.new(0, 8) }, panel)
+	self.panelText = label(panel, {
+		Size = UDim2.new(1, 0, 0, 0),
+		AutomaticSize = Enum.AutomaticSize.Y,
+		TextSize = 13,
+		TextWrapped = true,
+		RichText = true,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		TextYAlignment = Enum.TextYAlignment.Top,
+		ZIndex = 7,
+	})
+	self.panel = panel
 
 	-- mappa: piccola nell'angolo, a tutto schermo con M o con il tasto MAPPA
 	self.miniMap = MapView.new(screen, 230, 6)
@@ -7569,12 +7771,44 @@ function Tablet:render()
 
 	if os.clock() >= self.nextMap then
 		self.nextMap = os.clock() + 0.2
+		self:updatePanel()
 		if self.mapMode and self.bigMap then
 			self.bigMap:update(self.player, self.state, m)
 		else
 			self.miniMap:update(self.player, self.state, m)
 		end
 	end
+end
+
+local STATUS_TEXT = {
+	OK = "<font color=\"#8fe6a0\">●</font>",
+	Braccato = "<font color=\"#ff7060\">⚠</font>",
+	Fuori = "<font color=\"#888888\">✖</font>",
+	Lobby = "<font color=\"#aaaaaa\">○</font>",
+}
+
+function Tablet:updatePanel()
+	local state = self.state
+	local tracking = math.floor(state:GetAttribute("Tracking") or 0)
+	local bar = string.rep("█", math.floor(tracking / 10)) .. string.rep("░", 10 - math.floor(tracking / 10))
+	local zone = state:GetAttribute("ZoneHint") or ""
+	local lines = {
+		("<b>OBIETTIVO · %s</b>"):format(string.upper(state:GetAttribute("Objective") or "—")),
+		state:GetAttribute("ObjectiveText") or "",
+		("<font color=\"#ffd75a\">%s</font>"):format(state:GetAttribute("ObjectiveProgress") or ""),
+		"",
+		("TRACCIAMENTO %s %d%%"):format(bar, tracking),
+		"ZONA DI CACCIA: " .. (zone ~= "" and string.upper(zone) or "SCONOSCIUTA"),
+		("COPERTURA %d%% · CAMERE %d · PROVE %d"):format(state:GetAttribute("Coverage") or 0, state:GetAttribute("CamerasActive") or 0, state:GetAttribute("Evidence") or 0),
+		("MINACCIA: %s · METEO: %s"):format(string.upper(state:GetAttribute("RakeState") or "—"), string.upper(state:GetAttribute("Weather") or "—")),
+		"",
+		"<b>SQUADRA</b>",
+	}
+	for _, p in game:GetService("Players"):GetPlayers() do
+		table.insert(lines, ("%s %s  %d%%"):format(STATUS_TEXT[p:GetAttribute("Status") or "Lobby"] or "", p.DisplayName, math.floor(p:GetAttribute("Health") or 100)))
+	end
+	self.panelText.Text = table.concat(lines, "\n")
+	self.panel.Visible = not self.mapMode
 end
 
 function Tablet:toggleMap()
@@ -7591,7 +7825,7 @@ function Tablet:toggleMap()
 end
 
 return Tablet
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX36"><Properties><string name="Name">Watch</string><ProtectedString name="Source"><![CDATA[-- Smartwatch al polso (HUD in basso a sinistra): anelli di stamina e paura, ora e bussola,
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX37"><Properties><string name="Name">Watch</string><ProtectedString name="Source"><![CDATA[-- Smartwatch al polso (HUD in basso a sinistra): anelli di stamina e paura, ora e bussola,
 -- battito cardiaco che pulsa, batterie di torcia e visore, attrezzatura e avvisi con bip.
 local Lighting = game:GetService("Lighting")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -7679,8 +7913,8 @@ function Watch.new(parent: Instance)
 	local self = setmetatable({}, Watch)
 	local root = make("Frame", {
 		Name = "Smartwatch",
-		AnchorPoint = Vector2.new(0, 1),
-		Position = UDim2.new(0, 26, 1, -18),
+		AnchorPoint = Vector2.new(0, 0),
+		Position = UDim2.new(0, 0, 0, 0),
 		Size = UDim2.fromOffset(210, 290),
 		BackgroundTransparency = 1,
 	}, parent)
@@ -7739,7 +7973,7 @@ function Watch.new(parent: Instance)
 	label(screen, { AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0.5, 36, 0, 90), Size = UDim2.fromOffset(30, 12), Text = "BPM", TextSize = 8, TextColor3 = MUTED, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 4 })
 	self.torch = battery(screen, UDim2.fromOffset(32, 104), "T")
 	self.nv = battery(screen, UDim2.fromOffset(92, 104), "V")
-	self.gear = label(screen, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 122), Size = UDim2.fromOffset(130, 12), TextSize = 10, TextColor3 = TEXT, ZIndex = 4 })
+	self.gear = label(screen, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 122), Size = UDim2.fromOffset(140, 12), TextSize = 10, TextColor3 = TEXT, RichText = true, ZIndex = 4 })
 	self.status = label(screen, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 136), Size = UDim2.fromOffset(120, 12), Font = Enum.Font.GothamBold, TextSize = 10, TextColor3 = TEAL, ZIndex = 4 })
 	self.alarm = make("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = RED, BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 5 }, screen)
 	self.sos = label(self.alarm, { Size = UDim2.fromScale(1, 1), Text = "SOS", Font = Enum.Font.GothamBlack, TextSize = 44, TextTransparency = 1, ZIndex = 6 })
@@ -7778,11 +8012,13 @@ function Watch:update(info, player: Player)
 
 	setBattery(self.torch, (player:GetAttribute("TorchBattery") or 0) / info.config.EQUIPMENT.TORCH_BATTERY, player:GetAttribute("TorchOn") == true)
 	setBattery(self.nv, info.nv, info.nvOn)
-	self.gear.Text = ("DARDI %d · %s %d · CAMP %d"):format(
+	local health = math.floor(player:GetAttribute("Health") or 100)
+	self.gear.Text = ("<font color=\"%s\">VITA %d%%</font> · DARDI %d · %s %d"):format(
+		health < 40 and "#ff5a46" or "#78e6be",
+		health,
 		player:GetAttribute("Darts") or 0,
 		string.upper(string.sub(player:GetAttribute("CamType") or "Fissa", 1, 4)),
-		player:GetAttribute("Kits_" .. (player:GetAttribute("CamType") or "Fissa")) or 0,
-		player:GetAttribute("Samples") or 0
+		player:GetAttribute("Kits_" .. (player:GetAttribute("CamType") or "Fissa")) or 0
 	)
 
 	local alert = ""
@@ -7790,6 +8026,8 @@ function Watch:update(info, player: Player)
 		alert = "SOS"
 	elseif info.panic then
 		alert = "PANICO"
+	elseif (player:GetAttribute("Health") or 100) < 35 then
+		alert = "FERITO"
 	elseif info.closeness > 0.3 then
 		alert = "MOVIMENTO VICINO"
 	elseif info.exhausted then
