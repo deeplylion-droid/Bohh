@@ -253,7 +253,7 @@ function Hud:update(vitals)
 	local player, state = self.player, self.state
 	local char = player.Character
 	local arm = char and (char:FindFirstChild("LeftLowerArm") or char:FindFirstChild("Left Arm"))
-	local face = arm and arm:FindFirstChild("SchermoOrologio")
+	local face = self.viewScreen or (arm and arm:FindFirstChild("SchermoOrologio"))
 	if self.watchGui.Adornee ~= face then
 		self.watchGui.Adornee = face
 	end

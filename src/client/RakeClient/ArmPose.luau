@@ -1,8 +1,9 @@
--- Braccia in prima persona (client, sul proprio personaggio R15):
+-- Braccia in prima persona (client, sul proprio personaggio):
 --  - fascio della torcia orientato ogni frame come la visuale e inviato al server;
 --  - braccio destro: con torcia o fucile segue la visuale anche in verticale;
---  - braccio sinistro (tasto G): cinematica inversa a due segmenti (spalla, gomito) che porta il polso
---    davanti alla telecamera, avambraccio orizzontale e quadrante dell'orologio rivolto verso di te;
+--  - braccio sinistro (tasto G): una copia del braccio della skin agganciata alla telecamera, messa in
+--    posa con cinematica inversa (spalla, gomito) dal fianco fino a davanti agli occhi, con il quadrante
+--    dell'orologio rivolto verso di te;
 --  - braccia sempre visibili in prima persona.
 -- Le pose si ottengono riscrivendo il C0 delle giunture: Part1 = Part0 * C0 * Transform * C1⁻¹,
 -- quindi C0 = Part0⁻¹ * Part1(desiderato) * C1 * Transform⁻¹ (annulla anche l'animazione di camminata).
@@ -159,7 +160,7 @@ end
 -- Avatar R6 (un solo pezzo per braccio): si cerca (una volta per inclinazione, poi in cache) la
 -- direzione del braccio e la rotazione attorno al suo asse che portano il quadrante davanti agli
 -- occhi, rivolto verso di te.
-function ArmPose.solveWatchR6(torsoCF: CFrame, shoulder: Instance, c0s: CFrame, faceRel: CFrame, cam: CFrame): CFrame
+function ArmPose.solveWatchR6(torsoCF: CFrame, shoulder: Instance, c0s: CFrame, faceRel: CFrame, cam: CFrame): (CFrame, CFrame)
 	local S = (torsoCF * c0s).Position
 	local c1 = ArmPose.getC1(shoulder)
 	local look = cam.LookVector
@@ -214,43 +215,147 @@ function ArmPose.solveWatchR6(torsoCF: CFrame, shoulder: Instance, c0s: CFrame, 
 		ArmPose._cache[key] = best
 	end
 	local armCF = place(best[1], best[2], best[3])
-	return torsoCF:Inverse() * armCF * c1 * ArmPose.getTransform(shoulder):Inverse()
+	return torsoCF:Inverse() * armCF * c1 * ArmPose.getTransform(shoulder):Inverse(), armCF
 end
 
--- Un fotogramma della posa del braccio sinistro. blend = 0..1 (0 = posa normale).
-function ArmPose.stepWatch(char: Model, cam: CFrame, blend: number, originals: { [Instance]: CFrame }, motor: (Model, string, string, string) -> Instance?, set: (Instance, CFrame) -> ())
-	local e = blend * blend * (3 - 2 * blend)
+-- Braccio sinistro "da prima persona": una copia locale del braccio della tua skin (stesse mesh,
+-- colori, texture e maglietta, con l'orologio al polso) agganciata alla telecamera. Non dipende dalle
+-- giunture del personaggio, che il motore di animazione può sovrascrivere.
+local ARM_R15 = { "LeftUpperArm", "LeftLowerArm", "LeftHand" }
+local ARM_R6 = { "Left Arm" }
+local KEEP = { "SurfaceAppearance", "SpecialMesh", "Decal", "Texture" }
+
+function ArmPose.buildViewmodel(char: Model, parent: Instance): { model: Model, parts: { [string]: BasePart }, extras: { { part: BasePart, root: string, rel: CFrame } }, source: Instance, screen: BasePart? }?
+	local names = char:FindFirstChild("LeftUpperArm") and ARM_R15 or ARM_R6
+	local model = Instance.new("Model")
+	model.Name = "BraccioPrimaPersona"
+	local hum = Instance.new("Humanoid") -- serve per disegnare maglietta e colori sui pezzi del braccio
+	hum.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+	hum.HealthDisplayType = Enum.HumanoidHealthDisplayType.AlwaysOff
+	hum.RigType = names == ARM_R15 and Enum.HumanoidRigType.R15 or Enum.HumanoidRigType.R6
+	hum.Parent = model
+	for _, item in char:GetChildren() do
+		if item:IsA("Shirt") or item:IsA("BodyColors") then
+			item:Clone().Parent = model
+		end
+	end
+	local parts, extras = {}, {}
+	local screen: BasePart? = nil
+	for _, name in names do
+		local src = char:FindFirstChild(name)
+		if not src or not src:IsA("BasePart") then
+			model:Destroy()
+			return nil
+		end
+		local copy = src:Clone()
+		for _, d in copy:GetDescendants() do
+			if d:IsA("BasePart") then
+				-- pezzi dell'orologio: diventano pezzi indipendenti posizionati rispetto al braccio
+				local rel = copy.CFrame:ToObjectSpace(d.CFrame)
+				d.Parent = model
+				table.insert(extras, { part = d, root = name, rel = rel })
+				if d.Name == "SchermoOrologio" then
+					screen = d
+				end
+			end
+		end
+		for _, d in copy:GetDescendants() do
+			if not d:IsA("BasePart") and not table.find(KEEP, d.ClassName) then
+				d:Destroy()
+			end
+		end
+		copy.Parent = model
+		parts[name] = copy
+	end
+	for _, d in model:GetDescendants() do
+		if d:IsA("BasePart") then
+			for _, c in d:GetChildren() do
+				if not table.find(KEEP, c.ClassName) then
+					c:Destroy()
+				end
+			end
+			d.Anchored = true
+			d.CanCollide = false
+			d.CanQuery = false
+			d.CanTouch = false
+			d.CastShadow = false
+			d.Massless = true
+			d.LocalTransparencyModifier = 0
+		end
+	end
+	model.Parent = parent
+	return { model = model, parts = parts, extras = extras, source = char:FindFirstChild(names[#names == 3 and 2 or 1]) :: Instance, screen = screen }
+end
+
+-- CFrame finali dei pezzi del braccio (nome → CFrame), oppure nil se il personaggio è incompleto
+function ArmPose.solveViewmodel(char: Model, cam: CFrame): { [string]: CFrame }?
 	local upper = char:FindFirstChild("LeftUpperArm")
 	if upper then
 		local torso = char:FindFirstChild("UpperTorso")
 		local lower = char:FindFirstChild("LeftLowerArm")
-		local shoulder = motor(char, "LeftUpperArm", "LeftShoulder", "UpperTorso")
-		local elbow = motor(char, "LeftLowerArm", "LeftElbow", "LeftUpperArm")
+		local shoulder = ArmPose.findMotor(char, "LeftUpperArm", "LeftShoulder", "UpperTorso")
+		local elbow = ArmPose.findMotor(char, "LeftLowerArm", "LeftElbow", "LeftUpperArm")
+		local wrist = ArmPose.findMotor(char, "LeftHand", "LeftWrist", "LeftLowerArm")
 		if not (torso and torso:IsA("BasePart") and lower and lower:IsA("BasePart") and shoulder and elbow) then
-			return false
+			return nil
 		end
-		if e <= 0 then
-			set(shoulder, originals[shoulder])
-			set(elbow, originals[elbow])
-			return true
-		end
-		local c0s, c0e = ArmPose.solveWatch(torso.CFrame, shoulder, elbow, originals[shoulder], originals[elbow], ArmPose.faceRel(lower), cam)
-		set(shoulder, originals[shoulder]:Lerp(c0s, e))
-		set(elbow, originals[elbow]:Lerp(c0e, e))
-		return true
+		local _, _, upperCF, lowerCF = ArmPose.solveWatch(torso.CFrame, shoulder, elbow, ArmPose.getC0(shoulder), ArmPose.getC0(elbow), ArmPose.faceRel(lower), cam)
+		local handCF = wrist and lowerCF * ArmPose.getC0(wrist) * ArmPose.getC1(wrist):Inverse() or lowerCF * CFrame.new(0, -lower.Size.Y / 2 - 0.3, 0)
+		return { LeftUpperArm = upperCF, LeftLowerArm = lowerCF, LeftHand = handCF }
 	end
 	local torso = char:FindFirstChild("Torso")
 	local arm = char:FindFirstChild("Left Arm")
-	local shoulder = motor(char, "Left Arm", "Left Shoulder", "Torso")
+	local shoulder = ArmPose.findMotor(char, "Left Arm", "Left Shoulder", "Torso")
 	if not (torso and torso:IsA("BasePart") and arm and arm:IsA("BasePart") and shoulder) then
-		return false
+		return nil
 	end
-	if e <= 0 then
-		set(shoulder, originals[shoulder])
-		return true
+	-- R6: il braccio è un pezzo unico, quindi lo si stacca dalla spalla e lo si fissa alla telecamera
+	-- con il quadrante davanti agli occhi, dritto, e il resto del braccio che scende fuori schermo
+	local faceRel = ArmPose.faceRel(arm)
+	local key = ("r6:%.2f:%.2f"):format(arm.Size.Y, faceRel.Y)
+	local rel = ArmPose._cache[key]
+	if not rel then
+		local ray = ArmPose.WATCH_RAY
+		local p = Vector3.new(ray.X * 1.1, ray.Y * 1.1, -1.1)
+		local bestCost = math.huge
+		for roll = -math.pi, math.pi, math.pi / 36 do
+			local faceCam = CFrame.lookAt(p, Vector3.zero, Vector3.yAxis) * CFrame.Angles(0, 0, roll)
+			local armCam = faceCam * faceRel:Inverse()
+			local top = armCam * Vector3.new(0, arm.Size.Y / 2, 0)
+			local c = (1 - faceCam.UpVector.Y) + 2 * math.max(0, top.Y - p.Y + 0.5)
+			if c < bestCost then
+				rel, bestCost = armCam, c
+			end
+		end
+		ArmPose._cache[key] = rel
 	end
-	set(shoulder, originals[shoulder]:Lerp(ArmPose.solveWatchR6(torso.CFrame, shoulder, originals[shoulder], ArmPose.faceRel(arm), cam), e))
-	return true
+	return { ["Left Arm"] = cam * rel }
+end
+
+-- Mette il braccio in posa: e = 0 parte dalla posizione del braccio vero (che pende lungo il fianco),
+-- e = 1 è il braccio alzato davanti agli occhi. L'interpolazione è gerarchica (spalla → avambraccio →
+-- mano) così il gomito resta attaccato durante il movimento.
+function ArmPose.poseViewmodel(vm: any, char: Model, goal: { [string]: CFrame }, e: number)
+	local names = vm.parts.LeftUpperArm and ARM_R15 or ARM_R6
+	local prevReal, prevGoal, prevOut = nil, nil, nil
+	local out: { [string]: CFrame } = {}
+	for _, name in names do
+		local real = char:FindFirstChild(name)
+		local realCF = (real and real:IsA("BasePart")) and real.CFrame or goal[name]
+		local cf
+		if prevReal then
+			cf = prevOut * (prevReal:ToObjectSpace(realCF)):Lerp(prevGoal:ToObjectSpace(goal[name]), e)
+		else
+			cf = realCF:Lerp(goal[name], e)
+		end
+		vm.parts[name].CFrame = cf
+		out[name] = cf
+		prevReal, prevGoal, prevOut = realCF, goal[name], cf
+	end
+	for _, x in vm.extras do
+		x.part.CFrame = out[x.root] * x.rel
+	end
+	return out
 end
 
 -- Cerca la giuntura sia nel pezzo mosso sia nel pezzo padre (R15 la mette nel braccio, R6 nel busto)
@@ -292,14 +397,19 @@ function ArmPose.newPoser()
 	end
 end
 
-function ArmPose.start(player: Player, watchShown: () -> boolean, remotes: Folder, isBlocked: () -> boolean, hide: () -> ())
+function ArmPose.start(player: Player, watchShown: () -> boolean, remotes: Folder, isBlocked: () -> boolean, hide: () -> (), onScreen: (BasePart?) -> ())
 	local originals, motor, set, reset = ArmPose.newPoser()
 	local watchBlend = 0
 	local lastSent, lastLook = 0, Vector3.zero
+	local vm: any = nil
 
 	player.CharacterAdded:Connect(function()
 		reset()
 		watchBlend = 0
+		if vm then
+			vm.model:Destroy()
+			vm = nil
+		end
 	end)
 
 	RunService:BindToRenderStep("BracciaPrimaPersona", Enum.RenderPriority.Camera.Value + 5, function(dt)
@@ -342,17 +452,41 @@ function ArmPose.start(player: Player, watchShown: () -> boolean, remotes: Folde
 			hide()
 		end
 		local want = watchShown() and 1 or 0
-		watchBlend = math.clamp(watchBlend + (want > watchBlend and dt / 0.4 or -dt / 0.3), 0, 1)
-		ArmPose.stepWatch(char, cam, watchBlend, originals, motor, set)
+		watchBlend = math.clamp(watchBlend + (want > watchBlend and dt / 0.45 or -dt / 0.3), 0, 1)
+		local shown = false
+		if watchBlend > 0 then
+			local lowerName = char:FindFirstChild("LeftLowerArm") and "LeftLowerArm" or "Left Arm"
+			local src = char:FindFirstChild(lowerName)
+			local hasWatch = src ~= nil and src:FindFirstChild("SchermoOrologio") ~= nil
+			if vm and (vm.source ~= src or vm.model.Parent ~= camera or (hasWatch and not vm.screen)) then
+				vm.model:Destroy()
+				vm = nil
+			end
+			if not vm then
+				vm = ArmPose.buildViewmodel(char, camera)
+			end
+			local goal = vm and ArmPose.solveViewmodel(char, cam)
+			if vm and goal then
+				ArmPose.poseViewmodel(vm, char, goal, watchBlend * watchBlend * (3 - 2 * watchBlend))
+				shown = true
+			end
+		end
+		if vm and not shown then
+			vm.model:Destroy()
+			vm = nil
+		end
+		onScreen(shown and vm and vm.screen or nil)
 
-		-- braccia (e orologio) visibili in prima persona
+		-- braccia (e orologio) visibili in prima persona; il braccio sinistro vero si nasconde quando
+		-- c'è la sua copia davanti alla telecamera
 		for _, name in VISIBLE do
 			local p = char:FindFirstChild(name)
 			if p and p:IsA("BasePart") then
-				p.LocalTransparencyModifier = 0
+				local hidden = shown and (name == "LeftUpperArm" or name == "LeftLowerArm" or name == "LeftHand" or name == "Left Arm")
+				p.LocalTransparencyModifier = hidden and 1 or 0
 				for _, d in p:GetChildren() do
 					if d:IsA("BasePart") then
-						d.LocalTransparencyModifier = 0
+						d.LocalTransparencyModifier = hidden and 1 or 0
 					end
 				end
 			end

@@ -67,6 +67,11 @@ end, remotes, function()
 	return tablet.isOpen or scope.active
 end, function()
 	hud:setWatchVisible(false)
+end, function(screen)
+	hud.viewScreen = screen
+	if screen and hud.watchGui.Adornee ~= screen then
+		hud.watchGui.Adornee = screen
+	end
 end)
 
 remotes.Notify.OnClientEvent:Connect(function(message)
