@@ -105,8 +105,8 @@ function Scope:enter()
 	UserInputService.MouseDeltaSensitivity = 0.3
 	Sfx.new("ScopeZoom", SoundService, { Volume = 0.7, PlayOnRemove = true }):Destroy()
 	local camera = workspace.CurrentCamera
-	self.savedFov = camera.FieldOfView
-	TweenService:Create(camera, TweenInfo.new(0.18), { FieldOfView = 70 / self.zoom }):Play()
+	self.zoomTween = TweenService:Create(camera, TweenInfo.new(0.18), { FieldOfView = 70 / self.zoom })
+	self.zoomTween:Play()
 	self.wheel = UserInputService.InputChanged:Connect(function(input)
 		if input.UserInputType == Enum.UserInputType.MouseWheel then
 			self.zoom = math.clamp(self.zoom + input.Position.Z, 2, 8)
@@ -138,7 +138,11 @@ function Scope:exit()
 		self.wheel:Disconnect()
 		self.wheel = nil
 	end
-	workspace.CurrentCamera.FieldOfView = self.savedFov or 70
+	if self.zoomTween then
+		self.zoomTween:Cancel()
+		self.zoomTween = nil
+	end
+	workspace.CurrentCamera.FieldOfView = 70
 end
 
 function Scope:bind()

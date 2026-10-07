@@ -4315,6 +4315,23 @@ function Team.watchCharacter(player: Player, char: Model)
 	if not hum then
 		return
 	end
+	-- orologio al polso sempre presente: l'aspetto della skin può sostituire le braccia dopo la
+	-- comparsa, quindi lo si rimette quando l'aspetto è caricato e per qualche secondo dopo
+	Team.attachWatch(char)
+	player.CharacterAppearanceLoaded:Connect(function(loaded)
+		if loaded == char then
+			Team.attachWatch(char)
+		end
+	end)
+	task.spawn(function()
+		for _ = 1, 15 do
+			task.wait(1)
+			if char.Parent == nil then
+				return
+			end
+			Team.attachWatch(char)
+		end
+	end)
 	hum.Died:Connect(function()
 		local status = player:GetAttribute("Status")
 		if ctx.round.active and (status == "OK" or status == "Braccato") then
@@ -4374,8 +4391,27 @@ RakeAnimator.start(state)
 CamFeed.start(player)
 Compass.new(player, state, hud.gui)
 Gunfx.start(remotes)
-Scares.start(player, state, function()
+local scaring = Scares.start(player, state, function()
 	hud:pulse()
+end)
+
+-- Controllo della visuale: fuori da mirino, tablet e jumpscare il campo visivo torna sempre a 70
+-- (così nessun effetto può lasciare la visuale zoomata) e la telecamera torna a seguirti.
+RunService.RenderStepped:Connect(function(dt)
+	if tablet.isOpen or scope.active or scaring() then
+		return
+	end
+	local camera = workspace.CurrentCamera
+	if math.abs(camera.FieldOfView - 70) > 0.05 then
+		camera.FieldOfView += (70 - camera.FieldOfView) * math.min(1, dt * 10)
+	end
+	if camera.CameraType == Enum.CameraType.Scriptable then
+		camera.CameraType = Enum.CameraType.Custom
+		local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+		if hum then
+			camera.CameraSubject = hum
+		end
+	end
 end)
 ArmPose.start(player, function()
 	return hud.watchShown
@@ -4962,9 +4998,45 @@ return Ambience
 --  - braccia sempre visibili in prima persona.
 -- Le pose si ottengono riscrivendo il C0 delle giunture: Part1 = Part0 * C0 * Transform * C1⁻¹,
 -- quindi C0 = Part0⁻¹ * Part1(desiderato) * C1 * Transform⁻¹ (annulla anche l'animazione di camminata).
+-- Le giunture possono essere Motor6D (avatar classici) o AnimationConstraint (nuove giunture degli
+-- avatar Roblox): per queste C0 e C1 sono le CFrame di Attachment0 e Attachment1.
 local RunService = game:GetService("RunService")
 
 local ArmPose = {}
+
+function ArmPose.getC0(joint: Instance): CFrame
+	if joint:IsA("Motor6D") then
+		return joint.C0
+	end
+	local a = (joint :: AnimationConstraint).Attachment0
+	return a and a.CFrame or CFrame.identity
+end
+
+function ArmPose.setC0(joint: Instance, cf: CFrame)
+	if joint:IsA("Motor6D") then
+		joint.C0 = cf
+	else
+		local a = (joint :: AnimationConstraint).Attachment0
+		if a then
+			a.CFrame = cf
+		end
+	end
+end
+
+function ArmPose.getC1(joint: Instance): CFrame
+	if joint:IsA("Motor6D") then
+		return joint.C1
+	end
+	local a = (joint :: AnimationConstraint).Attachment1
+	return a and a.CFrame or CFrame.identity
+end
+
+function ArmPose.getTransform(joint: Instance): CFrame
+	if joint:IsA("Motor6D") or joint:IsA("AnimationConstraint") then
+		return (joint :: any).Transform
+	end
+	return CFrame.identity
+end
 
 local VISIBLE = { "LeftUpperArm", "LeftLowerArm", "LeftHand", "RightUpperArm", "RightLowerArm", "RightHand", "Left Arm", "Right Arm" }
 
@@ -4999,9 +5071,9 @@ end
 -- faceRel = CFrame del quadrante rispetto all'avambraccio. Restituisce anche le CFrame risultanti.
 ArmPose._cache = {}
 
-function ArmPose.solveWatch(torsoCF: CFrame, shoulder: Motor6D, elbow: Motor6D, c0s: CFrame, c0e: CFrame, faceRel: CFrame, cam: CFrame)
+function ArmPose.solveWatch(torsoCF: CFrame, shoulder: Instance, elbow: Instance, c0s: CFrame, c0e: CFrame, faceRel: CFrame, cam: CFrame)
 	local S = (torsoCF * c0s).Position
-	local c1s, c1e = shoulder.C1, elbow.C1
+	local c1s, c1e = ArmPose.getC1(shoulder), ArmPose.getC1(elbow)
 	local u = c0e.Position - c1s.Position -- spalla → gomito, nel braccio
 	local l1 = u.Magnitude
 	local look = cam.LookVector
@@ -5056,30 +5128,169 @@ function ArmPose.solveWatch(torsoCF: CFrame, shoulder: Motor6D, elbow: Motor6D, 
 	local lowerCF, Ej, faceCF = place(best[1], best[2], best[3], best[4])
 	local Ru = align(u, Ej - S, Vector3.xAxis, cam.RightVector)
 	local upperCF = CFrame.new(S - Ru:VectorToWorldSpace(c1s.Position)) * Ru
-	local newC0s = torsoCF:Inverse() * upperCF * c1s * shoulder.Transform:Inverse()
-	local newC0e = upperCF:Inverse() * lowerCF * c1e * elbow.Transform:Inverse()
+	local newC0s = torsoCF:Inverse() * upperCF * c1s * ArmPose.getTransform(shoulder):Inverse()
+	local newC0e = upperCF:Inverse() * lowerCF * c1e * ArmPose.getTransform(elbow):Inverse()
 	return newC0s, newC0e, upperCF, lowerCF, faceCF
 end
 
+-- CFrame del quadrante rispetto all'avambraccio: dalla parte "SchermoOrologio" se c'è, altrimenti
+-- ricavata dalle misure del braccio (stessa geometria di Team.attachWatch), così il gesto funziona
+-- anche se l'orologio non è ancora arrivato dal server o il braccio della skin è stato sostituito.
+function ArmPose.faceRel(lower: BasePart): CFrame
+	local face = lower:FindFirstChild("SchermoOrologio")
+	if face and face:IsA("BasePart") then
+		return lower.CFrame:ToObjectSpace(face.CFrame)
+	end
+	local size = lower.Size
+	local r15 = lower.Name == "LeftLowerArm"
+	return CFrame.new(-size.X / 2 - 0.07, -size.Y * (r15 and 0.3 or 0.38), 0)
+		* CFrame.fromMatrix(Vector3.zero, Vector3.new(0, 1, 0), Vector3.new(0, 0, 1), Vector3.new(1, 0, 0))
+		* CFrame.new(0, 0, -0.08)
+end
+
+-- Avatar R6 (un solo pezzo per braccio): si cerca (una volta per inclinazione, poi in cache) la
+-- direzione del braccio e la rotazione attorno al suo asse che portano il quadrante davanti agli
+-- occhi, rivolto verso di te.
+function ArmPose.solveWatchR6(torsoCF: CFrame, shoulder: Instance, c0s: CFrame, faceRel: CFrame, cam: CFrame): CFrame
+	local S = (torsoCF * c0s).Position
+	local c1 = ArmPose.getC1(shoulder)
+	local look = cam.LookVector
+	local yaw0 = math.atan2(-look.X, -look.Z)
+	local pitch = math.clamp(math.asin(math.clamp(look.Y, -1, 1)), -1.1, 0.15)
+	local vcam = CFrame.new(cam.Position) * CFrame.Angles(0, yaw0, 0) * CFrame.Angles(pitch, 0, 0)
+	local ray = ArmPose.WATCH_RAY
+
+	local function place(az: number, el: number, roll: number): (CFrame, CFrame)
+		local d = vcam:VectorToWorldSpace(Vector3.new(math.sin(az) * math.cos(el), math.sin(el), -math.cos(az) * math.cos(el)))
+		local R = CFrame.fromAxisAngle(d, roll) * align(Vector3.new(0, -1, 0), d, Vector3.new(-1, 0, 0), cam.Position - S)
+		local armCF = CFrame.new(S - R:VectorToWorldSpace(c1.Position)) * R
+		return armCF, armCF * faceRel
+	end
+	local function cost(az: number, el: number, roll: number): number
+		local _, faceCF = place(az, el, roll)
+		local p = vcam:PointToObjectSpace(faceCF.Position)
+		local depth = -p.Z
+		if depth < 0.3 then
+			return math.huge
+		end
+		local toCam = (cam.Position - faceCF.Position).Unit
+		return math.abs(p.X / depth - ray.X) + math.abs(p.Y / depth - ray.Y) + (1 - faceCF.LookVector:Dot(toCam)) * 8
+			+ math.abs(depth - 1) * 0.5 + (1 - faceCF.UpVector:Dot(vcam.UpVector)) * 0.5
+	end
+
+	local key = ("r6:%d"):format(math.floor(pitch / 0.05 + 0.5))
+	local best = ArmPose._cache[key]
+	if not best then
+		local bestCost = math.huge
+		for az = 0, 1.6, 0.1 do
+			for el = -0.6, 1.2, 0.1 do
+				for roll = -math.pi, math.pi, math.pi / 8 do
+					local c = cost(az, el, roll)
+					if c < bestCost then
+						best, bestCost = { az, el, roll }, c
+					end
+				end
+			end
+		end
+		local coarse = best
+		for az = coarse[1] - 0.1, coarse[1] + 0.1, 0.025 do
+			for el = coarse[2] - 0.1, coarse[2] + 0.1, 0.025 do
+				for roll = coarse[3] - 0.2, coarse[3] + 0.2, 0.05 do
+					local c = cost(az, el, roll)
+					if c < bestCost then
+						best, bestCost = { az, el, roll }, c
+					end
+				end
+			end
+		end
+		ArmPose._cache[key] = best
+	end
+	local armCF = place(best[1], best[2], best[3])
+	return torsoCF:Inverse() * armCF * c1 * ArmPose.getTransform(shoulder):Inverse()
+end
+
+-- Un fotogramma della posa del braccio sinistro. blend = 0..1 (0 = posa normale).
+function ArmPose.stepWatch(char: Model, cam: CFrame, blend: number, originals: { [Instance]: CFrame }, motor: (Model, string, string, string) -> Instance?, set: (Instance, CFrame) -> ())
+	local e = blend * blend * (3 - 2 * blend)
+	local upper = char:FindFirstChild("LeftUpperArm")
+	if upper then
+		local torso = char:FindFirstChild("UpperTorso")
+		local lower = char:FindFirstChild("LeftLowerArm")
+		local shoulder = motor(char, "LeftUpperArm", "LeftShoulder", "UpperTorso")
+		local elbow = motor(char, "LeftLowerArm", "LeftElbow", "LeftUpperArm")
+		if not (torso and torso:IsA("BasePart") and lower and lower:IsA("BasePart") and shoulder and elbow) then
+			return false
+		end
+		if e <= 0 then
+			set(shoulder, originals[shoulder])
+			set(elbow, originals[elbow])
+			return true
+		end
+		local c0s, c0e = ArmPose.solveWatch(torso.CFrame, shoulder, elbow, originals[shoulder], originals[elbow], ArmPose.faceRel(lower), cam)
+		set(shoulder, originals[shoulder]:Lerp(c0s, e))
+		set(elbow, originals[elbow]:Lerp(c0e, e))
+		return true
+	end
+	local torso = char:FindFirstChild("Torso")
+	local arm = char:FindFirstChild("Left Arm")
+	local shoulder = motor(char, "Left Arm", "Left Shoulder", "Torso")
+	if not (torso and torso:IsA("BasePart") and arm and arm:IsA("BasePart") and shoulder) then
+		return false
+	end
+	if e <= 0 then
+		set(shoulder, originals[shoulder])
+		return true
+	end
+	set(shoulder, originals[shoulder]:Lerp(ArmPose.solveWatchR6(torso.CFrame, shoulder, originals[shoulder], ArmPose.faceRel(arm), cam), e))
+	return true
+end
+
+-- Cerca la giuntura sia nel pezzo mosso sia nel pezzo padre (R15 la mette nel braccio, R6 nel busto)
+function ArmPose.findMotor(char: Model, partName: string, jointName: string, parentName: string): Instance?
+	for _, holder in { partName, parentName } do
+		local part = char:FindFirstChild(holder)
+		local joint = part and part:FindFirstChild(jointName)
+		if joint and (joint:IsA("Motor6D") or joint:IsA("AnimationConstraint")) then
+			return joint
+		end
+	end
+	return nil
+end
+
+-- Pose originali delle giunture, aggiornate se qualcun altro (es. il ridimensionamento dell'avatar)
+-- cambia la giuntura dopo che l'abbiamo letta.
+function ArmPose.newPoser()
+	local originals: { [Instance]: CFrame } = {}
+	local written: { [Instance]: CFrame } = {}
+	local function motor(char: Model, partName: string, jointName: string, parentName: string): Instance?
+		local joint = ArmPose.findMotor(char, partName, jointName, parentName)
+		if joint then
+			local current = ArmPose.getC0(joint)
+			local last = written[joint]
+			if not originals[joint] or (last and (current.Position - last.Position).Magnitude + (current.LookVector - last.LookVector).Magnitude + (current.UpVector - last.UpVector).Magnitude > 1e-3) then
+				originals[joint] = current
+				written[joint] = nil
+			end
+		end
+		return joint
+	end
+	local function set(joint: Instance, cf: CFrame)
+		ArmPose.setC0(joint, cf)
+		written[joint] = ArmPose.getC0(joint)
+	end
+	return originals, motor, set, function()
+		table.clear(originals)
+		table.clear(written)
+	end
+end
+
 function ArmPose.start(player: Player, watchShown: () -> boolean, remotes: Folder, isBlocked: () -> boolean, hide: () -> ())
-	local originals: { [Motor6D]: CFrame } = {}
+	local originals, motor, set, reset = ArmPose.newPoser()
 	local watchBlend = 0
 	local lastSent, lastLook = 0, Vector3.zero
 
-	local function motor(char: Model, partName: string, jointName: string): Motor6D?
-		local part = char:FindFirstChild(partName)
-		local joint = part and part:FindFirstChild(jointName)
-		if joint and joint:IsA("Motor6D") then
-			if not originals[joint] then
-				originals[joint] = joint.C0
-			end
-			return joint
-		end
-		return nil
-	end
-
 	player.CharacterAdded:Connect(function()
-		table.clear(originals)
+		reset()
 		watchBlend = 0
 	end)
 
@@ -5091,6 +5302,7 @@ function ArmPose.start(player: Player, watchShown: () -> boolean, remotes: Folde
 		local camera = workspace.CurrentCamera
 		local cam = camera.CFrame
 		local look = cam.LookVector
+		local status = player:GetAttribute("Status")
 
 		-- fascio della torcia
 		local tool = char:FindFirstChild("Torcia")
@@ -5099,47 +5311,31 @@ function ArmPose.start(player: Player, watchShown: () -> boolean, remotes: Folde
 		if beam and beam:IsA("Attachment") and lens:IsA("BasePart") then
 			beam.WorldCFrame = CFrame.lookAt(lens.Position, lens.Position + look)
 			local now = os.clock()
-			if now - lastSent > 0.07 and look:Dot(lastLook) < 0.9995 then
+			local aim = remotes:FindFirstChild("AimTorch") :: RemoteEvent?
+			if aim and now - lastSent > 0.07 and look:Dot(lastLook) < 0.9995 then
 				lastSent, lastLook = now, look
-				remotes.AimTorch:FireServer(look)
+				aim:FireServer(look)
 			end
 		end
 
 		-- braccio destro: segue la visuale con torcia o fucile in mano
 		local holding = char:FindFirstChild("Torcia") or char:FindFirstChild("Fucile a dardi")
-		local right = motor(char, "RightUpperArm", "RightShoulder")
+		local right = motor(char, "RightUpperArm", "RightShoulder", "UpperTorso") or motor(char, "Right Arm", "Right Shoulder", "Torso")
 		if right then
 			local pitch = 0
-			if holding and player:GetAttribute("Status") == "OK" then
+			if holding and status == "OK" then
 				pitch = math.clamp(math.asin(math.clamp(look.Y, -1, 1)), -1.2, 1.2)
 			end
-			right.C0 = originals[right] * CFrame.Angles(pitch, 0, 0)
+			set(right, originals[right] * CFrame.Angles(pitch, 0, 0))
 		end
 
-		-- braccio sinistro: orologio davanti agli occhi
-		if watchShown() and (player:GetAttribute("Status") ~= "OK" or isBlocked()) then
+		-- braccio sinistro: orologio davanti agli occhi (anche nella lobby)
+		if watchShown() and ((status ~= "OK" and status ~= "Lobby" and status ~= nil) or isBlocked()) then
 			hide()
 		end
 		local want = watchShown() and 1 or 0
 		watchBlend = math.clamp(watchBlend + (want > watchBlend and dt / 0.4 or -dt / 0.3), 0, 1)
-		local torso = char:FindFirstChild("UpperTorso") :: BasePart?
-		local upper = char:FindFirstChild("LeftUpperArm") :: BasePart?
-		local lower = char:FindFirstChild("LeftLowerArm") :: BasePart?
-		local shoulder = motor(char, "LeftUpperArm", "LeftShoulder")
-		local elbow = motor(char, "LeftLowerArm", "LeftElbow")
-		local face = lower and lower:FindFirstChild("SchermoOrologio") :: BasePart?
-		if torso and upper and lower and shoulder and elbow then
-			if watchBlend <= 0 or not face then
-				shoulder.C0 = originals[shoulder]
-				elbow.C0 = originals[elbow]
-			else
-				local faceRel = lower.CFrame:ToObjectSpace(face.CFrame)
-				local c0s, c0e = ArmPose.solveWatch(torso.CFrame, shoulder, elbow, originals[shoulder], originals[elbow], faceRel, cam)
-				local e = watchBlend * watchBlend * (3 - 2 * watchBlend)
-				shoulder.C0 = originals[shoulder]:Lerp(c0s, e)
-				elbow.C0 = originals[elbow]:Lerp(c0e, e)
-			end
-		end
+		ArmPose.stepWatch(char, cam, watchBlend, originals, motor, set)
 
 		-- braccia (e orologio) visibili in prima persona
 		for _, name in VISIBLE do
@@ -5924,9 +6120,8 @@ local function recoil(scoped: boolean)
 		end
 	end)
 	if not scoped then
-		local fov = camera.FieldOfView
-		camera.FieldOfView = fov + 4
-		TweenService:Create(camera, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { FieldOfView = fov }):Play()
+		-- piccolo colpo di FOV: torna a 70 da solo (vedi il controllo della visuale in init)
+		camera.FieldOfView = 74
 	end
 	ensureOverlay()
 	local frame = flashFrame :: Frame
@@ -7153,7 +7348,7 @@ local function rakeParts()
 	return root, (head and head:IsA("Bone")) and head or nil
 end
 
-function Scares.start(player: Player, state: Folder, onFlash: () -> ())
+function Scares.start(player: Player, state: Folder, onFlash: () -> ()): () -> boolean
 	local gui = Instance.new("ScreenGui")
 	gui.Name = "Jumpscare"
 	gui.IgnoreGuiInset = true
@@ -7182,7 +7377,7 @@ function Scares.start(player: Player, state: Folder, onFlash: () -> ())
 		end
 		active = true
 		local camera = workspace.CurrentCamera
-		local savedType, savedFov = camera.CameraType, camera.FieldOfView
+		local savedType = camera.CameraType
 		camera.CameraType = Enum.CameraType.Scriptable
 		camera.FieldOfView = 52
 		Sfx.new("Jumpscare", SoundService, { Volume = duration > 1 and 2.6 or 1.8, PlaybackSpeed = duration > 1 and 1 or 1.15, PlayOnRemove = true }):Destroy()
@@ -7202,7 +7397,7 @@ function Scares.start(player: Player, state: Folder, onFlash: () -> ())
 			RunService:UnbindFromRenderStep("Jumpscare")
 			red.BackgroundTransparency = 1
 			camera.CameraType = savedType == Enum.CameraType.Scriptable and Enum.CameraType.Custom or savedType
-			camera.FieldOfView = savedFov
+			camera.FieldOfView = 70
 			local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
 			if hum then
 				camera.CameraSubject = hum
@@ -7244,6 +7439,10 @@ function Scares.start(player: Player, state: Folder, onFlash: () -> ())
 			Sfx.new("Sting", SoundService, { Volume = 1.6, PlayOnRemove = true }):Destroy()
 		end
 	end)
+
+	return function(): boolean
+		return active
+	end
 end
 
 return Scares
@@ -7354,8 +7553,8 @@ function Scope:enter()
 	UserInputService.MouseDeltaSensitivity = 0.3
 	Sfx.new("ScopeZoom", SoundService, { Volume = 0.7, PlayOnRemove = true }):Destroy()
 	local camera = workspace.CurrentCamera
-	self.savedFov = camera.FieldOfView
-	TweenService:Create(camera, TweenInfo.new(0.18), { FieldOfView = 70 / self.zoom }):Play()
+	self.zoomTween = TweenService:Create(camera, TweenInfo.new(0.18), { FieldOfView = 70 / self.zoom })
+	self.zoomTween:Play()
 	self.wheel = UserInputService.InputChanged:Connect(function(input)
 		if input.UserInputType == Enum.UserInputType.MouseWheel then
 			self.zoom = math.clamp(self.zoom + input.Position.Z, 2, 8)
@@ -7387,7 +7586,11 @@ function Scope:exit()
 		self.wheel:Disconnect()
 		self.wheel = nil
 	end
-	workspace.CurrentCamera.FieldOfView = self.savedFov or 70
+	if self.zoomTween then
+		self.zoomTween:Cancel()
+		self.zoomTween = nil
+	end
+	workspace.CurrentCamera.FieldOfView = 70
 end
 
 function Scope:bind()
@@ -7735,7 +7938,6 @@ function Tablet:open()
 	self.lastError = nil
 	self.gui.Enabled = true
 	local camera = workspace.CurrentCamera
-	self.savedFov = camera.FieldOfView
 	camera.CameraType = Enum.CameraType.Scriptable
 	self.staticSound:Play()
 
@@ -7816,7 +8018,7 @@ function Tablet:close()
 	end
 	local camera = workspace.CurrentCamera
 	camera.CameraType = Enum.CameraType.Custom
-	camera.FieldOfView = self.savedFov or 70
+	camera.FieldOfView = 70
 	local hum = self.player.Character and self.player.Character:FindFirstChildOfClass("Humanoid")
 	if hum then
 		camera.CameraSubject = hum

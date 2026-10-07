@@ -16,7 +16,7 @@ local function rakeParts()
 	return root, (head and head:IsA("Bone")) and head or nil
 end
 
-function Scares.start(player: Player, state: Folder, onFlash: () -> ())
+function Scares.start(player: Player, state: Folder, onFlash: () -> ()): () -> boolean
 	local gui = Instance.new("ScreenGui")
 	gui.Name = "Jumpscare"
 	gui.IgnoreGuiInset = true
@@ -45,7 +45,7 @@ function Scares.start(player: Player, state: Folder, onFlash: () -> ())
 		end
 		active = true
 		local camera = workspace.CurrentCamera
-		local savedType, savedFov = camera.CameraType, camera.FieldOfView
+		local savedType = camera.CameraType
 		camera.CameraType = Enum.CameraType.Scriptable
 		camera.FieldOfView = 52
 		Sfx.new("Jumpscare", SoundService, { Volume = duration > 1 and 2.6 or 1.8, PlaybackSpeed = duration > 1 and 1 or 1.15, PlayOnRemove = true }):Destroy()
@@ -65,7 +65,7 @@ function Scares.start(player: Player, state: Folder, onFlash: () -> ())
 			RunService:UnbindFromRenderStep("Jumpscare")
 			red.BackgroundTransparency = 1
 			camera.CameraType = savedType == Enum.CameraType.Scriptable and Enum.CameraType.Custom or savedType
-			camera.FieldOfView = savedFov
+			camera.FieldOfView = 70
 			local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
 			if hum then
 				camera.CameraSubject = hum
@@ -107,6 +107,10 @@ function Scares.start(player: Player, state: Folder, onFlash: () -> ())
 			Sfx.new("Sting", SoundService, { Volume = 1.6, PlayOnRemove = true }):Destroy()
 		end
 	end)
+
+	return function(): boolean
+		return active
+	end
 end
 
 return Scares

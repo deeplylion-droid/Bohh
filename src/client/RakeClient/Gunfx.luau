@@ -143,9 +143,8 @@ local function recoil(scoped: boolean)
 		end
 	end)
 	if not scoped then
-		local fov = camera.FieldOfView
-		camera.FieldOfView = fov + 4
-		TweenService:Create(camera, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { FieldOfView = fov }):Play()
+		-- piccolo colpo di FOV: torna a 70 da solo (vedi il controllo della visuale in init)
+		camera.FieldOfView = 74
 	end
 	ensureOverlay()
 	local frame = flashFrame :: Frame

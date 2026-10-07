@@ -39,8 +39,27 @@ RakeAnimator.start(state)
 CamFeed.start(player)
 Compass.new(player, state, hud.gui)
 Gunfx.start(remotes)
-Scares.start(player, state, function()
+local scaring = Scares.start(player, state, function()
 	hud:pulse()
+end)
+
+-- Controllo della visuale: fuori da mirino, tablet e jumpscare il campo visivo torna sempre a 70
+-- (così nessun effetto può lasciare la visuale zoomata) e la telecamera torna a seguirti.
+RunService.RenderStepped:Connect(function(dt)
+	if tablet.isOpen or scope.active or scaring() then
+		return
+	end
+	local camera = workspace.CurrentCamera
+	if math.abs(camera.FieldOfView - 70) > 0.05 then
+		camera.FieldOfView += (70 - camera.FieldOfView) * math.min(1, dt * 10)
+	end
+	if camera.CameraType == Enum.CameraType.Scriptable then
+		camera.CameraType = Enum.CameraType.Custom
+		local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+		if hum then
+			camera.CameraSubject = hum
+		end
+	end
 end)
 ArmPose.start(player, function()
 	return hud.watchShown

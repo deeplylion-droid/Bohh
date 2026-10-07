@@ -323,7 +323,6 @@ function Tablet:open()
 	self.lastError = nil
 	self.gui.Enabled = true
 	local camera = workspace.CurrentCamera
-	self.savedFov = camera.FieldOfView
 	camera.CameraType = Enum.CameraType.Scriptable
 	self.staticSound:Play()
 
@@ -404,7 +403,7 @@ function Tablet:close()
 	end
 	local camera = workspace.CurrentCamera
 	camera.CameraType = Enum.CameraType.Custom
-	camera.FieldOfView = self.savedFov or 70
+	camera.FieldOfView = 70
 	local hum = self.player.Character and self.player.Character:FindFirstChildOfClass("Humanoid")
 	if hum then
 		camera.CameraSubject = hum

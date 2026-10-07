@@ -549,6 +549,23 @@ function Team.watchCharacter(player: Player, char: Model)
 	if not hum then
 		return
 	end
+	-- orologio al polso sempre presente: l'aspetto della skin può sostituire le braccia dopo la
+	-- comparsa, quindi lo si rimette quando l'aspetto è caricato e per qualche secondo dopo
+	Team.attachWatch(char)
+	player.CharacterAppearanceLoaded:Connect(function(loaded)
+		if loaded == char then
+			Team.attachWatch(char)
+		end
+	end)
+	task.spawn(function()
+		for _ = 1, 15 do
+			task.wait(1)
+			if char.Parent == nil then
+				return
+			end
+			Team.attachWatch(char)
+		end
+	end)
 	hum.Died:Connect(function()
 		local status = player:GetAttribute("Status")
 		if ctx.round.active and (status == "OK" or status == "Braccato") then
