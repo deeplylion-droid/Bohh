@@ -55,15 +55,34 @@ sorge l'alba prima di completare l'obiettivo.
 Tutti i valori di bilanciamento sono in `src/shared/Config.luau`, compresi i suoni: la creatura usa
 suoni 3D, quindi conviene impostare `RAKE_CALL` e `RAKE_SCREECH` con audio del Creator Store.
 
+## Grafica e atmosfera
+
+- **Illuminazione Future** (ombre dinamiche di torce, lampade e falò), atmosfera densa che cambia col
+  meteo, cielo stellato con la luna, correzione colore fredda e desaturata, bloom e profondità di campo.
+- **Terreno irregolare** generato con WriteVoxels: colline e creste rocciose nella pineta, altopiano
+  roccioso alla miniera, palude bassa con pozze d'acqua, conca del lago e pareti montuose ai confini.
+  I sentieri seguono il terreno (passerelle di legno nella palude); l'erba è animata.
+- **Modelli 3D** generati proceduralmente (`tools/meshgen`) e caricati su Roblox: 4 abeti, tronchi
+  secchi, alberi morti contorti con muschio pendente, latifoglie, cespugli, felci, canneti, rocce e
+  massi, tronchi caduti, ceppi, funghi; telecamere su treppiede (fissa, IR con anello di LED,
+  motorizzata) e camera trappola su paletto; torcia, fucile a dardi e tablet rinforzato; The Rake con
+  arti separati animati sul client (andatura scattosa, testa che si torce all'improvviso).
+- **Effetti locali**: nebbia che striscia a terra, lucciole, pioggia con lampi, luci che tremolano e
+  si spengono quando la creatura è vicina, tremolio della visuale, sfocatura nel panico, allucinazioni
+  con la sagoma della creatura.
+- **Suoni sintetizzati** (`tools/audiogen`): ambiente notturno (vento, grilli, civetta, scricchiolii),
+  passi, versi e urlo della creatura (3D), battito cardiaco, respiro affannato, rami spezzati alle
+  spalle, sussurri, statico del tablet, pioggia, scatto della camera trappola.
+
 ## Struttura
 
 | File | Dove va in Studio | Tipo |
 | --- | --- | --- |
-| `src/shared/Config.luau` | `ReplicatedStorage > Shared > Config` | ModuleScript |
-| `src/server/RakeHunt/init.server.luau` | `ServerScriptService > RakeHunt` | Script |
-| `src/server/RakeHunt/*.luau` | figli di `RakeHunt` (Forest, Rake, Cameras, Evidence, Team, Objectives, Progression) | ModuleScript |
+| `src/shared/*.luau` | `ReplicatedStorage > Shared` (Config, Assets, Audio, Models, Sfx, RakeRig) | ModuleScript |
+| `src/server/RakeHunt/init.server.luau` | `ServerScriptService > RakeHunt` (avvia `Game`) | Script |
+| `src/server/RakeHunt/*.luau` | figli di `RakeHunt` (Game, Forest, Rake, Cameras, Evidence, Team, Objectives, Progression) | ModuleScript |
 | `src/client/RakeClient/init.client.luau` | `StarterPlayer > StarterPlayerScripts > RakeClient` | LocalScript |
-| `src/client/RakeClient/*.luau` | figli di `RakeClient` (Hud, Tablet) | ModuleScript |
+| `src/client/RakeClient/*.luau` | figli di `RakeClient` (Hud, Tablet, Ambience, RakeAnimator) | ModuleScript |
 
 Mappa, luci, creatura e interfaccia vengono creati dagli script, quindi il luogo può partire vuoto.
 
@@ -75,6 +94,21 @@ Se modifichi gli script in `src/`, rigenera il file con `python3 tools/build_pla
 
 In Studio, per provare il salvataggio dei progressi attiva *Game Settings → Security → Enable Studio
 Access to API Services*.
+
+### Modelli e suoni
+
+I modelli 3D e i suoni appartengono all'account che possiede il luogo: `InsertService:LoadAsset`
+funziona solo per asset dello stesso proprietario. Per rigenerarli servono Python con numpy e Pillow,
+`ffmpeg` e una chiave Open Cloud con il permesso *assets: write*:
+
+```sh
+python3 tools/meshgen/generate.py      # build/assets/RakeAssets.glb
+python3 tools/meshgen/upload.py        # carica il pacchetto e scrive src/shared/Assets.luau
+python3 tools/audiogen/generate_audio.py
+python3 tools/audiogen/upload_audio.py # scrive src/shared/Audio.luau
+```
+
+`python3 tools/meshgen/render.py <cartella> Pine1_Trunk+Pine1_Foliage ...` crea un'anteprima PNG.
 
 ## Non ancora incluso
 

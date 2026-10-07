@@ -3,13 +3,14 @@
 -- il rumore, le luci lontane e i giocatori isolati. Più gli stati speciali Fuga e Stordita.
 local PathfindingService = game:GetService("PathfindingService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Debris = game:GetService("Debris")
 
-local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared:WaitForChild("Config"))
+local RakeRig = require(Shared:WaitForChild("RakeRig"))
+local Sfx = require(Shared:WaitForChild("Sfx"))
 local Forest = require(script.Parent.Forest)
 
 local R = Config.RAKE
-local HIP_HEIGHT = 2.6
 
 local Rake = {}
 Rake.model = nil :: Model?
@@ -20,6 +21,7 @@ local hum: Humanoid, root: BasePart, head: BasePart
 local highlight: Highlight, capturePrompt: ProximityPrompt
 local footsteps: Sound?, callSound: Sound?, screechSound: Sound?
 local brain: { [string]: any } = {}
+local EYE_COLORS, rig
 local revealed = false
 local loopToken = nil
 
@@ -31,70 +33,38 @@ local function setState(name: string)
 	if brain.state ~= name then
 		brain.state = name
 		ctx.state:SetAttribute("RakeState", name)
+		local color = EYE_COLORS[name]
+		if rig and color then
+			for _, eye in rig.eyes do
+				eye.Color = color
+			end
+			rig.glow.Color = color
+		end
 	end
 end
 
 ---------------------------------------------------------------------------------------------
 -- Modello
 
+EYE_COLORS = {
+	Inattiva = Color3.fromRGB(255, 240, 220),
+	Curiosa = Color3.fromRGB(255, 240, 220),
+	Territoriale = Color3.fromRGB(255, 170, 70),
+	Aggressiva = Color3.fromRGB(255, 40, 30),
+	Fuga = Color3.fromRGB(255, 240, 220),
+	Stordita = Color3.fromRGB(60, 60, 60),
+}
+
 local function build(pos: Vector3): Model
 	local m = Instance.new("Model")
 	m.Name = "TheRake"
-
-	local rootCF = CFrame.new(pos + Vector3.new(0, HIP_HEIGHT + 1, 0))
-	root = Instance.new("Part")
-	root.Name = "HumanoidRootPart"
-	root.Size = Vector3.new(2, 2, 1)
-	root.Transparency = 1
-	root.CFrame = rootCF
-	root.Parent = m
-
-	local skin = Color3.fromRGB(196, 190, 180)
-	local function limb(name: string, size: Vector3, offset: CFrame, color: Color3, material: Enum.Material?, shape: Enum.PartType?)
-		local p = Instance.new("Part")
-		p.Name = name
-		if shape then
-			p.Shape = shape
-		end
-		p.Size = size
-		p.Color = color
-		p.Material = material or Enum.Material.SmoothPlastic
-		p.CanCollide = false
-		p.Massless = true
-		p.CastShadow = true
-		p.CFrame = rootCF * offset
-		local weld = Instance.new("WeldConstraint")
-		weld.Part0 = root
-		weld.Part1 = p
-		weld.Parent = p
-		p.Parent = m
-		return p
-	end
-
-	for _, x in { -0.55, 0.55 } do
-		limb("Gamba", Vector3.new(0.6, 3, 0.6), CFrame.new(x, -2.1, 0), skin)
-		local arm = CFrame.new(x * 1.85, 0.3, -0.5) * CFrame.Angles(math.rad(15), 0, 0)
-		limb("Braccio", Vector3.new(0.4, 3.6, 0.4), arm, skin)
-		for i = -1, 1 do
-			limb("Artiglio", Vector3.new(0.12, 0.9, 0.12), arm * CFrame.new(i * 0.13, -2.1, -0.1), Color3.fromRGB(25, 20, 20))
-		end
-	end
-	limb("Torso", Vector3.new(1.5, 2.8, 0.9), CFrame.new(0, 0.8, -0.2) * CFrame.Angles(math.rad(-20), 0, 0), skin)
-	head = limb("Head", Vector3.new(1.2, 1.4, 1.2), CFrame.new(0, 2.6, -0.75), skin)
-	for _, x in { -0.28, 0.28 } do
-		limb("Occhio", Vector3.new(0.3, 0.3, 0.3), CFrame.new(x, 2.75, -1.33), Color3.fromRGB(255, 245, 225), Enum.Material.Neon, Enum.PartType.Ball)
-	end
-	limb("Bocca", Vector3.new(0.7, 0.15, 0.1), CFrame.new(0, 2.3, -1.36), Color3.fromRGB(10, 5, 5))
-
-	local glow = Instance.new("PointLight")
-	glow.Range = 6
-	glow.Brightness = 0.8
-	glow.Color = Color3.fromRGB(255, 230, 210)
-	glow.Parent = head
+	rig = RakeRig.build(m, CFrame.new(pos + Vector3.new(0, RakeRig.ROOT_HEIGHT, 0)))
+	root = rig.root
+	head = rig.head
 
 	hum = Instance.new("Humanoid")
 	hum.RigType = Enum.HumanoidRigType.R15
-	hum.HipHeight = HIP_HEIGHT
+	hum.HipHeight = RakeRig.HIP_HEIGHT
 	hum.MaxHealth = 1e6
 	hum.Health = 1e6
 	hum.WalkSpeed = R.WALK_SPEED
@@ -124,26 +94,9 @@ local function build(pos: Vector3): Model
 	capturePrompt.Enabled = false
 	capturePrompt.Parent = root
 
-	local function sound(id: string, parent: Instance, props: { [string]: any }): Sound?
-		if id == "" then
-			return nil
-		end
-		local s = Instance.new("Sound")
-		s.SoundId = id
-		s.RollOffMode = Enum.RollOffMode.InverseTapered
-		s.RollOffMinDistance = 8
-		s.RollOffMaxDistance = 120
-		for k, v in props do
-			(s :: any)[k] = v
-		end
-		s.Parent = parent
-		return s
-	end
-	footsteps = sound(Config.SOUNDS.RAKE_STEPS, root, { Looped = true, Volume = 0.9, PlaybackSpeed = 0.65 })
-	callSound = sound(Config.SOUNDS.RAKE_CALL, head, { Volume = 2, RollOffMaxDistance = 250 })
-	screechSound = sound(Config.SOUNDS.RAKE_SCREECH, head, { Volume = 2 })
-
-	m.PrimaryPart = root
+	footsteps = Sfx.new("Steps", root, { Volume = 1.2, RollOffMaxDistance = 110, PlaybackSpeed = 0.8 })
+	callSound = Sfx.new("Call", head, { Volume = 2.2, RollOffMinDistance = 12, RollOffMaxDistance = 320 })
+	screechSound = Sfx.new("Screech", head, { Volume = 2.5, RollOffMinDistance = 10, RollOffMaxDistance = 220 })
 	return m
 end
 
@@ -276,25 +229,11 @@ end
 
 -- Verso finto da un'altra direzione per depistare la squadra
 local function fakeCall()
-	if Config.SOUNDS.RAKE_CALL == "" then
-		return
-	end
-	local pos = Forest.randomGround(rng, root.Position, 80, 140)
-	local emitter = Instance.new("Part")
-	emitter.Anchored = true
-	emitter.CanCollide = false
-	emitter.CanQuery = false
-	emitter.Transparency = 1
-	emitter.Size = Vector3.new(1, 1, 1)
-	emitter.CFrame = CFrame.new(pos + Vector3.new(0, 5, 0))
-	local s = Instance.new("Sound")
-	s.SoundId = Config.SOUNDS.RAKE_CALL
-	s.Volume = 2
-	s.RollOffMaxDistance = 250
-	s.Parent = emitter
-	emitter.Parent = workspace
-	s:Play()
-	Debris:AddItem(emitter, 8)
+	Sfx.at("Call", Forest.randomGround(rng, root.Position, 80, 140) + Vector3.new(0, 5, 0), {
+		Volume = 2.2,
+		RollOffMinDistance = 12,
+		RollOffMaxDistance = 320,
+	})
 end
 
 local function updateLight(dt: number, survivors)
@@ -527,7 +466,7 @@ local function step(dt: number)
 		elseif not moving and footsteps.IsPlaying then
 			footsteps:Stop()
 		end
-		footsteps.PlaybackSpeed = hum.WalkSpeed > R.STALK_SPEED and 0.9 or 0.65
+		footsteps.PlaybackSpeed = hum.WalkSpeed > R.STALK_SPEED and 1.25 or 0.8
 	end
 end
 

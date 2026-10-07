@@ -19,7 +19,6 @@ return {
 
 	MAP = {
 		SIZE = 800, -- lato del bosco in stud, centrato nell'origine
-		TREE_COUNT = 520,
 		PATH_WIDTH = 8,
 		STATION_RADIUS = 30, -- area sicura (finché la creatura non è Aggressiva)
 		-- Punti di interesse fissi; il primo è la Ranger Station (spawn, sala di controllo, laboratorio)
@@ -34,11 +33,25 @@ return {
 		LAKE = { center = Vector3.new(-235, 0, 205), radius = 55 },
 	},
 
-	-- Meteo estratto a ogni notte (weight = probabilità relativa)
+	-- Meteo estratto a ogni notte (weight = probabilità relativa, density = densità dell'atmosfera)
 	WEATHER = {
-		{ name = "Sereno", weight = 4, fogEnd = 170, cameraNoise = 0 },
-		{ name = "Nebbia", weight = 3, fogEnd = 70, cameraNoise = 0.25 },
-		{ name = "Pioggia", weight = 2, fogEnd = 110, cameraNoise = 0.4 },
+		{ name = "Sereno", weight = 4, density = 0.36, cameraNoise = 0 },
+		{ name = "Nebbia", weight = 3, density = 0.58, cameraNoise = 0.25 },
+		{ name = "Pioggia", weight = 2, density = 0.46, cameraNoise = 0.4 },
+	},
+
+	-- Quantità di vegetazione e oggetti generati a ogni partita (abbassale se il gioco va a scatti)
+	VEGETATION = {
+		TREES = 560,
+		BUSHES = 520,
+		FERNS = 650,
+		ROCKS = 170,
+		BOULDERS = 34,
+		LOGS = 46,
+		STUMPS = 55,
+		MUSHROOMS = 60,
+		REEDS = 140,
+		EFFIGIES = 14, -- figure di rami appese: inquietanti
 	},
 
 	PLAYER = {
@@ -120,14 +133,5 @@ return {
 		{ name = "Cacciatore", xp = 1500 },
 		{ name = "Veterano", xp = 4000 },
 		{ name = "Leggenda", xp = 10000 },
-	},
-
-	-- Suoni (lascia "" per disattivarli). Puoi sostituirli con audio dal Creator Store:
-	-- incolla "rbxassetid://NUMERO". Sono suoni 3D: si sente da che direzione arrivano.
-	SOUNDS = {
-		RAKE_STEPS = "rbxasset://sounds/action_footsteps_plastic.mp3",
-		RAKE_CALL = "", -- verso della creatura (consigliato: un urlo/stridio dal Creator Store)
-		RAKE_SCREECH = "", -- urlo durante l'attacco
-		TRAP_SNAP = "rbxasset://sounds/electronicpingshort.wav",
 	},
 }

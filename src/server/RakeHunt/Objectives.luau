@@ -106,7 +106,8 @@ function Objectives.start(rng: Random)
 		local toStation = (Forest.STATION - poi.pos) * Vector3.new(1, 0, 1)
 		local side = Vector3.new(-toStation.Z, 0, toStation.X).Unit
 		local sign = rng:NextNumber() < 0.5 and -1 or 1
-		spawnTape(poi.pos + toStation.Unit * rng:NextNumber(10, 14) + side * sign * rng:NextNumber(3.5, 6))
+		local spot = poi.pos + toStation.Unit * rng:NextNumber(10, 14) + side * sign * rng:NextNumber(3.5, 6)
+		spawnTape(Forest.groundAt(spot.X, spot.Z))
 		text = ("Recupera il nastro audio (%s) e riportalo alla Ranger Station."):format(tapePoi)
 	end
 	ctx.state:SetAttribute("Objective", current)
@@ -173,7 +174,7 @@ function Objectives.onDowned(player: Player)
 	setCarrierHighlight(player, false)
 	local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
 	if hrp and ctx.round.active then
-		spawnTape(Vector3.new(hrp.Position.X, 0, hrp.Position.Z))
+		spawnTape(Forest.groundAt(hrp.Position.X, hrp.Position.Z))
 		ctx.notifyAll("📼 Il nastro è caduto a terra!")
 	end
 end

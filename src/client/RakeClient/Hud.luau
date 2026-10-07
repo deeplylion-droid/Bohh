@@ -342,7 +342,7 @@ function Hud:update(vitals)
 	elseif status == "Fuori" and phase == "Notte" then
 		self.center.Text = "Sei fuori gioco. Osservi i compagni: puoi aprire il tablet [T] per aiutarli."
 	elseif phase == "Briefing" then
-		self.center.Text = "<font size=\"16\">1 Torcia · 2 Telecamera · 3 Fucile a dardi\n"
+		self.center.Text = "<font size=\"16\">1 Torcia · 2 Telecamera · 3 Fucile a dardi · 4 Tablet\n"
 			.. "Shift scatto · T tablet · N visore · R tipo di camera · E interagisci</font>"
 	else
 		self.center.Text = ""

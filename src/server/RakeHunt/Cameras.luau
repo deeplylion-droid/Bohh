@@ -2,7 +2,10 @@
 -- Tipi: Fissa (economica), IR (vede di notte), Motorizzata (ruota dal tablet), Trappola (scatta sul movimento).
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared:WaitForChild("Config"))
+local Models = require(Shared:WaitForChild("Models"))
+local Sfx = require(Shared:WaitForChild("Sfx"))
 local Forest = require(script.Parent.Forest)
 
 local C = Config.CAMERAS
@@ -16,11 +19,12 @@ local nextId = 0
 local data: { [Model]: { useful: boolean, notified: number, lastSnap: number } } = {}
 local keyCells: { Vector3 } = {}
 
-local TYPE_COLORS = {
-	Fissa = Color3.fromRGB(70, 70, 75),
-	IR = Color3.fromRGB(40, 70, 45),
-	Motorizzata = Color3.fromRGB(60, 65, 95),
-	Trappola = Color3.fromRGB(110, 85, 45),
+-- Mesh del corpo e distanza della lente dal centro del corpo per ogni tipo
+local BODIES = {
+	Fissa = { mesh = "Cam_Body", lens = 1.17, lensR = 0.3 },
+	IR = { mesh = "Cam_IR", lens = 1.02, lensR = 0.24 },
+	Motorizzata = { mesh = "Cam_Motor", lens = 0.97, lensR = 0.2 },
+	Trappola = { mesh = "Cam_Trap", lens = 0.47, lensR = 0.13 },
 }
 
 local function flat(v: Vector3): Vector3
@@ -137,54 +141,86 @@ function Cameras.place(player: Player)
 	local y = ground and ground.Position.Y or 0
 
 	nextId += 1
+	local m = Cameras.build(camType, base, y, look)
+	local label = Forest.describe(base)
+	Cameras.register(m, nextId, camType, player, label)
+	player:SetAttribute(key, kits - 1)
+	ctx.notify(("📷 Camera %d (%s) piazzata %s."):format(nextId, camType, label), player)
+	Cameras.updateCoverage()
+end
+
+-- Modello 3D della telecamera appoggiato a terra in (base.X, y, base.Z) e rivolto verso look
+function Cameras.build(camType: string, base: Vector3, y: number, look: Vector3): Model
 	local m = Instance.new("Model")
-	m.Name = "Cam" .. nextId
-	local bodyPos = Vector3.new(base.X, y + 3.8, base.Z)
+	local spec = BODIES[camType] or BODIES.Fissa
+	local trap = camType == "Trappola"
+	local mountY = y + (trap and 3.1 or 3.75)
+	local bodyY = mountY + (camType == "Motorizzata" and 0.95 or (trap and 0 or 0.5))
+	local bodyPos = Vector3.new(base.X, bodyY, base.Z)
 	local bodyCF = CFrame.lookAt(bodyPos, bodyPos + look)
-	make("Part", m, {
-		Name = "Treppiede",
-		Size = Vector3.new(0.3, 3.4, 0.3),
-		CFrame = CFrame.new(base.X, y + 1.7, base.Z),
-		Color = Color3.fromRGB(30, 30, 30),
-		CanCollide = false,
-		CanQuery = false,
-	})
+	local visual = { CanCollide = false, CanQuery = false, CastShadow = true }
+	if trap then
+		Models.mesh("Cam_Stake", bodyCF, 1, visual, m)
+	else
+		Models.mesh("Cam_Tripod", CFrame.new(base.X, mountY, base.Z) * (bodyCF - bodyCF.Position), 1, visual, m)
+	end
+	Models.mesh(spec.mesh, bodyCF, 1, visual, m)
 	local body = make("Part", m, {
 		Name = "Body",
-		Size = Vector3.new(1.2, 0.9, 1.6),
+		Size = Vector3.new(0.6, 0.6, 0.6),
 		CFrame = bodyCF,
-		Color = TYPE_COLORS[camType] or TYPE_COLORS.Fissa,
-		Material = Enum.Material.Metal,
+		Transparency = 1,
 		CanCollide = false,
 		CanQuery = false,
 	})
 	make("Part", m, {
 		Name = "Obiettivo",
-		Size = Vector3.new(0.6, 0.6, 0.2),
-		CFrame = bodyCF * CFrame.new(0, 0, -0.85),
-		Color = Color3.fromRGB(10, 10, 15),
+		Shape = Enum.PartType.Cylinder,
+		Size = Vector3.new(0.04, spec.lensR * 2, spec.lensR * 2),
+		CFrame = bodyCF * CFrame.new(0, 0, -spec.lens) * CFrame.Angles(0, math.pi / 2, 0),
+		Color = Color3.fromRGB(20, 30, 45),
 		Material = Enum.Material.Glass,
+		Reflectance = 0.4,
 		CanCollide = false,
 		CanQuery = false,
 	})
 	make("Part", m, {
 		Name = "Led",
-		Size = Vector3.new(0.18, 0.18, 0.18),
-		CFrame = bodyCF * CFrame.new(0.4, 0.35, -0.75),
+		Shape = Enum.PartType.Ball,
+		Size = Vector3.new(0.09, 0.09, 0.09),
+		CFrame = bodyCF * CFrame.new(trap and 0.2 or 0.38, trap and 0.5 or 0.3, -(trap and 0.34 or 0.72)),
 		Color = Color3.fromRGB(255, 40, 40),
 		Material = Enum.Material.Neon,
 		CanCollide = false,
 		CanQuery = false,
 	})
+	if camType == "IR" then
+		for i = 0, 7 do
+			local a = i / 8 * math.pi * 2
+			make("Part", m, {
+				Shape = Enum.PartType.Ball,
+				Size = Vector3.new(0.08, 0.08, 0.08),
+				CFrame = bodyCF * CFrame.new(math.cos(a) * 0.34, math.sin(a) * 0.34, -0.74),
+				Color = Color3.fromRGB(90, 10, 10),
+				Material = Enum.Material.Neon,
+				CanCollide = false,
+				CanQuery = false,
+			})
+		end
+	end
 	local flash = make("PointLight", body, { Range = 30, Brightness = 6, Enabled = false, Color = Color3.fromRGB(255, 255, 255) })
 	flash.Name = "Flash"
-	if Config.SOUNDS.TRAP_SNAP ~= "" and camType == "Trappola" then
-		make("Sound", body, { Name = "Scatto", SoundId = Config.SOUNDS.TRAP_SNAP, Volume = 1, RollOffMaxDistance = 60 })
+	if trap then
+		local snapSound = Sfx.new("TrapClick", body, { Volume = 1, RollOffMaxDistance = 60 })
+		snapSound.Name = "Scatto"
 	end
 	m.PrimaryPart = body
+	return m
+end
 
-	local label = Forest.describe(base)
-	m:SetAttribute("Id", nextId)
+function Cameras.register(m: Model, id: number, camType: string, player: Player, label: string)
+	m.Name = "Cam" .. id
+	m:SetAttribute("Id", id)
 	m:SetAttribute("Type", camType)
 	m:SetAttribute("Owner", player.UserId)
 	m:SetAttribute("OwnerName", player.DisplayName)
@@ -192,11 +228,12 @@ function Cameras.place(player: Player)
 	m:SetAttribute("Online", true)
 	m:SetAttribute("Label", label)
 	m:SetAttribute("Sees", false)
+	local look = m.PrimaryPart.CFrame.LookVector
 	m:SetAttribute("Yaw", math.deg(math.atan2(-look.X, -look.Z)))
 
-	local prompt = make("ProximityPrompt", body, {
+	local prompt = make("ProximityPrompt", m.PrimaryPart, {
 		ActionText = "Recupera",
-		ObjectText = ("Camera %d · %s"):format(nextId, camType),
+		ObjectText = ("Camera %d · %s"):format(id, camType),
 		HoldDuration = 1,
 		MaxActivationDistance = 8,
 		RequiresLineOfSight = false,
@@ -207,9 +244,6 @@ function Cameras.place(player: Player)
 
 	data[m] = { useful = false, notified = 0, lastSnap = 0 }
 	m.Parent = folder
-	player:SetAttribute(key, kits - 1)
-	ctx.notify(("📷 Camera %d (%s) piazzata %s."):format(nextId, camType, label), player)
-	Cameras.updateCoverage()
 end
 
 function Cameras.rotate(player: Player, id: any, dir: any)

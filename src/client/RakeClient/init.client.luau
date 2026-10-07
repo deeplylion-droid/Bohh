@@ -1,5 +1,5 @@
 -- Client di "The Rake": controlli, stamina e fiatone, Paura e allucinazioni, visore notturno,
--- fucile a dardi, tablet delle telecamere e HUD.
+-- fucile a dardi, tablet delle telecamere, atmosfera, animazione della creatura e HUD.
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Lighting = game:GetService("Lighting")
@@ -7,9 +7,14 @@ local ContextActionService = game:GetService("ContextActionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Debris = game:GetService("Debris")
 
-local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared:WaitForChild("Config"))
+local Models = require(Shared:WaitForChild("Models"))
+local RakeRig = require(Shared:WaitForChild("RakeRig"))
 local Hud = require(script:WaitForChild("Hud"))
 local Tablet = require(script:WaitForChild("Tablet"))
+local Ambience = require(script:WaitForChild("Ambience"))
+local RakeAnimator = require(script:WaitForChild("RakeAnimator"))
 
 local player = Players.LocalPlayer
 local mouse = player:GetMouse()
@@ -19,8 +24,10 @@ local remotes = ReplicatedStorage:WaitForChild("RakeRemotes")
 local P = Config.PLAYER
 local NV_MAX = Config.EQUIPMENT.NIGHT_VISION_BATTERY
 
+Models.load()
 local hud = Hud.new(player, state)
-local tablet = Tablet.new(player, state, remotes, hud)
+local tablet = Tablet.new(player, state, remotes)
+RakeAnimator.start()
 
 remotes.Notify.OnClientEvent:Connect(function(message)
 	hud:notify(message)
@@ -78,7 +85,7 @@ player:GetAttributeChangedSignal("SupplyTick"):Connect(function()
 	nvBattery = NV_MAX
 end)
 
--- Il fucile a dardi mira dove punta il mouse (o il tocco)
+-- Fucile a dardi (mira dove punta il mouse o il tocco) e tablet impugnato
 local hooked = setmetatable({}, { __mode = "k" })
 local function hookTool(tool: Instance)
 	if not tool:IsA("Tool") or hooked[tool] then
@@ -90,6 +97,10 @@ local function hookTool(tool: Instance)
 			if not tablet.isOpen then
 				remotes.FireDart:FireServer(mouse.Hit.Position)
 			end
+		end)
+	elseif tool.Name == "Tablet" then
+		tool.Activated:Connect(function()
+			tablet:open()
 		end)
 	end
 end
@@ -127,13 +138,24 @@ local fearEffect = Instance.new("ColorCorrectionEffect")
 fearEffect.Name = "Paura"
 fearEffect.Parent = Lighting
 
-local function rakeRoot(): BasePart?
-	local folder = workspace:FindFirstChild("RakeHunt")
-	local rake = folder and folder:FindFirstChild("TheRake")
-	return rake and rake:FindFirstChild("HumanoidRootPart") :: BasePart?
+local fearBlur = Instance.new("BlurEffect")
+fearBlur.Name = "PauraSfocatura"
+fearBlur.Size = 0
+fearBlur.Parent = Lighting
+
+local function groundY(pos: Vector3): number
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Include
+	params.FilterDescendantsInstances = { workspace.Terrain }
+	local hit = workspace:Raycast(pos + Vector3.new(0, 30, 0), Vector3.new(0, -200, 0), params)
+	return hit and hit.Position.Y or pos.Y - 4
 end
 
--- Allucinazione: una sagoma della creatura appare per un istante tra gli alberi (solo per te)
+local updateAmbience, whisperAt = Ambience.start(player, state, function()
+	hud:pulse()
+end)
+
+-- Allucinazione: la sagoma della creatura appare un istante tra gli alberi (solo per te)
 local function hallucinate()
 	local camera = workspace.CurrentCamera
 	local look = camera.CFrame.LookVector * Vector3.new(1, 0, 1)
@@ -141,31 +163,15 @@ local function hallucinate()
 		return
 	end
 	local dir = CFrame.Angles(0, math.rad(math.random(-35, 35)), 0) * look.Unit
-	local pos = camera.CFrame.Position + dir * math.random(25, 40)
+	local pos = camera.CFrame.Position + dir * math.random(22, 38)
+	local ground = Vector3.new(pos.X, groundY(pos), pos.Z)
+	local facing = Vector3.new(camera.CFrame.Position.X, ground.Y, camera.CFrame.Position.Z)
 	local ghost = Instance.new("Model")
-	local function part(size: Vector3, offset: Vector3, color: Color3, neon: boolean?)
-		local p = Instance.new("Part")
-		p.Anchored = true
-		p.CanCollide = false
-		p.CanQuery = false
-		p.CastShadow = false
-		p.Size = size
-		p.Color = color
-		p.Material = neon and Enum.Material.Neon or Enum.Material.SmoothPlastic
-		p.CFrame = CFrame.lookAt(Vector3.new(pos.X, 0, pos.Z), Vector3.new(camera.CFrame.Position.X, 0, camera.CFrame.Position.Z))
-			* CFrame.new(offset)
-		p.Parent = ghost
-	end
-	local dark = Color3.fromRGB(10, 10, 10)
-	part(Vector3.new(1.5, 3, 0.9), Vector3.new(0, 4.4, 0), dark)
-	part(Vector3.new(1.2, 1.4, 1.2), Vector3.new(0, 6.4, -0.3), dark)
-	part(Vector3.new(0.6, 3, 0.6), Vector3.new(-0.5, 1.5, 0), dark)
-	part(Vector3.new(0.6, 3, 0.6), Vector3.new(0.5, 1.5, 0), dark)
-	part(Vector3.new(0.3, 0.3, 0.1), Vector3.new(-0.28, 6.6, -0.95), Color3.fromRGB(255, 245, 225), true)
-	part(Vector3.new(0.3, 0.3, 0.1), Vector3.new(0.28, 6.6, -0.95), Color3.fromRGB(255, 245, 225), true)
-	ghost.Parent = camera
-	Debris:AddItem(ghost, 0.7)
-	hud:pulse()
+	ghost.Name = "Allucinazione"
+	RakeRig.build(ghost, CFrame.lookAt(ground, facing) * CFrame.new(0, RakeRig.ROOT_HEIGHT, 0), { ghost = true })
+	ghost.Parent = workspace
+	Debris:AddItem(ghost, 0.8)
+	whisperAt(ground + Vector3.new(0, 5, 0))
 end
 
 local function spectate()
@@ -184,7 +190,7 @@ local function spectate()
 end
 
 ---------------------------------------------------------------------------------------------
--- Ciclo per frame: stamina, paura, velocità, visore
+-- Ciclo per frame: stamina, paura, velocità, visore, atmosfera
 
 local stamina, fear = 100, 0
 local exhausted, panic = false, false
@@ -214,10 +220,11 @@ RunService.RenderStepped:Connect(function(dt)
 	end
 
 	-- Paura: sale al buio, da soli e con la creatura vicina; scende vicino ai compagni e alle luci
+	local root = Ambience.rakeRoot()
 	if phase == "Notte" and status == "OK" and hrp then
 		local pos = hrp.Position
 		local dark = Lighting.ClockTime >= 19.5 or Lighting.ClockTime < 6
-		local atStation = Vector3.new(pos.X, 0, pos.Z).Magnitude < Config.MAP.STATION_RADIUS
+		local atStation = (Vector3.new(pos.X, 0, pos.Z) - Vector3.new(Config.MAP.POIS[1].pos.X, 0, Config.MAP.POIS[1].pos.Z)).Magnitude < Config.MAP.STATION_RADIUS
 		local lit = player:GetAttribute("TorchOn") or nvOn or atStation
 		local mates = 0
 		for _, other in Players:GetPlayers() do
@@ -237,7 +244,6 @@ RunService.RenderStepped:Connect(function(dt)
 		if atStation then
 			rate -= 10
 		end
-		local root = rakeRoot()
 		if root then
 			local d = (root.Position - pos).Magnitude
 			if d < 70 then
@@ -255,11 +261,25 @@ RunService.RenderStepped:Connect(function(dt)
 	end
 	if panic and os.clock() > nextHallucination then
 		nextHallucination = os.clock() + math.random(5, 11)
-		hallucinate()
+		local ok, err = pcall(hallucinate)
+		if not ok then
+			warn("[Allucinazione] " .. tostring(err))
+		end
 	end
 	local fearAmount = math.clamp((fear - 40) / 60, 0, 1)
 	fearEffect.Saturation = -0.6 * fearAmount
-	fearEffect.Contrast = 0.2 * fearAmount
+	fearEffect.Contrast = 0.25 * fearAmount
+	fearBlur.Size = panic and 3 + math.sin(os.clock() * 6) * 2 or 0
+
+	-- Tremolio della visuale quando la creatura è vicina
+	if root and hrp and not tablet.isOpen then
+		local d = (root.Position - hrp.Position).Magnitude
+		local shake = math.clamp(1 - d / 30, 0, 1) * 0.012
+		if shake > 0 then
+			local camera = workspace.CurrentCamera
+			camera.CFrame *= CFrame.Angles((math.random() - 0.5) * shake, (math.random() - 0.5) * shake, 0)
+		end
+	end
 
 	-- Velocità (il server la azzera quando sei braccato)
 	if hum then
@@ -292,6 +312,7 @@ RunService.RenderStepped:Connect(function(dt)
 		spectate()
 	end
 
+	updateAmbience(dt, { exhausted = exhausted, panic = panic })
 	hud:update({
 		config = Config,
 		stamina = stamina,

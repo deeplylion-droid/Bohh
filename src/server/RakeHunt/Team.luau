@@ -3,7 +3,10 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Debris = game:GetService("Debris")
 
-local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared:WaitForChild("Config"))
+local Models = require(Shared:WaitForChild("Models"))
+local Sfx = require(Shared:WaitForChild("Sfx"))
 local Forest = require(script.Parent.Forest)
 
 local EQ = Config.EQUIPMENT
@@ -47,8 +50,10 @@ function Team.anyStanding(): boolean
 end
 
 local function torchLight(player: Player): SpotLight?
-	local head = player.Character and player.Character:FindFirstChild("Head")
-	return head and head:FindFirstChild("TorchLight") :: SpotLight?
+	local char = player.Character
+	local tool = char and char:FindFirstChild("Torcia")
+	local lens = tool and tool:FindFirstChild("Lente")
+	return lens and lens:FindFirstChild("TorchLight") :: SpotLight?
 end
 
 function Team.setTorch(player: Player, on: boolean)
@@ -59,14 +64,28 @@ function Team.setTorch(player: Player, on: boolean)
 	if on and not Team.isStanding(player) then
 		on = false
 	end
+	if player:GetAttribute("TorchOn") ~= on then
+		local char = player.Character
+		local head = char and char:FindFirstChild("Head")
+		if head then
+			Sfx.at("TorchClick", head.Position, { Volume = 0.6, RollOffMaxDistance = 30 })
+		end
+	end
 	player:SetAttribute("TorchOn", on)
 	local light = torchLight(player)
 	if light then
 		light.Enabled = on
+		local lens = light.Parent :: BasePart
+		lens.Material = on and Enum.Material.Neon or Enum.Material.Glass
+		local glow = lens:FindFirstChild("Alone") :: PointLight?
+		if glow then
+			glow.Enabled = on
+		end
 	end
 end
 
-local function newTool(name: string, tip: string, size: Vector3, color: Color3): (Tool, BasePart)
+-- Attrezzo con impugnatura invisibile e modello 3D saldato (il fronte del modello punta in avanti)
+local function newTool(name: string, tip: string, mesh: string, scale: number, offset: CFrame?): (Tool, BasePart)
 	local tool = Instance.new("Tool")
 	tool.Name = name
 	tool.ToolTip = tip
@@ -74,13 +93,40 @@ local function newTool(name: string, tip: string, size: Vector3, color: Color3):
 	tool.RequiresHandle = true
 	local handle = Instance.new("Part")
 	handle.Name = "Handle"
-	handle.Size = size
-	handle.Color = color
-	handle.Material = Enum.Material.Metal
+	handle.Size = Vector3.new(0.3, 0.3, 0.3)
+	handle.Transparency = 1
 	handle.CanCollide = false
 	handle.Massless = true
+	handle.CFrame = CFrame.new()
 	handle.Parent = tool
+	local visual = Models.mesh(mesh, (offset or CFrame.new()), scale, {
+		Name = "Modello",
+		Anchored = false,
+		CanCollide = false,
+		CanQuery = false,
+		CanTouch = false,
+		Massless = true,
+	}, tool)
+	local weld = Instance.new("WeldConstraint")
+	weld.Part0 = handle
+	weld.Part1 = visual
+	weld.Parent = handle
 	return tool, handle
+end
+
+local function attachPart(tool: Tool, handle: BasePart, props: { [string]: any }): BasePart
+	local part = make("Part", nil, props)
+	part.Anchored = false
+	part.CanCollide = false
+	part.CanQuery = false
+	part.CanTouch = false
+	part.Massless = true
+	part.Parent = tool
+	local weld = Instance.new("WeldConstraint")
+	weld.Part0 = handle
+	weld.Part1 = part
+	weld.Parent = part
+	return part
 end
 
 function Team.equip(player: Player)
@@ -108,22 +154,33 @@ function Team.equip(player: Player)
 		player:SetAttribute("Kits_" .. camType, count)
 	end
 	player:SetAttribute("SupplyTick", os.clock())
+	Team.buildTools(player, backpack)
+end
 
-	local head = char:FindFirstChild("Head")
-	if head and not head:FindFirstChild("TorchLight") then
-		make("SpotLight", head, {
-			Name = "TorchLight",
-			Face = Enum.NormalId.Front,
-			Angle = 55,
-			Range = 45,
-			Brightness = 5,
-			Shadows = true,
-			Color = Color3.fromRGB(255, 240, 210),
-			Enabled = false,
-		})
-	end
-
-	local torch = newTool("Torcia", "Clic: accendi/spegni la torcia", Vector3.new(0.35, 0.35, 1.4), Color3.fromRGB(30, 30, 30))
+-- Crea gli attrezzi nello zaino (separato da equip per poterlo provare senza un giocatore vero)
+function Team.buildTools(player: Player, backpack: Instance)
+	-- Torcia: la luce esce dalla lente e segue il braccio
+	local torch, torchHandle = newTool("Torcia", "Clic: accendi/spegni la torcia", "Tool_Torch", 0.95)
+	local lens = attachPart(torch, torchHandle, {
+		Name = "Lente",
+		Shape = Enum.PartType.Cylinder,
+		Size = Vector3.new(0.05, 0.5, 0.5),
+		CFrame = CFrame.new(0, 0, -0.83) * CFrame.Angles(0, math.pi / 2, 0),
+		Color = Color3.fromRGB(255, 244, 220),
+		Material = Enum.Material.Glass,
+	})
+	local beam = make("SpotLight", lens, {
+		Name = "TorchLight",
+		Face = Enum.NormalId.Right,
+		Angle = 50,
+		Range = 60,
+		Brightness = 7,
+		Shadows = true,
+		Color = Color3.fromRGB(255, 238, 205),
+		Enabled = false,
+	})
+	Forest.flicker(beam)
+	make("PointLight", lens, { Name = "Alone", Range = 5, Brightness = 0.6, Color = Color3.fromRGB(255, 230, 200), Enabled = false })
 	torch.Activated:Connect(function()
 		Team.setTorch(player, not player:GetAttribute("TorchOn"))
 	end)
@@ -132,14 +189,39 @@ function Team.equip(player: Player)
 	end)
 	torch.Parent = backpack
 
-	local camera = newTool("Telecamera", "Clic: piazza una telecamera · R: cambia tipo", Vector3.new(1, 0.8, 1.2), Color3.fromRGB(70, 70, 75))
+	local camera, cameraHandle = newTool("Telecamera", "Clic: piazza una telecamera · R: cambia tipo", "Cam_Body", 0.55, CFrame.new(0, 0.1, -0.2))
+	attachPart(camera, cameraHandle, {
+		Name = "Led",
+		Shape = Enum.PartType.Ball,
+		Size = Vector3.new(0.06, 0.06, 0.06),
+		CFrame = CFrame.new(0.2, 0.27, -0.6),
+		Color = Color3.fromRGB(255, 40, 40),
+		Material = Enum.Material.Neon,
+	})
 	camera.Activated:Connect(function()
 		ctx.cameras.place(player)
 	end)
 	camera.Parent = backpack
 
-	local gun = newTool("Fucile a dardi", "Clic: spara un dardo tranquillante", Vector3.new(0.4, 0.6, 2.4), Color3.fromRGB(45, 60, 40))
+	local gun, gunHandle = newTool("Fucile a dardi", "Clic: spara un dardo tranquillante", "Tool_Rifle", 0.8)
+	attachPart(gun, gunHandle, {
+		Name = "Volata",
+		Size = Vector3.new(0.1, 0.1, 0.1),
+		CFrame = CFrame.new(0, 0.12, -2.15),
+		Transparency = 1,
+	})
 	gun.Parent = backpack
+
+	local tablet, tabletHandle = newTool("Tablet", "Clic (o T): guarda le telecamere", "Tool_Tablet", 1, CFrame.new(0, 0.3, -0.6) * CFrame.Angles(math.rad(-65), 0, 0))
+	local screen = attachPart(tablet, tabletHandle, {
+		Name = "Schermo",
+		Size = Vector3.new(1.35, 0.85, 0.02),
+		CFrame = CFrame.new(0, 0.3, -0.6) * CFrame.Angles(math.rad(-65), 0, 0) * CFrame.new(0, 0, -0.07),
+		Color = Color3.fromRGB(30, 80, 60),
+		Material = Enum.Material.Neon,
+	})
+	make("PointLight", screen, { Range = 5, Brightness = 0.5, Color = Color3.fromRGB(90, 220, 160) })
+	tablet.Parent = backpack
 end
 
 function Team.spawn(player: Player, equip: boolean)
@@ -212,8 +294,8 @@ function Team.fireDart(player: Player, targetPos: any)
 	local result = workspace:Raycast(head.Position, dir, params)
 	local hitPos = result and result.Position or head.Position + dir
 
-	local handle = gun:FindFirstChild("Handle") :: BasePart?
-	local from = handle and handle.Position or head.Position
+	local muzzle = gun:FindFirstChild("Volata") :: BasePart?
+	local from = muzzle and muzzle.Position or head.Position
 	local length = (hitPos - from).Magnitude
 	local tracer = make("Part", workspace, {
 		Size = Vector3.new(0.08, 0.08, length),

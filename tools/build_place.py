@@ -23,6 +23,8 @@ _ref = 0
 
 
 def prop_xml(name, value):
+    if isinstance(value, dict) and "Enum" in value:
+        return f'<token name="{name}">{int(value["Enum"])}</token>'
     if isinstance(value, bool):
         return f'<bool name="{name}">{"true" if value else "false"}</bool>'
     if isinstance(value, int):
