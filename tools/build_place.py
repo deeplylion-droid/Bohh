@@ -25,6 +25,9 @@ def read(rel):
 
 
 tree = [
+    # Servizi base richiesti da Roblox per accettare il file (anche via Open Cloud)
+    item("Workspace", "Workspace"),
+    item("Lighting", "Lighting"),
     item("ReplicatedStorage", "ReplicatedStorage", [
         item("Folder", "Shared", [
             item("ModuleScript", "Config", source=read("shared/Config.luau")),
@@ -48,7 +51,7 @@ xml = (
     'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" '
     'xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4">'
     + "".join(tree)
-    + "</roblox>\n"
+    + "</roblox>"  # niente a-capo finale: Open Cloud lo rifiuta ("Invalid Content stream")
 )
 
 OUT.parent.mkdir(exist_ok=True)

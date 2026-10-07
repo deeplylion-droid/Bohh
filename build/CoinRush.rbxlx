@@ -1,4 +1,4 @@
-<roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4"><Item class="ReplicatedStorage" referent="RBX3"><Properties><string name="Name">ReplicatedStorage</string></Properties><Item class="Folder" referent="RBX2"><Properties><string name="Name">Shared</string></Properties><Item class="ModuleScript" referent="RBX1"><Properties><string name="Name">Config</string><ProtectedString name="Source"><![CDATA[-- Impostazioni della modalità "Coin Rush". Modifica questi valori per bilanciare il gioco.
+<roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4"><Item class="Workspace" referent="RBX1"><Properties><string name="Name">Workspace</string></Properties></Item><Item class="Lighting" referent="RBX2"><Properties><string name="Name">Lighting</string></Properties></Item><Item class="ReplicatedStorage" referent="RBX5"><Properties><string name="Name">ReplicatedStorage</string></Properties><Item class="Folder" referent="RBX4"><Properties><string name="Name">Shared</string></Properties><Item class="ModuleScript" referent="RBX3"><Properties><string name="Name">Config</string><ProtectedString name="Source"><![CDATA[-- Impostazioni della modalità "Coin Rush". Modifica questi valori per bilanciare il gioco.
 return {
 	-- Giocatori necessari per avviare un round (metti 2+ per un server pubblico)
 	MIN_PLAYERS = 1,
@@ -21,7 +21,7 @@ return {
 	-- Sotto questa distanza dal pavimento dell'arena il giocatore è eliminato
 	FALL_LIMIT = 25,
 }
-]]></ProtectedString></Properties></Item></Item></Item><Item class="ServerScriptService" referent="RBX7"><Properties><string name="Name">ServerScriptService</string></Properties><Item class="Script" referent="RBX6"><Properties><string name="Name">GameMode</string><ProtectedString name="Source"><![CDATA[-- Coin Rush: ciclo dei round (attesa -> intervallo -> round -> risultati).
+]]></ProtectedString></Properties></Item></Item></Item><Item class="ServerScriptService" referent="RBX9"><Properties><string name="Name">ServerScriptService</string></Properties><Item class="Script" referent="RBX8"><Properties><string name="Name">GameMode</string><ProtectedString name="Source"><![CDATA[-- Coin Rush: ciclo dei round (attesa -> intervallo -> round -> risultati).
 -- Durante il round i giocatori vengono portati nell'arena sospesa e devono raccogliere
 -- più monete possibile. Chi cade o muore è eliminato. Vince chi ha più monete.
 local Players = game:GetService("Players")
@@ -205,7 +205,7 @@ while true do
 		runRound()
 	end
 end
-]]></ProtectedString></Properties><Item class="ModuleScript" referent="RBX4"><Properties><string name="Name">Arena</string><ProtectedString name="Source"><![CDATA[-- Costruisce l'arena sospesa e la lobby, e trova punti casuali sulle superfici.
+]]></ProtectedString></Properties><Item class="ModuleScript" referent="RBX6"><Properties><string name="Name">Arena</string><ProtectedString name="Source"><![CDATA[-- Costruisce l'arena sospesa e la lobby, e trova punti casuali sulle superfici.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
@@ -311,7 +311,7 @@ function Arena.floorHeight(model: Model): number
 end
 
 return Arena
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX5"><Properties><string name="Name">Coins</string><ProtectedString name="Source"><![CDATA[-- Genera le monete nell'arena e notifica quando un giocatore ne raccoglie una.
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX7"><Properties><string name="Name">Coins</string><ProtectedString name="Source"><![CDATA[-- Genera le monete nell'arena e notifica quando un giocatore ne raccoglie una.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -369,7 +369,7 @@ function Coins.destroy(self: Coins)
 end
 
 return Coins
-]]></ProtectedString></Properties></Item></Item></Item><Item class="StarterPlayer" referent="RBX10"><Properties><string name="Name">StarterPlayer</string></Properties><Item class="StarterPlayerScripts" referent="RBX9"><Properties><string name="Name">StarterPlayerScripts</string></Properties><Item class="LocalScript" referent="RBX8"><Properties><string name="Name">HUD</string><ProtectedString name="Source"><![CDATA[-- Mostra lo stato del round in alto allo schermo e fa ruotare le monete (solo effetto visivo).
+]]></ProtectedString></Properties></Item></Item></Item><Item class="StarterPlayer" referent="RBX12"><Properties><string name="Name">StarterPlayer</string></Properties><Item class="StarterPlayerScripts" referent="RBX11"><Properties><string name="Name">StarterPlayerScripts</string></Properties><Item class="LocalScript" referent="RBX10"><Properties><string name="Name">HUD</string><ProtectedString name="Source"><![CDATA[-- Mostra lo stato del round in alto allo schermo e fa ruotare le monete (solo effetto visivo).
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
