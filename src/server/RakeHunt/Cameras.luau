@@ -208,6 +208,17 @@ function Cameras.build(camType: string, base: Vector3, y: number, look: Vector3)
 			})
 		end
 	end
+	-- illuminatore a infrarossi: lo accende solo il client che sta guardando questa camera
+	make("SpotLight", body, {
+		Name = "Illuminatore",
+		Face = Enum.NormalId.Front,
+		Angle = 75,
+		Range = camType == "IR" and 95 or 70,
+		Brightness = 2.2,
+		Shadows = false,
+		Color = Color3.fromRGB(215, 235, 215),
+		Enabled = false,
+	})
 	local flash = make("PointLight", body, { Range = 30, Brightness = 6, Enabled = false, Color = Color3.fromRGB(255, 255, 255) })
 	flash.Name = "Flash"
 	if trap then
@@ -284,7 +295,6 @@ end
 
 function Cameras.tick(dt: number)
 	local rakePos = ctx.rake.position()
-	local night = ctx.isNight()
 	local noise = ctx.weather.cameraNoise
 	local now = os.clock()
 	local changed = false
@@ -310,8 +320,8 @@ function Cameras.tick(dt: number)
 		local sees = false
 		if online and rakePos then
 			local range = camType == "Trappola" and C.TRAP_RANGE or C.VIEW_RANGE
-			if night and camType ~= "IR" and camType ~= "Trappola" then
-				range *= C.NIGHT_RANGE_FACTOR
+			if camType == "IR" then
+				range *= C.IR_RANGE_BONUS
 			end
 			range *= 1 - noise * 0.5
 			sees = inCone(body.CFrame, rakePos, range) and ctx.rake.visibleFrom(body.Position, { folder })

@@ -17,6 +17,7 @@ local Ambience = require(script:WaitForChild("Ambience"))
 local RakeAnimator = require(script:WaitForChild("RakeAnimator"))
 local Scope = require(script:WaitForChild("Scope"))
 local CamFeed = require(script:WaitForChild("CamFeed"))
+local Gps = require(script:WaitForChild("Gps"))
 
 local player = Players.LocalPlayer
 local mouse = player:GetMouse()
@@ -33,6 +34,7 @@ local scope = Scope.new(player)
 scope:bind()
 RakeAnimator.start(state)
 CamFeed.start(player)
+Gps.new(player, state, hud.gui)
 
 remotes.Notify.OnClientEvent:Connect(function(message)
 	hud:notify(message)
@@ -305,13 +307,13 @@ RunService.RenderStepped:Connect(function(dt)
 	fearBlur.Size = panic and 3 + math.sin(os.clock() * 6) * 2 or 0
 
 	-- Tremolio della visuale quando la creatura è vicina
-	if root and hrp and not tablet.isOpen then
-		local d = (root.Position - hrp.Position).Magnitude
-		local shake = math.clamp(1 - d / 30, 0, 1) * 0.012
-		if shake > 0 then
-			local camera = workspace.CurrentCamera
-			camera.CFrame *= CFrame.Angles((math.random() - 0.5) * shake, (math.random() - 0.5) * shake, 0)
+	-- (CameraOffset non si accumula: modificare la CFrame della visuale la farebbe derivare)
+	if hum then
+		local shake = 0
+		if root and hrp and not tablet.isOpen and not scope.active then
+			shake = math.clamp(1 - (root.Position - hrp.Position).Magnitude / 30, 0, 1) * 0.25
 		end
+		hum.CameraOffset = Vector3.new((math.random() - 0.5) * shake, (math.random() - 0.5) * shake, 0)
 	end
 
 	-- Velocità (il server la azzera quando sei braccato)

@@ -59,6 +59,9 @@ local function buildScene(body: BasePart): Folder
 				local color = hit.Material == Enum.Material.Water and Color3.fromRGB(14, 20, 18) or terrain:GetMaterialColor(hit.Material)
 				make("Part", {
 					Anchored = true,
+					CanCollide = false,
+					CanQuery = false,
+					CanTouch = false,
 					Size = Vector3.new(GRID + 0.4, 2, GRID + 0.4),
 					CFrame = CFrame.new(hit.Position - Vector3.new(0, 1, 0)) * CFrame.Angles(math.asin(math.clamp(-hit.Normal.Z, -1, 1)) * 0.8, 0, math.asin(math.clamp(hit.Normal.X, -1, 1)) * 0.8),
 					Color = color,
@@ -98,6 +101,9 @@ local function buildScene(body: BasePart): Folder
 				end
 			end
 			copy.Anchored = true
+			copy.CanCollide = false
+			copy.CanQuery = false
+			copy.CanTouch = false
 			copy.Parent = scene
 		end
 	end
@@ -121,20 +127,24 @@ type Monitor = {
 	people: { [Player]: BasePart },
 }
 
-local function newMonitor(part: BasePart): Monitor
+local function newMonitor(part: BasePart, playerGui: Instance): Monitor
 	local old = part:FindFirstChildOfClass("SurfaceGui")
 	if old then
 		old.Enabled = false
 	end
+	-- la SurfaceGui sta nel PlayerGui (Adornee sul monitor): i pezzi del ViewportFrame non devono
+	-- mai trovarsi sotto Workspace, altrimenti diventano oggetti fisici veri
 	local gui = make("SurfaceGui", {
 		Name = "Feed",
+		Adornee = part,
+		ResetOnSpawn = false,
 		Face = Enum.NormalId.Back,
 		SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud,
 		PixelsPerStud = 140,
 		LightInfluence = 0,
 		Brightness = 1.6,
 		ClipsDescendants = true,
-	}, part)
+	}, playerGui)
 	local viewport = make("ViewportFrame", {
 		Size = UDim2.fromScale(1, 1),
 		BackgroundColor3 = Color3.fromRGB(2, 4, 3),
@@ -224,6 +234,9 @@ local function updateDynamic(mon: Monitor, body: BasePart)
 				end
 			end
 			copy.Anchored = true
+			copy.CanCollide = false
+			copy.CanQuery = false
+			copy.CanTouch = false
 			copy.Parent = mon.viewport
 			mon.rake = copy
 			mon.rakeBones = {}
@@ -252,7 +265,7 @@ local function updateDynamic(mon: Monitor, body: BasePart)
 		for i, e in realEyes do
 			local twin = mon.eyes[i]
 			if not twin then
-				twin = make("Part", { Shape = Enum.PartType.Ball, Size = Vector3.new(0.3, 0.3, 0.3), Material = Enum.Material.Neon, Anchored = true }, mon.viewport)
+				twin = make("Part", { Shape = Enum.PartType.Ball, Size = Vector3.new(0.3, 0.3, 0.3), Material = Enum.Material.Neon, Anchored = true, CanCollide = false, CanQuery = false }, mon.viewport)
 				mon.eyes[i] = twin
 			end
 			twin.CFrame = e.CFrame
@@ -268,7 +281,7 @@ local function updateDynamic(mon: Monitor, body: BasePart)
 		local twin = mon.people[p]
 		if near and hrp then
 			if not twin then
-				twin = make("Part", { Shape = Enum.PartType.Cylinder, Size = Vector3.new(5, 1.8, 1.8), Color = Color3.fromRGB(40, 44, 40), Material = Enum.Material.SmoothPlastic, Anchored = true }, mon.viewport)
+				twin = make("Part", { Shape = Enum.PartType.Cylinder, Size = Vector3.new(5, 1.8, 1.8), Color = Color3.fromRGB(40, 44, 40), Material = Enum.Material.SmoothPlastic, Anchored = true, CanCollide = false, CanQuery = false }, mon.viewport)
 				mon.people[p] = twin
 			end
 			twin.CFrame = CFrame.new(hrp.Position) * CFrame.Angles(0, 0, math.pi / 2)
@@ -293,7 +306,7 @@ function CamFeed.start(player: Player)
 		end)
 		for _, p in parts do
 			if p:IsA("BasePart") then
-				table.insert(monitors, newMonitor(p))
+				table.insert(monitors, newMonitor(p, player:WaitForChild("PlayerGui")))
 			end
 		end
 	end
@@ -349,12 +362,15 @@ function CamFeed.start(player: Player)
 			mon.viewport.Visible = true
 			mon.message.Text = ""
 			mon.vcam.CFrame = body.CFrame * CFrame.new(0, 0, -1.25)
-			if camType == "IR" then
+			-- tutte le telecamere hanno la visione notturna a infrarossi
+			if night then
 				mon.viewport.ImageColor3 = Color3.fromRGB(150, 255, 165)
-				mon.viewport.Ambient = Color3.fromRGB(150, 160, 150)
+				mon.viewport.Ambient = camType == "IR" and Color3.fromRGB(175, 185, 175) or Color3.fromRGB(140, 150, 140)
+				mon.viewport.LightColor = Color3.fromRGB(200, 220, 200)
 			else
 				mon.viewport.ImageColor3 = Color3.fromRGB(205, 215, 225)
-				mon.viewport.Ambient = night and Color3.fromRGB(55, 60, 70) or Color3.fromRGB(150, 150, 150)
+				mon.viewport.Ambient = Color3.fromRGB(150, 150, 150)
+				mon.viewport.LightColor = Color3.fromRGB(150, 160, 180)
 			end
 			updateDynamic(mon, body)
 			local noise = 0

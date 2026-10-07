@@ -78,7 +78,7 @@ return {
 		BATTERY = 300,
 		VIEW_RANGE = 70,
 		FOV = 70, -- gradi
-		NIGHT_RANGE_FACTOR = 0.45, -- portata delle camere non IR di notte
+		IR_RANGE_BONUS = 1.4, -- tutte le camere vedono al buio; il modello IR ha più portata
 		TRAP_RANGE = 35,
 		TRAP_COOLDOWN = 20,
 		TRAP_TRACKING = 10,

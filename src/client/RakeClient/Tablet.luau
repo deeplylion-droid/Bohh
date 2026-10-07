@@ -359,10 +359,32 @@ function Tablet:open()
 	end)
 end
 
+-- Accende in locale l'illuminatore IR della camera che stai guardando (e alza l'esposizione)
+function Tablet:setIlluminator(light: SpotLight?)
+	if self.illuminator == light then
+		return
+	end
+	if self.illuminator then
+		self.illuminator.Enabled = false
+	end
+	self.illuminator = light
+	if light then
+		light.Enabled = true
+		if not self.savedExposure then
+			self.savedExposure = Lighting.ExposureCompensation
+		end
+		Lighting.ExposureCompensation = (self.savedExposure or 0) + 1.3
+	elseif self.savedExposure then
+		Lighting.ExposureCompensation = self.savedExposure
+		self.savedExposure = nil
+	end
+end
+
 function Tablet:close()
 	if not self.isOpen then
 		return
 	end
+	self:setIlluminator(nil)
 	self.isOpen = false
 	self.gui.Enabled = false
 	self.cc.Enabled = false
@@ -419,6 +441,7 @@ function Tablet:render()
 	self.powerLed.BackgroundTransparency = blink and 0 or 0.6
 
 	if not m then
+		self:setIlluminator(nil)
 		self.black.Visible = true
 		self.cc.Enabled = false
 		self:setStatic(0.2)
@@ -435,8 +458,12 @@ function Tablet:render()
 		self.header.Text = ("CAM %02d · %s · %s"):format(id, string.upper(camType), string.upper(m:GetAttribute("Label") or ""))
 		self.batteryFill.Size = UDim2.new(battery, -4, 1, -4)
 		self.batteryFill.BackgroundColor3 = battery < 0.2 and Color3.fromRGB(255, 80, 60) or GREEN
-		self.info.Text = ("ZOOM %.1fx · %s\nproprietario: %s"):format(self.zoom, camType == "IR" and "INFRAROSSI" or "VISIBILE", m:GetAttribute("OwnerName") or "?")
+		local nightNow = Lighting.ClockTime >= 19.5 or Lighting.ClockTime < 6
+		self.info.Text = ("ZOOM %.1fx · %s\nproprietario: %s"):format(self.zoom, nightNow and "VISIONE NOTTURNA IR" or "DIURNA", m:GetAttribute("OwnerName") or "?")
 
+		if not online or camType == "Trappola" then
+			self:setIlluminator(nil)
+		end
 		if not online then
 			self.black.Visible = true
 			self.cc.Enabled = false
@@ -474,10 +501,12 @@ function Tablet:render()
 			local night = Lighting.ClockTime >= 19.5 or Lighting.ClockTime < 6
 			local cc = self.cc
 			cc.Enabled = true
-			if camType == "IR" then
+			-- visione notturna a infrarossi di serie su tutte le telecamere
+			self:setIlluminator(night and body:FindFirstChild("Illuminatore") :: SpotLight? or nil)
+			if night then
 				cc.TintColor = Color3.fromRGB(170, 255, 175)
-				cc.Brightness = 0.32
-				cc.Contrast = 0.45
+				cc.Brightness = camType == "IR" and 0.3 or 0.24
+				cc.Contrast = 0.4 + noise * 0.4
 				cc.Saturation = -1
 			else
 				cc.TintColor = Color3.fromRGB(230, 240, 255)

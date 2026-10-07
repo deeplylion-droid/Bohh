@@ -113,11 +113,12 @@ function Scope:enter()
 			workspace.CurrentCamera.FieldOfView = 70 / self.zoom
 		end
 	end)
+	-- mirino stabilizzato: nessun movimento della visuale, solo un lievissimo ondeggiare del
+	-- reticolo quando hai il fiatone o sei nel panico
 	RunService:BindToRenderStep("MirinoOscillazione", Enum.RenderPriority.Camera.Value + 2, function()
 		local t = os.clock()
-		local amp = (0.0012 + self.sway * 0.006) * (4 / self.zoom + 0.5)
-		local camera2 = workspace.CurrentCamera
-		camera2.CFrame *= CFrame.Angles(math.sin(t * 1.3) * amp, math.sin(t * 0.9 + 1) * amp * 1.4, 0)
+		local drift = math.max(0, self.sway - 0.8) * 4
+		self.lens.Position = UDim2.new(0.5, math.sin(t * 1.1) * drift, 0.5, math.sin(t * 0.8 + 1) * drift * 0.6)
 		self.label.Text = ("%dx · dardi %d"):format(self.zoom, self.player:GetAttribute("Darts") or 0)
 	end)
 end
@@ -132,6 +133,7 @@ function Scope:exit()
 	self.player.CameraMode = self.savedMode or Enum.CameraMode.Classic
 	UserInputService.MouseDeltaSensitivity = 1
 	RunService:UnbindFromRenderStep("MirinoOscillazione")
+	self.lens.Position = UDim2.fromScale(0.5, 0.5)
 	if self.wheel then
 		self.wheel:Disconnect()
 		self.wheel = nil
