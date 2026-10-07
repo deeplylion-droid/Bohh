@@ -21,7 +21,6 @@ local Compass = require(script:WaitForChild("Compass"))
 local Gunfx = require(script:WaitForChild("Gunfx"))
 local Scares = require(script:WaitForChild("Scares"))
 local ArmPose = require(script:WaitForChild("ArmPose"))
-local WatchView = require(script:WaitForChild("WatchView"))
 
 local player = Players.LocalPlayer
 local mouse = player:GetMouse()
@@ -45,9 +44,10 @@ Scares.start(player, state, function()
 end)
 ArmPose.start(player, function()
 	return hud.watchShown
-end, remotes)
-WatchView.start(player, hud, function()
+end, remotes, function()
 	return tablet.isOpen or scope.active
+end, function()
+	hud:setWatchVisible(false)
 end)
 
 remotes.Notify.OnClientEvent:Connect(function(message)

@@ -220,8 +220,8 @@ return function()
 	end
 
 	local function onPlayerAdded(player: Player)
-		player.CameraMaxZoomDistance = 14
-		player.CameraMinZoomDistance = 0.5
+		-- gioco in prima persona
+		player.CameraMode = Enum.CameraMode.LockFirstPerson
 		player.CharacterAdded:Connect(function(char)
 			Team.watchCharacter(player, char)
 		end)

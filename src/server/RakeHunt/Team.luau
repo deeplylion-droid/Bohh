@@ -194,8 +194,9 @@ function Team.attachWatch(char: Model)
 	end
 	local r15 = arm.Name == "LeftLowerArm"
 	local wristCF = arm.CFrame * CFrame.new(0, -arm.Size.Y * (r15 and 0.3 or 0.38), 0)
-	-- il quadrante guarda verso l'esterno del braccio (-X)
-	local faceCF = wristCF * CFrame.new(-arm.Size.X / 2 - 0.07, 0, 0) * CFrame.Angles(0, math.pi / 2, 0)
+	-- il quadrante guarda verso l'esterno del braccio (-X) e il suo "alto" è l'asse +Z del braccio:
+	-- quando il braccio è portato davanti agli occhi (avambraccio orizzontale) il testo risulta dritto
+	local faceCF = wristCF * CFrame.new(-arm.Size.X / 2 - 0.07, 0, 0) * CFrame.fromMatrix(Vector3.zero, Vector3.new(0, 1, 0), Vector3.new(0, 0, 1), Vector3.new(1, 0, 0))
 	local parts = {
 		make("Part", nil, {
 			Name = "Cinturino",
@@ -231,7 +232,7 @@ function Team.attachWatch(char: Model)
 			Name = "Corona",
 			Shape = Enum.PartType.Cylinder,
 			Size = Vector3.new(0.1, 0.12, 0.12),
-			CFrame = faceCF * CFrame.new(0.36, 0.08, 0),
+			CFrame = faceCF * CFrame.new(0.36, 0.08, 0.02),
 			Color = Color3.fromRGB(110, 114, 118),
 			Material = Enum.Material.Metal,
 		}),
@@ -271,7 +272,7 @@ function Team.buildTools(player: Player, backpack: Instance)
 	local beam = make("SpotLight", aim, {
 		Name = "TorchLight",
 		Face = Enum.NormalId.Front,
-		Angle = 50,
+		Angle = 87.5, -- fascio ampio (+75%)
 		Range = 60,
 		Brightness = 7,
 		Shadows = true,
