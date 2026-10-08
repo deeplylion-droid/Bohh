@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -sS -X PATCH \"https://apis.roblox.com/cloud/v2/universes/10769777358?updateMask=visibility\"*)"
+    ]
+  }
+}
