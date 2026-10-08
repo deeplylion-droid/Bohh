@@ -23,23 +23,36 @@ function MapService.Init(services)
 	MapService.Folder = folder
 end
 
+-- Esegue un passo della costruzione: un errore viene segnalato ma non blocca gli altri passi
+local function stage(name: string, fn: () -> ())
+	local ok, err = pcall(fn)
+	if not ok then
+		warn(`[MapService] {name}: {err}`)
+	end
+end
+
 function MapService.Start()
 	local t0 = os.clock()
-	WorldLighting.Apply()
-	local ok, err = pcall(Terrain.Build)
-	if not ok then
-		warn(`[MapService] terreno: {err}`)
-	end
+	stage("luce", WorldLighting.Apply)
+	stage("terreno", Terrain.Build)
 	local folder = MapService.Folder :: Folder
 	local assets = {
 		Clone = function(category, name)
 			return S.AssetService.Clone(category, name)
 		end,
 	}
-	Scenery.Summit(folder, assets)
-	Scenery.Shelters(folder)
-	Scenery.CloudSea(folder)
-	Scenery.Decor(folder, assets, Terrain.HeightAt)
+	stage("vetta", function()
+		Scenery.Summit(folder, assets)
+	end)
+	stage("rifugi", function()
+		Scenery.Shelters(folder)
+	end)
+	stage("nuvole", function()
+		Scenery.CloudSea(folder)
+	end)
+	stage("decorazioni", function()
+		Scenery.Decor(folder, assets, Terrain.HeightAt)
+	end)
 	MapService.Ready = true
 	workspace:SetAttribute("MapBuildTime", os.clock() - t0)
 	MapService.Built:Fire()

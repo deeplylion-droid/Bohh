@@ -1,6 +1,8 @@
 -- Genera il terreno della montagna con i voxel di Roblox.
--- L'altezza di ogni colonna e' il massimo di "elementi": la vetta, le terrazze del sentiero
--- (piatte sul sentiero e con scarpate ripide intorno), le isole dei tornanti, il cratere e il vulcano.
+-- L'altezza di ogni colonna e' il massimo di "elementi": la vetta, le scarpate del sentiero,
+-- le isole dei tornanti e il cratere. Sul sentiero vero e proprio (la terrazza larga quanto il
+-- sentiero) l'altezza viene solo dai campioni del sentiero vicini: cosi' la superficie calpestabile
+-- coincide con MapLayout.PathPoint e le scarpate dei tratti piu' alti non la coprono.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -9,6 +11,7 @@ local MapLayout = require(ReplicatedStorage.Shared.MapLayout)
 local Terrain = {}
 
 local RES = 4
+local SURFACE_BIAS = RES * 0.5
 local X0, X1 = -324, 324
 local Z0, Z1 = -332, 832
 local Y0, Y1 = 44, 344
@@ -105,11 +108,22 @@ function Terrain.HeightAt(x: number, z: number): (number, string, string)
 	-- elementi vicini (la zona viene dall'elemento che "vince" con un po' di rumore,
 	-- cosi' i confini fra le zone sulle scarpate sono irregolari e naturali)
 	local list = buckets[bucketKey(math.floor(x / BUCKET), math.floor(z / BUCKET))]
+	-- terrazza: media pesata dei campioni del sentiero vicini (sui tratti dritti da' esattamente
+	-- la quota del punto del sentiero, negli angoli raccorda le quote senza gradini)
+	local terraceW, terraceSum, terraceZone, terraceBest = 0, 0, "Meadow", -1
 	if list then
 		local zoneScore = -math.huge
 		local jitter = noise(x, z, 14, 5.5) * 9
 		for _, f in list do
 			local d = math.sqrt((x - f.x) ^ 2 + (z - f.z) ^ 2)
+			if f.kind == "path" and d < f.r then
+				local w = (1 - d / f.r) ^ 3
+				terraceW += w
+				terraceSum += w * f.y
+				if w > terraceBest then
+					terraceBest, terraceZone = w, f.zone
+				end
+			end
 			local h = f.y - math.max(0, d - f.r) * f.k
 			if h > best then
 				best = h
@@ -124,6 +138,10 @@ function Terrain.HeightAt(x: number, z: number): (number, string, string)
 		if best < plateau + 0.01 and kind ~= "path" then
 			zone = "Summit"
 		end
+	end
+	-- sulla terrazza del sentiero vince sempre il sentiero (anche dentro il cratere e sul bordo)
+	if terraceW > 0 then
+		return terraceSum / terraceW, "path", terraceZone
 	end
 	-- cratere: conca con bordo rialzato e varco verso la rampa d'ingresso
 	local cc = MapLayout.Crater.Center
@@ -267,7 +285,9 @@ function Terrain.Build(): number
 				ox[iy] = table.create(nz, 0)
 			end
 			for iz = 1, nz do
-				local h = heights[ix][iz]
+				-- il motore disegna la superficie mezzo voxel sopra l'occupazione scritta (misurato:
+				-- +2.0 stud con RES 4): si compensa perche' la superficie cada esattamente a quota h
+				local h = heights[ix][iz] - SURFACE_BIAS
 				if h > Y0 then
 					local hl = heights[math.max(ix - 1, 1)][iz]
 					local hr = heights[math.min(ix + 1, nx)][iz]

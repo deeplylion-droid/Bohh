@@ -17,8 +17,8 @@ local function ensure(className: string, name: string, parent: Instance): Instan
 	return inst
 end
 
+-- Nota: Lighting.Technology non e' modificabile dagli script, e' impostata nel file di progetto.
 function World.Apply()
-	Lighting.Technology = Enum.Technology.Future
 	Lighting.Brightness = 2.6
 	Lighting.ClockTime = 13.6
 	Lighting.GeographicLatitude = 28
@@ -74,7 +74,10 @@ function World.Apply()
 	clouds.Density = 0.62
 	clouds.Color = Color3.fromRGB(255, 255, 255)
 
-	workspace.Terrain.Decoration = true
+	-- erba animata sul terreno (proprieta' non sempre scrivibile dagli script)
+	pcall(function()
+		workspace.Terrain.Decoration = true
+	end)
 	workspace.Terrain.WaterColor = Color3.fromRGB(80, 190, 255)
 end
 

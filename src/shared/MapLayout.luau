@@ -128,8 +128,8 @@ for i, leg in LEGS do
 		addArc(center, MapLayout.HairpinRadius, -math.pi / 2, sweep, leg.y1, nextLeg.y0, leg.zone)
 	end
 end
--- Discesa nel cratere
-addLine(Vector3.new(40, 124, 508), Vector3.new(70, 100, 560), "Crater")
+-- Discesa nel cratere: termina alla quota del fondo, cosi' si puo' sempre risalire
+addLine(Vector3.new(40, 124, 508), Vector3.new(70, 96, 560), "Crater")
 
 MapLayout.Segments = segments
 
