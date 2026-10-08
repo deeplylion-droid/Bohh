@@ -1,23 +1,65 @@
 {
-  "name": "CoinRush",
+  "name": "ClimbAndStealEggs",
   "tree": {
     "$className": "DataModel",
+    "ReplicatedFirst": {
+      "Loading": { "$path": "src/first/Loading.client.luau" }
+    },
     "ReplicatedStorage": {
-      "Shared": {
-        "$path": "src/shared"
-      }
+      "Shared": { "$path": "src/shared" }
     },
     "ServerScriptService": {
-      "GameMode": {
-        "$path": "src/server/GameMode"
-      }
+      "Server": { "$path": "src/server" }
     },
     "StarterPlayer": {
+      "$properties": {
+        "CameraMaxZoomDistance": 70,
+        "CharacterWalkSpeed": 16,
+        "CharacterJumpPower": 50,
+        "CharacterUseJumpPower": true,
+        "LoadCharacterAppearance": true
+      },
       "StarterPlayerScripts": {
-        "HUD": {
-          "$path": "src/client/HUD.client.luau"
-        }
+        "Client": { "$path": "src/client" }
+      },
+      "StarterCharacterScripts": {
+        "$properties": {}
       }
+    },
+    "StarterGui": {
+      "$properties": { "ResetPlayerGuiOnSpawn": false, "ScreenOrientation": "LandscapeSensor" }
+    },
+    "Players": {
+      "$properties": { "CharacterAutoLoads": false, "RespawnTime": 2 }
+    },
+    "Workspace": {
+      "$properties": {
+        "StreamingEnabled": false,
+        "FallenPartsDestroyHeight": -200,
+        "Gravity": 196.2
+      }
+    },
+    "Lighting": {
+      "$properties": {
+        "Technology": "Future",
+        "Brightness": 2.6,
+        "ClockTime": 13.5,
+        "GeographicLatitude": 30,
+        "Ambient": [0.36, 0.36, 0.42],
+        "OutdoorAmbient": [0.55, 0.55, 0.62],
+        "ColorShift_Top": [1, 0.96, 0.9],
+        "EnvironmentDiffuseScale": 1,
+        "EnvironmentSpecularScale": 0.6,
+        "ExposureCompensation": 0.1,
+        "GlobalShadows": true,
+        "ShadowSoftness": 0.25
+      }
+    },
+    "SoundService": {
+      "$properties": { "RespectFilteringEnabled": true }
+    },
+    "TextChatService": {
+      "$properties": { "ChatVersion": "TextChatService" }
     }
   }
 }

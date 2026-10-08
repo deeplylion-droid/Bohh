@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="it"><head><meta charset="utf-8">
+<style>
+@font-face { font-family: "Luckiest"; src: url("luckiest-guy-latin-400-normal.woff2"); }
+@font-face { font-family: "Fredoka"; src: url("fredoka-one-latin-400-normal.woff2"); }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { width: 1600px; height: 900px; overflow: hidden; background: #000; }
+body { width: 1600px; height: 900px; overflow: hidden; font-family: "Fredoka", sans-serif; color: #fff;
+  background: url("../out/scene/meadow_close.png") center/cover; position: relative; }
+.stroke { -webkit-text-stroke: 7px #1d1630; paint-order: stroke fill; text-shadow: 0 5px 0 #1d1630; }
+.stroke-s { -webkit-text-stroke: 5px #1d1630; paint-order: stroke fill; text-shadow: 0 3px 0 #1d1630; }
+.title { font-family: "Luckiest"; letter-spacing: 1px; }
+
+/* barra in alto a sinistra riservata al menu Roblox */
+.coins { position: absolute; top: 18px; left: 50%; transform: translateX(-50%); display: flex; align-items: center;
+  gap: 12px; padding: 8px 28px 8px 12px; border-radius: 40px; background: linear-gradient(#3b2c6b, #23184a);
+  border: 5px solid #1d1630; box-shadow: 0 6px 0 #1d1630, inset 0 3px 0 rgba(255,255,255,.18); }
+.coin { width: 58px; height: 58px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff6b0, #ffd21f 45%, #f59b00 80%);
+  border: 4px solid #1d1630; display: grid; place-items: center; font-family: "Luckiest"; font-size: 34px; color: #b86b00;
+  box-shadow: inset 0 -5px 0 rgba(0,0,0,.18); }
+.coins .val { font-family: "Luckiest"; font-size: 46px; color: #ffe14d; line-height: 1; }
+.coins .rate { font-size: 21px; color: #9dff6b; margin-top: 2px; }
+
+.warn { position: absolute; top: 136px; left: 50%; transform: translateX(-50%) rotate(-1.5deg); padding: 12px 34px;
+  border-radius: 22px; background: linear-gradient(#ff5a4e, #d81b2b); border: 5px solid #1d1630;
+  box-shadow: 0 7px 0 #1d1630, 0 0 40px rgba(255,60,60,.65), inset 0 4px 0 rgba(255,255,255,.3); text-align: center; }
+.warn .t { font-family: "Luckiest"; font-size: 44px; line-height: 1.05; }
+.warn .s { font-size: 23px; margin-top: 2px; }
+.warn .timer { color: #ffe14d; }
+
+.menu { position: absolute; left: 26px; top: 238px; display: grid; grid-template-columns: repeat(2, 112px); gap: 16px 14px; }
+.btn { text-align: center; }
+.btn .face { width: 112px; height: 104px; border-radius: 26px; border: 5px solid #1d1630; display: grid; place-items: center;
+  font-size: 56px; box-shadow: 0 7px 0 #1d1630, inset 0 5px 0 rgba(255,255,255,.35), inset 0 -8px 0 rgba(0,0,0,.15);
+  position: relative; }
+.btn .label { font-family: "Luckiest"; font-size: 23px; margin-top: 8px; }
+.green { background: linear-gradient(#8dff62, #22c23b); }
+.blue { background: linear-gradient(#69d8ff, #1b7dff); }
+.purple { background: linear-gradient(#d39bff, #8a3dff); }
+.pink { background: linear-gradient(#ff9ee0, #ff3c9e); }
+.badge { position: absolute; top: -12px; right: -12px; width: 38px; height: 38px; border-radius: 50%; background: #ff3b3b;
+  border: 4px solid #1d1630; font-family: "Luckiest"; font-size: 22px; display: grid; place-items: center; }
+.tilt-l { transform: rotate(-4deg); } .tilt-r { transform: rotate(4deg); }
+
+.event { position: absolute; right: 26px; top: 92px; width: 330px; border-radius: 22px; padding: 12px 16px 14px;
+  background: linear-gradient(#ffe36b, #ffab17); border: 5px solid #1d1630; box-shadow: 0 7px 0 #1d1630, inset 0 4px 0 rgba(255,255,255,.45);
+  display: flex; gap: 12px; align-items: center; }
+.event .ic { font-size: 50px; filter: drop-shadow(0 3px 0 #1d1630); }
+.event .t { font-family: "Luckiest"; font-size: 30px; line-height: 1; }
+.event .s { font-size: 19px; color: #5a3200; margin-top: 4px; }
+.chips { position: absolute; right: 26px; top: 222px; display: flex; flex-direction: column; gap: 10px; align-items: flex-end; }
+.chip { padding: 7px 16px 7px 10px; border-radius: 30px; background: rgba(29,22,48,.82); border: 4px solid #1d1630;
+  font-size: 22px; display: flex; gap: 8px; align-items: center; }
+.chip b { font-family: "Luckiest"; color: #9dff6b; font-weight: normal; }
+
+.carry { position: absolute; bottom: 26px; left: 50%; transform: translateX(-50%); display: flex; gap: 14px; align-items: center;
+  padding: 10px 24px 10px 12px; border-radius: 26px; background: linear-gradient(#3b2c6b, #23184a); border: 5px solid #1d1630;
+  box-shadow: 0 7px 0 #1d1630, inset 0 3px 0 rgba(255,255,255,.18); }
+.carry .egg { width: 70px; height: 84px; border-radius: 50% 50% 46% 46% / 58% 58% 42% 42%; border: 4px solid #1d1630;
+  background: radial-gradient(circle at 35% 30%, #fff3a0, #ffc21a 45%, #f08a00 85%); position: relative; }
+.carry .egg::after { content: ""; position: absolute; left: 6px; right: 6px; bottom: 6px; height: 26px;
+  background: repeating-linear-gradient(90deg, #ff5a14 0 10px, transparent 10px 18px); border-radius: 0 0 30px 30px; opacity: .9; }
+.carry .t { font-family: "Luckiest"; font-size: 30px; color: #ffc21a; line-height: 1; }
+.carry .s { font-size: 21px; margin-top: 4px; }
+.carry .s .slow { color: #ff8a7a; }
+.carry .hint { font-size: 18px; color: #c9bdf5; margin-top: 2px; }
+
+.slap { position: absolute; right: 190px; bottom: 120px; width: 132px; height: 132px; border-radius: 50%;
+  background: radial-gradient(circle at 40% 30%, #ff9b6b, #ff4f2e 60%, #d92a1b); border: 6px solid #1d1630;
+  box-shadow: 0 8px 0 #1d1630, inset 0 5px 0 rgba(255,255,255,.35); display: grid; place-items: center; text-align: center; }
+.slap .ic { font-size: 54px; line-height: 1; }
+.slap .l { font-family: "Luckiest"; font-size: 20px; margin-top: -4px; }
+
+.toast { position: absolute; left: 26px; bottom: 30px; max-width: 470px; padding: 12px 18px; border-radius: 20px;
+  background: rgba(29,22,48,.86); border: 4px solid #1d1630; font-size: 22px; line-height: 1.25; display: flex; gap: 12px; align-items: center; }
+.toast .ic { font-size: 40px; }
+.toast .leg { font-family: "Luckiest"; color: #ffc21a; }
+
+.prompt { position: absolute; left: 812px; top: 590px; display: flex; gap: 10px; align-items: center; }
+.key { width: 62px; height: 62px; border-radius: 50%; background: #fff; color: #1d1630; border: 5px solid #1d1630;
+  display: grid; place-items: center; font-family: "Luckiest"; font-size: 32px; position: relative;
+  box-shadow: 0 0 0 7px rgba(255,255,255,.35); }
+.ring { position: absolute; inset: -12px; border-radius: 50%; background: conic-gradient(#9dff6b 0 62%, transparent 62% 100%);
+  -webkit-mask: radial-gradient(circle, transparent 58%, #000 60%); }
+.prompt .txt { padding: 8px 18px; border-radius: 16px; background: rgba(29,22,48,.86); border: 4px solid #1d1630; }
+.prompt .a { font-family: "Luckiest"; font-size: 26px; }
+.prompt .o { font-size: 18px; color: #ffc21a; }
+
+.tag { position: absolute; left: 1150px; top: 545px; text-align: center; }
+.tag .r { font-family: "Luckiest"; font-size: 24px; color: #ffc21a; }
+.tag .n { font-size: 20px; }
+</style></head>
+<body>
+  <div class="coins"><div class="coin">$</div><div><div class="val stroke-s">$12.4K</div><div class="rate">+$85/s</div></div></div>
+
+  <div class="warn"><div class="t stroke-s">⚠ VALANGA TRA <span class="timer">12s</span>!</div><div class="s">Corri al riparo in un rifugio!</div></div>
+
+  <div class="menu">
+    <div class="btn tilt-l"><div class="face green">🛒<div class="badge">!</div></div><div class="label stroke-s">NEGOZIO</div></div>
+    <div class="btn tilt-r"><div class="face blue">⏫</div><div class="label stroke-s">POTENZIA</div></div>
+    <div class="btn tilt-r"><div class="face purple">📖</div><div class="label stroke-s">ALBUM</div></div>
+    <div class="btn tilt-l"><div class="face pink">🎁<div class="badge">2</div></div><div class="label stroke-s">REGALI</div></div>
+  </div>
+
+  <div class="event"><div class="ic">🌟</div><div><div class="t stroke-s">ORA D'ORO</div><div class="s">Mutazione Oro al 25% · 2:41</div></div></div>
+  <div class="chips">
+    <div class="chip">🍀 Fortuna <b>x2</b> · 14:59</div>
+    <div class="chip">👥 Bonus amici <b>+20%</b></div>
+  </div>
+
+  <div class="carry"><div class="egg"></div><div><div class="t stroke-s">UOVO LEGGENDARIO</div>
+    <div class="s">Velocità <span class="slow">-28%</span> · Pesante!</div><div class="hint">Portalo in cima, nel tuo lotto</div></div></div>
+
+  <div class="slap"><div><div class="ic">🖐️</div><div class="l stroke-s">SCHIAFFO</div></div></div>
+
+  <div class="toast"><div class="ic">📣</div><div>Un uovo <span class="leg stroke-s">LEGGENDARIO</span> è apparso nel <b>Cratere Vulcanico</b>!</div></div>
+
+  <div class="prompt"><div class="key"><div class="ring"></div>E</div><div class="txt"><div class="a stroke-s">RACCOGLI</div><div class="o">Uovo Comune</div></div></div>
+
+  <div class="tag"><div class="r stroke-s">★ LEGGENDARIO ★</div></div>
+</body></html>

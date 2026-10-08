@@ -1,0 +1,11 @@
+# Strumenti locali (scaricati da tools/setup.sh)
+.tools/
+# Output di build e cache
+build/*.rbxl
+build/*.rbxlx
+art/out/
+art/cache/
+__pycache__/
+*.pyc
+.DS_Store
+sourcemap.json

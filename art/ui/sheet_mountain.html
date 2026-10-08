@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="it"><head><meta charset="utf-8">
+<style>
+@font-face { font-family: "Luckiest"; src: url("luckiest-guy-latin-400-normal.woff2"); }
+@font-face { font-family: "Fredoka"; src: url("fredoka-one-latin-400-normal.woff2"); }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 1920px; height: 1080px; overflow: hidden; }
+body { font-family: "Fredoka"; color: #fff; background: radial-gradient(circle at 50% 0%, #8fd3ff, #4a7dff 55%, #3a3fb8); }
+.stroke { -webkit-text-stroke: 8px #1d1630; paint-order: stroke fill; text-shadow: 0 6px 0 #1d1630; }
+h1 { font-family: "Luckiest"; font-size: 64px; text-align: center; margin-top: 26px; }
+.sub { text-align: center; font-size: 26px; margin-top: 4px; color: #e8f2ff; }
+.row { display: flex; gap: 28px; justify-content: center; margin-top: 30px; }
+.shot { width: 900px; border-radius: 28px; border: 7px solid #1d1630; overflow: hidden; box-shadow: 0 10px 0 #1d1630; background: #1d1630; }
+.shot img { width: 100%; display: block; }
+.cap { padding: 14px 20px 16px; font-size: 22px; line-height: 1.3; background: #23184a; }
+.cap b { font-family: "Luckiest"; font-weight: normal; color: #ffe14d; font-size: 26px; }
+.list { margin: 28px auto 0; width: 1828px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+.it { background: rgba(29,22,48,.82); border: 4px solid #1d1630; border-radius: 20px; padding: 12px 18px; font-size: 21px; line-height: 1.3; }
+.it b { font-family: "Luckiest"; font-weight: normal; color: #9dff6b; font-size: 23px; }
+</style></head>
+<body>
+  <h1 class="stroke">LA MONTAGNA · ZONA PRATI</h1>
+  <div class="sub">Render di anteprima con le misure reali del gioco (sentiero largo 40 stud, avatar di 5 stud)</div>
+  <div class="row">
+    <div class="shot"><img src="../out/scene/meadow_close.png"><div class="cap"><b>Dal punto di vista del giocatore</b><br>Si sale con l'uovo sopra la testa; i nidi sono lungo il sentiero, la scarpata rocciosa separa i tornanti.</div></div>
+    <div class="shot"><img src="../out/scene/meadow_wide.png"><div class="cap"><b>Il tornante dall'alto</b><br>Due tratti collegati da una curva; una palla di neve rotola sul tratto alto, a sinistra c'è un rifugio anti-valanga.</div></div>
+  </div>
+  <div class="list">
+    <div class="it"><b>5 zone scendendo</b><br>Prati → Bosco → Canyon → Grotte di cristallo → Cratere vulcanico, ognuna con colori e ostacoli propri.</div>
+    <div class="it"><b>Vetta con 8 lotti</b><br>In cima, con incubatrici, piedistalli dei pet, barriera laser, trappole e classifiche nella piazza centrale.</div>
+    <div class="it"><b>In gioco in più</b><br>Luce e cielo pastello di Roblox, particelle (neve, foglie, lapilli), musica per zona ed eventi.</div>
+  </div>
+</body></html>
