@@ -495,6 +495,9 @@ function Tablet:render()
 					noise = math.max(noise, w.cameraNoise * 0.35)
 				end
 			end
+			if self.state:GetAttribute("Storm") then
+				noise = math.max(noise, Config.STORM.CAMERA_NOISE * 0.35)
+			end
 			local jitter = noise * 0.035
 			camera.CFrame = body.CFrame
 				* CFrame.new(0, 0, -1.25)
@@ -561,7 +564,7 @@ function Tablet:updatePanel()
 		("TRACCIAMENTO %s %d%%"):format(bar, tracking),
 		"ZONA DI CACCIA: " .. (zone ~= "" and string.upper(zone) or "SCONOSCIUTA"),
 		("COPERTURA %d%% · CAMERE %d · PROVE %d"):format(state:GetAttribute("Coverage") or 0, state:GetAttribute("CamerasActive") or 0, state:GetAttribute("Evidence") or 0),
-		("MINACCIA: %s · METEO: %s"):format(string.upper(state:GetAttribute("RakeState") or "—"), string.upper(state:GetAttribute("Weather") or "—")),
+		("MINACCIA: %s · METEO: %s"):format(string.upper(state:GetAttribute("RakeState") or "—"), (state:GetAttribute("Storm") and "TEMPORALE" or string.upper(state:GetAttribute("Weather") or "—"))),
 		"",
 		"<b>SQUADRA</b>",
 	}

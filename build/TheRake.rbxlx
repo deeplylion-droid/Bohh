@@ -1,4 +1,4 @@
-<roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4"><Item class="Workspace" referent="RBX2"><Properties><string name="Name">Workspace</string><bool name="StreamingEnabled">false</bool></Properties><Item class="Terrain" referent="RBX1"><Properties><string name="Name">Terrain</string><bool name="Decoration">true</bool></Properties></Item></Item><Item class="Lighting" referent="RBX3"><Properties><string name="Name">Lighting</string><token name="Technology">4</token><bool name="GlobalShadows">true</bool></Properties></Item><Item class="ReplicatedStorage" referent="RBX14"><Properties><string name="Name">ReplicatedStorage</string></Properties><Item class="Folder" referent="RBX13"><Properties><string name="Name">Shared</string></Properties><Item class="ModuleScript" referent="RBX4"><Properties><string name="Name">Assets</string><ProtectedString name="Source"><![CDATA[-- Generato da tools/meshgen/upload.py: non modificare a mano.
+<roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4"><Item class="Workspace" referent="RBX2"><Properties><string name="Name">Workspace</string><bool name="StreamingEnabled">false</bool></Properties><Item class="Terrain" referent="RBX1"><Properties><string name="Name">Terrain</string><bool name="Decoration">true</bool></Properties></Item></Item><Item class="Lighting" referent="RBX3"><Properties><string name="Name">Lighting</string><token name="Technology">4</token><bool name="GlobalShadows">true</bool></Properties></Item><Item class="ReplicatedStorage" referent="RBX15"><Properties><string name="Name">ReplicatedStorage</string></Properties><Item class="Folder" referent="RBX14"><Properties><string name="Name">Shared</string></Properties><Item class="ModuleScript" referent="RBX4"><Properties><string name="Name">Assets</string><ProtectedString name="Source"><![CDATA[-- Generato da tools/meshgen/upload.py: non modificare a mano.
 -- Modelli 3D caricati su Roblox e dimensioni originali (in stud) di ogni mesh.
 return {
 	ASSET_ID = 139270555213761,
@@ -95,7 +95,18 @@ return {
 		Sting = { start = 8.1, length = 2.4, loop = false },
 	},
 }
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX8"><Properties><string name="Name">Config</string><ProtectedString name="Source"><![CDATA[-- Impostazioni di "The Rake: Caccia nei Boschi". Modifica questi valori per bilanciare il gioco.
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX8"><Properties><string name="Name">Audio4</string><ProtectedString name="Source"><![CDATA[-- Generato da tools/audiogen/upload_audio.py --sheet4: non modificare a mano.
+-- Quarto foglio: temporale (tuono vicino e lontano, pioggia battente, vento).
+return {
+	SFX = "rbxassetid://126861568267288",
+	REGIONS = {
+		Thunder = { start = 0, length = 6, loop = false },
+		ThunderFar = { start = 6.5, length = 7, loop = false },
+		HeavyRain = { start = 14, length = 5.75, loop = true },
+		Wind = { start = 20.5, length = 7.6, loop = true },
+	},
+}
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX9"><Properties><string name="Name">Config</string><ProtectedString name="Source"><![CDATA[-- Impostazioni di "The Rake: Caccia nei Boschi". Modifica questi valori per bilanciare il gioco.
 -- Il modulo è condiviso: lo leggono sia il server sia i client.
 return {
 	-- Giocatori necessari per iniziare (il gioco è pensato per 1-8: imposta il massimo in Game Settings)
@@ -130,6 +141,18 @@ return {
 		LAKE = { center = Vector3.new(-235, 0, 205), radius = 55 },
 		-- Sentieri come coppie di indici di POIS (la stazione è collegata a tutti)
 		PATHS = { { 1, 2 }, { 1, 3 }, { 1, 4 }, { 1, 5 }, { 1, 6 }, { 2, 6 }, { 3, 4 }, { 4, 5 } },
+	},
+
+	-- Temporale: la notte è divisa in finestre da WINDOW secondi; in ognuna c'è CHANCE di probabilità
+	-- che scoppi, in un momento casuale, per DURATION secondi. Pioggia battente, vento, fulmini e
+	-- tuoni; il frastuono copre i rumori dei giocatori (la creatura sente NOISE_MASK volte meno).
+	STORM = {
+		WINDOW = 300,
+		CHANCE = 0.5,
+		DURATION = { 26, 34 },
+		NOISE_MASK = 0.5,
+		EXTRA_DENSITY = 0.14,
+		CAMERA_NOISE = 0.5,
 	},
 
 	-- Meteo estratto a ogni notte (weight = probabilità relativa, density = densità dell'atmosfera)
@@ -242,7 +265,7 @@ return {
 		{ name = "Leggenda", xp = 10000 },
 	},
 }
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX9"><Properties><string name="Name">Models</string><ProtectedString name="Source"><![CDATA[-- Modelli 3D generati da tools/meshgen e caricati su Roblox (vedi Assets.luau).
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX10"><Properties><string name="Name">Models</string><ProtectedString name="Source"><![CDATA[-- Modelli 3D generati da tools/meshgen e caricati su Roblox (vedi Assets.luau).
 -- Il server li carica una volta in ReplicatedStorage.RakeAssets; server e client li clonano da lì.
 -- Se il caricamento fallisce (ad esempio in un luogo di un altro proprietario) si usano blocchi semplici.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -344,7 +367,7 @@ function Models.mesh(name: string, originCF: CFrame, scale: number?, props: { [s
 end
 
 return Models
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX10"><Properties><string name="Name">RakeAsset</string><ProtectedString name="Source"><![CDATA[-- Generato da tools/meshgen/upload_creature.py: non modificare a mano.
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX11"><Properties><string name="Name">RakeAsset</string><ProtectedString name="Source"><![CDATA[-- Generato da tools/meshgen/upload_creature.py: non modificare a mano.
 -- Corpo di The Rake (mesh con scheletro) e posizione a riposo delle ossa (suolo a y = 0).
 return {
 	ASSET_ID = 83257652533464,
@@ -393,7 +416,7 @@ return {
 		ToeR = Vector3.new(0.56, 0.12, -0.28),
 	},
 }
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX11"><Properties><string name="Name">RakeRig</string><ProtectedString name="Source"><![CDATA[-- Corpo di The Rake: radice invisibile (HumanoidRootPart) più la mesh con scheletro (40 ossa),
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX12"><Properties><string name="Name">RakeRig</string><ProtectedString name="Source"><![CDATA[-- Corpo di The Rake: radice invisibile (HumanoidRootPart) più la mesh con scheletro (40 ossa),
 -- animata dai client tramite Bone.Transform. Usato dal server per la creatura vera e dai client
 -- per le allucinazioni (sagoma nera ancorata).
 local Models = require(script.Parent:WaitForChild("Models"))
@@ -452,13 +475,14 @@ function RakeRig.build(model: Model, rootCF: CFrame, opts: { ghost: boolean? }?)
 end
 
 return RakeRig
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX12"><Properties><string name="Name">Sfx</string><ProtectedString name="Source"><![CDATA[-- Suoni dai fogli di effetti sintetizzati (Audio, Audio2, Audio3): ogni effetto è un intervallo
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX13"><Properties><string name="Name">Sfx</string><ProtectedString name="Source"><![CDATA[-- Suoni dai fogli di effetti sintetizzati (Audio, Audio2, Audio3): ogni effetto è un intervallo
 -- di uno dei file, riprodotto con Sound.PlaybackRegion.
 local Shared = script.Parent
 local SHEETS = {
 	require(Shared:WaitForChild("Audio")),
 	require(Shared:WaitForChild("Audio2")),
 	require(Shared:WaitForChild("Audio3")),
+	require(Shared:WaitForChild("Audio4")),
 }
 
 local Sfx = {}
@@ -521,9 +545,9 @@ function Sfx.at(name: string, position: Vector3, props: { [string]: any }?)
 end
 
 return Sfx
-]]></ProtectedString></Properties></Item></Item></Item><Item class="ServerScriptService" referent="RBX24"><Properties><string name="Name">ServerScriptService</string></Properties><Item class="Script" referent="RBX23"><Properties><string name="Name">RakeHunt</string><ProtectedString name="Source"><![CDATA[-- Avvia la partita (tutta la logica è nel modulo Game).
+]]></ProtectedString></Properties></Item></Item></Item><Item class="ServerScriptService" referent="RBX25"><Properties><string name="Name">ServerScriptService</string></Properties><Item class="Script" referent="RBX24"><Properties><string name="Name">RakeHunt</string><ProtectedString name="Source"><![CDATA[-- Avvia la partita (tutta la logica è nel modulo Game).
 require(script.Game)()
-]]></ProtectedString></Properties><Item class="ModuleScript" referent="RBX15"><Properties><string name="Name">Cameras</string><ProtectedString name="Source"><![CDATA[-- Telecamere di sorveglianza: piazzamento, batteria, rilevamento della creatura e copertura della mappa.
+]]></ProtectedString></Properties><Item class="ModuleScript" referent="RBX16"><Properties><string name="Name">Cameras</string><ProtectedString name="Source"><![CDATA[-- Telecamere di sorveglianza: piazzamento, batteria, rilevamento della creatura e copertura della mappa.
 -- Tipi: Fissa (economica), IR (vede di notte), Motorizzata (ruota dal tablet), Trappola (scatta sul movimento).
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -884,7 +908,7 @@ function Cameras.tick(dt: number)
 end
 
 return Cameras
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX16"><Properties><string name="Name">Evidence</string><ProtectedString name="Source"><![CDATA[-- Prove e tracciamento: impronte, graffi, peli, sangue e carcasse lasciati dalla creatura.
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX17"><Properties><string name="Name">Evidence</string><ProtectedString name="Source"><![CDATA[-- Prove e tracciamento: impronte, graffi, peli, sangue e carcasse lasciati dalla creatura.
 -- Peli e sangue vanno analizzati al laboratorio. Alcune tracce sono depistaggi.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -1136,7 +1160,7 @@ function Evidence.reset()
 end
 
 return Evidence
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX17"><Properties><string name="Name">Forest</string><ProtectedString name="Source"><![CDATA[-- Il bosco: terreno irregolare (colline, creste rocciose, paludi, lago e pareti ai confini) generato una
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX18"><Properties><string name="Name">Forest</string><ProtectedString name="Source"><![CDATA[-- Il bosco: terreno irregolare (colline, creste rocciose, paludi, lago e pareti ai confini) generato una
 -- volta per server, sentieri, punti di interesse, e vegetazione con modelli 3D rigenerata a ogni notte.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CollectionService = game:GetService("CollectionService")
@@ -2260,7 +2284,7 @@ function Forest.regenerate(rng: Random)
 end
 
 return Forest
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX18"><Properties><string name="Name">Game</string><ProtectedString name="Source"><![CDATA[-- The Rake: Caccia nei Boschi — ciclo della partita.
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX19"><Properties><string name="Name">Game</string><ProtectedString name="Source"><![CDATA[-- The Rake: Caccia nei Boschi — ciclo della partita.
 -- Attesa -> Briefing (alla Ranger Station) -> Notte (caccia) -> Debriefing (XP e ranghi).
 -- Avviato da init.server.luau; i test lo richiamano direttamente.
 return function()
@@ -2465,7 +2489,7 @@ return function()
 		-- Verso l'alba la luce torna e la nebbia si dirada
 		local dawn = math.clamp((progress - 0.88) / 0.12, 0, 1)
 		Lighting.Brightness = 0.9 + dawn * 1.2
-		atmosphere.Density = ctx.weather.density * (1 - dawn * 0.4)
+		atmosphere.Density = (ctx.weather.density + (ctx.stormLevel or 0) * Config.STORM.EXTRA_DENSITY) * (1 - dawn * 0.4)
 	end
 
 	setDusk()
@@ -2612,6 +2636,11 @@ return function()
 
 		local start = os.clock()
 		local last = start
+		-- temporali: per ogni finestra si decide all'inizio se ce ne sarà uno e quando
+		local STORM = Config.STORM
+		local stormWindow, stormAt, stormUntil = -1, math.huge, 0
+		ctx.stormLevel = 0
+		state:SetAttribute("Storm", false)
 		while true do
 			task.wait(0.25)
 			local now = os.clock()
@@ -2619,6 +2648,27 @@ return function()
 			last = now
 			local progress = math.clamp((now - start) / Config.NIGHT_DURATION, 0, 1)
 			ctx.nightProgress = progress
+
+			local window = math.floor((now - start) / STORM.WINDOW)
+			if window ~= stormWindow then
+				stormWindow = window
+				local windowStart = start + window * STORM.WINDOW
+				local latest = math.min(STORM.WINDOW - STORM.DURATION[2] - 10, Config.NIGHT_DURATION - window * STORM.WINDOW - STORM.DURATION[2] - 10)
+				if latest > 20 and rng:NextNumber() < STORM.CHANCE then
+					stormAt = windowStart + rng:NextNumber(20, latest)
+				else
+					stormAt = math.huge
+				end
+			end
+			if now >= stormAt then
+				stormAt = math.huge
+				stormUntil = now + rng:NextNumber(STORM.DURATION[1], STORM.DURATION[2])
+				state:SetAttribute("Storm", true)
+				ctx.notifyAll("⛈ Scoppia un temporale! Il frastuono copre i vostri passi… e i suoi.")
+			elseif state:GetAttribute("Storm") and now >= stormUntil then
+				state:SetAttribute("Storm", false)
+			end
+			ctx.stormLevel = math.clamp(ctx.stormLevel + (state:GetAttribute("Storm") and dt / 4 or -dt / 6), 0, 1)
 			applyNight(progress)
 			state:SetAttribute("TimeLeft", math.max(0, math.ceil(Config.NIGHT_DURATION - (now - start))))
 
@@ -2645,6 +2695,8 @@ return function()
 
 	local function debrief(result: string, reason: string)
 		ctx.round.active = false
+		state:SetAttribute("Storm", false)
+		ctx.stormLevel = 0
 		setPhase("Debriefing")
 		Rake.despawn()
 		state:SetAttribute("RakeState", "Assente")
@@ -2739,7 +2791,7 @@ return function()
 		end
 	end
 end
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX19"><Properties><string name="Name">Objectives</string><ProtectedString name="Source"><![CDATA[-- Obiettivi di partita: Ricognizione, Caccia, Sopravvivenza, Reperto.
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX20"><Properties><string name="Name">Objectives</string><ProtectedString name="Source"><![CDATA[-- Obiettivi di partita: Ricognizione, Caccia, Sopravvivenza, Reperto.
 -- La cattura della creatura vale come vittoria con qualsiasi obiettivo.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -2932,7 +2984,7 @@ function Objectives.cleanup()
 end
 
 return Objectives
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX20"><Properties><string name="Name">Progression</string><ProtectedString name="Source"><![CDATA[-- Progressione persistente (DataStore): XP, livello e rango "Criptidologo".
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX21"><Properties><string name="Name">Progression</string><ProtectedString name="Source"><![CDATA[-- Progressione persistente (DataStore): XP, livello e rango "Criptidologo".
 -- In Studio serve "Enable Studio Access to API Services", altrimenti i dati restano solo in memoria.
 local DataStoreService = game:GetService("DataStoreService")
 local Players = game:GetService("Players")
@@ -3057,7 +3109,7 @@ game:BindToClose(function()
 end)
 
 return Progression
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX21"><Properties><string name="Name">Rake</string><ProtectedString name="Source"><![CDATA[-- The Rake: creatura controllata dal server. Comportamento elusivo "colpisci e scappa":
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX22"><Properties><string name="Name">Rake</string><ProtectedString name="Source"><![CDATA[-- The Rake: creatura controllata dal server. Comportamento elusivo "colpisci e scappa":
 --   Vaga      → gira intorno alla tana finché non trova qualcuno
 --   Pedina    → segue il bersaglio alle spalle, fuori dalla sua vista, nascosto dietro gli alberi
 --   Mostra    → compare davanti al bersaglio, resta immobile a fissarlo, poi sparisce
@@ -3491,6 +3543,9 @@ function Rake.hearNoise(pos: Vector3, loudness: number)
 	if not Rake.model or brain.knockedUntil > 0 or brain.captured then
 		return
 	end
+	if ctx.state:GetAttribute("Storm") then
+		loudness *= Config.STORM.NOISE_MASK -- il temporale copre i rumori
+	end
 	local d = (pos - root.Position).Magnitude
 	if d > 260 * loudness then
 		return
@@ -3856,7 +3911,7 @@ function Rake.despawn()
 end
 
 return Rake
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX22"><Properties><string name="Name">Team</string><ProtectedString name="Source"><![CDATA[-- La squadra: spawn, attrezzatura (torcia, telecamere, fucile a dardi), stato "Braccato" e rianimazione.
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX23"><Properties><string name="Name">Team</string><ProtectedString name="Source"><![CDATA[-- La squadra: spawn, attrezzatura (torcia, telecamere, fucile a dardi), stato "Braccato" e rianimazione.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -4442,7 +4497,7 @@ function Team.watchCharacter(player: Player, char: Model)
 end
 
 return Team
-]]></ProtectedString></Properties></Item></Item></Item><Item class="StarterPlayer" referent="RBX40"><Properties><string name="Name">StarterPlayer</string></Properties><Item class="StarterPlayerScripts" referent="RBX39"><Properties><string name="Name">StarterPlayerScripts</string></Properties><Item class="LocalScript" referent="RBX38"><Properties><string name="Name">RakeClient</string><ProtectedString name="Source"><![CDATA[-- Client di "The Rake": controlli, stamina e fiatone, Paura e allucinazioni, visore notturno,
+]]></ProtectedString></Properties></Item></Item></Item><Item class="StarterPlayer" referent="RBX41"><Properties><string name="Name">StarterPlayer</string></Properties><Item class="StarterPlayerScripts" referent="RBX40"><Properties><string name="Name">StarterPlayerScripts</string></Properties><Item class="LocalScript" referent="RBX39"><Properties><string name="Name">RakeClient</string><ProtectedString name="Source"><![CDATA[-- Client di "The Rake": controlli, stamina e fiatone, Paura e allucinazioni, visore notturno,
 -- fucile a dardi, tablet delle telecamere, atmosfera, animazione della creatura e HUD.
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -4867,7 +4922,7 @@ RunService.RenderStepped:Connect(function(dt)
 		dt = dt,
 	})
 end)
-]]></ProtectedString></Properties><Item class="ModuleScript" referent="RBX25"><Properties><string name="Name">Ambience</string><ProtectedString name="Source"><![CDATA[-- Atmosfera locale: nebbia bassa, lucciole, pioggia e lampi, luci che tremano (e muoiono quando la
+]]></ProtectedString></Properties><Item class="ModuleScript" referent="RBX26"><Properties><string name="Name">Ambience</string><ProtectedString name="Source"><![CDATA[-- Atmosfera locale: nebbia bassa, lucciole, pioggia e lampi, luci che tremano (e muoiono quando la
 -- creatura è vicina), suoni d'ambiente, battito cardiaco, respiro affannato e rumori improvvisi.
 local Lighting = game:GetService("Lighting")
 local CollectionService = game:GetService("CollectionService")
@@ -4988,6 +5043,19 @@ function Ambience.start(player: Player, state: Folder, onHallucination: () -> ()
 	ambience.Parent = SoundService
 	ambience:Play()
 	local rainSound = Sfx.new("Rain", SoundService, { Volume = 0 })
+	-- temporale
+	local stormRain = Sfx.new("HeavyRain", SoundService, { Volume = 0 })
+	local stormWind = Sfx.new("Wind", SoundService, { Volume = 0 })
+	stormRain:Play()
+	stormWind:Play()
+	local stormLevel = 0
+	local nextStormBolt = 0
+	local flash = Instance.new("PointLight") -- lampo che illumina davvero il bosco attorno a te
+	flash.Range = 60
+	flash.Brightness = 0
+	flash.Shadows = true
+	flash.Color = Color3.fromRGB(200, 215, 255)
+	flash.Parent = rainPart
 	local heartbeat = Sfx.new("Heartbeat", SoundService, { Volume = 0 })
 	local breathing = Sfx.new("Breathing", SoundService, { Volume = 0 })
 	rainSound:Play()
@@ -5018,7 +5086,9 @@ function Ambience.start(player: Player, state: Folder, onHallucination: () -> ()
 		local camPos = camera.CFrame.Position
 		local phase = state:GetAttribute("Phase")
 		local night = Lighting.ClockTime >= 19.5 or Lighting.ClockTime < 6
-		local raining = state:GetAttribute("Weather") == "Pioggia" and phase == "Notte"
+		local storm = state:GetAttribute("Storm") == true and phase == "Notte"
+		stormLevel = math.clamp(stormLevel + (storm and dt / 3 or -dt / 5), 0, 1)
+		local raining = (state:GetAttribute("Weather") == "Pioggia" or stormLevel > 0.05) and phase == "Notte"
 
 		if now >= nextFollow then
 			nextFollow = now + 0.3
@@ -5031,7 +5101,35 @@ function Ambience.start(player: Player, state: Folder, onHallucination: () -> ()
 		end
 		rainPart.CFrame = CFrame.new(camPos + Vector3.new(0, 35, 0))
 		rain.Enabled = raining
-		rainSound.Volume = raining and 0.6 or 0
+		-- temporale: pioggia fitta inclinata dal vento, scroscio e raffiche
+		rain.Rate = 900 + 2600 * stormLevel
+		rain.Speed = NumberRange.new(75 + 30 * stormLevel, 85 + 35 * stormLevel)
+		rain.Acceleration = Vector3.new(28, 0, 10) * stormLevel
+		rainSound.Volume = raining and 0.6 * (1 - stormLevel * 0.5) or 0
+		stormRain.Volume = 1.1 * stormLevel
+		stormWind.Volume = 0.7 * stormLevel
+
+		if storm and now >= nextStormBolt then
+			nextStormBolt = now + 2.5 + math.random() * 5
+			local close = math.random() < 0.35
+			task.spawn(function()
+				-- lampo: scatti di luce bianco-azzurra, poi il tuono arriva dopo un po' (più è lontano, più tarda)
+				for _ = 1, math.random(2, 4) do
+					lightning.Brightness = close and 0.7 or 0.35
+					lightning.Contrast = close and 0.35 or 0.15
+					flash.Brightness = close and 6 or 2.5
+					TweenService:Create(lightning, TweenInfo.new(0.15), { Brightness = 0, Contrast = 0 }):Play()
+					TweenService:Create(flash, TweenInfo.new(0.2), { Brightness = 0 }):Play()
+					task.wait(0.06 + math.random() * 0.12)
+				end
+				task.wait(close and 0.2 + math.random() * 0.4 or 1.2 + math.random() * 2)
+				Sfx.new(close and "Thunder" or "ThunderFar", SoundService, {
+					Volume = close and 2.4 or 1.6,
+					PlaybackSpeed = 0.85 + math.random() * 0.3,
+					PlayOnRemove = true,
+				}):Destroy()
+			end)
+		end
 
 		if raining and now >= nextBolt then
 			nextBolt = now + math.random(15, 40)
@@ -5097,7 +5195,7 @@ function Ambience.start(player: Player, state: Folder, onHallucination: () -> ()
 end
 
 return Ambience
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX26"><Properties><string name="Name">ArmPose</string><ProtectedString name="Source"><![CDATA[-- Braccia in prima persona (client, sul proprio personaggio):
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX27"><Properties><string name="Name">ArmPose</string><ProtectedString name="Source"><![CDATA[-- Braccia in prima persona (client, sul proprio personaggio):
 --  - fascio della torcia orientato ogni frame come la visuale e inviato al server;
 --  - braccio destro: con torcia o fucile segue la visuale anche in verticale;
 --  - braccio sinistro (tasto G): una copia del braccio della skin agganciata alla telecamera, messa in
@@ -5633,7 +5731,7 @@ function ArmPose.start(player: Player, watchShown: () -> boolean, remotes: Folde
 end
 
 return ArmPose
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX27"><Properties><string name="Name">CamFeed</string><ProtectedString name="Source"><![CDATA[-- Anteprime delle telecamere sui monitor della Ranger Station (solo client).
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX28"><Properties><string name="Name">CamFeed</string><ProtectedString name="Source"><![CDATA[-- Anteprime delle telecamere sui monitor della Ranger Station (solo client).
 -- Ogni monitor ha un ViewportFrame con una ricostruzione della scena davanti alla telecamera:
 -- terreno campionato, alberi/rocce/costruzioni clonati una volta, creatura (con la sua posa) e
 -- compagni aggiornati 10 volte al secondo. I feed si attivano solo vicino alla stazione.
@@ -6019,7 +6117,7 @@ function CamFeed.start(player: Player)
 end
 
 return CamFeed
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX28"><Properties><string name="Name">Compass</string><ProtectedString name="Source"><![CDATA[-- Bussola in alto, trasparente: tacche e punti cardinali, icone dei punti di interesse con la
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX29"><Properties><string name="Name">Compass</string><ProtectedString name="Source"><![CDATA[-- Bussola in alto, trasparente: tacche e punti cardinali, icone dei punti di interesse con la
 -- distanza in metri, la destinazione (che indica la direzione del sentiero da seguire e la
 -- distanza lungo il percorso), compagni, area di caccia e ultimo avvistamento.
 local Players = game:GetService("Players")
@@ -6255,7 +6353,7 @@ function Compass:update()
 end
 
 return Compass
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX29"><Properties><string name="Name">Gunfx</string><ProtectedString name="Source"><![CDATA[-- Effetti del fucile a dardi (client): fiammata con luce che illumina il bosco, fumo, rinculo
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX30"><Properties><string name="Name">Gunfx</string><ProtectedString name="Source"><![CDATA[-- Effetti del fucile a dardi (client): fiammata con luce che illumina il bosco, fumo, rinculo
 -- (la canna sale e torna giù a metà), sobbalzo dell'arma, lampo e colpo di zoom, sparo con eco e
 -- otturatore, dardo visibile in volo che resta conficcato dove colpisce, conferma del colpo.
 local Players = game:GetService("Players")
@@ -6541,7 +6639,7 @@ function Gunfx.start(remotes: Folder)
 end
 
 return Gunfx
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX30"><Properties><string name="Name">Hud</string><ProtectedString name="Source"><![CDATA[-- HUD minimale: fase e obiettivo, barre del giocatore, stato della caccia, squadra, notifiche e debriefing.
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX31"><Properties><string name="Name">Hud</string><ProtectedString name="Source"><![CDATA[-- HUD minimale: fase e obiettivo, barre del giocatore, stato della caccia, squadra, notifiche e debriefing.
 local Lighting = game:GetService("Lighting")
 local TweenService = game:GetService("TweenService")
 
@@ -6872,7 +6970,7 @@ function Hud:showDebrief(data)
 end
 
 return Hud
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX31"><Properties><string name="Name">MapView</string><ProtectedString name="Source"><![CDATA[-- Mappa del tablet: biomi, lago, sentieri, punti di interesse (toccali per sceglierli come
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX32"><Properties><string name="Name">MapView</string><ProtectedString name="Source"><![CDATA[-- Mappa del tablet: biomi, lago, sentieri, punti di interesse (toccali per sceglierli come
 -- destinazione), percorso giallo da seguire, la tua freccia, compagni, telecamere con il loro
 -- cono visivo, area di caccia e ultimo avvistamento.
 local Players = game:GetService("Players")
@@ -7144,7 +7242,7 @@ function MapView:update(player: Player, state: Folder, selectedCam: Model?)
 end
 
 return MapView
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX32"><Properties><string name="Name">Nav</string><ProtectedString name="Source"><![CDATA[-- Navigazione condivisa da bussola e mappa del tablet: destinazione scelta (o automatica in base
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX33"><Properties><string name="Name">Nav</string><ProtectedString name="Source"><![CDATA[-- Navigazione condivisa da bussola e mappa del tablet: destinazione scelta (o automatica in base
 -- all'obiettivo) e percorso lungo la rete dei sentieri (Dijkstra sui punti di interesse).
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -7312,7 +7410,7 @@ function Nav.nextWaypoint(points: { Vector3 }, from: Vector3): Vector3
 end
 
 return Nav
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX33"><Properties><string name="Name">RakeAnimator</string><ProtectedString name="Source"><![CDATA[-- Animazione di The Rake (solo client, Bone.Transform sulle 40 ossa): movimenti violenti e a scatti.
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX34"><Properties><string name="Name">RakeAnimator</string><ProtectedString name="Source"><![CDATA[-- Animazione di The Rake (solo client, Bone.Transform sulle 40 ossa): movimenti violenti e a scatti.
 -- La posa non viene interpolata: salta da una posa all'altra a intervalli irregolari (stop-motion),
 -- con perturbazioni casuali enormi. Andatura sconclusionata, testa che ciondola e si capovolge,
 -- convulsioni quando si mostra, braccia che si agitano quando carica, posa da jumpscare quando attacca.
@@ -7612,7 +7710,7 @@ function RakeAnimator.start(state: Folder)
 end
 
 return RakeAnimator
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX34"><Properties><string name="Name">Scares</string><ProtectedString name="Source"><![CDATA[-- Spaventi locali: jumpscare quando la creatura ti abbatte (la visuale viene strappata sulla sua
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX35"><Properties><string name="Name">Scares</string><ProtectedString name="Source"><![CDATA[-- Spaventi locali: jumpscare quando la creatura ti abbatte (la visuale viene strappata sulla sua
 -- faccia, urlo distorto, tremore e lampi rossi) e stacco musicale quando ti si mostra davanti.
 local RunService = game:GetService("RunService")
 local SoundService = game:GetService("SoundService")
@@ -7728,7 +7826,7 @@ function Scares.start(player: Player, state: Folder, onFlash: () -> ()): () -> b
 end
 
 return Scares
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX35"><Properties><string name="Name">Scope</string><ProtectedString name="Source"><![CDATA[-- Mirino telescopico del fucile a dardi: tasto destro (o pulsante "Mirino") con il fucile in mano.
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX36"><Properties><string name="Name">Scope</string><ProtectedString name="Source"><![CDATA[-- Mirino telescopico del fucile a dardi: tasto destro (o pulsante "Mirino") con il fucile in mano.
 -- Prima persona, zoom 2x-8x con la rotella, reticolo con tacche, oscillazione del respiro che
 -- cresce con paura e fiatone, leggera intensificazione della luce.
 local RunService = game:GetService("RunService")
@@ -7895,7 +7993,7 @@ function Scope:bind()
 end
 
 return Scope
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX36"><Properties><string name="Name">Tablet</string><ProtectedString name="Source"><![CDATA[-- Tablet di sorveglianza: la visuale passa alla telecamera scelta, dentro la cornice di un tablet
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX37"><Properties><string name="Name">Tablet</string><ProtectedString name="Source"><![CDATA[-- Tablet di sorveglianza: la visuale passa alla telecamera scelta, dentro la cornice di un tablet
 -- rinforzato, con scanline, rumore quando la creatura è vicina, visione IR, zoom e mini-mappa.
 -- Ogni frame è protetto da pcall: in caso di errore il tablet lo mostra e resta chiudibile.
 local RunService = game:GetService("RunService")
@@ -8392,6 +8490,9 @@ function Tablet:render()
 					noise = math.max(noise, w.cameraNoise * 0.35)
 				end
 			end
+			if self.state:GetAttribute("Storm") then
+				noise = math.max(noise, Config.STORM.CAMERA_NOISE * 0.35)
+			end
 			local jitter = noise * 0.035
 			camera.CFrame = body.CFrame
 				* CFrame.new(0, 0, -1.25)
@@ -8458,7 +8559,7 @@ function Tablet:updatePanel()
 		("TRACCIAMENTO %s %d%%"):format(bar, tracking),
 		"ZONA DI CACCIA: " .. (zone ~= "" and string.upper(zone) or "SCONOSCIUTA"),
 		("COPERTURA %d%% · CAMERE %d · PROVE %d"):format(state:GetAttribute("Coverage") or 0, state:GetAttribute("CamerasActive") or 0, state:GetAttribute("Evidence") or 0),
-		("MINACCIA: %s · METEO: %s"):format(string.upper(state:GetAttribute("RakeState") or "—"), string.upper(state:GetAttribute("Weather") or "—")),
+		("MINACCIA: %s · METEO: %s"):format(string.upper(state:GetAttribute("RakeState") or "—"), (state:GetAttribute("Storm") and "TEMPORALE" or string.upper(state:GetAttribute("Weather") or "—"))),
 		"",
 		"<b>SQUADRA</b>",
 	}
@@ -8483,7 +8584,7 @@ function Tablet:toggleMap()
 end
 
 return Tablet
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX37"><Properties><string name="Name">Watch</string><ProtectedString name="Source"><![CDATA[-- Smartwatch al polso (HUD in basso a sinistra): anelli di stamina e paura, ora e bussola,
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX38"><Properties><string name="Name">Watch</string><ProtectedString name="Source"><![CDATA[-- Smartwatch al polso (HUD in basso a sinistra): anelli di stamina e paura, ora e bussola,
 -- battito cardiaco che pulsa, batterie di torcia e visore, attrezzatura e avvisi con bip.
 local Lighting = game:GetService("Lighting")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")

@@ -119,6 +119,19 @@ function Ambience.start(player: Player, state: Folder, onHallucination: () -> ()
 	ambience.Parent = SoundService
 	ambience:Play()
 	local rainSound = Sfx.new("Rain", SoundService, { Volume = 0 })
+	-- temporale
+	local stormRain = Sfx.new("HeavyRain", SoundService, { Volume = 0 })
+	local stormWind = Sfx.new("Wind", SoundService, { Volume = 0 })
+	stormRain:Play()
+	stormWind:Play()
+	local stormLevel = 0
+	local nextStormBolt = 0
+	local flash = Instance.new("PointLight") -- lampo che illumina davvero il bosco attorno a te
+	flash.Range = 60
+	flash.Brightness = 0
+	flash.Shadows = true
+	flash.Color = Color3.fromRGB(200, 215, 255)
+	flash.Parent = rainPart
 	local heartbeat = Sfx.new("Heartbeat", SoundService, { Volume = 0 })
 	local breathing = Sfx.new("Breathing", SoundService, { Volume = 0 })
 	rainSound:Play()
@@ -149,7 +162,9 @@ function Ambience.start(player: Player, state: Folder, onHallucination: () -> ()
 		local camPos = camera.CFrame.Position
 		local phase = state:GetAttribute("Phase")
 		local night = Lighting.ClockTime >= 19.5 or Lighting.ClockTime < 6
-		local raining = state:GetAttribute("Weather") == "Pioggia" and phase == "Notte"
+		local storm = state:GetAttribute("Storm") == true and phase == "Notte"
+		stormLevel = math.clamp(stormLevel + (storm and dt / 3 or -dt / 5), 0, 1)
+		local raining = (state:GetAttribute("Weather") == "Pioggia" or stormLevel > 0.05) and phase == "Notte"
 
 		if now >= nextFollow then
 			nextFollow = now + 0.3
@@ -162,7 +177,35 @@ function Ambience.start(player: Player, state: Folder, onHallucination: () -> ()
 		end
 		rainPart.CFrame = CFrame.new(camPos + Vector3.new(0, 35, 0))
 		rain.Enabled = raining
-		rainSound.Volume = raining and 0.6 or 0
+		-- temporale: pioggia fitta inclinata dal vento, scroscio e raffiche
+		rain.Rate = 900 + 2600 * stormLevel
+		rain.Speed = NumberRange.new(75 + 30 * stormLevel, 85 + 35 * stormLevel)
+		rain.Acceleration = Vector3.new(28, 0, 10) * stormLevel
+		rainSound.Volume = raining and 0.6 * (1 - stormLevel * 0.5) or 0
+		stormRain.Volume = 1.1 * stormLevel
+		stormWind.Volume = 0.7 * stormLevel
+
+		if storm and now >= nextStormBolt then
+			nextStormBolt = now + 2.5 + math.random() * 5
+			local close = math.random() < 0.35
+			task.spawn(function()
+				-- lampo: scatti di luce bianco-azzurra, poi il tuono arriva dopo un po' (più è lontano, più tarda)
+				for _ = 1, math.random(2, 4) do
+					lightning.Brightness = close and 0.7 or 0.35
+					lightning.Contrast = close and 0.35 or 0.15
+					flash.Brightness = close and 6 or 2.5
+					TweenService:Create(lightning, TweenInfo.new(0.15), { Brightness = 0, Contrast = 0 }):Play()
+					TweenService:Create(flash, TweenInfo.new(0.2), { Brightness = 0 }):Play()
+					task.wait(0.06 + math.random() * 0.12)
+				end
+				task.wait(close and 0.2 + math.random() * 0.4 or 1.2 + math.random() * 2)
+				Sfx.new(close and "Thunder" or "ThunderFar", SoundService, {
+					Volume = close and 2.4 or 1.6,
+					PlaybackSpeed = 0.85 + math.random() * 0.3,
+					PlayOnRemove = true,
+				}):Destroy()
+			end)
+		end
 
 		if raining and now >= nextBolt then
 			nextBolt = now + math.random(15, 40)

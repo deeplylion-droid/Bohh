@@ -203,7 +203,7 @@ return function()
 		-- Verso l'alba la luce torna e la nebbia si dirada
 		local dawn = math.clamp((progress - 0.88) / 0.12, 0, 1)
 		Lighting.Brightness = 0.9 + dawn * 1.2
-		atmosphere.Density = ctx.weather.density * (1 - dawn * 0.4)
+		atmosphere.Density = (ctx.weather.density + (ctx.stormLevel or 0) * Config.STORM.EXTRA_DENSITY) * (1 - dawn * 0.4)
 	end
 
 	setDusk()
@@ -350,6 +350,11 @@ return function()
 
 		local start = os.clock()
 		local last = start
+		-- temporali: per ogni finestra si decide all'inizio se ce ne sarà uno e quando
+		local STORM = Config.STORM
+		local stormWindow, stormAt, stormUntil = -1, math.huge, 0
+		ctx.stormLevel = 0
+		state:SetAttribute("Storm", false)
 		while true do
 			task.wait(0.25)
 			local now = os.clock()
@@ -357,6 +362,27 @@ return function()
 			last = now
 			local progress = math.clamp((now - start) / Config.NIGHT_DURATION, 0, 1)
 			ctx.nightProgress = progress
+
+			local window = math.floor((now - start) / STORM.WINDOW)
+			if window ~= stormWindow then
+				stormWindow = window
+				local windowStart = start + window * STORM.WINDOW
+				local latest = math.min(STORM.WINDOW - STORM.DURATION[2] - 10, Config.NIGHT_DURATION - window * STORM.WINDOW - STORM.DURATION[2] - 10)
+				if latest > 20 and rng:NextNumber() < STORM.CHANCE then
+					stormAt = windowStart + rng:NextNumber(20, latest)
+				else
+					stormAt = math.huge
+				end
+			end
+			if now >= stormAt then
+				stormAt = math.huge
+				stormUntil = now + rng:NextNumber(STORM.DURATION[1], STORM.DURATION[2])
+				state:SetAttribute("Storm", true)
+				ctx.notifyAll("⛈ Scoppia un temporale! Il frastuono copre i vostri passi… e i suoi.")
+			elseif state:GetAttribute("Storm") and now >= stormUntil then
+				state:SetAttribute("Storm", false)
+			end
+			ctx.stormLevel = math.clamp(ctx.stormLevel + (state:GetAttribute("Storm") and dt / 4 or -dt / 6), 0, 1)
 			applyNight(progress)
 			state:SetAttribute("TimeLeft", math.max(0, math.ceil(Config.NIGHT_DURATION - (now - start))))
 
@@ -383,6 +409,8 @@ return function()
 
 	local function debrief(result: string, reason: string)
 		ctx.round.active = false
+		state:SetAttribute("Storm", false)
+		ctx.stormLevel = 0
 		setPhase("Debriefing")
 		Rake.despawn()
 		state:SetAttribute("RakeState", "Assente")

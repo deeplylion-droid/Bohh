@@ -5,6 +5,7 @@ local SHEETS = {
 	require(Shared:WaitForChild("Audio")),
 	require(Shared:WaitForChild("Audio2")),
 	require(Shared:WaitForChild("Audio3")),
+	require(Shared:WaitForChild("Audio4")),
 }
 
 local Sfx = {}

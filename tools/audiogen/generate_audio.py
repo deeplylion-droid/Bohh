@@ -316,6 +316,63 @@ def sting(d=2.4):
     return norm(reverb(np.tanh(x * 2.5), 2.5, 0.45), 0.95)
 
 
+
+# --- Temporale (quarto foglio) ---------------------------------------------------------------
+
+def thunder(d=6.0):
+    """Fulmine vicino: schiocco secco, rombo che rotola e si spegne lentamente."""
+    t = t_axis(d)
+    crack = band(noise(d), 1500, 12000) * np.exp(-t * 18) * 1.4
+    crack += band(noise(d), 300, 3000) * np.exp(-t * 6) * 0.8
+    rumble = band(noise(d, "brown"), 25, 220)
+    # modulazione irregolare: il rombo "rotola" tra le colline
+    mod = np.interp(t, np.linspace(0, d, 14), 0.4 + rng.random(14) * 0.9)
+    rumble *= mod * np.exp(-t * 0.55) * np.clip(t / 0.15, 0, 1)
+    x = crack + rumble * 2.2
+    x *= env(len(x), 0.005, 1.5)
+    return norm(reverb(x, decay=2.5, mix=0.4), 0.95)
+
+
+def thunder_far(d=7.0):
+    """Tuono lontano: solo un rombo basso che sale e scende."""
+    t = t_axis(d)
+    rumble = band(noise(d, "brown"), 20, 160)
+    mod = np.interp(t, np.linspace(0, d, 10), 0.3 + rng.random(10) * 0.8)
+    x = rumble * mod * np.clip(t / 0.8, 0, 1) * np.exp(-t * 0.4)
+    x *= env(len(x), 0.6, 2.0)
+    return norm(reverb(x, decay=3.0, mix=0.5), 0.8)
+
+
+def heavy_rain(d=6.0):
+    """Pioggia battente in loop (più densa e scrosciante di quella normale)."""
+    x = band(noise(d, "pink"), 250, 10000)
+    drops = (rng.random(len(x)) > 0.99) * rng.standard_normal(len(x))
+    x += band(drops, 1500, 9000) * 2.5
+    x += band(noise(d, "brown"), 60, 400) * 0.6  # rombo dell'acqua sulle foglie
+    # dissolvenza incrociata ai bordi per un loop senza scatti
+    fade = int(0.25 * SR)
+    x[:fade] = x[:fade] * np.linspace(0, 1, fade) + x[-fade:] * np.linspace(1, 0, fade)
+    return norm(x[: len(x) - fade], 0.8)
+
+
+def wind(d=8.0):
+    """Raffiche di vento tra gli alberi, in loop."""
+    t = t_axis(d)
+    x = band(noise(d, "pink"), 120, 1800)
+    gust = 0.35 + 0.65 * (0.5 + 0.5 * np.sin(2 * np.pi * t / d * 3 + np.sin(2 * np.pi * t / d) * 2))
+    x *= gust
+    fade = int(0.4 * SR)
+    x[:fade] = x[:fade] * np.linspace(0, 1, fade) + x[-fade:] * np.linspace(1, 0, fade)
+    return norm(x[: len(x) - fade], 0.7)
+
+
+SEGMENTS4 = [
+    ("Thunder", thunder, 0.0, False),
+    ("ThunderFar", thunder_far, 6.5, False),
+    ("HeavyRain", heavy_rain, 14.0, True),
+    ("Wind", wind, 20.5, True),
+]
+
 SEGMENTS3 = [
     ("RifleShot", rifle_shot, 0.0, False),
     ("BoltCycle", bolt_cycle, 3.0, False),
@@ -396,6 +453,11 @@ def build_sheet(segments, total, path):
 
 def main():
     os.makedirs(OUT, exist_ok=True)
+    if "--sheet4" in sys.argv:
+        regions4 = build_sheet(SEGMENTS4, 29.0, os.path.join(OUT, "Sfx4.ogg"))
+        json.dump(regions4, open(os.path.join(OUT, "regions4.json"), "w"), indent=1)
+        print("Creato Sfx4.ogg")
+        return
     if "--sheet3" in sys.argv:
         regions3 = build_sheet(SEGMENTS3, 10.6, os.path.join(OUT, "Sfx3.ogg"))
         json.dump(regions3, open(os.path.join(OUT, "regions3.json"), "w"), indent=1)

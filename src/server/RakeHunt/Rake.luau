@@ -432,6 +432,9 @@ function Rake.hearNoise(pos: Vector3, loudness: number)
 	if not Rake.model or brain.knockedUntil > 0 or brain.captured then
 		return
 	end
+	if ctx.state:GetAttribute("Storm") then
+		loudness *= Config.STORM.NOISE_MASK -- il temporale copre i rumori
+	end
 	local d = (pos - root.Position).Magnitude
 	if d > 260 * loudness then
 		return

@@ -35,6 +35,18 @@ return {
 		PATHS = { { 1, 2 }, { 1, 3 }, { 1, 4 }, { 1, 5 }, { 1, 6 }, { 2, 6 }, { 3, 4 }, { 4, 5 } },
 	},
 
+	-- Temporale: la notte è divisa in finestre da WINDOW secondi; in ognuna c'è CHANCE di probabilità
+	-- che scoppi, in un momento casuale, per DURATION secondi. Pioggia battente, vento, fulmini e
+	-- tuoni; il frastuono copre i rumori dei giocatori (la creatura sente NOISE_MASK volte meno).
+	STORM = {
+		WINDOW = 300,
+		CHANCE = 0.5,
+		DURATION = { 26, 34 },
+		NOISE_MASK = 0.5,
+		EXTRA_DENSITY = 0.14,
+		CAMERA_NOISE = 0.5,
+	},
+
 	-- Meteo estratto a ogni notte (weight = probabilità relativa, density = densità dell'atmosfera)
 	WEATHER = {
 		{ name = "Sereno", weight = 4, density = 0.36, cameraNoise = 0 },

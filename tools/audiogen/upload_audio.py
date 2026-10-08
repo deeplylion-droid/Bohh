@@ -47,6 +47,8 @@ def main_sheet2(n=2, title="Secondo foglio di effetti (fucile, creatura, orologi
 
 
 def main():
+    if "--sheet4" in sys.argv:
+        return main_sheet2(4, "Quarto foglio: temporale (tuono vicino e lontano, pioggia battente, vento).")
     if "--sheet3" in sys.argv:
         return main_sheet2(3, "Terzo foglio: fucile (sparo, otturatore, dardo, impatti), jumpscare e stacco.")
     if "--sheet2" in sys.argv:
