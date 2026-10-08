@@ -1,17 +1,15 @@
 Qualcosa vive nei boschi di Blackwood. Di giorno nessuno l'ha mai visto. Di notte, caccia.
 
-Fai squadra con i tuoi amici (2-6 giocatori) e passa la notte nella riserva per documentare la creatura chiamata "The Rake", raccogliere prove e sopravvivere fino all'alba.
+Fai squadra con i tuoi amici e passa la notte nella riserva: documenta la creatura chiamata "The Rake", raccogli prove e sopravvivi fino all'alba.
 
-• Piazza telecamere a infrarossi e seguile dal tablet o dai monitor della Ranger Station
-• Raccogli tracce, peli e campioni di sangue e analizzali in laboratorio
-• Usa torcia, visore notturno e fucile a dardi sedativi con mirino telescopico
-• Controlla battito, stamina e paura sullo smartwatch al polso (tasto G)
-• Rifugiati nei luoghi sicuri: la creatura non può entrarci... ma ti aspetta fuori
-• La creatura è imprevedibile: ti pedina, si mostra, scappa e torna quando sei solo
+• Piazza telecamere a infrarossi e seguile dal tablet o dai monitor della stazione
+• Raccogli tracce, peli e sangue e analizzali in laboratorio
+• Torcia, visore notturno e fucile a dardi sedativi con mirino
+• Battito, stamina e paura sullo smartwatch al polso
+• Rifugiati nei luoghi sicuri: la creatura non entra... ma ti aspetta fuori
 
 Gioca in prima persona, con le cuffie, al buio.
 
-Comandi: T tablet · G orologio · N visore notturno · Shift corsa · tasto destro mirino
+Comandi: T tablet · G orologio · N visore · Shift corsa · tasto destro mirino
 
----
 Something lives in the Blackwood woods. Team up, place IR cameras, gather evidence and survive the night against The Rake.
