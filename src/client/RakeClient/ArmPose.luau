@@ -425,6 +425,7 @@ function ArmPose.start(player: Player, watchShown: () -> boolean, remotes: Folde
 		reset()
 		watchBlend = 0
 		if vm then
+			onScreen(nil) -- riporta fuori lo schermo dell'orologio prima di distruggere la copia
 			vm.model:Destroy()
 			vm = nil
 		end
@@ -478,7 +479,8 @@ function ArmPose.start(player: Player, watchShown: () -> boolean, remotes: Folde
 			local src = char:FindFirstChild(lowerName)
 			local hasWatch = src ~= nil and src:FindFirstChild("SchermoOrologio") ~= nil
 			if vm and (vm.source ~= src or vm.model.Parent ~= camera or (hasWatch and not vm.screen)) then
-				vm.model:Destroy()
+				onScreen(nil) -- riporta fuori lo schermo dell'orologio prima di distruggere la copia
+			vm.model:Destroy()
 				vm = nil
 			end
 			if not vm then
@@ -500,6 +502,7 @@ function ArmPose.start(player: Player, watchShown: () -> boolean, remotes: Folde
 			end
 		end
 		if vm and not shown then
+			onScreen(nil) -- riporta fuori lo schermo dell'orologio prima di distruggere la copia
 			vm.model:Destroy()
 			vm = nil
 		end

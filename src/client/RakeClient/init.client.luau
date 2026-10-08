@@ -23,6 +23,7 @@ local Scares = require(script:WaitForChild("Scares"))
 local ArmPose = require(script:WaitForChild("ArmPose"))
 
 local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
 local mouse = player:GetMouse()
 local state = ReplicatedStorage:WaitForChild("RakeState")
 local remotes = ReplicatedStorage:WaitForChild("RakeRemotes")
@@ -68,12 +69,19 @@ end, remotes, function()
 end, function()
 	hud:setWatchVisible(false)
 end, function(screen)
+	-- Mentre guardi il polso lo schermo dell'orologio sta DENTRO la parte del quadrante della copia
+	-- del braccio: una SurfaceGui agganciata da fuori (Adornee dal PlayerGui) viene ridisegnata con un
+	-- fotogramma di ritardo quando la parte si muove ogni fotogramma, e sembrava vibrare.
 	hud.viewScreen = screen
-	if screen and hud.watchGui.Adornee ~= screen then
-		hud.watchGui.Adornee = screen
+	local gui = hud.watchGui
+	if screen then
+		if gui.Parent ~= screen then
+			gui.Adornee = nil
+			gui.Parent = screen
+		end
+	elseif gui.Parent ~= playerGui then
+		gui.Parent = playerGui
 	end
-	-- quadrante disegnato sopra a tutto mentre guardi il polso: niente sfarfallio con la ghiera
-	hud.watchGui.AlwaysOnTop = screen ~= nil
 end)
 
 remotes.Notify.OnClientEvent:Connect(function(message)
