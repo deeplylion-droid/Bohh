@@ -196,10 +196,12 @@ def title(text: str, size: int, gradient: str, stroke: int, depth: int, extra: s
     """Testo gommoso: contorno spesso e scuro, ombra solida sotto, riempimento a gradiente."""
     lines = text.split("|")
     back = "".join(f"<span>{ln}</span>" for ln in lines)
-    front = "".join(f"<span>{ln}</span>" for ln in lines)
+    # il gradiente si ripete su ogni riga (non sfuma da una riga all'altra)
+    front = "".join(f'<span style="background-image:{gradient};-webkit-background-clip:text;background-clip:text;'
+                    f'color:transparent">{ln}</span>' for ln in lines)
     return (f'<div class="title" style="font-size:{size}px;{extra}"><div class="t">'
             f'<div class="back" style="-webkit-text-stroke:{stroke * 2}px {INK};text-shadow:0 {depth}px 0 {INK}">{back}</div>'
-            f'<div class="front" style="background-image:{gradient}">{front}</div></div></div>')
+            f'<div class="front">{front}</div></div></div>')
 
 
 def pet(name: str, x: float, y: float, width: float, flip: bool = False, z: int = 5, outline: bool = True,
@@ -251,7 +253,7 @@ def thumb_title() -> str:
     W, H = 1920, 1080
     body = [
         f'<svg class="layer" width="{W}" height="{H}">{rays(960, 380, 22, "#ffffff", 0.12, 1400)}</svg>',
-        mountains_svg(W, H, LAYERS, seed=11, trail=True).replace("<svg ", '<svg class="layer" '),
+        mountains_svg(W, H, LAYERS, seed=11).replace("<svg ", '<svg class="layer" '),
         snow_dots(W, H, 70, 5),
         ground_svg(W, H, 870, 4),
         glow(960, 860, 300, "rgba(255,230,110,.9)", z=3),
@@ -284,10 +286,11 @@ def thumb_hatch() -> str:
         x = 520 + i * 126
         body.append(pet(e, x, 1060, 104 + i * 4, z=10, shadow=False))
     body.append(title("HATCH RARE|PETS!", 176, PINK, 13, 16, "left:0;right:0;top:36px;transform:rotate(-2deg);z-index:12"))
-    body.append(f'<div class="ribbon" style="left:120px;top:470px;font-size:46px;padding:8px 26px;background:#8a3dff;'
-                f'transform:rotate(-8deg);z-index:11">SECRET</div>')
-    body.append(f'<div class="ribbon" style="right:110px;top:450px;font-size:46px;padding:8px 26px;background:#ff4f8b;'
-                f'transform:rotate(7deg);z-index:11">MYTHIC</div>')
+    # etichette vicino ai pet giusti: Gelatone (mitico) a sinistra, Tortellone (segreto) a destra
+    body.append(f'<div class="ribbon" style="left:120px;top:560px;font-size:46px;padding:8px 26px;background:#ff4f8b;'
+                f'transform:rotate(-8deg);z-index:11">MYTHIC</div>')
+    body.append(f'<div class="ribbon" style="left:1250px;top:330px;font-size:46px;padding:8px 26px;background:#8a3dff;'
+                f'transform:rotate(7deg);z-index:11">SECRET</div>')
     body.append(f'<div class="ribbon" style="left:820px;top:330px;font-size:40px;padding:6px 22px;background:#ffb21f;'
                 f'transform:rotate(-3deg);z-index:11">32 PETS</div>')
     bg = "background: radial-gradient(circle at 50% 58%, #ffcf6b 0%, #ff7d4f 32%, #b8379f 62%, #3b1f7a 100%);"
@@ -307,7 +310,7 @@ def thumb_steal() -> str:
         snow_dots(W, H, 60, 9),
         ground_svg(W, H, 880, 12),
         laser, posts,
-        pet("IconAlarm", 1480, 470, 190, z=9, shadow=False),
+        pet("IconAlarm", 1822, 545, 150, z=9, shadow=False),
         glow(700, 820, 300, "rgba(255,226,90,.85)", z=3),
         pet("FoxKit_3q", 640, 1040, 520, z=8),
         pet("EggLegendary_3q", 930, 900, 230, z=9, rot=18),
@@ -315,7 +318,7 @@ def thumb_steal() -> str:
         pet("IconThief", 230, 330, 210, z=9, shadow=False),
         title("STEAL THEIR|EGGS!", 172, RED, 13, 16, "left:0;right:0;top:34px;transform:rotate(-2.5deg);z-index:12"),
     ]
-    body.append(f'<div class="ribbon" style="right:90px;top:300px;font-size:52px;padding:8px 30px;background:#2bb8ff;'
+    body.append(f'<div class="ribbon" style="right:150px;top:250px;font-size:52px;padding:8px 30px;background:#2bb8ff;'
                 f'transform:rotate(5deg);z-index:11">PROTECT YOURS!</div>')
     return page(W, H, "".join(body))
 
