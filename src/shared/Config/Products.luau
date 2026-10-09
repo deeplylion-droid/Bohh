@@ -9,25 +9,25 @@ local Products = {}
 
 Products.PassOrder = { "VIP", "DoubleCoins", "ExtraIncubator", "BigBackpack", "FastHatch", "SuperBarrier" }
 Products.Passes = {
-	VIP = { key = "VIP", id = 0, price = 249, icon = "VIP" },
-	DoubleCoins = { key = "DoubleCoins", id = 0, price = 399, icon = "DoubleCoins" },
-	ExtraIncubator = { key = "ExtraIncubator", id = 0, price = 149, icon = "Incubator" },
-	BigBackpack = { key = "BigBackpack", id = 0, price = 199, icon = "Backpack" },
-	FastHatch = { key = "FastHatch", id = 0, price = 299, icon = "HatchSpeed" },
-	SuperBarrier = { key = "SuperBarrier", id = 0, price = 149, icon = "Barrier" },
+	VIP = { key = "VIP", id = 2022170349, price = 249, icon = "VIP" },
+	DoubleCoins = { key = "DoubleCoins", id = 2021672356, price = 399, icon = "DoubleCoins" },
+	ExtraIncubator = { key = "ExtraIncubator", id = 2021672357, price = 149, icon = "Incubator" },
+	BigBackpack = { key = "BigBackpack", id = 2022788361, price = 199, icon = "Backpack" },
+	FastHatch = { key = "FastHatch", id = 2021684355, price = 299, icon = "HatchSpeed" },
+	SuperBarrier = { key = "SuperBarrier", id = 2022500356, price = 149, icon = "Barrier" },
 } :: { [string]: Pass }
 
 Products.ProductOrder =
 	{ "SkipHatchSmall", "SkipHatchMedium", "SkipHatchLarge", "Luck15", "CoinsSmall", "CoinsMedium", "CoinsLarge" }
 Products.Products = {
 	-- salta l'attesa di un'incubatrice: piccolo fino a Raro, medio fino a Leggendario, grande per tutto
-	SkipHatchSmall = { key = "SkipHatchSmall", id = 0, price = 19, icon = "SkipHatch" },
-	SkipHatchMedium = { key = "SkipHatchMedium", id = 0, price = 49, icon = "SkipHatch" },
-	SkipHatchLarge = { key = "SkipHatchLarge", id = 0, price = 99, icon = "SkipHatch" },
-	Luck15 = { key = "Luck15", id = 0, price = 99, icon = "Luck" },
-	CoinsSmall = { key = "CoinsSmall", id = 0, price = 49, icon = "CoinsSmall" },
-	CoinsMedium = { key = "CoinsMedium", id = 0, price = 149, icon = "CoinsMedium" },
-	CoinsLarge = { key = "CoinsLarge", id = 0, price = 399, icon = "CoinsLarge" },
+	SkipHatchSmall = { key = "SkipHatchSmall", id = 3717390839, price = 19, icon = "SkipHatch" },
+	SkipHatchMedium = { key = "SkipHatchMedium", id = 3717390921, price = 49, icon = "SkipHatch" },
+	SkipHatchLarge = { key = "SkipHatchLarge", id = 3717390923, price = 99, icon = "SkipHatch" },
+	Luck15 = { key = "Luck15", id = 3717390926, price = 99, icon = "Luck" },
+	CoinsSmall = { key = "CoinsSmall", id = 3717390930, price = 49, icon = "CoinsSmall" },
+	CoinsMedium = { key = "CoinsMedium", id = 3717390935, price = 149, icon = "CoinsMedium" },
+	CoinsLarge = { key = "CoinsLarge", id = 3717390941, price = 399, icon = "CoinsLarge" },
 } :: { [string]: Product }
 
 -- Rarita' massima coperta da ciascun "salta schiusa"
