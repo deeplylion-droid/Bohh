@@ -32,8 +32,8 @@ def rock_body(i: int) -> SDF:
         body = union(a, b, c)
         cracks = [((-0.2, 0, 0.9), (0.1, -1, 0.6), (0.25, 0, -1), 1.5, 3), ((-0.6, 0, 1.0), (-0.3, -0.2, 1), (1, -0.3, 0), 1.2, 4)]
     elif i == 2:  # dente alto e appuntito con un blocco ai piedi e uno dietro
-        a = cleaved_block((0, 0, 1.0), (0.95, 0.85, 1.2), seed=201, rot=(0, 6, 30), peak=1.5, taper=0.25, chips=7)
-        b = cleaved_block((0.95, -0.55, 0.28), (0.62, 0.5, 0.45), seed=202, rot=(0, 10, -20), chips=4)
+        a = cleaved_block((0, 0, 1.0), (0.95, 0.85, 1.2), seed=201, rot=(0, 6, 30), peak=1.5, taper=0.4, chips=7)
+        b = cleaved_block((0.95, -0.55, 0.28), (0.62, 0.5, 0.45), seed=202, rot=(0, 10, -20), ridge=0.22, tilt=16, chips=5)
         c = cleaved_block((-0.75, 0.6, 0.55), (0.75, 0.65, 0.7), seed=203, rot=(0, -8, 60), ridge=0.35, chips=4)
         body = union(a, b, c)
         cracks = [((0, 0, 1.6), (0.3, -1, 0.4), (0, 0, -1), 1.8, 4), ((0.1, 0, 1.2), (1, 0.1, 0.2), (0.2, 0.3, -1), 1.1, 5)]
@@ -76,15 +76,15 @@ def rock(i: int) -> Prop:
 def rock_spire() -> Prop:
     """Pinnacolo di roccia alto e frastagliato (~7) per pareti e bordi del sentiero."""
     m = Prop("RockSpire", voxel=0.03)
-    column = cleaved_block((0.05, 0, 2.2), (1.2, 1.0, 2.4), seed=501, rot=(0, 4, 30), taper=0.3, peak=1.9, chips=8)
-    twin = cleaved_block((-0.85, 0.45, 1.6), (0.7, 0.62, 1.6), seed=502, rot=(0, -12, 10), taper=0.25, peak=1.1, chips=5)
-    shard = cleaved_block((0.95, 0.35, 2.6), (0.45, 0.35, 0.9), seed=503, rot=(0, 22, 55), peak=0.7, chips=4)
+    column = cleaved_block((0.05, 0, 2.5), (1.15, 0.95, 2.7), seed=501, rot=(0, 4, 30), taper=0.45, peak=1.7, chips=8)
+    twin = cleaved_block((-0.9, 0.45, 1.8), (0.68, 0.6, 1.9), seed=502, rot=(0, -10, 10), taper=0.35, peak=1.0, chips=5)
+    shard = cleaved_block((0.95, 0.4, 3.0), (0.42, 0.34, 1.0), seed=503, rot=(0, 20, 55), peak=0.8, chips=4)
     ledge = cleaved_block((0.9, -0.6, 1.2), (0.7, 0.55, 0.45), seed=504, rot=(0, 10, -25), ridge=0.2, chips=4)
     base1 = cleaved_block((0.4, -0.3, 0.3), (1.6, 1.2, 0.55), seed=505, rot=(0, 0, 15), ridge=0.25, chips=7)
     base2 = cleaved_block((-1.2, -0.4, 0.25), (0.8, 0.7, 0.5), seed=506, rot=(0, 8, -35), ridge=0.3, chips=4)
     body = union(column, twin, shard, ledge, base1, base2).intersect(ground())
-    for inside, d, along, ln, s in [((0.05, 0, 3.0), (0.2, -1, 0.1), (0.05, 0, -1), 2.2, 11),
-                                    ((0.05, 0, 3.9), (1, -0.4, 0.3), (0, 0.2, -1), 1.3, 12),
+    for inside, d, along, ln, s in [((0.05, 0, 3.4), (0.2, -1, 0.1), (0.05, 0, -1), 2.4, 11),
+                                    ((0.05, 0, 4.6), (1, -0.4, 0.3), (0, 0.2, -1), 1.4, 12),
                                     ((0.4, -0.3, 0.4), (-0.2, -1, 0.3), (1, 0, -0.3), 1.4, 13)]:
         body = body.subtract(surface_crack(body, inside, d, along, depth=0.3, width=0.08, length=ln, zigzag=3, seed=s))
     m.add("Rock", body, (110, 116, 126), tris=1150, smooth=False)
@@ -175,31 +175,38 @@ def pine_snowy() -> Prop:
 # ------------------------------------------------------------------------------ cespuglio
 
 def bush(i: int = 1) -> Prop:
-    """Cespuglio tondeggiante fatto di ciuffi di foglie low-poly in due verdi, con qualche bacca."""
+    """Cespuglio tondeggiante: ciuffi di foglie low-poly irregolari in due verdi, qualche bacca."""
     m = Prop(f"Bush{i}", voxel=0.03)
-    dark = [((-0.95, 0.35, 0.65), (0.95, 0.85, 0.8)), ((0.95, 0.4, 0.6), (0.9, 0.8, 0.75)),
-            ((0.05, 0.75, 0.85), (1.05, 0.85, 0.95)), ((-0.45, -0.55, 0.45), (0.8, 0.7, 0.62)),
-            ((0.6, -0.55, 0.42), (0.75, 0.68, 0.6))]
-    light = [((0.05, -0.05, 1.35), (0.95, 0.85, 0.75)), ((-0.75, -0.3, 1.05), (0.72, 0.66, 0.62)),
-             ((0.8, -0.2, 1.0), (0.7, 0.65, 0.6)), ((0.1, -0.8, 0.8), (0.62, 0.55, 0.55))]
-    dk = union(*[facet_blob(c, r, n=18, seed=200 + k, depth=(0.86, 1.0), rot=(0, 0, 37 * k)) for k, (c, r) in enumerate(dark)])
-    lt = union(*[facet_blob(c, r, n=18, seed=220 + k, depth=(0.86, 1.0), rot=(0, 0, 53 * k)) for k, (c, r) in enumerate(light)])
-    dk = dk.intersect(ground())
-    m.add("Leaves", dk, (52, 98, 50), tris=420, smooth=False)
-    m.add("LeavesLight", lt, (78, 124, 58), role="detail", tris=330, smooth=False)
+    rng = np.random.default_rng(3 + i)
+    w, h = 1.55, 1.9
+    dark, light = [], []
+    for k in range(8):  # anello basso, verde scuro
+        a = 2 * math.pi * k / 8 + rng.uniform(-0.3, 0.3)
+        r = rng.uniform(0.75, 1.0) * w * 0.7
+        sz = rng.uniform(0.62, 0.85)
+        dark.append(((r * math.cos(a), r * math.sin(a) * 0.85, sz * 0.75), (sz * 1.1, sz, sz * 0.95)))
+    for k in range(6):  # sopra e davanti, verde chiaro
+        a = 2 * math.pi * k / 6 + rng.uniform(-0.4, 0.4) + 0.5
+        r = rng.uniform(0.2, 0.55) * w * 0.7
+        sz = rng.uniform(0.6, 0.8)
+        light.append(((r * math.cos(a), r * math.sin(a) * 0.85 - 0.15, h * 0.5 + rng.uniform(-0.15, 0.25)), (sz * 1.05, sz, sz * 0.95)))
+    light.append(((0.05, -0.05, h * 0.64), (0.8, 0.75, 0.68)))
+    blob = dict(n=14, depth=(0.78, 1.0), zmax=0.8, top=1.15)
+    dk = union(*[facet_blob(c, r, seed=200 + k, rot=(0, 0, 37 * k), **blob) for k, (c, r) in enumerate(dark)]).intersect(ground())
+    lt = union(*[facet_blob(c, r, seed=220 + k, rot=(0, 0, 53 * k), **blob) for k, (c, r) in enumerate(light)])
+    m.add("Leaves", dk, (46, 92, 48), tris=440, smooth=False)
+    m.add("LeavesLight", lt, (84, 130, 60), role="detail", tris=330, smooth=False)
+    # bacche scure appoggiate sui ciuffi, verso il davanti
+    shape = union(dk, lt)
     berries = []
-    for c, d in [((0.1, -0.8, 0.8), (-0.3, -1, 0.5)), ((0.8, -0.2, 1.0), (0.4, -1, 0.3)), ((-0.75, -0.3, 1.05), (-0.6, -1, 0.6)),
-                 ((0.05, -0.05, 1.35), (0.3, -0.6, 1)), ((-0.45, -0.55, 0.45), (-0.2, -1, -0.1)), ((0.6, -0.55, 0.42), (0.7, -1, 0.1))]:
-        d = np.asarray(d, dtype=np.float64)
+    for k, (c, _) in enumerate(light[:5] + dark[:3]):
+        d = np.array([c[0] * 0.6, -1.0, 0.35 + 0.2 * (k % 3)])
         d /= np.linalg.norm(d)
-        # punto sulla superficie del ciuffo: si cerca lungo la direzione d
-        shape = union(dk, lt)
         t = 0.0
         while shape(np.asarray([np.asarray(c) + d * t], dtype=np.float32))[0] < 0 and t < 2:
             t += 0.02
-        p = np.asarray(c) + d * (t - 0.05)
-        berries.append(facet_blob(p, (0.12, 0.12, 0.12), n=9, seed=int(t * 100)))
-    m.add("Berries", union(*berries), (140, 30, 40), role="detail", tris=130, smooth=False)
+        berries.append(facet_blob(np.asarray(c) + d * (t - 0.04), (0.11, 0.11, 0.11), n=9, seed=260 + k))
+    m.add("Berries", union(*berries), (128, 26, 38), role="detail", tris=110, smooth=False)
     return m
 
 
@@ -246,74 +253,74 @@ def grass_tuft(i: int = 1) -> Prop:
 # ------------------------------------------------------------------------------ nido
 
 NEST_R = 1.42   # raggio dell'anello di rametti
-NEST_ZC = 0.76  # altezza del centro dell'anello
+NEST_ZC = 0.7   # altezza del centro dell'anello
+NEST_RT = 0.26  # raggio del "tubo" dell'anello
+
+
+def _rim_point(th, psi, rr):
+    """Punto sulla superficie dell'anello: psi = 0 esterno, 90 sopra, 180 interno (gradi)."""
+    rho = NEST_R + rr * math.cos(math.radians(psi))
+    return (rho * math.cos(th), rho * math.sin(th), NEST_ZC + rr * math.sin(math.radians(psi)))
 
 
 def nest() -> Prop:
-    """Nido: ciotola bassa, bordo intrecciato di rametti, paglia dorata dentro.
+    """Nido: ciotola bassa, bordo di rametti intrecciati, paglia dorata dentro.
 
     L'uovo appoggia a z = 0.55 (NestService): il fondo di paglia sta a z ~0.5.
     """
-    m = Prop("Nest", voxel=0.02)
-    # ciotola: fondo arrotondato appena sotto terra, sale fino sotto l'anello
-    bowl = ellipsoid((1.62, 1.62, 0.9), (0, 0, 0.62)).intersect(ground(-0.15)).intersect(ceiling(0.7))
-    core = torus(NEST_R, 0.24, (0, 0, NEST_ZC))
-    body = noisy(union(bowl, core, k=0.15), 0.025, 6.0, 5)
-    m.add("Bowl", body, (122, 84, 50), tris=420, smooth=False)
-    # rametti: archi inclinati alternati che si incrociano attorno al bordo (effetto intrecciato)
+    m = Prop("Nest", voxel=0.025)
+    # ciotola cava: fondo arrotondato appena sotto terra, pavimento interno a z ~0.45
+    bowl = ellipsoid((1.62, 1.62, 0.9), (0, 0, 0.62)).subtract(ellipsoid((1.25, 1.25, 0.65), (0, 0, 1.0)))
+    bowl = bowl.intersect(ground(-0.15)).intersect(ceiling(0.75))
+    core = torus(NEST_R, NEST_RT, (0, 0, NEST_ZC))
+    body = noisy(union(bowl, core, k=0.15), 0.02, 6.0, 5)
+    m.add("Bowl", body, (98, 66, 40), tris=420, smooth=False)
+    # rametti: archi che corrono sull'anello a quote diverse e si incrociano (intreccio)
+    rng = np.random.default_rng(5)
     twigs = []
-    n = 14
+    n, rad = 16, 0.1
     for k in range(n):
-        a0 = 2 * math.pi * k / n
-        span = 2 * math.pi / n * 1.55
-        sgn = 1 if k % 2 == 0 else -1
-        rr = NEST_R + (0.13 if k % 2 == 0 else 0.02)
-        pts, rad = [], []
+        th0 = 2 * math.pi * k / n + rng.uniform(-0.1, 0.1)
+        span = rng.uniform(1.5, 2.0)
+        psi0 = [-40, 10, 60, 110, 150][k % 5] + rng.uniform(-15, 15)
+        drift = rng.uniform(25, 55) * (1 if k % 2 else -1)
+        pts, rr = [], []
         for j in range(7):
             t = j / 6
-            a = a0 + span * (t - 0.5)
-            z = NEST_ZC + sgn * 0.17 * (2 * t - 1) + 0.06 * math.sin(math.pi * t)
-            r = rr + 0.07 * math.sin(math.pi * t)
-            pts.append((r * math.cos(a), r * math.sin(a), z))
-            rad.append(0.1 + 0.03 * math.sin(math.pi * t))
-        twigs.append(tube(pts, rad))
-        # secondo giro sul lato interno-alto del bordo
-        if k % 2 == 0:
-            a = a0 + math.pi / n
-            p0 = ((NEST_R - 0.12) * math.cos(a - 0.3), (NEST_R - 0.12) * math.sin(a - 0.3), NEST_ZC + 0.16)
-            p1 = ((NEST_R - 0.05) * math.cos(a + 0.3), (NEST_R - 0.05) * math.sin(a + 0.3), NEST_ZC + 0.24)
-            twigs.append(capsule(p0, p1, 0.085))
-    # qualche rametto che sporge, con una forchetta
-    for a, dz, ln in [(0.6, 0.1, 0.75), (2.3, -0.05, 0.6), (3.9, 0.12, 0.7), (5.2, 0.0, 0.65)]:
-        p0 = (NEST_R * math.cos(a), NEST_R * math.sin(a), NEST_ZC)
-        d = (math.cos(a + 0.5), math.sin(a + 0.5))
-        p1 = (p0[0] + d[0] * ln, p0[1] + d[1] * ln, p0[2] + dz + 0.15)
-        p2 = (p1[0] + math.cos(a + 1.1) * 0.25, p1[1] + math.sin(a + 1.1) * 0.25, p1[2] + 0.12)
-        twigs.append(tube([p0, p1], [0.07, 0.045]))
-        twigs.append(tube([lerp3(p0, p1, 0.6), p2], [0.04, 0.03]))
-    m.add("Twigs", fast_union(*twigs), (168, 118, 70), role="detail", tris=1150, smooth=False)
+            lift = 0.06 if j in (0, 6) else 0.0  # le punte si staccano un po'
+            pts.append(_rim_point(th0 + span * (t - 0.5), psi0 + drift * (t - 0.5), NEST_RT + rad * 0.6 + lift))
+            rr.append(rad * (0.75 + 0.25 * math.sin(math.pi * t)))
+        twigs.append(tube(pts, rr))
+    m.add("Twigs", fast_union(*twigs), (182, 130, 78), role="detail", tris=1100, voxel=0.02, smooth=False)
+
     # paglia: letto concavo (fondo a z 0.5) e qualche filo che scavalca il bordo
     def straw_bed(p):
         rho = np.sqrt(p[:, 0] ** 2 + p[:, 1] ** 2)
-        top = 0.5 + 0.2 * (rho / 1.15) ** 2
-        return np.maximum(np.maximum(p[:, 2] - top, 0.25 - p[:, 2]), rho - 1.3)
-    bed = noisy(SDF(straw_bed, (-1.35, -1.35, 0.2), (1.35, 1.35, 0.85)), 0.02, 9.0, 3)
+        top = 0.5 + 0.35 * (rho / 1.1) ** 2
+        return np.maximum(np.maximum(p[:, 2] - top, 0.3 - p[:, 2]), rho - 1.3)
+
+    bed = noisy(SDF(straw_bed, (-1.35, -1.35, 0.3), (1.35, 1.35, 1.05)), 0.025, 8.0, 3)
     strands = []
-    rng = np.random.default_rng(77)
-    for k in range(9):
+    rng = np.random.default_rng(78)
+    for k in range(6):
+        a = 2 * math.pi * k / 6 + rng.uniform(-0.3, 0.3)
+        a1 = a + rng.uniform(-0.25, 0.25)
+        r0 = rng.uniform(0.75, 0.95)
+        p0 = (r0 * math.cos(a), r0 * math.sin(a), 0.5 + 0.35 * (r0 / 1.1) ** 2)
+        p1 = (NEST_R * math.cos(a1), NEST_R * math.sin(a1), NEST_ZC + NEST_RT + 0.12)
+        p2 = ((NEST_R + 0.38) * math.cos(a1 + 0.08), (NEST_R + 0.38) * math.sin(a1 + 0.08), NEST_ZC + 0.05)
+        strands.append(tube([p0, p1, p2], [0.04, 0.042, 0.03]))
+    for k in range(9):  # fili sparsi sul letto di paglia
         a = rng.uniform(0, 2 * math.pi)
-        r0 = rng.uniform(0.5, 0.9)
-        p0 = (r0 * math.cos(a), r0 * math.sin(a), 0.62)
-        a1 = a + rng.uniform(-0.5, 0.5)
-        p1 = (1.3 * math.cos(a1), 1.3 * math.sin(a1), NEST_ZC + 0.32)
-        p2 = (1.75 * math.cos(a1 + 0.1), 1.75 * math.sin(a1 + 0.1), NEST_ZC + rng.uniform(-0.05, 0.25))
-        strands.append(tube([p0, p1, p2], [0.035, 0.035, 0.025]))
-    m.add("Straw", fast_union(bed, *strands), (222, 182, 96), role="detail", tris=520, smooth=False)
+        r0 = rng.uniform(0.25, 0.85)
+        d = rng.uniform(0, 2 * math.pi)
+        pts = []
+        for t in (-0.32, 0.0, 0.32):
+            x, y = r0 * math.cos(a) + t * math.cos(d), r0 * math.sin(a) + t * math.sin(d)
+            pts.append((x, y, 0.5 + 0.35 * (math.hypot(x, y) / 1.1) ** 2 + 0.02))
+        strands.append(tube(pts, [0.03, 0.035, 0.03]))
+    m.add("Straw", fast_union(bed, *strands), (232, 190, 92), role="detail", tris=600, voxel=0.02, smooth=False)
     return m
-
-
-def lerp3(a, b, t):
-    return tuple(x + (y - x) * t for x, y in zip(a, b))
 
 
 CATALOG = {

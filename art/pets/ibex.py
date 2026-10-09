@@ -80,27 +80,6 @@ def stitches(base, pts, step=0.09, length=0.07, r=0.016, cross=True):
     return fast_union(dashes)
 
 
-def poly_xz(poly, y0, y1):
-    """Regione disegnata nella vista frontale: poligono nel piano XZ estruso lungo Y fra y0 e y1."""
-    pts = np.asarray(poly, dtype=np.float32)
-
-    def f(p):
-        px, pz = p[:, 0], p[:, 2]
-        d = np.full(len(p), np.inf, dtype=np.float32)
-        s = np.ones(len(p), dtype=np.float32)
-        for i in range(len(pts)):
-            vi, vj = pts[i], pts[i - 1]
-            ex, ez = vj[0] - vi[0], vj[1] - vi[1]
-            wx, wz = px - vi[0], pz - vi[1]
-            t = np.clip((wx * ex + wz * ez) / max(ex * ex + ez * ez, 1e-12), 0.0, 1.0)
-            d = np.minimum(d, (wx - ex * t) ** 2 + (wz - ez * t) ** 2)
-            c1, c2, c3 = pz >= vi[1], pz < vj[1], ex * wz > ez * wx
-            s = np.where((c1 & c2 & c3) | (~c1 & ~c2 & ~c3), -s, s)
-        return np.maximum(s * np.sqrt(d), np.maximum(y0 - p[:, 1], p[:, 1] - y1))
-
-    return SDF(f, (pts[:, 0].min(), y0, pts[:, 1].min()), (pts[:, 0].max(), y1, pts[:, 1].max()))
-
-
 def lid_shape(radii, cut, slope=0.0, grow=0.016, k=0.012):
     """Palpebra pesante (coordinate locali del Frame): calotta dell'occhio ingrandito sopra z = cut + slope*x."""
     a, b, c = radii
@@ -124,26 +103,6 @@ def eye_set(frame, white, pupil, look=(0.0, 0.0), lid=None):
 def surface_tube(base, pts2d, radii, y=-0.3, inset=0.0, direction=(0, -1, 0)):
     """Tubo (sopracciglio, bocca) disegnato nella vista frontale e appoggiato sulla superficie."""
     return tube(project_curve(base, [(x, y, z) for x, z in pts2d], direction, inset=inset), radii)
-
-
-def grin(base, upper, lower, y_back, up_teeth=(), down_teeth=(), tooth=(0.06, 0.026), d=0.034):
-    """Ghigno: bocca scura fra labbro superiore e inferiore (punti 2D x,z da sinistra a destra) + dentini."""
-    region = poly_xz(list(upper) + list(lower[-2:0:-1]), -3.0, y_back)  # gli angoli sono in comune
-    mouth = base.offset(d).intersect(region, k=0.006)
-    lip = base.offset(d)
-    (ux, uz), (lx, lz) = np.array(upper).T, np.array(lower).T
-    length, r = tooth
-    teeth = []
-    for x in up_teeth:
-        z = float(np.interp(x, ux, uz))
-        b, t = project_curve(lip, [(x, y_back - 0.6, z + 0.012), (x, y_back - 0.6, z - length)], (0, -1, 0), inset=0.004)
-        teeth.append(round_cone(b, t, r, 0.006))
-    for x in down_teeth:
-        z = float(np.interp(x, lx, lz))
-        b, t = project_curve(lip, [(x, y_back - 0.6, z - 0.012), (x, y_back - 0.6, z + length * 0.8)], (0, -1, 0),
-                             inset=0.004)
-        teeth.append(round_cone(b, t, r * 0.85, 0.006))
-    return mouth, teeth
 
 
 def ring(c, d, R, r):

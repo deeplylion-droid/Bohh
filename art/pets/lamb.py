@@ -15,7 +15,7 @@ WOOL = (246, 238, 218)
 FACE = (78, 60, 72)
 HOOF = (38, 28, 38)
 EAR_IN = (214, 112, 138)
-BUTTON = (30, 28, 60)
+BUTTON = (228, 218, 200)
 THREAD = (206, 34, 62)
 NOSE = (226, 120, 146)
 BLUSH = (232, 106, 136)
@@ -106,14 +106,17 @@ wool = union(*puffs, k=0.07)
 HEAD_C = (0, -0.52, 1.86)
 head = ellipsoid((0.6, 0.52, 0.58), HEAD_C)
 tuft_puffs = []
-for pol, az, r in ([(0, 0, 0.17), (14, 120, 0.15), (22, -40, 0.14)] + [(34, a + rng.uniform(-15, 15), rng.uniform(0.12, 0.16))
-                                                                       for a in range(0, 360, 60)]
-                   + [(50, -90, 0.14), (50, -55, 0.12), (52, -125, 0.13)]):
+tuft_spec = [(0, 0, 0.17), (14, 120, 0.15), (22, -40, 0.14)]
+tuft_spec += [(34, a + rng.uniform(-15, 15), rng.uniform(0.12, 0.16)) for a in range(0, 360, 60)]
+tuft_spec += [(50, -90, 0.14), (50, -55, 0.12), (52, -125, 0.13)]
+for pol, az, r in tuft_spec:
     pr, ar = math.radians(pol), math.radians(az)
     p, n = project(head, HEAD_C, (math.sin(pr) * math.cos(ar), math.sin(pr) * math.sin(ar), math.cos(pr)))
     tuft_puffs.append(sphere(r, p - n * 0.03))
 p, n = project(head, HEAD_C, (0.2, 0.1, 1.0))
-tuft_puffs += [sphere(0.1, p + n * 0.1), sphere(0.08, p + n * 0.19 + np.array((0.04, 0.0, 0.0)))]  # ciuffo ritto
+curl = bezier(p, p + n * 0.22, p + n * 0.3 + np.array((0.16, -0.04, 0.0)),
+              p + n * 0.16 + np.array((0.18, -0.06, 0.0)), 10)
+tuft_puffs.append(tube(curl, list(np.linspace(0.09, 0.045, 11))))  # ricciolo ribelle
 tuft = union(*tuft_puffs, k=0.06)
 m.add("Wool", union(wool, tuft), WOOL, material="Fabric", role="skin", tris=6000, voxel=0.025)
 
@@ -154,7 +157,7 @@ for sx, r, spin in ((1, 0.125, 18), (-1, 0.108, -8)):
     f = Frame(head, HEAD_C, (0.42 * sx, -1.0, 0.16), sink=0.02)
     buttons.append(f.place(disc.rot(0, spin, 0)))
     threads.append(f.place(x_thread.rot(0, spin, 0)))
-m.add("Eyes", union(*buttons), BUTTON, role="eye", tris=1000, voxel=0.01, reflectance=0.1)
+m.add("Eyes", union(*buttons), BUTTON, role="eye", tris=1000, voxel=0.01)
 
 # sorriso cucito, un po' storto
 smile_pts = bezier((-0.27, 0, 1.6), (-0.12, 0, 1.47), (0.12, 0, 1.47), (0.29, 0, 1.63), 14)

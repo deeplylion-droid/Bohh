@@ -11,8 +11,8 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from lib.sdf import (SDF, Frame, bezier, box, capsule, ellipsoid, project, project_curve,  # noqa: E402
-                     round_cone, sphere, tube, union)
+from lib.sdf import (SDF, Frame, bezier, box, capsule, ellipsoid, project, project_curve, round_cone,  # noqa: E402
+                     sphere, tube, union)
 from lib.toy import Model  # noqa: E402
 
 FUR = (204, 122, 50)

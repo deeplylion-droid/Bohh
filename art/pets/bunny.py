@@ -1,5 +1,4 @@
 """Coniglietto (Bunny) - pet Comune. Carattere: maniacale (occhi sgranati, ghignone, testa inclinata)."""
-import math
 import os
 import sys
 from pathlib import Path
@@ -126,7 +125,8 @@ head_core = union(head, *[ellipsoid((0.34, 0.28, 0.28), (sx * 0.38, -0.34, 1.7))
 body = ellipsoid((0.72, 0.66, 0.78), (0, 0.08, 0.84))
 arms = []
 for sx in (1, -1):
-    arms.append(tube([(sx * 0.55, -0.02, 1.34), (sx * 0.68, -0.18, 0.86), (sx * 0.71, -0.3, 0.44)], [0.12, 0.11, 0.115]))
+    arms.append(tube([(sx * 0.55, -0.02, 1.34), (sx * 0.68, -0.18, 0.86), (sx * 0.71, -0.3, 0.44)],
+                     [0.12, 0.11, 0.115]))
     arms.append(ellipsoid((0.16, 0.16, 0.14), (sx * 0.71, -0.36, 0.31)))
     arms += [sphere(0.075, (sx * 0.71 + dx, -0.47, 0.2)) for dx in (-0.085, 0.0, 0.085)]
 arms = union(*arms, k=0.06)
@@ -208,13 +208,13 @@ for sx, nm, shell, inner in ((1, "EarR", ear_r, ear_r_in), (-1, "EarL", ear_l, e
               pivot=pivot)
 
 # ------------------------------------------------------------------ occhi sgranati cerchiati di scuro
-eye_frames = [Frame(head, HEAD_C, (0.42 * sx, -1.0, 0.12), sink=0.04) for sx in (1, -1)]
+eye_frames = [Frame(head, HEAD_C, (0.42 * sx, -1.0, 0.12), sink=0.045) for sx in (1, -1)]
 dark, whites, shines = [], [], []
 for f, sx, pr in zip(eye_frames, (1, -1), (0.085, 0.064)):  # pupille diverse: sguardo un po' folle
-    dark.append(f.place(ellipsoid((0.163, 0.075, 0.203))))
-    whites.append(f.place(ellipsoid((0.15, 0.08, 0.19)), (0, -0.012, 0)))
-    dark.append(f.place(ellipsoid((pr, 0.035, pr * 1.12)), (0.02 * sx, -0.074, -0.01)))
-    shines.append(f.place(sphere(0.022), (0.02 * sx - pr * 0.45, -0.1, pr * 0.5)))
+    dark.append(f.place(ellipsoid((0.163, 0.05, 0.203)), (0, -0.015, 0)))
+    whites.append(f.place(ellipsoid((0.15, 0.08, 0.19)), (0, -0.025, 0)))
+    dark.append(f.place(ellipsoid((pr, 0.035, pr * 1.12)), (0.02 * sx, -0.09, -0.01)))
+    shines.append(f.place(sphere(0.022), (0.02 * sx - pr * 0.45, -0.118, pr * 0.5)))
 brows = []
 for sx in (1, -1):
     pts = bezier((sx * 0.13, 0, 2.3), (sx * 0.24, 0, 2.44), (sx * 0.4, 0, 2.44), (sx * 0.5, 0, 2.33), 8)

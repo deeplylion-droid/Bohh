@@ -33,6 +33,10 @@ from lib.toy import Model  # noqa: E402
 DEFAULT_VIEW = (0.35, -1.0, 0.45)
 FILL = 0.92  # frazione del riquadro occupata dal lato maggiore della sagoma
 GLOSS = 0.15  # vernice trasparente leggera su tutto (vinile lucido); l'oro ne ha di piu'
+# le icone sono solo immagini: budget di triangoli altissimo, cosi' Model.build non rimesha piu'
+# grossolano e non decima (la decimazione dava bordi bitorzoluti, riflessi a strisce sotto la vernice
+# lucida e triangoli ribaltati): si usa la mesh del marching cubes con le normali esatte dell'SDF
+TRIS_SCALE = 100
 
 # ---------------------------------------------------------------------- palette
 GOLD = (255, 194, 30)
@@ -54,7 +58,6 @@ BLUE_DARK = (30, 84, 200)
 SKY = (120, 200, 255)
 PINK = (255, 104, 178)
 PINK_LIGHT = (255, 150, 206)
-PURPLE = (150, 84, 246)
 LAVENDER = (182, 152, 255)
 ORANGE = (255, 138, 28)
 ORANGE_LIGHT = (255, 206, 110)
@@ -130,6 +133,13 @@ def _frame_tight(objs, view="3q", res=900, lens=60, fill=0.78, aspect=(1, 1)):
 
 
 def _patch_render():
+    """Adatta la pipeline dei modelli alle icone, solo in questo processo (lib/ non viene toccata):
+
+    - inquadratura stretta sulla sagoma (_frame_tight) e campioni regolabili (SAMPLES);
+    - normali lisce: il mesher calcola le normali esatte dal gradiente dell'SDF ma toy.py le scarta;
+      qui diventano normali personalizzate della mesh (niente puntini lucidi dovuti ai triangolini
+      del marching cubes sotto la vernice trasparente).
+    """
     from lib import render
 
     if getattr(render, "_icons_patched", False):
@@ -143,13 +153,36 @@ def _patch_render():
 
     render.setup_world = setup_world
     render.frame_camera = _frame_tight
+
+    last = {}
+    orig_mesh, orig_make, orig_dec = toy.mesh_sdf, toy.make_object, toy.decimate
+
+    def mesh_sdf(sdf, voxel=0.03, *a, **kw):
+        verts, faces, normals = orig_mesh(sdf, voxel, *a, **kw)
+        last["normals"] = normals
+        return verts, faces, normals
+
+    def make_object(name, verts, faces):
+        obj = orig_make(name, verts, faces)
+        n = last.pop("normals", None)
+        if n is not None and len(n) == len(obj.data.vertices):
+            obj.data.normals_split_custom_set_from_vertices(np.asarray(n, dtype=np.float64).tolist())
+        return obj
+
+    def decimate(obj, target):
+        # se mai servisse decimare, le normali personalizzate non sarebbero piu' valide
+        if len(obj.data.polygons) > target and "custom_normal" in obj.data.attributes:
+            obj.data.attributes.remove(obj.data.attributes["custom_normal"])
+        return orig_dec(obj, target)
+
+    toy.mesh_sdf, toy.make_object, toy.decimate = mesh_sdf, make_object, decimate
     render._icons_patched = True
 
 
 # ---------------------------------------------------------------------- forme di base
 def add(m: Model, name: str, sdf: SDF, color, tris: int = 8000, gloss: float = GLOSS, role: str = "detail", **kw):
     kw.setdefault("reflectance", gloss)
-    return m.add(name, sdf, color, tris=tris, role=role, **kw)
+    return m.add(name, sdf, color, tris=max(int(tris * TRIS_SCALE), 6000), role=role, **kw)
 
 
 def tf(shape: SDF, pos=(0, 0, 0), rx=0.0, ry=0.0, rz=0.0) -> SDF:
@@ -175,9 +208,38 @@ def ccone(a, b, ra: float, rb: float, round: float = 0.0) -> SDF:
     return capped_cone(tuple(a), tuple(b), ra, rb, round=round)
 
 
-def plate(poly, t: float, r: float | None = None) -> SDF:
-    """Lastra con contorno poligonale nel piano XZ (x a destra, y del poligono = Z), spessore t lungo Y."""
+def inset_poly(pts, d: float):
+    """Poligono rientrato di d (lati spostati verso l'interno, vertici = intersezioni dei lati spostati)."""
+    P = np.asarray(pts, dtype=np.float64)
+    n = len(P)
+    area = 0.5 * np.sum(P[:, 0] * np.roll(P[:, 1], -1) - np.roll(P[:, 0], -1) * P[:, 1])
+    sg = 1.0 if area > 0 else -1.0
+    out = []
+    for i in range(n):
+        a, b, c = P[i - 1], P[i], P[(i + 1) % n]
+        e1 = (b - a) / np.linalg.norm(b - a)
+        e2 = (c - b) / np.linalg.norm(c - b)
+        p1 = b + sg * np.array([-e1[1], e1[0]]) * d
+        p2 = b + sg * np.array([-e2[1], e2[0]]) * d
+        den = e1[0] * e2[1] - e1[1] * e2[0]
+        if abs(den) < 1e-9:
+            out.append(tuple(p1))
+            continue
+        w = p2 - p1
+        out.append(tuple(p1 + e1 * (w[0] * e2[1] - w[1] * e2[0]) / den))
+    return out
+
+
+def plate(poly, t: float, r: float | None = None, corner: float = 0.0) -> SDF:
+    """Lastra con contorno poligonale nel piano XZ (x a destra, y del poligono = Z), spessore t lungo Y.
+
+    r arrotonda gli spigoli delle facce; corner arrotonda anche gli angoli convessi del contorno
+    (prism() li lascia vivi e il marching cubes li rende frastagliati, es. le punte delle stelle).
+    """
     r = min(t * 0.45, 0.2) if r is None else r
+    if corner > 0:
+        inner = prism(inset_poly(poly, corner), -t / 2 + corner, t / 2 - corner, round=max(r - corner, 0.0))
+        return inner.offset(corner).rot(90, 0, 0)
     return prism(poly, -t / 2, t / 2, round=r).rot(90, 0, 0)
 
 
@@ -217,6 +279,7 @@ def squash(shape: SDF, sx: float = 1.0, sy: float = 1.0, sz: float = 1.0, pad: f
 
 
 def above(z: float) -> SDF:
+    """Semispazio sopra la quota z (per tagliare o dipingere)."""
     return halfspace_z(z, above=True, lo=(-50, -50, -50), hi=(50, 50, 50))
 
 
@@ -252,6 +315,7 @@ def heart_poly(s: float, n: int = 48):
 
 
 def gear_poly(n: int, r_out: float, r_root: float, tip: float = 0.4, base: float = 0.62, arc: int = 5):
+    """Contorno di ingranaggio a n denti trapezoidali (tip/base = larghezza in punta/alla base, in passi)."""
     step = 2 * math.pi / n
     pts = []
     for i in range(n):
@@ -267,31 +331,51 @@ def gear_poly(n: int, r_out: float, r_root: float, tip: float = 0.4, base: float
 
 
 def shield_poly(w: float = 1.0, top: float = 0.95, bottom: float = -1.3, n: int = 12):
+    """Contorno di scudo: bordo alto appena bombato, fianchi che curvano fino alla punta in basso."""
     right = [(0.0, top + 0.1), (w * 0.5, top + 0.07), (w * 0.86, top), (w, top - 0.1)]
     curve = bezier((w, top - 0.22, 0), (w, -0.35 * w, 0), (w * 0.62, bottom + 0.42 * w, 0), (0, bottom, 0), n)
     right += [(x, y) for x, y, _ in curve]
     return right + [(-x, y) for x, y in reversed(right[1:-1])]
 
 
-BOLT = [(0.12, 0.62), (-0.36, -0.06), (-0.04, -0.06), (-0.2, -0.62), (0.36, 0.1), (0.04, 0.1)]
+def strip(pts2d, w0: float, w1: float | None = None):
+    """Contorno di un nastro largo w (da w0 a w1) attorno a una polilinea 2D (piano XZ)."""
+    pts = np.asarray(pts2d, dtype=np.float64)
+    w1 = w0 if w1 is None else w1
+    n = len(pts)
+    left, right = [], []
+    for i in range(n):
+        d = pts[min(i + 1, n - 1)] - pts[max(i - 1, 0)]
+        d /= np.linalg.norm(d)
+        nrm = np.array([-d[1], d[0]])
+        w = (w0 + (w1 - w0) * i / (n - 1)) / 2
+        left.append(tuple(pts[i] + nrm * w))
+        right.append(tuple(pts[i] - nrm * w))
+    return left + right[::-1]
+
+
+BOLT = [(0.12, 0.62), (-0.36, -0.06), (-0.04, -0.06), (-0.2, -0.62), (0.36, 0.1), (0.04, 0.1)]  # fulmine
 
 
 def sparkle(size: float, t: float | None = None) -> SDF:
     """Stellina a quattro punte rivolta verso -Y."""
     t = size * 0.26 if t is None else t
-    return plate(star_points(4, size, size * 0.3, rot_deg=90), t, r=t * 0.45)
+    return plate(star_points(4, size, size * 0.3, rot_deg=90), t, r=t * 0.45, corner=size * 0.06)
 
 
 def puffy_star(r_out: float, r_in: float, t: float) -> SDF:
     """Stella a cinque punte bombata (piu' sottile sulle punte), rivolta verso -Y."""
-    base = plate(star_points(5, r_out, r_in, rot_deg=90), t, r=t * 0.3)
+    base = plate(star_points(5, r_out, r_in, rot_deg=90), t, r=t * 0.3, corner=0.055 * r_out)
     return base.intersect(ellipsoid((r_out * 1.3, t * 0.5, r_out * 1.3)), k=0.06)
 
 
 def star_with_face(r_out: float, r_in: float, t: float):
-    """Stella bombata e stella interna piu' chiara dipinta sul davanti (effetto smusso)."""
+    """Stella bombata e stella interna piu' chiara in rilievo sul davanti (effetto smusso)."""
     s = puffy_star(r_out, r_in, t)
-    inner = paint(s, front(star_points(5, r_out * 0.66, r_in * 0.66, rot_deg=90)), t=0.035 * r_out, depth=0.08)
+    e = 0.04 * r_out  # di quanto sporge la stella interna
+    dome = ellipsoid((r_out * 1.3 + e, t * 0.5 + e, r_out * 1.3 + e))
+    inner = plate(star_points(5, r_out * 0.66, r_in * 0.66, rot_deg=90), t * 0.98, r=0.0, corner=0.035 * r_out)
+    inner = inner.translate((0, -t * 0.02, 0)).intersect(dome, k=0.025 * r_out)
     return s, inner
 
 
@@ -331,12 +415,12 @@ def coin(r: float = 1.0, t: float = 0.36, emblem: bool = True, rim: float = 0.16
 
 
 def small_coin(r: float, t: float) -> SDF:
-    """Moneta semplice per i mucchi (bordo rialzato, niente emblema)."""
+    """Moneta semplice per i mucchi (disco pieno con incasso appena accennato, niente emblema)."""
     h = t / 2
     body = cyl((0, -h, 0), (0, h, 0), r, round=h * 0.7)
-    cut = union(cyl((0, -h - 0.2, 0), (0, -h + 0.025, 0), r * 0.74),
-                cyl((0, h - 0.025, 0), (0, h + 0.2, 0), r * 0.74))
-    return body.subtract(cut, k=0.02)
+    cut = union(cyl((0, -h - 0.2, 0), (0, -h + 0.012, 0), r * 0.7),
+                cyl((0, h - 0.012, 0), (0, h + 0.2, 0), r * 0.7))
+    return body.subtract(cut, k=0.012)
 
 
 def surface_spots(base: SDF, center, n: int, rmin: float, rmax: float, seed: int, placed=None,
@@ -417,7 +501,6 @@ def x2_polys(x0: float = 0.0):
 
 # ---------------------------------------------------------------------- registro icone
 ICONS: dict[str, tuple] = {}
-TESTS: set[str] = set()  # prove, non fanno parte del set
 
 
 def icon(view=None, voxel=0.02):
@@ -465,7 +548,7 @@ def Upgrades(m):
     """Grande freccia verde con stelline."""
     poly = [(-1.0, 0.12), (0.0, 1.2), (1.0, 0.12), (0.44, 0.12), (0.44, -1.15), (-0.44, -1.15), (-0.44, 0.12)]
     inner = [(-0.74, 0.24), (0.0, 1.0), (0.74, 0.24), (0.28, 0.24), (0.28, -0.98), (-0.28, -0.98), (-0.28, 0.24)]
-    arrow = plate(poly, 0.56, r=0.16)
+    arrow = plate(poly, 0.56, r=0.16, corner=0.05)
     add(m, "Arrow", arrow, GREEN_DARK, tris=8000, role="skin")
     add(m, "Face", paint(arrow, front(inner), t=0.035, depth=0.08), GREEN, tris=5000, voxel=0.015)
     sp = union(tf(sparkle(0.36), (0.98, -0.1, 0.98)), tf(sparkle(0.25), (-0.98, -0.1, 0.66)),
@@ -492,16 +575,18 @@ def Index(m):
     def surf(x):
         return 0.22 + 0.26 * (1 - (1 - min(abs(x) / W, 1.0)) ** 2)
 
-    lines = [tube([(x, y, surf(x)) for x in np.linspace(-0.26, -0.92, 8)], 0.04) for y in (0.42, 0.18, -0.06, -0.3)]
-    toes = [(0.36, 0.13), (0.5, 0.25), (0.67, 0.25), (0.81, 0.13)]
-    paw = union(ellipsoid((0.22, 0.18, 0.8), (0.585, -0.15, 0.4)),
-                *[ellipsoid((0.085, 0.1, 0.8), (x, y, 0.4)) for x, y in toes])
-    tilt = dict(rx=38, rz=-6)
+    # righe di testo e impronta come forme esatte appena rialzate (la vernice sul campo piegato fa righe)
+    lines = [tube([(x, y, surf(x) - 0.012) for x in np.linspace(-0.26, -0.92, 28)], 0.032) for y in (0.42, 0.18, -0.06, -0.3)]
+    pads = []
+    for (x, y), (rx, ry) in (((0.585, -0.15), (0.22, 0.18)), ((0.36, 0.13), (0.085, 0.1)), ((0.5, 0.25), (0.085, 0.1)),
+                             ((0.67, 0.25), (0.085, 0.1)), ((0.81, 0.13), (0.085, 0.1))):
+        fr = Frame(pages, (x, y, surf(x) - 0.08), (0, 0, 1), sink=0.0, up=(0, 1, 0))  # parte dentro la pagina
+        pads.append(fr.place(ellipsoid((rx, 0.045, ry)), (0, 0.012, 0)))
+    tilt = dict(rx=50, rz=-8)
     add(m, "Cover", tf(cover, **tilt), BLUE, tris=6000, role="skin")
     add(m, "Pages", tf(pages, **tilt), CREAM, tris=8000)
-    add(m, "Lines", tf(paint(pages, union(*lines), t=0.012, depth=0.04), **tilt), (184, 196, 222), tris=2500,
-        voxel=0.012)
-    add(m, "Paw", tf(paint(pages, paw, t=0.03, depth=0.05), **tilt), WOOD_DARK, tris=3000, voxel=0.012)
+    add(m, "Lines", tf(union(*lines), **tilt), (176, 190, 222), tris=2500, voxel=0.012)
+    add(m, "Paw", tf(union(*pads), **tilt), WOOD_DARK, tris=3000, voxel=0.012)
 
 
 @icon()
@@ -528,10 +613,11 @@ def Codes(m):
     notches = union(cyl((w, -1, 0), (w, 1, 0), 0.25), cyl((-w, -1, 0), (-w, 1, 0), 0.25))
     holes = union(*[sphere(0.055, (0.5, -0.17, z)) for z in np.linspace(-0.52, 0.52, 6)])
     body = body.subtract(notches, k=0.05).subtract(holes, k=0.02)
-    frame_ = front(rrect(w - 0.1, h - 0.1, 0.13)).subtract(front(rrect(w - 0.17, h - 0.17, 0.08), 2.0).translate((0, 0.5, 0)))
-    frame_ = frame_.subtract(notches.offset(0.08))
-    deco = union(paint(body, frame_, t=0.03, depth=0.07),
-                 paint(body, front([(x - 0.3, z) for x, z in star_points(5, 0.42, 0.19)]), t=0.035, depth=0.07))
+    ring = plate(rrect(w - 0.09, h - 0.09, 0.13), 0.08, r=0.03).subtract(
+        plate(rrect(w - 0.17, h - 0.17, 0.07), 0.3, r=0.0), k=0.015)
+    ring = ring.subtract(notches.offset(0.07), k=0.015)
+    star = plate([(x - 0.3, z) for x, z in star_points(5, 0.42, 0.19)], 0.1, r=0.035, corner=0.03)
+    deco = union(ring, star).translate((0, -0.16, 0))
     tilt = dict(ry=-14, rz=-8)
     add(m, "Ticket", tf(body, **tilt), ORANGE, tris=7000, role="skin")
     add(m, "Deco", tf(deco, **tilt), ORANGE_LIGHT, tris=5000, voxel=0.013)
@@ -540,7 +626,7 @@ def Codes(m):
 @icon()
 def Settings(m):
     """Ingranaggio grigio."""
-    g = plate(gear_poly(8, 1.2, 0.92), 0.46, r=0.12)
+    g = plate(gear_poly(8, 1.2, 0.92), 0.46, r=0.12, corner=0.05)
     g = g.subtract(cyl((0, -1, 0), (0, 1, 0), 0.3), k=0.05)
     add(m, "Gear", tf(g, rz=-8), GREY, tris=9000, role="skin")
     hub = torus(0.47, 0.075).rot(90, 0, 0).translate((0, -0.23, 0))
@@ -584,24 +670,23 @@ def Lock(m):
 
 @icon()
 def Trap(m):
-    """Tagliola aperta come una bocca: due ganasce dentate alzate, piatto rosso, molle corte ai lati."""
+    """Tagliola aperta vista dall'alto: anello di denti, piatto rosso al centro, molle corte."""
     R = 1.0
     jaws, teeth = [], []
-    angles = np.linspace(0.18, math.pi - 0.18, 8)
-    for side, ang, aa in ((1, 52, angles), (-1, -52, (angles[:-1] + angles[1:]) / 2)):  # denti sfalsati
+    angles = np.linspace(0.17, math.pi - 0.17, 8)
+    for side, ang, aa in ((1, 20, angles), (-1, -20, (angles[:-1] + angles[1:]) / 2)):  # denti sfalsati
         arc = [(R * math.cos(a), side * R * math.sin(a), 0.0) for a in np.linspace(0, math.pi, 25)]
-        jaws.append(tube(arc, 0.1).rot(ang, 0, 0))
-        tt = [round_cone((R * math.cos(a), side * R * math.sin(a), 0.04),
-                         ((R - 0.08) * math.cos(a), side * (R - 0.08) * math.sin(a), 0.46), 0.1, 0.016) for a in aa]
+        jaws.append(tube(arc, 0.11).rot(ang, 0, 0))
+        tt = [round_cone((R * math.cos(a), side * R * math.sin(a), 0.05),
+                         ((R - 0.07) * math.cos(a), side * (R - 0.07) * math.sin(a), 0.52), 0.115, 0.018) for a in aa]
         teeth.append(union(*tt).rot(ang, 0, 0))
     metal = union(*jaws, *teeth)
-    plate_ = cyl((0, 0, -0.1), (0, 0, 0.0), 0.62, round=0.04)
-    pan = cyl((0, 0, -0.02), (0, 0, 0.1), 0.4, round=0.05)
-    springs = [box((R + 0.05, 0.1, 0.05), (0, 0, -0.06), round=0.04)]
+    plate_ = cyl((0, 0, -0.12), (0, 0, -0.02), 0.6, round=0.04)
+    pan = cyl((0, 0, -0.04), (0, 0, 0.08), 0.42, round=0.05)
+    springs = [box((R + 0.05, 0.11, 0.05), (0, 0, -0.07), round=0.04)]
     for sx in (1, -1):
-        springs += [torus(0.16, 0.055).rot(0, 90, 0).translate((sx * (R + 0.1 + 0.11 * i), 0, 0)) for i in range(3)]
-        springs.append(capsule((sx * (R + 0.3), 0, 0), (sx * (R + 0.52), 0, 0.0), 0.075))
-    tilt = dict(rx=16, rz=-10)
+        springs += [torus(0.17, 0.06).rot(0, 90, 0).translate((sx * (R + 0.08 + 0.12 * i), 0, -0.02)) for i in range(3)]
+    tilt = dict(rx=30, rz=-10)
     add(m, "Jaws", tf(metal, **tilt), SILVER, tris=10000, gloss=0.35, role="skin")
     add(m, "Pan", tf(pan, **tilt), RED, tris=3000)
     add(m, "Springs", tf(union(plate_, *springs), **tilt), GREY_DARK, tris=6000, voxel=0.015)
@@ -686,10 +771,10 @@ def Speed(m):
 @icon()
 def Strength(m):
     """Braccio che esce da una manica e mostra il bicipite, con polsino rosso."""
-    sh, el, wr = (-1.2, 0.0, -0.55), (0.42, 0.0, -0.58), (0.58, 0.0, 0.36)
-    upper = round_cone(sh, el, 0.35, 0.33)
-    bicep = ellipsoid((0.5, 0.4, 0.42), (-0.24, -0.02, -0.22))
-    fore = round_cone(el, wr, 0.37, 0.27)
+    sh, el, wr = (-1.2, 0.0, -0.58), (0.42, 0.0, -0.58), (0.58, 0.0, 0.36)
+    upper = round_cone(sh, el, 0.3, 0.3)
+    bicep = ellipsoid((0.5, 0.38, 0.47), (-0.2, -0.02, -0.16))
+    fore = round_cone(el, wr, 0.33, 0.25)
     fist = box((0.36, 0.32, 0.34), (0.6, 0, 0.76), round=0.24)
     ridges = [capsule((0.36, -0.27, z), (0.84, -0.27, z), 0.08) for z in (0.6, 0.76, 0.92)]
     thumb = capsule((0.32, -0.24, 0.62), (0.64, -0.33, 0.52), 0.11)
@@ -701,7 +786,7 @@ def Strength(m):
     add(m, "Arm", arm, SKIN, tris=10000, role="skin")
     add(m, "Sleeve", union(sleeve, hem, k=0.03), BLUE, tris=4000)
     add(m, "Band", band, RED, tris=3000, voxel=0.015)
-    sp = union(tf(sparkle(0.32), (-0.42, -0.5, 0.42)), tf(sparkle(0.18), (0.05, -0.5, 0.2)))
+    sp = union(tf(sparkle(0.34), (-0.78, -0.4, 0.55)), tf(sparkle(0.2), (-0.25, -0.4, 0.78)))
     add(m, "Sparkles", sp, WHITE, tris=2000, voxel=0.012)
 
 
@@ -727,31 +812,34 @@ def Incubator(m):
     base = cyl((0, 0, 0), (0, 0, 0.44), 1.12, round=0.16)
     glow_band = torus(1.115, 0.065, (0, 0, 0.22))
     nest = torus(0.74, 0.3, (0, 0, 0.7))
-    bowl = cyl((0, 0, 0.42), (0, 0, 0.66), 0.8, round=0.08)  # fondo del nido, rovente
-    twigs = []
-    for i in range(11):
-        th0 = 2 * math.pi * i / 11 + 0.2
+    tufts = [ellipsoid((0.26, 0.2, 0.17)).rot(0, 0, math.degrees(a) + 90).translate(
+        (0.78 * math.cos(a), 0.78 * math.sin(a), 0.86 + 0.05 * (i % 2))) for i, a in enumerate(np.linspace(0, 2 * math.pi, 14, endpoint=False))]
+    nest = union(nest, *tufts, k=0.1)
+    straws = []
+    for i in range(9):
+        th0 = 2 * math.pi * i / 9 + 0.3
         pts = []
-        for j in range(8):
-            th, ph = th0 + j * 0.1, -1.2 + j * 0.38
-            rr = 0.74 + 0.31 * math.cos(ph)
-            pts.append((rr * math.cos(th), rr * math.sin(th), 0.7 + 0.31 * math.sin(ph)))
-        twigs.append(tube(pts, 0.042))
+        for j in range(6):
+            th, ph = th0 + j * 0.09, -0.6 + j * 0.3
+            rr = 0.74 + 0.33 * math.cos(ph)
+            pts.append((rr * math.cos(th), rr * math.sin(th), 0.7 + 0.33 * math.sin(ph)))
+        straws.append(tube(pts, 0.032))
+    bowl = cyl((0, 0, 0.42), (0, 0, 0.66), 0.8, round=0.08)  # fondo del nido, rovente
     shell, s1, s2 = spotted_egg(0.62, 1.62, seed=8, n1=5, n2=5)
     pos = (0, 0, 0.5 + 1.62 * 0.45)
     waves = []
     for sx in (1, -1):
-        zs = np.linspace(1.05, 1.8, 14)
-        pts = [(sx * (1.02 + 0.09 * math.sin(2 * math.pi * (z - 1.05) / 0.6)), -0.2, z) for z in zs]
-        waves.append(tube(pts, list(np.linspace(0.08, 0.045, 14))))
+        zs = np.linspace(1.1, 1.85, 14)
+        pts = [(sx * (1.0 + 0.08 * math.sin(2 * math.pi * (z - 1.1) / 0.75)), -0.2, z) for z in zs]
+        waves.append(tube(pts, list(np.linspace(0.085, 0.05, 14))))
     add(m, "Base", base, SLATE, tris=5000, role="skin")
-    add(m, "Glow", union(glow_band, bowl), ORANGE, material="Neon", role="glow", tris=4000, voxel=0.015)
-    add(m, "Nest", nest, WOOD, tris=6000)
-    add(m, "Twigs", fast_union(twigs), WOOD_DARK, tris=5000, voxel=0.014)
+    add(m, "Glow", union(glow_band, bowl), (255, 160, 40), material="Neon", role="glow", tris=4000, voxel=0.015)
+    add(m, "Nest", nest, WOOD, tris=7000)
+    add(m, "Straws", fast_union(straws), WOOD_LIGHT, tris=3000, voxel=0.012)
     add(m, "Shell", tf(shell, pos), CREAM, tris=7000)
     add(m, "Spots", tf(s1, pos), SPOT, tris=2500, voxel=0.013)
     add(m, "Spots2", tf(s2, pos), SPOT_LIGHT, tris=2000, voxel=0.013)
-    add(m, "Heat", union(*waves), (255, 176, 70), tris=2500, voxel=0.015)
+    add(m, "Heat", union(*waves), (255, 200, 90), tris=2500, voxel=0.015)
 
 
 @icon()
@@ -800,10 +888,10 @@ def Pedestal(m):
 @icon()
 def Barrier(m):
     """Scudo laser rosso luminoso in una cornice scura."""
-    frame_ = plate(shield_poly(), 0.46, r=0.14)
+    frame_ = plate(shield_poly(), 0.46, r=0.14, corner=0.05)
     panel_poly = shield_poly(0.76, 0.72, -0.98)
-    frame_ = frame_.subtract(plate(panel_poly, 0.4).translate((0, -0.3, 0)), k=0.03)
-    panel = plate(panel_poly, 0.3, r=0.06).translate((0, -0.06, 0))
+    frame_ = frame_.subtract(plate(panel_poly, 0.4, r=0.0, corner=0.04).translate((0, -0.3, 0)), k=0.03)
+    panel = plate(shield_poly(0.79, 0.75, -1.02), 0.3, r=0.06, corner=0.04).translate((0, -0.06, 0))
     clip = plate(shield_poly(0.66, 0.62, -0.84), 2.0, r=0.0)
     lasers = union(*[capsule((-1, -0.215, z), (1, -0.215, z), 0.05) for z in (0.36, 0.0, -0.36)]).intersect(clip)
     rivets = union(*[sphere(0.07, (x, -0.22, z)) for x, z in ((-0.86, 0.86), (0.86, 0.86), (0, -1.12))])
@@ -838,17 +926,17 @@ def VIP(m):
     bead = torus(Ro + 0.01, 0.06, (0, 0, 0.07))
     velvet = ellipsoid((0.86, 0.86, 0.74), (0, 0, 0.42))
     gold = union(crown, balls, bead, sphere(0.12, (0, 0, 1.18)))
-    gems_r, gems_b = [], []
-    for a, sz, lst in ((-90, 0.25, gems_r), (-90 + 50, 0.17, gems_b), (-90 - 50, 0.17, gems_b)):
-        d = np.array([math.cos(math.radians(a)), math.sin(math.radians(a)), 0.0])
-        # il raggio parte dentro la parete (il centro della corona e' vuoto)
-        fr = Frame(crown, tuple(d * ((Ro + Ri) / 2 + fl * 0.32) + np.array([0, 0, 0.32])), tuple(d), sink=0.05)
-        lst.append(fr.place(gem(sz)))
+    rb = Ro + fl * 0.33  # raggio esterno della fascia all'altezza delle gemme
+    ruby = ellipsoid((0.21, 0.11, 0.25), (0, -rb + 0.03, 0.33))
+    saph = []
+    for a in (-90 + 48, -90 - 48):
+        g = ellipsoid((0.14, 0.09, 0.16)).rot(0, 0, a + 90)
+        saph.append(g.translate((rb * math.cos(math.radians(a)) * 0.97, rb * math.sin(math.radians(a)) * 0.97, 0.33)))
     t = dict(rx=10)
     add(m, "Crown", tf(gold, **t), GOLD, tris=12000, gloss=0.3, role="skin")
     add(m, "Velvet", tf(velvet, **t), RED_DARK, tris=4000, gloss=0.05)
-    add(m, "Ruby", tf(union(*gems_r), **t), (255, 40, 80), tris=600, gloss=0.5, voxel=0.012, smooth=False)
-    add(m, "Sapphires", tf(union(*gems_b), **t), (70, 150, 255), tris=900, gloss=0.5, voxel=0.012, smooth=False)
+    add(m, "Ruby", tf(ruby, **t), (255, 34, 84), tris=2000, gloss=0.5, voxel=0.012)
+    add(m, "Sapphires", tf(union(*saph), **t), (60, 150, 255), tris=2000, gloss=0.5, voxel=0.012)
 
 
 @icon()
@@ -879,7 +967,7 @@ def SkipHatch(m):
     add(m, "Spots2", tf(s2, **ep), SPOT_LIGHT, tris=2000, voxel=0.013)
     add(m, "Crack", tf(crack, **ep), WOOD_DARK, tris=2000, voxel=0.012)
     tri = [(-0.36, 0.5), (0.44, 0.0), (-0.36, -0.5)]
-    arrows = union(*[plate([(x + dx, z) for x, z in tri], 0.34, r=0.13) for dx in (0.0, 0.56)])
+    arrows = union(*[plate([(x + dx, z) for x, z in tri], 0.34, r=0.13, corner=0.06) for dx in (0.0, 0.56)])
     back = arrows.offset(0.07).translate((0, 0.09, 0))
     ap = dict(pos=(0.32, -0.62, -0.62), rz=-6)
     add(m, "Arrows", tf(arrows, **ap), (70, 190, 255), tris=5000)
@@ -897,14 +985,17 @@ def Luck(m):
         leaf = plate(heart_poly(s), 0.3, r=0.12).rot(0, th, 0)
         leaf = leaf.intersect(ellipsoid((0.8, 0.17, 0.8), tuple(d * 0.62)), k=0.05)
         leaves.append(leaf)
+        # cuore interno in rilievo: lastra un po' piu' spessa della foglia, tagliata dalla stessa cupola allargata
+        e = 0.03
         hp = [(x, y + 0.42 * s) for x, y in heart_poly(s * 0.5)]
-        inner.append(prism(hp, 0.0, 1.0).rot(90, 0, 0).rot(0, th, 0))
+        ih = plate(hp, 0.3 + 2 * e, r=0.0).rot(0, th, 0)
+        inner.append(ih.intersect(ellipsoid((0.8 + e, 0.17 + e, 0.8 + e), tuple(d * 0.62)), k=0.02))
     clover = union(*leaves, k=0.04)
     stem = tube(bezier((0.0, 0.07, -0.15), (0.02, 0.07, -0.85), (0.25, 0.07, -1.25), (0.62, 0.05, -1.45), 12),
                 [0.11 - 0.003 * i for i in range(13)])
     t = dict(rz=-10)
     add(m, "Leaves", tf(clover, **t), GREEN, tris=10000, role="skin")
-    add(m, "Inner", tf(paint(clover, union(*inner), t=0.03, depth=0.06), **t), GREEN_LIGHT, tris=4000, voxel=0.013)
+    add(m, "Inner", tf(union(*inner), **t), GREEN_LIGHT, tris=4000, voxel=0.013)
     add(m, "Stem", tf(union(stem, sphere(0.13, (0, -0.02, 0))), **t), GREEN_DARK, tris=3000, voxel=0.015)
     sp = union(tf(sparkle(0.28), (1.0, -0.2, 1.0)), tf(sparkle(0.18), (-1.05, -0.2, -0.8)))
     add(m, "Sparkles", sp, YELLOW, tris=2000, voxel=0.012)
@@ -965,13 +1056,13 @@ def CoinsMedium(m):
     heap = ellipsoid((1.0, 0.62, 0.44), (0, -0.02, 2 * H - 0.04))
     rng = np.random.default_rng(7)
     coins = []
-    for _ in range(26):
+    for _ in range(20):
         v = rng.normal(size=3)
         v[2] = abs(v[2]) * 1.6 + 0.4
         v[1] = -abs(v[1]) - 0.2
         v /= np.linalg.norm(v)
         fr = Frame(heap, (0, -0.02, 2 * H - 0.04), tuple(v), sink=0.03)
-        coins.append(fr.place(small_coin(0.24, 0.09).rot(float(rng.uniform(-30, 30)), 0, float(rng.uniform(-30, 30)))))
+        coins.append(fr.place(small_coin(0.28, 0.09).rot(float(rng.uniform(-18, 18)), 0, float(rng.uniform(-18, 18)))))
     spill = [tf(small_coin(0.26, 0.08), (0.78, -0.98, 0.04), rx=90), tf(small_coin(0.26, 0.08), (-0.55, -1.0, 0.28), rx=12, rz=25)]
     gems_ = union(tf(gem(0.17), (-0.35, -0.42, 1.52), rx=-30, rz=15), tf(gem(0.15), (0.48, -0.36, 1.5), rx=-30, rz=-20))
     add(m, "Chest", body, WOOD, tris=6000, role="skin")
@@ -985,79 +1076,91 @@ def CoinsMedium(m):
 
 @icon()
 def CoinsLarge(m):
-    """Montagna di monete con pile ai lati e un grande luccichio."""
-    mound = ellipsoid((1.5, 1.05, 1.18), (0, 0, -0.05)).intersect(above(0.0))
+    """Montagna di monete con pile ai lati, gemme e un grande luccichio."""
+    mound = union(round_cone((0, 0.05, -0.2), (0, 0.05, 1.42), 1.3, 0.3), ellipsoid((1.32, 0.95, 0.85)), k=0.3)
+    mound = mound.intersect(above(0.0))
+    mc = (0, 0.05, 0.4)
     rng = np.random.default_rng(11)
     coins = []
     tries = 0
     pts = []
-    while len(coins) < 60 and tries < 2000:
+    while len(coins) < 64 and tries < 3000:
         tries += 1
         v = rng.normal(size=3)
-        v[2] = abs(v[2]) + 0.12
+        v[2] = abs(v[2]) * 1.2 + 0.05
         v /= np.linalg.norm(v)
-        if v[1] > 0.45:
+        if v[1] > 0.5:
             continue
-        p, _ = project(mound, (0, 0, 0.1), tuple(v))
-        if any(np.linalg.norm(p - q) < 0.24 for q in pts):
+        p, _ = project(mound, mc, tuple(v))
+        if any(np.linalg.norm(p - q) < 0.3 for q in pts):
             continue
         pts.append(p)
-        fr = Frame(mound, (0, 0, 0.1), tuple(v), sink=0.02)
-        c = small_coin(0.27, 0.1).rot(float(rng.uniform(-35, 35)), 0, float(rng.uniform(-35, 35)))
+        fr = Frame(mound, mc, tuple(v), sink=0.03)
+        c = small_coin(0.31, 0.1).rot(float(rng.uniform(-20, 20)), 0, float(rng.uniform(-20, 20)))
         coins.append(fr.place(c))
-    for (x, y), nstack in (((-1.25, -0.6), 5), ((1.3, -0.5), 3)):
+    for (x, y), nstack in (((-1.3, -0.55), 6), ((1.36, -0.42), 4)):
         for i in range(nstack):
-            coins.append(tf(small_coin(0.3, 0.1), (x + rng.uniform(-0.03, 0.03), y + rng.uniform(-0.03, 0.03), 0.06 + i * 0.105), rx=90))
-    big, emb = coin(0.5, 0.16)
-    bp = dict(pos=(0.25, -1.12, 0.5), rz=12, rx=-8)
-    gems_ = union(tf(gem(0.17), (-0.55, -0.72, 0.92), rx=-35, rz=20), tf(gem(0.15), (0.6, -0.66, 1.0), rx=-35, rz=-15))
+            coins.append(tf(small_coin(0.3, 0.1), (x + rng.uniform(-0.03, 0.03), y + rng.uniform(-0.03, 0.03), 0.05 + i * 0.102), rx=90))
+    big, emb = coin(0.52, 0.17)
+    bp = dict(pos=(0.3, -1.08, 0.52), rz=12, rx=-6)
+    gems_ = union(tf(gem(0.17), (-0.5, -0.78, 0.98), rx=-35, rz=20), tf(gem(0.15), (0.55, -0.62, 1.38), rx=-35, rz=-15))
     add(m, "Mound", mound, GOLD_DEEP, tris=5000, gloss=0.3, role="skin")
-    add(m, "Coins", fast_union(coins), GOLD, tris=16000, gloss=0.3, voxel=0.014)
+    add(m, "Coins", fast_union(coins), GOLD, tris=18000, gloss=0.3, voxel=0.014)
     add(m, "BigCoin", tf(big, **bp), GOLD, tris=4000, gloss=0.3, voxel=0.014)
     add(m, "Emblem", tf(emb, **bp), EMBLEM, tris=1500, gloss=0.3, voxel=0.01)
     add(m, "Gems", gems_, (70, 150, 255), tris=600, gloss=0.5, voxel=0.012, smooth=False)
-    sp = union(tf(sparkle(0.46), (1.1, -0.8, 1.32)), tf(sparkle(0.26), (-0.95, -0.8, 1.2)))
+    sp = union(tf(sparkle(0.46), (0.95, -0.6, 1.75)), tf(sparkle(0.26), (-1.0, -0.6, 1.3)))
     add(m, "Sparkles", sp, WHITE, tris=2500, voxel=0.012)
 
 
 # ====================================================================== eventi
+CAM = np.asarray(DEFAULT_VIEW, dtype=np.float64) / np.linalg.norm(DEFAULT_VIEW)
+
+
 @icon()
 def Meteor(m):
-    """Meteora viola con coda di fiamme."""
+    """Meteora viola con coda di fiamme a lingue (viola fuori, rosa, nucleo giallo)."""
     rng = np.random.default_rng(2)
     bumps = []
     for _ in range(6):
         v = rng.normal(size=3)
         v /= np.linalg.norm(v)
-        bumps.append(sphere(0.32, tuple(v * 0.6)))
-    rock = union(sphere(0.78), *bumps, k=0.25)
+        bumps.append(sphere(0.36, tuple(v * 0.68)))
+    rock = union(sphere(0.88), *bumps, k=0.25)
     craters, rims = [], []
-    for v, r in (((-0.45, -1.0, 0.3), 0.22), ((0.3, -1.0, -0.25), 0.17), ((-0.15, -1.0, -0.55), 0.13), ((0.45, -1.0, 0.45), 0.12)):
+    for v, r in (((-0.5, -1.0, 0.25), 0.25), ((0.25, -1.0, -0.3), 0.19), ((-0.25, -1.0, -0.6), 0.14), ((0.1, -1.0, 0.45), 0.13)):
         p, n = project(rock, (0, 0, 0), v)
         craters.append(sphere(r, tuple(p + n * r * 0.45)))
         rims.append(sphere(r * 1.35, tuple(p)))
     rock_c = rock.subtract(union(*craters), k=0.06)
-    c0 = np.array([0.0, 0.25, 0.0])
-    ends = [(np.array([2.05, 1.2, 1.75]), 0.95, 0.06), (np.array([2.15, 1.1, 0.9]), 0.62, 0.05), (np.array([1.15, 1.1, 2.15]), 0.62, 0.05)]
+    c0 = np.array([0.0, 0.2, 0.0])
+    main = np.array([1.0, 0.45, 0.85])
+    main /= np.linalg.norm(main)
+    perp = np.array([-0.85, 0.0, 1.0])
+    perp -= main * (perp @ main)
+    perp /= np.linalg.norm(perp)
+    tongues = ((0.0, 2.55, 1.0), (0.34, 2.0, 0.72), (-0.34, 2.05, 0.72), (0.66, 1.4, 0.55), (-0.66, 1.45, 0.55))
 
     def flame(scale, shift):
-        parts = [round_cone(tuple(c0 + shift), tuple(c0 + shift + (e - c0) * scale), r0 * scale, r1) for e, r0, r1 in ends]
-        return union(*parts, k=0.35)
+        parts = []
+        for ang, L, rr in tongues:
+            d = main * math.cos(ang) + perp * math.sin(ang)
+            a = c0 + shift
+            L2 = L * scale
+            pts = bezier(a, a + d * L2 * 0.35 + perp * 0.12 * scale, a + d * L2 * 0.7 - perp * 0.1 * scale, a + d * L2, 10)
+            radii = [max(0.86 * rr * scale * (1 - i / 10) ** 0.95, 0.015) for i in range(11)]
+            parts.append(tube(pts, radii))
+        return union(*parts, k=0.13 * scale)
 
-    def flicker(p):
-        q = p.copy()
-        s = p[:, 0] + p[:, 2]
-        q[:, 0] += 0.06 * np.sin(s * 5.0)
-        q[:, 2] -= 0.06 * np.sin(s * 5.0 + 1.0)
-        return q
-
-    outer = flame(1.0, np.zeros(3)).warp(flicker, pad=0.1)
-    inner = flame(0.72, np.array([0.05, -0.2, 0.05])).warp(flicker, pad=0.1)
-    embers = union(*[sphere(r, p) for p, r in (((2.1, 0.5, 2.0), 0.09), ((2.45, 0.5, 1.45), 0.07), ((1.55, 0.5, 2.4), 0.06))])
-    add(m, "Rock", rock_c, (118, 70, 206), tris=8000, role="skin")
-    add(m, "Craters", paint(rock_c, union(*rims), t=0.015, depth=0.05), (78, 40, 150), tris=3000, voxel=0.013)
-    add(m, "Flame", union(outer, embers), (206, 92, 255), material="Neon", role="glow", tris=7000)
-    add(m, "Core", inner, (255, 196, 250), material="Neon", role="glow", tris=5000)
+    outer = flame(1.0, np.zeros(3))
+    mid = flame(0.74, main * 0.35 + CAM * 0.4)
+    core = flame(0.48, main * 0.75 + CAM * 0.55)
+    embers = union(*[sphere(r, p) for p, r in (((2.25, 0.6, 1.95), 0.09), ((2.6, 0.6, 1.3), 0.07), ((1.5, 0.6, 2.5), 0.065))])
+    add(m, "Rock", rock_c, (124, 74, 214), tris=8000, role="skin")
+    add(m, "Craters", paint(rock_c, union(*rims), t=0.015, depth=0.05), (74, 40, 150), tris=3000, voxel=0.013)
+    add(m, "Flame", union(outer, embers), (140, 60, 255), material="Neon", role="glow", tris=8000)
+    add(m, "FlameMid", mid, (255, 78, 196), material="Neon", role="glow", tris=5000)
+    add(m, "Core", core, (255, 214, 96), material="Neon", role="glow", tris=3000)
 
 
 @icon()
@@ -1082,7 +1185,7 @@ def GoldenHour(m):
 
 @icon()
 def Avalanche(m):
-    """Montagna innevata e grande palla di neve che rotola."""
+    """Montagna innevata e grande palla di neve che rotola, con schizzi e linee di movimento."""
     def ridges(p):
         q = p.copy()
         th = np.arctan2(p[:, 1], p[:, 0])
@@ -1097,23 +1200,30 @@ def Avalanche(m):
 
     def snowline(p):
         th = np.arctan2(p[:, 1] - 0.3, p[:, 0] + 0.3)
-        return (1.12 + 0.1 * np.sin(7 * th)) - p[:, 2]
+        return (1.08 + 0.12 * np.sin(7 * th)) - p[:, 2]
 
     snow = paint(mountain, SDF(snowline, (-3, -3, 0.8), (3, 3, 3)), t=0.035, depth=0.08)
     rng = np.random.default_rng(4)
-    ball_c = np.array([0.95, -0.85, 0.72])
+    ball_c = np.array([0.98, -0.85, 0.66])
     lumps = []
-    for _ in range(7):
+    for _ in range(8):
         v = rng.normal(size=3)
         v /= np.linalg.norm(v)
-        lumps.append(sphere(0.24, tuple(ball_c + v * 0.56)))
-    ball = union(sphere(0.72, tuple(ball_c)), *lumps, k=0.18)
-    trail = union(*[sphere(r, p) for p, r in (((0.25, -0.62, 0.95), 0.36), ((-0.22, -0.4, 1.18), 0.28),
-                                               ((-0.55, -0.22, 1.36), 0.21), ((-0.1, -0.72, 0.62), 0.22))], k=0.12)
-    add(m, "Mountain", mountain, (124, 138, 184), tris=9000, role="skin")
+        lumps.append(sphere(0.2, tuple(ball_c + v * 0.52)))
+    ball = union(sphere(0.66, tuple(ball_c)), *lumps, k=0.16)
+    up = np.array([-1.0, 0.0, 0.9])
+    up /= np.linalg.norm(up)
+    side = np.array([up[2], 0.0, -up[0]])
+    lines = []
+    for off, start, length in ((0.42, 0.78, 0.62), (0.0, 0.9, 0.82), (-0.42, 0.78, 0.55)):
+        a0 = ball_c + up * start + side * off + np.array([0, -0.45, 0])
+        lines.append(tube([tuple(a0), tuple(a0 + up * length * 0.5), tuple(a0 + up * length)], [0.03, 0.06, 0.022]))
+    chunks = union(*[sphere(r, tuple(ball_c + np.array(o))) for o, r in (((-0.95, -0.2, -0.45), 0.12), ((-0.7, -0.25, -0.6), 0.08),
+                                                                         ((0.75, -0.2, -0.5), 0.1))])
+    add(m, "Mountain", mountain, (92, 108, 168), tris=9000, role="skin")
     add(m, "Snow", snow, (250, 252, 255), tris=6000, voxel=0.015)
-    add(m, "Ball", ball, (236, 246, 255), tris=7000)
-    add(m, "Trail", trail, (214, 232, 255), tris=4000)
+    add(m, "Ball", union(ball, chunks), (240, 248, 255), tris=8000)
+    add(m, "Lines", union(*lines), (176, 224, 255), tris=2500, voxel=0.012)
 
 
 @icon()
@@ -1122,7 +1232,7 @@ def Alarm(m):
     base = cyl((0, 0, 0), (0, 0, 0.34), 1.0, round=0.12)
     collar = torus(0.8, 0.075, (0, 0, 0.36))
     dome = union(cyl((0, 0, 0.3), (0, 0, 0.92), 0.74), sphere(0.74, (0, 0, 0.92)))
-    bulb = sphere(0.38, (0, -0.05, 0.86))
+    bulb = sphere(0.56, (0, 0, 0.8))
     rays = []
     for sx in (1, -1):
         for a in (5, 38, 70):
@@ -1138,42 +1248,55 @@ def Alarm(m):
 
 @icon()
 def Thief(m):
-    """Mascherina da ladro con occhi furbi e lacci."""
-    c = 0.3
-    lobes = union(ellipsoid((0.62, 0.14, 0.42), (0.5, 0, 0)), ellipsoid((0.62, 0.14, 0.42), (-0.5, 0, 0)),
-                  ellipsoid((0.34, 0.14, 0.24), (0, 0, 0.12)), k=0.2)
-    holes = union(ellipsoid((0.25, 0.5, 0.19), (0.5, 0, 0.03)), ellipsoid((0.25, 0.5, 0.19), (-0.5, 0, 0.03)))
-    mask = lobes.subtract(holes, k=0.04)
+    """Ladro: testa tonda con mascherina nera da bandito, berretto scuro con risvolto, occhi furbi e sorrisetto."""
+    head = ellipsoid((1.0, 0.92, 0.94))
 
-    def bend(p):
-        q = p.copy()
-        q[:, 1] = p[:, 1] - c * p[:, 0] ** 2
-        return q
+    def xz_ell(rx, rz, cx, cz, ang=0.0):
+        """Ellisse nel piano XZ estrusa lungo Y (regione per dipingere sulla faccia)."""
+        return ellipsoid((rx, 3.0, rz)).rot(0, ang, 0).translate((cx, 0, cz))
 
-    mask = mask.warp(bend, pad=0.45)
-    eyes = union(*[ellipsoid((0.23, 0.12, 0.18), (sx * 0.5, c * 0.25 + 0.1, 0.03)) for sx in (1, -1)])
-    pupils = union(*[sphere(0.1, (sx * 0.5 - 0.09, c * 0.25 + 0.0, 0.0)) for sx in (1, -1)])
-    tails = [tube(bezier((1.02, 0.36, 0.05), (1.35, 0.42, 0.25), (1.5, 0.48, -0.15), (1.85, 0.5, -0.05), 12), [0.11 - 0.003 * i for i in range(13)]),
-             tube(bezier((1.02, 0.36, 0.0), (1.3, 0.42, -0.25), (1.45, 0.48, -0.5), (1.72, 0.5, -0.62), 12), [0.1 - 0.003 * i for i in range(13)])]
-    knot = sphere(0.14, (1.02, 0.34, 0.03))
-    ties = squash(union(*tails, knot, k=0.05), sy=0.6)
-    add(m, "Mask", mask, (58, 48, 92), tris=8000, gloss=0.3, role="skin")
-    add(m, "Ties", ties, (58, 48, 92), tris=4000, gloss=0.3, voxel=0.015)
-    add(m, "Eyes", eyes, WHITE, tris=2000, voxel=0.013)
-    add(m, "Pupils", pupils, EYE, role="eye", tris=1200, voxel=0.012)
+    front_half = SDF(lambda p: p[:, 1] - 0.25, (-3, -3, -3), (3, 3, 3))
+    mask_front = union(xz_ell(0.52, 0.36, 0.43, 0.04, -14), xz_ell(0.52, 0.36, -0.43, 0.04, 14),
+                       xz_ell(0.3, 0.2, 0.0, -0.02), k=0.12).intersect(front_half)
+    strap = SDF(lambda p: np.abs(p[:, 2] - 0.08) - 0.11, (-3, -3, -0.1), (3, 3, 0.3))
+    holes = union(*[xz_ell(0.25, 0.18, sx * 0.42, 0.07, -sx * 14) for sx in (1, -1)])
+    mask = paint(head, union(mask_front, strap).subtract(holes), t=0.07, depth=0.05)
+    eyes, pupils = [], []
+    for sx in (1, -1):
+        fr = Frame(head, (0, 0, 0), (sx * 0.44, -1.0, 0.08), sink=0.02)
+        eyes.append(fr.place(ellipsoid((0.22, 0.05, 0.15)).rot(0, -sx * 14, 0)))
+        pupils.append(fr.place(sphere(0.095), (0.1, -0.04, -0.01)))  # x locale = verso sinistra: sguardo di lato
+    cap = paint(head, above(0.5), t=0.1, depth=0.05)
+    brim = squash(torus(0.866, 0.165), sy=0.92).translate((0, 0, 0.47))
+    pom = sphere(0.2, (0, 0.0, 1.12))
+    smirk = bezier((-0.2, 0, -0.44), (-0.05, 0, -0.5), (0.12, 0, -0.48), (0.25, 0, -0.36), 12)
+    mouth = tube(project_curve(head, [(x, 0.0, z) for x, _, z in smirk], (0, -1, 0), inset=0.012, start_back=0.0), 0.04)
+    kx = 0.98
+    r1 = [(x, z) for x, _, z in bezier((kx, 0, 0.06), (kx + 0.2, 0, 0.02), (kx + 0.26, 0, -0.18), (kx + 0.4, 0, -0.4), 10)]
+    r2 = [(x, z) for x, _, z in bezier((kx, 0, 0.08), (kx + 0.26, 0, 0.16), (kx + 0.42, 0, 0.08), (kx + 0.6, 0, -0.04), 10)]
+    tails = [plate(strip(r, 0.24, 0.17), 0.07, r=0.03).translate((0, 0.2, 0)) for r in (r1, r2)]
+    knot = ellipsoid((0.13, 0.12, 0.15), (kx - 0.02, 0.16, 0.08))
+    t = dict(rx=-12)
+    add(m, "Head", tf(head, **t), (255, 208, 164), tris=8000, role="skin")
+    add(m, "Mask", tf(union(mask, *tails, knot, k=0.02), **t), (34, 28, 56), tris=9000, gloss=0.35)
+    add(m, "Cap", tf(union(cap, pom, k=0.04), **t), (82, 78, 116), tris=6000)
+    add(m, "Brim", tf(brim, **t), (240, 238, 248), tris=3000)
+    add(m, "Eyes", tf(union(*eyes), **t), WHITE, tris=1500, voxel=0.012)
+    add(m, "Pupils", tf(union(*pupils), **t), EYE, role="eye", tris=1000, voxel=0.01)
+    add(m, "Mouth", tf(mouth, **t), MOUTH, tris=800, voxel=0.01)
 
 
 @icon()
 def Friends(m):
     """Due testoline tonde e sorridenti vicine."""
-    ca, cb = (-0.72, 0.32, 0.1), (0.66, -0.2, -0.05)
+    ca, cb = (-0.84, 0.3, 0.18), (0.62, -0.22, -0.06)
     a = sphere(0.86, ca)
-    b = sphere(0.96, cb)
-    fa = face(a, ca, fwd=(0.12, -1, 0.02), s=0.95)
+    b = sphere(0.94, cb)
+    fa = face(a, ca, fwd=(-0.04, -1, 0.04), s=0.95)
     fb = face(b, cb, fwd=(-0.06, -1, 0.0), s=1.05)
-    tuft = tube(bezier((-0.72, 0.32, 0.9), (-0.72, 0.25, 1.32), (-0.42, 0.3, 1.38), (-0.4, 0.38, 1.18), 10),
+    tuft = tube(bezier((-0.84, 0.3, 0.98), (-0.84, 0.23, 1.4), (-0.54, 0.28, 1.46), (-0.52, 0.36, 1.26), 10),
                 [0.13, 0.12, 0.11, 0.1, 0.09, 0.08, 0.075, 0.07, 0.065, 0.06, 0.055])
-    ears = union(*[sphere(0.24, (0.66 + sx * 0.6, -0.12, 0.72)) for sx in (1, -1)])
+    ears = union(*[sphere(0.24, (0.62 + sx * 0.6, -0.14, 0.66)) for sx in (1, -1)])
     add(m, "HeadA", union(a, tuft, k=0.08), SKY, tris=7000, role="skin")
     add(m, "HeadB", union(b, ears, k=0.1), YELLOW, tris=7000)
     add(m, "Eyes", union(fa["eyes"], fb["eyes"]), EYE, role="eye", tris=2000, voxel=0.012)
@@ -1242,14 +1365,12 @@ def main(argv):
     if os.environ.get("OUTDIR"):
         toy.OUT = Path(os.environ["OUTDIR"])
     names = [a for a in argv if a not in ("all", "sheet")]
-    set_names = [n for n in ICONS if n not in TESTS]
+    set_names = list(ICONS)
     if "all" in argv:
         names = set_names
     unknown = [n for n in names if n not in ICONS]
     if unknown:
         raise SystemExit(f"Icone sconosciute: {unknown}. Disponibili: {', '.join(ICONS)}")
-    if any(n in TESTS for n in names) and not os.environ.get("OUTDIR"):
-        raise SystemExit("Le prove vanno in una cartella a parte: impostare OUTDIR")
     if names:
         _patch_render()
         res = int(os.environ.get("RES", 512))

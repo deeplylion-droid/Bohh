@@ -137,16 +137,6 @@ def convex(normals, offsets, c=(0, 0, 0), ext: float = 2.0, soft: float = 0.0) -
 
 # ------------------------------------------------------------------------------ superficie
 
-def surface_path(base: SDF, pts, direction, start_back: float = 0.8):
-    """Proietta i punti lungo `direction` sulla superficie: lista di (punto, normale)."""
-    d = unit(direction)
-    out = []
-    for q in pts:
-        q = np.asarray(q, dtype=np.float64) - d * start_back
-        out.append(project(base, q, d))
-    return out
-
-
 def resample(path, step: float):
     """Ricampiona una lista di (punto, normale) a passo costante."""
     pts = np.array([p for p, _ in path])
@@ -183,25 +173,53 @@ def stitches(path, every: float, half: float, r: float, line_r: float = 0.0, ins
     return fast_union(*out)
 
 
-def ring_stitches(base: SDF, center, normal, radius: float, every: float, half: float, r: float,
-                  inset: float = 0.0, cross: bool = False) -> SDF:
-    """Cucitura chiusa attorno a una toppa: cerchio di raggio `radius` attorno a center (sulla superficie)."""
+def tangent_frame(normal, angle: float = 0.0):
+    """Due assi (u, v) perpendicolari alla normale, ruotati di `angle` gradi attorno ad essa."""
     n = unit(normal)
     u = unit(np.cross(n, [0.0, 0.0, 1.0]) if abs(n[2]) < 0.9 else np.cross(n, [1.0, 0.0, 0.0]))
     v = np.cross(n, u)
+    a = math.radians(angle)
+    return u * math.cos(a) + v * math.sin(a), -u * math.sin(a) + v * math.cos(a)
+
+
+def patch_region(center, normal, rx: float, ry: float, angle: float = 0.0, power: float = 4.0,
+                 depth: float = 0.5) -> SDF:
+    """Regione per una toppa: "quadrato arrotondato" (superellisse) nel piano tangente, estruso lungo la normale."""
+    n = unit(normal).astype(np.float32)
+    u, v = (x.astype(np.float32) for x in tangent_frame(normal, angle))
+    c = np.asarray(center, dtype=np.float32)
+    r = min(rx, ry)
+
+    def f(p):
+        q = p - c
+        a = np.abs(q @ u) / rx
+        b = np.abs(q @ v) / ry
+        d = ((a ** power + b ** power) ** (1.0 / power) - 1.0) * r
+        return np.maximum(d, np.abs(q @ n) - depth)
+
+    e = max(rx, ry, depth) + 0.05
+    return SDF(f, c - e, c + e)
+
+
+def patch_outline(base: SDF, center, normal, rx: float, ry: float, angle: float = 0.0, power: float = 4.0, n: int = 40):
+    """Contorno della toppa proiettato sulla superficie: lista chiusa di (punto, normale)."""
+    nn = unit(normal)
+    u, v = tangent_frame(normal, angle)
     c = np.asarray(center, dtype=np.float64)
-    pts = []
-    for a in np.linspace(0, 2 * math.pi, 33):
-        q = c + (u * math.cos(a) + v * math.sin(a)) * radius
-        pts.append(project(base, q - n * 0.6, n))
-    return stitches(pts, every, half, r, inset=inset, cross=cross)
+    out = []
+    for t in np.linspace(0, 2 * math.pi, n + 1):
+        ct, st = math.cos(t), math.sin(t)
+        a = rx * np.sign(ct) * abs(ct) ** (2 / power)
+        b = ry * np.sign(st) * abs(st) ** (2 / power)
+        q = c + u * a + v * b
+        out.append(project(base, q - nn * 0.6, nn))
+    return out
 
 
 # ------------------------------------------------------------------------------ faccia "toy horror"
 
 def face_prism(poly, y0: float, y1: float, round: float = 0.0) -> SDF:
     """Regione: poligono nel piano XZ (coppie x, z) estruso lungo Y fra y0 e y1 (y0 < y1)."""
-    from lib.sdf import prism
     return prism(poly, -y1, -y0, round=round).rot(90, 0, 0)
 
 

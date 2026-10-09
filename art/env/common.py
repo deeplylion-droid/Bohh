@@ -18,7 +18,7 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import lib.toy as _toy  # noqa: E402
-from lib.sdf import SDF, euler, project, smin  # noqa: E402
+from lib.sdf import SDF, cylinder, euler, project, smin  # noqa: E402
 from lib.toy import Model  # noqa: E402
 
 BIG = 1e3
@@ -45,6 +45,13 @@ def _clean_mesh(verts, faces, target=None):
     bm.free()
     if target and len(obj.data.polygons) > target:
         _toy.decimate(obj, target)
+        bm = bmesh.new()
+        bm.from_mesh(obj.data)
+        bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-6)
+        bmesh.ops.dissolve_degenerate(bm, dist=1e-6, edges=bm.edges)
+        bmesh.ops.triangulate(bm, faces=[fc for fc in bm.faces if len(fc.verts) > 3])
+        bm.to_mesh(obj.data)
+        bm.free()
     me = obj.data
     v = np.array([vx.co[:] for vx in me.vertices], dtype=np.float32)
     f = np.array([pl.vertices[:] for pl in me.polygons], dtype=np.int64)
@@ -70,10 +77,17 @@ class Prop(Model):
         parts = {id(p.sdf): p for p in self.parts}
 
         def mesh(sdf, voxel):
+            if isinstance(sdf, MeshShape):  # mesh low-poly costruita direttamente
+                return sdf.verts.copy(), sdf.faces.copy(), None
             v, f, n = orig(sdf, voxel)
             part = parts.get(id(sdf))
             if part is not None:
-                v, f = _clean_mesh(v, f, part.tris * 2 if len(f) > part.tris * 8 else None)
+                # una sola decimazione, direttamente al bersaglio: una seconda passata su una mesh
+                # gia' decimata puo' far collassare intere parti (es. il pilastro della Mesa)
+                v, f = _clean_mesh(v, f, part.tris)
+                if len(f) > part.tris * 1.05:
+                    print(f"[prop] ATTENZIONE {self.name}/{part.name}: decimazione bloccata a {len(f)} "
+                          f"triangoli (richiesti {part.tris}): la forma potrebbe essere rovinata", flush=True)
                 n = None
             return v, f, n
 
@@ -82,6 +96,103 @@ class Prop(Model):
             return super().build(*args, **kw)
         finally:
             _toy.mesh_sdf = orig
+
+
+# ------------------------------------------------------------------------------ mesh dirette
+
+class MeshShape(SDF):
+    """Parte gia' in forma di mesh low-poly (foglie sottili, rametti): Prop la usa cosi' com'e',
+    senza marching cubes (la decimazione appiattisce e fa sparire le lamine sottili).
+
+    Ogni pezzo e' un solido chiuso e convesso con le facce orientate verso l'esterno."""
+
+    def __init__(self, verts, faces):
+        v = np.asarray(verts, dtype=np.float32).reshape(-1, 3)
+        f = np.asarray(faces, dtype=np.int64).reshape(-1, 3)
+        super().__init__(lambda p: np.full(len(p), BIG, dtype=np.float32), v.min(0), v.max(0))
+        self.verts, self.faces = v, f
+
+    def __add__(self, other: "MeshShape") -> "MeshShape":
+        return MeshShape(np.concatenate([self.verts, other.verts]),
+                         np.concatenate([self.faces, other.faces + len(self.verts)]))
+
+
+def mesh_concat(meshes) -> MeshShape:
+    vs, fs, off = [], [], 0
+    for m in meshes:
+        vs.append(m.verts)
+        fs.append(m.faces + off)
+        off += len(m.verts)
+    return MeshShape(np.concatenate(vs), np.concatenate(fs))
+
+
+def _orient_convex(verts, faces):
+    """Gira le facce di un pezzo convesso in modo che le normali escano dal baricentro."""
+    v = np.asarray(verts, dtype=np.float64)
+    c = v.mean(0)
+    out = []
+    for f in faces:
+        a, b, d = v[f[0]], v[f[1]], v[f[2]]
+        n = np.cross(b - a, d - a)
+        out.append(f if np.dot(n, (a + b + d) / 3 - c) >= 0 else (f[0], f[2], f[1]))
+    return out
+
+
+def mesh_leaf(base, axis, side, length: float, width: float, fold: float, mid: float = 0.45) -> MeshShape:
+    """Fogliolina low-poly: rombo piegato lungo la nervatura (tetraedro schiacciato, 4 triangoli).
+
+    base = attaccatura, axis = direzione della foglia, side = direzione della larghezza; i due
+    vertici laterali si alzano di 'fold' lungo la normale (piega a V, si vede da sopra e da sotto)."""
+    base = np.asarray(base, dtype=np.float64)
+    ax = _unit(axis)
+    sd = np.asarray(side, dtype=np.float64)
+    sd = _unit(sd - np.dot(sd, ax) * ax)
+    n = np.cross(sd, ax)
+    if n[2] < 0:
+        n = -n
+    tip = base + ax * length
+    l = base + ax * length * mid + sd * width + n * fold
+    r = base + ax * length * mid - sd * width + n * fold
+    verts = [base, tip, l, r]
+    faces = _orient_convex(verts, [(0, 2, 1), (0, 1, 3), (0, 3, 2), (2, 3, 1)])
+    return MeshShape(verts, faces)
+
+
+def mesh_tube(points, radii, sides: int = 3, twist: float = 0.0, inner_caps: bool = False) -> MeshShape:
+    """Tubo low-poly (prismi a 'sides' lati) lungo una spezzata, chiuso alle estremita'.
+
+    Ogni tratto e' un prisma convesso orientato a se'; i tappi interni (nascosti) si omettono
+    salvo inner_caps=True."""
+    pts = [np.asarray(p, dtype=np.float64) for p in points]
+    if isinstance(radii, (int, float)):
+        radii = [float(radii)] * len(pts)
+    # sistema di riferimento trasportato lungo la curva
+    t0 = _unit(pts[1] - pts[0])
+    ref = np.array([0, 0, 1.0]) if abs(t0[2]) < 0.9 else np.array([1.0, 0, 0])
+    u = _unit(np.cross(t0, ref))
+    rings = []
+    for i, p in enumerate(pts):
+        t = _unit(pts[min(i + 1, len(pts) - 1)] - pts[max(i - 1, 0)])
+        u = _unit(u - np.dot(u, t) * t)
+        w = np.cross(t, u)
+        ring = []
+        for k in range(sides):
+            a = 2 * math.pi * k / sides + twist * i
+            ring.append(p + (u * math.cos(a) + w * math.sin(a)) * radii[i])
+        rings.append(ring)
+    pieces = []
+    for i in range(len(pts) - 1):
+        verts = rings[i] + rings[i + 1]
+        faces = []
+        for k in range(sides):
+            k2 = (k + 1) % sides
+            faces += [(k, k2, sides + k2), (k, sides + k2, sides + k)]
+        if inner_caps or i == 0:
+            faces += [(0, k, k + 1) for k in range(1, sides - 1)]
+        if inner_caps or i == len(pts) - 2:
+            faces += [(sides, sides + k + 1, sides + k) for k in range(1, sides - 1)]
+        pieces.append(MeshShape(verts, _orient_convex(verts, faces)))
+    return mesh_concat(pieces)
 
 
 # ------------------------------------------------------------------------------ campi di base
@@ -224,10 +335,10 @@ def facet_blob(c, radii, n: int = 16, seed: int = 0, depth=(0.82, 1.0), rot=(0, 
 
 def cleaved_block(c, half, seed: int = 0, rot=(0, 0, 0), tilt: float = 10.0, taper: float = 0.15,
                   chips: int = 6, chip=(0.2, 0.5), peak: float = 0.0, ridge: float = 0.0) -> SDF:
-    """Blocco di roccia 'spaccato': parallelepipedo con facce inclinate a caso (tilt, gradi), lati
-    che si stringono verso l'alto (taper), spigoli e vertici scheggiati (chips: tagli che
-    asportano una frazione 'chip' dello spigolo). peak > 0 sostituisce la faccia alta con una
-    piramide (punta alta peak); ridge > 0 con una cresta allungata su x."""
+    """Blocco di roccia 'spaccato': parallelepipedo (mezze misure 'half') con facce inclinate a caso
+    (tilt, gradi), lati che si stringono verso l'alto (taper = frazione della mezza larghezza persa
+    dal fondo alla cima), spigoli e vertici scheggiati (chips tagli, profondita' 'chip'). peak > 0
+    sostituisce la faccia alta con una piramide (punta alta peak); ridge > 0 con una cresta su x."""
     rng = np.random.default_rng(seed)
     c = np.asarray(c, dtype=np.float64)
     hx, hy, hz = half
@@ -245,12 +356,16 @@ def cleaved_block(c, half, seed: int = 0, rot=(0, 0, 0), tilt: float = 10.0, tap
 
     for ax, h in ((0, hx), (1, hy)):
         for s in (1, -1):
+            # taper = frazione della mezza larghezza persa dal fondo alla cima
+            slope = taper * h / (2 * hz) + rng.normal() * math.radians(tilt) * min(1.0, h / hz)
             nl = np.zeros(3)
             nl[ax] = s
-            nl[2] = taper
-            nl = _unit(nl + jit())
-            # il piano passa a distanza h dal centro lungo l'asse
-            add(nl, h * nl[ax] * s * rng.uniform(0.9, 1.0))
+            nl[2] = slope
+            j = rng.normal(size=3) * math.radians(tilt)
+            j[ax] = 0.0
+            j[2] = 0.0
+            nl = _unit(nl + j)
+            add(nl, h * abs(nl[ax]) * rng.uniform(0.9, 1.0))
     add(_unit(np.array([0, 0, -1.0]) + jit() * 0.3), hz)
     if peak > 0:
         k = rng.integers(3, 5)
@@ -272,22 +387,27 @@ def cleaved_block(c, half, seed: int = 0, rot=(0, 0, 0), tilt: float = 10.0, tap
         add(np.array([0, 0, 1.0]), hz + ridge)
     else:
         add(_unit(np.array([0, 0, 1.0]) + jit()), hz * rng.uniform(0.92, 1.0))
-    # scheggiature su vertici e spigoli
+    # scheggiature su vertici e spigoli: piani che asportano una piccola frazione del blocco
     for _ in range(chips):
         sg = rng.choice([-1.0, 1.0], size=3)
         if rng.uniform() < 0.5:
             sg[rng.integers(0, 3)] = 0.0  # spigolo invece di vertice
-        corner = np.array([hx, hy, hz + (ridge * 0.5 if sg[2] > 0 else 0.0)]) * sg
-        nl = _unit(sg / np.array([hx, hy, hz]) + rng.normal(size=3) * 0.35)
-        dist = float(nl @ corner)
-        add(nl, dist * (1 - rng.uniform(*chip) * 0.5))
+        if (peak > 0 or ridge > 0) and sg[2] > 0:
+            sg[2] = 0.0  # non smussa la punta o la cresta
+        if not sg.any():
+            continue
+        nl = _unit(sg / np.array([hx, hy, hz]) + rng.normal(size=3) * 0.12)
+        sup = hx * abs(nl[0]) + hy * abs(nl[1]) + hz * abs(nl[2])
+        add(nl, sup * (1 - rng.uniform(*chip) * 0.35))
     return convex(np.array(N), np.array(D))
 
 
 def slab(poly, z0: float, z1: float, bevel: float = 0.0, tilt=(0, 0, 0), seed: int | None = None,
-         chips: int = 0, chip_depth: float = 0.12) -> SDF:
+         chips: int = 0, chip_depth: float = 0.12, bevel_bottom: float | None = None) -> SDF:
     """Prisma poligonale convesso (poly in senso qualsiasi) tra z0 e z1, con smussi a 45 gradi
-    sugli spigoli orizzontali (bevel) e scheggiature casuali sugli spigoli (chips)."""
+    sugli spigoli orizzontali (bevel in alto, bevel_bottom in basso: se None uguale a bevel) e
+    scheggiature casuali sugli spigoli (chips)."""
+    bevel_bottom = bevel if bevel_bottom is None else bevel_bottom
     pts = np.asarray(poly, dtype=np.float64)
     cxy = pts.mean(0)
     N, D = [], []
@@ -301,17 +421,16 @@ def slab(poly, z0: float, z1: float, bevel: float = 0.0, tilt=(0, 0, 0), seed: i
             nn = -nn
         N.append([nn[0], nn[1], 0.0])
         D.append(float(np.dot(nn, a)))
-        if bevel > 0:
-            for sz, zz in ((1, z1), (-1, z0)):
+        for sz, zz, bv in ((1, z1, bevel), (-1, z0, bevel_bottom)):
+            if bv > 0:
                 bn = _unit([nn[0], nn[1], sz])
-                # piano a 45 gradi che taglia lo spigolo di 'bevel'
-                D.append(float(np.dot(bn, [a[0] - nn[0] * bevel, a[1] - nn[1] * bevel, zz])))
+                # piano a 45 gradi che taglia lo spigolo di 'bv'
+                D.append(float(np.dot(bn, [a[0] - nn[0] * bv, a[1] - nn[1] * bv, zz])))
                 N.append(bn.tolist())
     N += [[0, 0, 1], [0, 0, -1]]
     D += [z1, -z0]
     if chips and seed is not None:
         rng = np.random.default_rng(seed)
-        N0, D0 = np.array(N), np.array(D)
         for _ in range(chips):
             # taglio obliquo vicino a un vertice in alto o in basso
             k = rng.integers(0, n)
@@ -321,7 +440,6 @@ def slab(poly, z0: float, z1: float, bevel: float = 0.0, tilt=(0, 0, 0), seed: i
             nn = _unit(out + np.array([0, 0, 1.0 if zz == z1 else -1.0]) * rng.uniform(0.5, 1.5) + rng.normal(size=3) * 0.25)
             N.append(nn.tolist())
             D.append(float(np.dot(nn, corner)) - chip_depth * rng.uniform(0.6, 1.4))
-        del N0, D0
     shape = convex(N, D)
     if any(tilt):
         cz = (z0 + z1) / 2
@@ -443,6 +561,60 @@ def surface_crack(rock: SDF, inside, direction, along, depth: float, width: floa
         nrm.append(nk)
         cur = pk
     return polyline_crack(pts, nrm, depth, width)
+
+
+# ------------------------------------------------------------------------------ tronchi
+
+def log_prism(x0: float, x1: float, r: float, sides: int, seed: int, cz: float, jitter: float = 0.07,
+              cut0=(0, 0), cut1=(0, 0)) -> SDF:
+    """Tronco low-poly lungo X: prisma a 'sides' facce irregolari tra x0 e x1, con i tagli delle
+    estremita' leggermente inclinati (cut = inclinazione in y, z)."""
+    rng = np.random.default_rng(seed)
+    N, D = [], []
+    a0 = rng.uniform(0, 2 * math.pi)
+    for i in range(sides):
+        a = a0 + 2 * math.pi * i / sides + rng.uniform(-0.12, 0.12)
+        n = np.array([0.0, math.cos(a), math.sin(a)])
+        N.append(n)
+        D.append(r * (1 - rng.uniform(0, jitter)) + n[2] * cz)
+    for sx, x, cut in ((1, x1, cut1), (-1, x0, cut0)):
+        n = np.array([sx, cut[0], cut[1]])
+        n /= np.linalg.norm(n)
+        N.append(n)
+        D.append(float(n @ np.array([x, 0.0, cz])))
+    return convex(N, D)
+
+
+def _near_ends(x0, x1, d, r, cz):
+    """Regione entro d dalle due sezioni del tronco (x < x0 + d oppure x > x1 - d)."""
+    return SDF(lambda p: np.minimum(p[:, 0] - (x0 + d), (x1 - d) - p[:, 0]), (x0 - 1, -r - 1, cz - r - 1), (x1 + 1, r + 1, cz + r + 1))
+
+
+def log_parts(x0, x1, r, cz, seed, sides=9, cut0=(0.08, -0.05), cut1=(-0.06, 0.1), bark_t=0.07):
+    """Corteccia (prisma pieno) e i due dischi di legno chiaro delle sezioni, con un anello inciso.
+
+    Niente gusci sottili: la decimazione li accartoccia. I dischi sporgono di 0.02 dalle sezioni."""
+    outer = log_prism(x0, x1, r, sides, seed, cz, cut0=cut0, cut1=cut1)
+    inner = log_prism(x0 - 0.02, x1 + 0.02, r - bark_t, sides, seed, cz, jitter=0.0, cut0=cut0, cut1=cut1)
+    ring = SDF(lambda p: np.abs(np.sqrt(p[:, 1] ** 2 + (p[:, 2] - cz) ** 2) - r * 0.5) - 0.025,
+               (x0 - 1, -r, cz - r), (x1 + 1, r, cz + r))
+    ends = inner.intersect(_near_ends(x0, x1, 0.12, r, cz)).subtract(ring.intersect(_near_ends(x0, x1, 0.0, r, cz)))
+    return outer, ends
+
+
+def bark_grooves(log: SDF, grooves, cz: float, depth: float = 0.07, width: float = 0.035) -> SDF:
+    """Solchi della corteccia lungo X: (x centrale, lunghezza, angolo attorno all'asse in gradi)."""
+    for k, (x, ln, ang) in enumerate(grooves):
+        a = math.radians(ang)
+        d = (0.0, math.cos(a), math.sin(a))
+        log = log.subtract(surface_crack(log, (x, 0.0, cz), d, (1, 0, 0), depth=depth, width=width, length=ln,
+                                         zigzag=1, seed=90 + k, bend=0.08))
+    return log
+
+
+def stub(a, b, r: float) -> SDF:
+    """Moncone di ramo da a verso b, tagliato netto in b (diventa low-poly con la decimazione)."""
+    return cylinder(a, b, r)
 
 
 # ------------------------------------------------------------------------------ piante

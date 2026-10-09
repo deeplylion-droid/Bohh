@@ -124,7 +124,6 @@ body = ellipsoid((0.98, 0.92, 0.86), (0, 0.02, 1.12))
 head = ellipsoid((0.88, 0.82, 0.78), HEAD_C)
 core = union(body, head, k=0.38)
 m.add("Body", core, YELLOW, tris=4600)
-painted = core.offset(0.02)
 
 belly_region = ellipsoid((0.66, 0.72, 0.6), (0, -0.62, 1.06))
 m.add("Belly", paint(core, belly_region), CREAM, role="detail", tris=1100)
@@ -176,7 +175,8 @@ m.add("Beak", Frame(head, HEAD_C, (0, -1.0, -0.02), sink=0.07).place(beak), ORAN
       voxel=0.013)
 
 mouth, teeth = grin(0.03, 1.87, 0.34, 0.06, 0.05, 0.13, 7, 4, 0.05, -1.4, -0.4)
-belly_seam = seam(front_path(core.offset(0.02), [(0.0, z) for z in np.linspace(1.5, 0.62, 12)], -0.3), inset=-0.005)
+seam_path = front_path(core.offset(0.02), [(0.0, z) for z in np.linspace(1.5, 0.62, 12)], -0.3)
+belly_seam = seam(seam_path, inset=-0.002, line_r=0.01)
 m.add("Stitches", union(*brows, belly_seam), THREAD, role="detail", tris=1300, voxel=0.01)
 
 m.add("Eyes", union(*pupils), EYE, role="eye", tris=900, voxel=0.012)
