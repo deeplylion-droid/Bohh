@@ -160,8 +160,8 @@ local function buildMarkers()
 	for i = 1, #MapLayout.Shelters do
 		local cf = MapLayout.ShelterFrame(i)
 		local att = Instance.new("Attachment")
-		att.WorldPosition = cf.Position + Vector3.new(0, MapLayout.ShelterSize.Y + 5, 0)
 		att.Parent = workspace.Terrain
+		att.WorldPosition = cf.Position + Vector3.new(0, MapLayout.ShelterSize.Y + 5, 0)
 		local gui = Kit.New("BillboardGui", {
 			Name = "ShelterMarker",
 			Size = UDim2.fromOffset(200, 90),

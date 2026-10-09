@@ -1,0 +1,49 @@
+{
+ "images": {},
+ "models": {
+  "Chick": {
+   "asset": 87872955844098,
+   "hash": "2b113b549ad2198bff47bb08e386e97f59fd344f"
+  },
+  "EggCommon": {
+   "asset": 118447612830356,
+   "hash": "6e4cca69759cd07a52c11705bf480fc9719b9f5f"
+  },
+  "EggDivine": {
+   "asset": 107162028099437,
+   "hash": "67be98f26737747318426534ced52f2032749098"
+  },
+  "EggEpic": {
+   "asset": 98382043405607,
+   "hash": "f231b35f9835efa82dfa29a3a4ed5b3b5afa27bb"
+  },
+  "EggLegendary": {
+   "asset": 101254387549632,
+   "hash": "340e623c15db94a3dafd2742525a34a95d472ca2"
+  },
+  "EggMythic": {
+   "asset": 87824274908355,
+   "hash": "42228ffbeba0252da3a2087a379ca5e1b10cce38"
+  },
+  "EggRare": {
+   "asset": 107235932397354,
+   "hash": "e5bf10c525c5d7be12256c5acdcb56a7f6c7bd60"
+  },
+  "EggSecret": {
+   "asset": 110968255228648,
+   "hash": "f7c44b9046ac79813e909e22e3f21f9aba9ace5d"
+  },
+  "EggUncommon": {
+   "asset": 124179252034752,
+   "hash": "cbe9cfd747bd6887d1a0c566ababb43c11b93d59"
+  },
+  "LavaDragon": {
+   "asset": 95954678416787,
+   "hash": "389e0f182e85a78fdbf4d2f2dae5e2f15845cbb3"
+  },
+  "PinguinoPanettone": {
+   "asset": 125750564024260,
+   "hash": "8ff1a268626283092643a15109afef01ad233439"
+  }
+ }
+}

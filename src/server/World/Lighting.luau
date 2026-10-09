@@ -44,14 +44,15 @@ function World.Apply()
 	sky.SunAngularSize = 14
 	sky.MoonAngularSize = 9
 	sky.StarCount = 0
+	-- cielo pastello: le quattro facce laterali sono uguali (il colore dipende solo dall'altezza)
 	local img = Assets.Images
-	if img.SkyBk then
-		sky.SkyboxBk = img.SkyBk
-		sky.SkyboxDn = img.SkyDn
-		sky.SkyboxFt = img.SkyFt
-		sky.SkyboxLf = img.SkyLf
-		sky.SkyboxRt = img.SkyRt
+	if img.SkySide and img.SkyUp and img.SkyDn then
+		sky.SkyboxBk = img.SkySide
+		sky.SkyboxFt = img.SkySide
+		sky.SkyboxLf = img.SkySide
+		sky.SkyboxRt = img.SkySide
 		sky.SkyboxUp = img.SkyUp
+		sky.SkyboxDn = img.SkyDn
 	end
 
 	local bloom = ensure("BloomEffect", "Bloom", Lighting) :: BloomEffect

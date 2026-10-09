@@ -81,8 +81,8 @@ function Audio.Play(name: string, position: Vector3?, volume: number?)
 	end
 	if position then
 		local att = Instance.new("Attachment")
-		att.WorldPosition = position
 		att.Parent = workspace.Terrain
+		att.WorldPosition = position
 		local s = Instance.new("Sound")
 		s.SoundId = id
 		s.Volume = volume or 0.8

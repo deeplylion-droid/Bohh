@@ -29,7 +29,7 @@ end
 -- Layout interno di un lotto (coordinate locali: -Z verso il cancello/fronte, Y=0 al pavimento)
 MapLayout.Plot = {
 	FloorHeight = 1.2,
-	WallHeight = 14,
+	WallHeight = 12,
 	GateWidth = 18,
 	SpawnOffset = Vector3.new(0, 3, -20),
 	-- 9 incubatrici in una griglia 3x3 nella parte anteriore sinistra

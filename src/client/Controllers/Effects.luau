@@ -37,8 +37,8 @@ end
 -- Esplosione di particelle in un punto
 function Effects.Burst(position: Vector3, color: ColorSequence | Color3, count: number, texture: string?, speed: number?, size: number?)
 	local att = Instance.new("Attachment")
-	att.WorldPosition = position
 	att.Parent = workspace.Terrain
+	att.WorldPosition = position
 	local p = Instance.new("ParticleEmitter")
 	p.Texture = texture or SPARKLE
 	p.Color = if typeof(color) == "Color3" then ColorSequence.new(color) else color
@@ -59,8 +59,8 @@ end
 function Effects.FloatText(position: Vector3, text: string, color: Color3?)
 	local Kit = C.UI.Kit
 	local att = Instance.new("Attachment")
-	att.WorldPosition = position
 	att.Parent = workspace.Terrain
+	att.WorldPosition = position
 	local gui = Kit.New("BillboardGui", { Size = UDim2.fromOffset(220, 60), AlwaysOnTop = true, LightInfluence = 0, Adornee = att, Parent = att })
 	local label = Kit.Text({ Text = text, TextColor3 = color or Kit.Theme.Gold, Size = UDim2.fromScale(1, 1), Parent = gui })
 	Kit.Pop(label)

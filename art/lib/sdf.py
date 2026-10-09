@@ -528,3 +528,26 @@ def capped_cone(a: Vec, b: Vec, ra: float, rb: float, round: float = 0.0) -> SDF
 
     r = max(ra, rb)
     return SDF(f, np.minimum(a, b) - r, np.maximum(a, b) + r)
+
+
+def crystal(length: float, radius: float, tip: float = 0.3, sides: int = 6) -> SDF:
+    """Cristallo sfaccettato: prisma regolare lungo +Z (da 0 a length) con punta piramidale.
+
+    tip = frazione della lunghezza occupata dalla punta. Da usare con smooth=False.
+    """
+    angles = [2 * math.pi * i / sides for i in range(sides)]
+    normals = np.array([[math.cos(a), math.sin(a)] for a in angles], dtype=np.float32)
+    apothem = radius * math.cos(math.pi / sides)
+    z_tip = length * (1 - tip)
+
+    def f(p):
+        q = p[:, :2] @ normals.T  # distanze lungo le normali delle facce laterali
+        side = q.max(axis=1)
+        # nella punta il raggio si riduce linearmente fino a zero
+        t = np.clip((p[:, 2] - z_tip) / max(length - z_tip, 1e-6), 0.0, 1.0)
+        r = apothem * (1 - t)
+        slope = apothem / max(length - z_tip, 1e-6)
+        d_side = (side - r) / np.sqrt(1 + slope * slope * (p[:, 2] > z_tip))
+        return np.maximum(np.maximum(d_side, -p[:, 2]), p[:, 2] - length)
+
+    return SDF(f, (-radius, -radius, 0.0), (radius, radius, length))
