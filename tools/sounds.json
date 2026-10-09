@@ -2,186 +2,223 @@
   "Click": {
     "id": 15675059323,
     "name": "Roblox_UI_Bright_Click",
-    "duration": 0
+    "duration": 0,
+    "creator": "Roblox"
   },
   "Open": {
     "id": 17208204604,
     "name": "Roblox GUI - Bubble",
-    "duration": 1
+    "duration": 1,
+    "creator": "Roblox"
   },
   "Fanfare": {
-    "id": 12222253,
-    "name": "victory.wav",
-    "duration": 1
+    "id": 1840120051,
+    "name": "Cartoon Fanfare (B)",
+    "duration": 5,
+    "creator": "APMOfficial"
   },
   "Announce": {
     "id": 15675085146,
     "name": "Roblox_UI_Indicator",
-    "duration": 3
+    "duration": 3,
+    "creator": "Roblox"
   },
   "Error": {
     "id": 17208353912,
     "name": "Roblox GUI - Negative",
-    "duration": 0
+    "duration": 0,
+    "creator": "Roblox"
   },
   "Success": {
     "id": 15675043410,
     "name": "Roblox_UI_Tonal_Stinger",
-    "duration": 1
+    "duration": 1,
+    "creator": "Roblox"
   },
   "Alarm": {
-    "id": 16480580064,
-    "name": "Audio/Roblox_Pinball_8Bit_Blip_02",
-    "duration": 1
+    "id": 9120221867,
+    "name": "Toy Siren Four Variations 1 (SFX)",
+    "duration": 5,
+    "creator": "ProSoundEffects"
   },
   "Pickup": {
     "id": 17208319162,
     "name": "Roblox GUI - Pickup",
-    "duration": 1
+    "duration": 1,
+    "creator": "Roblox"
   },
   "Deliver": {
     "id": 17208327798,
     "name": "Roblox GUI - Aura",
-    "duration": 2
+    "duration": 2,
+    "creator": "Roblox"
   },
   "Coin": {
     "id": 16480548354,
     "name": "Audio/Roblox_Pinball_Token_Insert_06",
-    "duration": 1
+    "duration": 1,
+    "creator": "Roblox"
   },
   "CoinsBig": {
     "id": 127645268874265,
     "name": "CoinTransfer_01",
-    "duration": 2
+    "duration": 2,
+    "creator": "Roblox"
   },
   "Purchase": {
     "id": 17208380755,
     "name": "Roblox GUI - Purchase",
-    "duration": 1
+    "duration": 1,
+    "creator": "Roblox"
   },
   "Upgrade": {
     "id": 16480578169,
     "name": "Audio/Roblox_Pinball_8Bit_Riser_01",
-    "duration": 2
+    "duration": 2,
+    "creator": "Roblox"
   },
   "Slap": {
-    "id": 12222140,
-    "name": "snap.wav",
-    "duration": 0
+    "id": 9113512302,
+    "name": "Body Hit Slaps 5 (SFX)",
+    "duration": 1,
+    "creator": "ProSoundEffects"
   },
   "Bonk": {
     "id": 12222054,
     "name": "Kerplunk.wav",
-    "duration": 0
+    "duration": 0,
+    "creator": "Roblox"
   },
   "Whoosh": {
     "id": 12222208,
     "name": "swordlunge.wav",
-    "duration": 1
+    "duration": 1,
+    "creator": "Roblox"
   },
   "BarrierOn": {
-    "id": 162670145,
-    "name": "UFO Taking Off",
-    "duration": 3
+    "id": 9119816531,
+    "name": "Synth Power Up Multi Tone Wind Ups Rise 1 (SFX)",
+    "duration": 3,
+    "creator": "ProSoundEffects"
   },
   "BarrierOff": {
-    "id": 15675081158,
-    "name": "Roblox_UI_Cute_Goodbye",
-    "duration": 0
+    "id": 9117873383,
+    "name": "Power Down 3 (SFX)",
+    "duration": 4,
+    "creator": "ProSoundEffects"
   },
   "Trap": {
     "id": 12222124,
     "name": "Short spring sound.wav",
-    "duration": 1
+    "duration": 1,
+    "creator": "Roblox"
   },
   "MeteorFall": {
-    "id": 12222095,
-    "name": "Rocket whoosh 01.wav",
-    "duration": 6
+    "id": 9125445790,
+    "name": "Comet Pass By Intense Fiery Whoosh By Sizzli (SFX)",
+    "duration": 3,
+    "creator": "ProSoundEffects"
   },
   "Explosion": {
     "id": 3149249837,
     "name": "Cannon_Explode",
-    "duration": 4
+    "duration": 4,
+    "creator": "Roblox"
   },
   "Sizzle": {
-    "id": 17208402198,
-    "name": "Roblox GUI - Spraypaint",
-    "duration": 1
+    "id": 9119165436,
+    "name": "Sizzle Short And Explosive Sear 1 (SFX)",
+    "duration": 2,
+    "creator": "ProSoundEffects"
   },
   "Roar": {
-    "id": 9120031442,
-    "name": "Thunder With Lion Roar Searing Blast Growl 3 (SFX)",
-    "duration": 4
+    "id": 9114624345,
+    "name": "Goblin Growl 1 (SFX)",
+    "duration": 2,
+    "creator": "ProSoundEffects"
   },
   "GeyserBurst": {
-    "id": 103840356233584,
-    "name": "Water_Plants_01",
-    "duration": 2
+    "id": 9120502958,
+    "name": "Water Burst Boom Blast Hissing Spray 1 (SFX)",
+    "duration": 3,
+    "creator": "ProSoundEffects"
   },
   "FireBurst": {
-    "id": 12222065,
-    "name": "Launching rocket.wav",
-    "duration": 2
+    "id": 9114444008,
+    "name": "Fire Whoosh 3 (SFX)",
+    "duration": 1,
+    "creator": "ProSoundEffects"
   },
   "LavaFlow": {
-    "id": 365956378,
-    "name": "CoffeeBrew",
-    "duration": 15
+    "id": 9119223551,
+    "name": "Slowed Bubbles Thick Liquid Constant 1 (SFX)",
+    "duration": 7,
+    "creator": "ProSoundEffects"
   },
   "Wind": {
-    "id": 15675021174,
-    "name": "Roblox_UI_Loop_Air_Whooshes",
-    "duration": 11
+    "id": 9113081018,
+    "name": "Airy Pass By Windy Whoosh 3 (SFX)",
+    "duration": 5,
+    "creator": "ProSoundEffects"
   },
   "GoatBleat": {
-    "id": 16480558759,
-    "name": "Audio/Roblox_Pinball_Joystick_Buzz_Release_02",
-    "duration": 0
+    "id": 9113442867,
+    "name": "Billy Goat 7 (SFX)",
+    "duration": 1,
+    "creator": "ProSoundEffects"
   },
   "Rumble": {
-    "id": 16480554368,
-    "name": "Audio/Roblox_Pinball_Rolling_Single_Loop_01",
-    "duration": 9
+    "id": 9113222583,
+    "name": "Avalanche Rumble 9 (SFX)",
+    "duration": 11,
+    "creator": "ProSoundEffects"
   },
   "MusicSummit": {
-    "id": 130053244401794,
-    "name": "TutorialMusic_01",
-    "duration": 262
+    "id": 9045624279,
+    "name": "Glowing Out With Family (a)",
+    "duration": 127,
+    "creator": "APMOfficial"
   },
   "MusicMeadow": {
-    "id": 15930255433,
-    "name": "Roblox_RetroFluteMusic_01",
-    "duration": 108
+    "id": 9045623776,
+    "name": "Clean Plates Best Mates (a)",
+    "duration": 126,
+    "creator": "APMOfficial"
   },
   "MusicForest": {
-    "id": 17208308857,
-    "name": "Roblox GUI - Ringtone",
-    "duration": 23
+    "id": 9043323476,
+    "name": "Woodland Walks",
+    "duration": 89,
+    "creator": "APMOfficial"
   },
   "MusicCanyon": {
-    "id": 15675051846,
-    "name": "Roblox_UI_Loop_Guitar_Acoustic",
-    "duration": 12
+    "id": 1837240905,
+    "name": "The Whistling Cowboy",
+    "duration": 188,
+    "creator": "APMOfficial"
   },
   "MusicCrystal": {
-    "id": 15675069601,
-    "name": "Roblox_UI_Loop_Calm_Music",
-    "duration": 95
+    "id": 9048734017,
+    "name": "Enchanted Butterflies",
+    "duration": 152,
+    "creator": "APMOfficial"
   },
   "MusicCrater": {
-    "id": 17422163655,
-    "name": "Generic - Cloud Blitz",
-    "duration": 138
+    "id": 9042776045,
+    "name": "Looking For Clues",
+    "duration": 103,
+    "creator": "APMOfficial"
   },
   "MusicEvent": {
-    "id": 17422147220,
-    "name": "HR - WASSA (Instrumental)",
-    "duration": 85
+    "id": 9044691746,
+    "name": "Party Time",
+    "duration": 125,
+    "creator": "APMOfficial"
   },
   "MusicDanger": {
-    "id": 16480577096,
-    "name": "Audio/Roblox_Pinball_8Bit_Tone_Loop_03",
-    "duration": 13
+    "id": 1838520230,
+    "name": "Laughter Makers - Hurry 4",
+    "duration": 95,
+    "creator": "APMOfficial"
   }
 }
