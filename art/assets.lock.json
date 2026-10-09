@@ -1,5 +1,10 @@
 {
  "images": {
+  "IconAdmin": {
+   "decal": 108786170313278,
+   "hash": "d9ff10a758758fae8dc794e830232dbda39a12c7",
+   "image": 86547832031463
+  },
   "IconAlarm": {
    "decal": 113157752651766,
    "hash": "7b9fff0fe309a247ea796b79d1047fd994c5e154",
@@ -24,6 +29,11 @@
    "decal": 103394996132187,
    "hash": "a910c1e270123dcd63cc440bce847704e6afb8a7",
    "image": 134779205505239
+  },
+  "IconClose": {
+   "decal": 76052197015673,
+   "hash": "133aa9081394b7e6d157bfffaedc1938bd107bb2",
+   "image": 89378038508048
   },
   "IconCodes": {
    "decal": 90835661259367,
@@ -75,6 +85,11 @@
    "hash": "d218418564e243db62a822793d716501475d1347",
    "image": 107998422511073
   },
+  "IconGraphics": {
+   "decal": 121749148056038,
+   "hash": "edb9b216d05288535730a66442d5385a355de029",
+   "image": 112533510762684
+  },
   "IconHatchSpeed": {
    "decal": 137716345224460,
    "hash": "bd27370343b547eee1e753a99e4b11edb2a62443",
@@ -90,6 +105,11 @@
    "hash": "0c645b04e3ac2659c93b5699d6a4846304b37f2a",
    "image": 138755183386090
   },
+  "IconLanguage": {
+   "decal": 123236661958205,
+   "hash": "562415260cd8828372fea9789c66f28acdfd6bf7",
+   "image": 80779990457660
+  },
   "IconLock": {
    "decal": 123264869625598,
    "hash": "da6a11a48c9daa5fdcc96c7ed311c8a18cd9e85f",
@@ -104,6 +124,11 @@
    "decal": 127184917916245,
    "hash": "274f2a58d096204e6b0c69b576d9fafc66b15d06",
    "image": 106843909265085
+  },
+  "IconMusic": {
+   "decal": 134494720447423,
+   "hash": "018af414f7d589bce5c2c51462e67168a9a7c143",
+   "image": 137626024795397
   },
   "IconPedestal": {
    "decal": 93485810088662,
@@ -129,6 +154,11 @@
    "decal": 135447029551543,
    "hash": "a7a496c459aa306a01f441279f5f309a122f47bc",
    "image": 132567986358081
+  },
+  "IconSound": {
+   "decal": 100523115059223,
+   "hash": "a092fc9f7987984ac21e154a2c5fc230c64ab2e6",
+   "image": 117287254122990
   },
   "IconSpeed": {
    "decal": 71325955923422,

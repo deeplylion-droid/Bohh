@@ -1305,6 +1305,105 @@ def Friends(m):
     add(m, "Mouth", union(fa["mouth"], fb["mouth"]), MOUTH, tris=1200, voxel=0.01)
 
 
+# ====================================================================== opzioni, admin, chiusura
+@icon()
+def Close(m):
+    """X bianca grossa e arrotondata (sul pulsante rosso di chiusura), con lo spessore piu' scuro dietro."""
+    r = 0.3
+    bars = union(tube([(-0.92, 0, -0.92), (0.92, 0, 0.92)], r), tube([(-0.92, 0, 0.92), (0.92, 0, -0.92)], r), k=0.12)
+    x = squash(bars, sy=0.7)
+    add(m, "X", x, WHITE, tris=8000, role="skin")
+    add(m, "Depth", tf(x, (0.05, 0.16, -0.09)), (214, 206, 232), tris=6000)
+
+
+@icon()
+def Admin(m):
+    """Chiave inglese d'argento e martello incrociati."""
+    # chiave: manico piatto, testa ad anello aperto in alto e anello chiuso in basso
+    handle = box((0.15, 0.1, 0.88), (0, 0, 0), round=0.08)
+    head = cyl((0, -0.11, 1.12), (0, 0.11, 1.12), 0.44, round=0.05)
+    head = head.subtract(union(box((0.17, 0.6, 0.34), (0, 0, 1.46)), cyl((0, -0.6, 1.12), (0, 0.6, 1.12), 0.18)), k=0.03)
+    tail = cyl((0, -0.1, -1.02), (0, 0.1, -1.02), 0.3, round=0.04).subtract(cyl((0, -0.6, -1.02), (0, 0.6, -1.02), 0.14), k=0.02)
+    wrench = union(handle, head, tail, k=0.07)
+    add(m, "Wrench", tf(wrench, (0, -0.16, 0), ry=38), SILVER, tris=9000, gloss=0.3, role="skin")
+    # martello: manico di legno con impugnatura rossa e testa di metallo scuro
+    shaft = cyl((0, 0, -1.25), (0, 0, 0.8), 0.11, round=0.05)
+    grip = cyl((0, 0, -1.27), (0, 0, -0.5), 0.14, round=0.06)
+    hhead = union(box((0.52, 0.21, 0.22), (0.05, 0, 0.95), round=0.07),
+                  cyl((0.5, 0, 0.95), (0.66, 0, 0.95), 0.25, round=0.05), k=0.04)
+    t = dict(pos=(0, 0.2, 0), ry=-38)
+    add(m, "Shaft", tf(shaft, **t), WOOD, tris=4000)
+    add(m, "Grip", tf(grip, **t), RED, tris=3000)
+    add(m, "HammerHead", tf(hhead, **t), GREY_DARK, tris=5000, gloss=0.3)
+
+
+@icon()
+def Music(m):
+    """Due crome unite (nota musicale) viola, con una stellina."""
+    head = ellipsoid((0.37, 0.27, 0.27))
+    h1 = tf(head, (-0.64, 0, -0.86), ry=-22)
+    h2 = tf(head, (0.62, 0, -0.62), ry=-22)
+    st1 = cyl((-0.34, 0, -0.78), (-0.34, 0, 0.9), 0.09)
+    st2 = cyl((0.92, 0, -0.54), (0.92, 0, 1.14), 0.09)
+    beam = plate([(-0.43, 0.62), (1.01, 0.88), (1.01, 1.24), (-0.43, 0.98)], 0.22, r=0.07, corner=0.04)
+    notes = union(h1, h2, st1, st2, beam, k=0.05)
+    add(m, "Notes", notes, (146, 76, 255), tris=9000, role="skin")
+    shine = union(tf(ellipsoid((0.12, 0.05, 0.07)), (-0.74, -0.27, -0.74), ry=-22),
+                  tf(ellipsoid((0.12, 0.05, 0.07)), (0.52, -0.27, -0.5), ry=-22))
+    add(m, "Shine", shine, (214, 190, 255), tris=1500, voxel=0.012)
+    add(m, "Sparkle", tf(sparkle(0.3), (-1.0, -0.1, 0.7)), YELLOW, tris=2000, voxel=0.014)
+
+
+@icon()
+def Sound(m):
+    """Altoparlante con due onde sonore."""
+    body = box((0.3, 0.34, 0.4), (-0.78, 0, 0), round=0.1)
+    cone = ccone((-0.55, 0, 0), (0.12, 0, 0), 0.36, 0.86, round=0.07)
+    add(m, "Body", body, SLATE, tris=4000)
+    add(m, "Cone", cone, GREY, tris=6000, gloss=0.3, role="skin")
+    rim = torus(0.8, 0.07).rot(0, 90, 0).translate((0.13, 0, 0))
+    add(m, "Rim", rim, GREY_DARK, tris=2500, voxel=0.014)
+    waves = []
+    for R in (0.62, 1.0):
+        pts = [(0.3 + R * math.cos(math.radians(a)), 0, R * math.sin(math.radians(a))) for a in np.linspace(-46, 46, 16)]
+        waves.append(tube(pts, 0.09))
+    add(m, "Waves", union(*waves), SKY, tris=5000, voxel=0.014)
+
+
+@icon()
+def Graphics(m):
+    """Monitor con un paesaggio di montagna innevata sullo schermo."""
+    w, h, zc = 1.2, 0.8, 0.32
+    frame_ = box((w, 0.13, h), (0, 0, zc), round=0.1)
+    screen = paint(frame_, front(rrect(w - 0.12, h - 0.12, 0.06)).translate((0, 0, zc)), t=0.02, depth=0.05)
+    neck = box((0.13, 0.08, 0.26), (0, 0.05, -0.6), round=0.04)
+    base = box((0.55, 0.26, 0.07), (0, 0.05, -0.86), round=0.05)
+    add(m, "Frame", frame_, SLATE, tris=6000, role="skin")
+    add(m, "Stand", union(neck, base, k=0.05), GREY_DARK, tris=3000)
+    add(m, "Screen", screen, SKY, tris=4000, voxel=0.014)
+    y = -0.16  # disegni appena davanti allo schermo
+    hills = plate([(-1.08, -0.4), (-0.55, 0.2), (-0.2, -0.12), (0.3, 0.42), (1.08, -0.25), (1.08, -0.4)], 0.04, r=0.012)
+    snow = plate([(0.13, 0.2), (0.3, 0.42), (0.49, 0.18), (0.38, 0.24), (0.3, 0.16), (0.22, 0.24)], 0.05, r=0.012)
+    sun = cyl((-0.62, y - 0.025, zc + 0.36), (-0.62, y + 0.025, zc + 0.36), 0.15, round=0.012)
+    add(m, "Hills", hills.translate((0, y, zc)), GREEN, tris=2500, voxel=0.012)
+    add(m, "Snow", snow.translate((0, y - 0.01, zc)), WHITE, tris=1500, voxel=0.01)
+    add(m, "Sun", sun, YELLOW, tris=1500, voxel=0.012)
+
+
+@icon()
+def Language(m):
+    """Mappamondo blu con continenti verdi e anello d'oro."""
+    ball = sphere(1.0)
+    land = union(ellipsoid((0.42, 0.6, 0.36), (-0.32, -0.8, 0.38)), ellipsoid((0.28, 0.6, 0.48), (0.42, -0.78, -0.25)),
+                 ellipsoid((0.22, 0.6, 0.16), (-0.5, -0.8, -0.45)), ellipsoid((0.2, 0.6, 0.12), (0.5, -0.8, 0.62)))
+    add(m, "Ocean", ball, BLUE, tris=9000, role="skin")
+    add(m, "Land", paint(ball, land, t=0.03, depth=0.08), GREEN, tris=5000, voxel=0.013)
+    ring = torus(1.24, 0.075).rot(90, 0, 0).rot(0, 0, 58).rot(0, -18, 0)
+    add(m, "Ring", ring, GOLD, tris=4000, gloss=0.3, voxel=0.014)
+    glint = tf(ellipsoid((0.17, 0.4, 0.1)), (-0.36, -0.82, 0.45), ry=-35)
+    add(m, "Shine", paint(ball, glint, t=0.035, depth=0.08), (176, 220, 255), tris=1200, voxel=0.012)
+
+
 # ---------------------------------------------------------------------- esecuzione
 def build_icon(name: str, res: int):
     fn, view, voxel = ICONS[name]
