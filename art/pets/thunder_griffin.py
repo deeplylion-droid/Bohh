@@ -1,13 +1,15 @@
 """Grifone del Tuono (ThunderGriffin) - pet ULTRA, il livello piu' alto: in gioco e' esposto gigante
-(circa 38 stud) su una torre dietro la base del giocatore.
+(circa 38 stud) su una torre dietro la base del giocatore, quindi forme grandi e leggibili anche da vicino.
 
-Carattere: il sovrano della tempesta, fiero e minaccioso. Testa d'aquila bianca con il grande becco
-d'oro adunco spalancato in uno strido (bordo seghettato di dentini aguzzi: il tocco "toy horror"),
-occhi socchiusi che brillano sotto sopracciglia piumate a punta, una cicatrice ricucita sull'occhio.
-Petto in fuori coperto di piume a scaglie, un artiglio d'oro alzato, corpo da leone grigio argento con
-cosce muscolose e zampe con gli unghioli fuori. Attorno a collo e testa una enorme CRINIERA DI FULMINI
-(parte Neon "Mane": il gioco ci aggancia le scintille), fulmini anche sul ciuffo della coda e sui bordi
-delle grandi ali alzate (gruppi WingR/WingL, perno alla spalla), con qualche penna strappata.
+Carattere: il sovrano della tempesta, fiero e minaccioso. Testa d'aquila bianca con il grande becco d'oro
+adunco spalancato in uno strido (bordo seghettato di dentini aguzzi: il tocco "toy horror"), occhi socchiusi
+che brillano sotto sopracciglia piumate a punta e una cicatrice ricucita sull'occhio. Dietro la testa un
+collare di piume scure (nube temporalesca) da cui esplode un'enorme CRINIERA DI FULMINI a saetta, alcuni
+ramificati (parte Neon "Mane": il gioco ci aggancia le scintille; nella stessa parte anche il ciuffo della
+coda e le saette luminose sui fianchi). Petto in fuori coperto di file di piume sovrapposte, un artiglio
+d'oro alzato, corpo da leone grigio tempesta accovacciato con cosce muscolose e unghioli fuori. Grandi ali
+alzate (gruppi WingR/WingL, perno alla spalla) con le penne "a dito" dell'aquila, qualche penna strappata
+dai fulmini e scintille sulle punte (parti Neon WingBoltsR/WingBoltsL).
 """
 import math
 import os
@@ -26,7 +28,7 @@ SILVER = (116, 132, 160)       # corpo da leone grigio tempesta
 STORM = (226, 232, 245)        # piume bianco tempesta
 HEAD_WHITE = (244, 247, 253)   # testa d'aquila: il bianco piu' luminoso
 STEEL = (96, 126, 172)         # copritrici blu acciaio
-SLATE = (44, 54, 82)           # ardesia scura: sopracciglia, zampe d'aquila, strisce
+SLATE = (44, 54, 82)           # ardesia scura: sopracciglia, palpebre, zampe d'aquila
 REMIGE = (52, 64, 98)          # penne remiganti ardesia
 RUFF = (48, 62, 98)            # collare di piume "nube temporalesca" dietro la testa
 GOLD = (255, 184, 36)
@@ -35,7 +37,7 @@ TOOTH = (255, 252, 240)
 PUPIL = (14, 16, 34)
 WHITE = (255, 255, 255)
 BOLT = (36, 206, 255)          # fulmini ciano elettrico
-EYE_GLOW = (255, 238, 140)
+EYE_GLOW = (255, 238, 140)     # iridi luminose bianco-giallo
 THREAD = (72, 40, 112)
 
 
@@ -587,7 +589,7 @@ for u in np.linspace(0.05, 0.27, 5) * BS:
         teeth.append(round_cone(tuple(a), tuple(a + nrm_low * 0.05), 0.017, 0.003))
 m.add("Teeth", fast_union(teeth), TOOTH, role="detail", tris=700, voxel=0.009)
 
-# ============================================================ piumaggio bianco a scaglie (collo, petto, spalle, "calzoni")
+# ============================================================ piumaggio a file sovrapposte (collo, petto, "calzoni")
 
 
 def scale_feather(p, nrm, point_dir, L, w, lift=0.0, tilt=0.3, back=0.42):
@@ -635,7 +637,7 @@ def shingles(base, origin, axis, fwd, edges, lobes, lobe_d, d_lo=0.022, d_hi=0.0
 
 def plume_side(p):
     """Bordo posteriore del piumaggio (piano obliquo) con le punte delle piume che sporgono sul pelo."""
-    h = (p - A0) @ AX.astype(np.float32)
+    h = (p - A0.astype(np.float32)) @ AX.astype(np.float32)
     x = 2 * ((h / 0.17) - np.floor(h / 0.17)) - 1
     return ((p - PL_C.astype(np.float32)) @ PL_N.astype(np.float32) - 0.1 * (1 - np.abs(x) ** 1.7)) * 0.8
 
@@ -663,7 +665,6 @@ for sx in (1, -1):
         if sh is not None:
             fringe.append(sh)
 plumage = union(chest_pl, *legs_pl, fast_union(fringe))
-
 m.add("Plumage", plumage, STORM, role="detail", tris=10800, voxel=0.016)
 
 # ============================================================ zampe d'aquila: tarso a scaglie (ardesia) e artigli d'oro
@@ -796,7 +797,7 @@ m.add("Ruff", fast_union(ruff), RUFF, role="detail", tris=2500, voxel=0.014)
 m.add("Slate", union(*slate_bits, *brows, *lids_top).intersect(GROUND), SLATE, role="detail", tris=4100, voxel=0.013)
 m.add("Talons", fast_union(gold_bits).intersect(GROUND), GOLD, role="detail", tris=2000, voxel=0.011, reflectance=0.12)
 
-# ============================================================ criniera di fulmini (+ ciuffo della coda): parte Neon "Mane"
+# ============================================================ criniera di fulmini: parte Neon "Mane" (+ coda e fianchi)
 mane = []
 N_M = 22
 for i in range(N_M):
@@ -898,7 +899,7 @@ for sx, nm, ragged in ((1, "WingR", (5, 7)), (-1, "WingL", (6,))):
         if i in ragged or i in (2, 8):
             a = math.radians(ang + rng.uniform(-8, 8))
             wb.append(bolt((tip[0], 0.0, tip[1]), (math.cos(a), 0.0, math.sin(a)), (0.0, -1.0, 0.0),
-                           0.5 if i in ragged else 0.42, 0.08, random_segs(rng, n=2), t_edge=0.013, slope=0.4))
+                           0.6 if i in ragged else 0.5, 0.062, random_segs(rng, n=3), t_edge=0.02, slope=0.36))
     wb.append(bolt((WH[0] - 0.05, 0.0, WH[1] - 0.05), rodrigues(np.array([hand[0], 0.0, hand[1]]), (0, 1, 0), -28),
                    (0.0, -1.0, 0.0), 0.56, 0.085, random_segs(rng, n=2)))
     for t in (0.3, 0.62):  # scariche che saltano dal bordo d'attacco
