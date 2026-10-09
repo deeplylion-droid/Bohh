@@ -342,11 +342,33 @@ def shoot(name: str, html: str, w: int, h: int) -> Path:
     return out
 
 
+def thumb_ultra() -> str:
+    """I 5 giganti Ultra, con un pet normale davanti per far capire quanto sono enormi."""
+    W, H = 1920, 1080
+    body = [
+        f'<svg class="layer" width="{W}" height="{H}">{rays(960, 700, 30, "#ff3a6a", 0.18, 1700)}</svg>',
+        glow(960, 760, 620, "rgba(255,120,80,.75)", "rgba(120,20,80,0)", z=2),
+        pet("PentaDragon_3q", 960, 900, 760, z=6),
+        pet("TitanRex_3q", 420, 960, 560, z=7),
+        pet("ThunderGriffin_3q", 1500, 950, 560, flip=True, z=7),
+        pet("InfernoKomodo_3q", 330, 1075, 520, z=9),
+        pet("VenomWidow_3q", 1590, 1075, 520, flip=True, z=9),
+        pet("EggUltra_3q", 960, 1065, 170, z=10),
+        pet("Chick_3q", 1110, 1068, 62, z=11),
+        title("ULTRA|GIANTS!", 178, RED, 13, 16, "left:0;right:0;top:30px;transform:rotate(-2deg);z-index:12"),
+    ]
+    body.append(f'<div class="ribbon" style="left:1280px;top:330px;font-size:56px;padding:8px 30px;background:#ffb21f;'
+                f'transform:rotate(6deg);z-index:11">10x BIGGER!</div>')
+    bg = "background: radial-gradient(circle at 50% 62%, #ff9a5a 0%, #e0336a 30%, #6a1a7a 62%, #1a0a2e 100%);"
+    return page(W, H, "".join(body), bg)
+
+
 PAGES = {
     "icon": (icon, 512, 512),
     "thumbnail_1": (thumb_title, 1920, 1080),
     "thumbnail_2": (thumb_hatch, 1920, 1080),
     "thumbnail_3": (thumb_steal, 1920, 1080),
+    "thumbnail_4": (thumb_ultra, 1920, 1080),
 }
 
 
