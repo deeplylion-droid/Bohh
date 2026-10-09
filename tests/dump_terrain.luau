@@ -6,19 +6,21 @@ local Terrain = H.require("ServerScriptService/Server/World/Terrain")
 Terrain.Prepare()
 local ok = true
 local X0, X1, Z0, Z1, STEP = -324, 324, -332, 832, 4
-local rows, kinds, zones = {}, {}, {}
+local rows, kinds, zones, edges = {}, {}, {}, {}
 local t0 = os.clock()
 for z = Z0, Z1, STEP do
-	local row, krow, zrow = {}, {}, {}
+	local row, krow, zrow, erow = {}, {}, {}, {}
 	for x = X0, X1, STEP do
-		local h, k, zn = Terrain.HeightAt(x, z)
+		local h, k, zn, e = Terrain.HeightAt(x, z)
 		table.insert(row, h)
 		table.insert(krow, k)
 		table.insert(zrow, zn)
+		table.insert(erow, e)
 	end
 	table.insert(rows, row)
 	table.insert(kinds, krow)
 	table.insert(zones, zrow)
+	table.insert(edges, erow)
 end
 -- materiali calcolati con la stessa funzione del gioco (pendenza dalle differenze finite)
 local mats = {}
@@ -30,7 +32,7 @@ for j = 1, #rows do
 		local hd = rows[math.max(j - 1, 1)][i]
 		local hu = rows[math.min(j + 1, #rows)][i]
 		local slope = math.sqrt(((hr - hl) / (2 * STEP)) ^ 2 + ((hu - hd) / (2 * STEP)) ^ 2)
-		local m = Terrain.SurfaceMaterial(rows[j][i], kinds[j][i], zones[j][i], slope)
+		local m = Terrain.SurfaceMaterial(rows[j][i], kinds[j][i], zones[j][i], slope, X0 + (i - 1) * STEP, Z0 + (j - 1) * STEP, edges[j][i])
 		table.insert(mrow, m.Name)
 	end
 	table.insert(mats, mrow)

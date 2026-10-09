@@ -40,15 +40,26 @@ render di anteprima `Nome_3q.png`, `Nome_front.png` (viste: `3q`, `front`, `side
 
 ## Stile
 
-Giocattolo in vinile morbido e lucido, colori saturi e allegri, forme tonde e "paffute":
-testa grande (circa il 45-50% dell'altezza), corpo a goccia, zampe corte, **occhi grandi e
-lucidi** (ellissoidi scuri appoggiati sulla testa con `Frame(...).place`) con **due riflessi
-bianchi** sullo stesso lato in entrambi gli occhi, guance rosa (`stick`), bocca sorridente
-disegnata sulla superficie (`project_curve` + `tube`). Silhouette leggibile da lontano: un
-elemento distintivo grande per ogni pet (orecchie, corna, coda, criniera, guscio, accessorio).
-I pet piu' rari sono piu' elaborati, con parti `glow` e accessori. Le creature "meme" (Mitici,
-Divini, Segreti) sono personaggi originali a tema cibo/oggetti italiani: nessun personaggio
-esistente.
+Giocattolo da collezione lucido e ben rifinito, ma con **personalita'** e un tocco leggero
+(circa 20%) di "toy horror" alla Poppy Playtime: giocattoli che sembrano prendere vita di notte.
+Non fanno paura, ma non sono nemmeno solo "dolci":
+
+- **Espressione**: ghigno largo e furbo (anche asimmetrico) con una fila di **dentini aguzzi**
+  bianchi su bocca scura, oppure sorriso cucito; sopracciglia spesse e inclinate; palpebra
+  superiore che copre in parte l'occhio (sguardo sornione) o pupille piu' piccole con il bianco
+  dell'occhio visibile; ogni tanto **occhi a bottone** cuciti (con il filo a X) o occhi diversi.
+- **Dettagli da peluche/giocattolo**: cuciture visibili (file di trattini sulla superficie),
+  toppe cucite di un altro colore, bottoni; per gli animali di peluche il corpo puo' usare il
+  materiale `Fabric`.
+- **Proporzioni**: testa ancora grande ma meno "neonato"; braccia e gambe un po' piu' lunghe,
+  mani piu' grandi con dita tozze; posture con carattere (spalle curve, testa inclinata).
+- **Colori**: saturi e con piu' contrasto, accenti scuri (viola, blu notte, bordeaux), meno pastello.
+- Ogni pet ha un tratto di carattere riconoscibile (furbo, sbruffone, inquietante-tenero,
+  scontroso...). Le creature "meme" (Mitici, Divini, Segreti) restano personaggi originali a
+  tema cibo/oggetti italiani: nessun personaggio esistente, nemmeno di Poppy Playtime.
+
+Ambiente: niente forme "a caramella". Rocce **spigolose e taglienti** (sfaccettature piatte,
+punte, crepe), colori naturali e meno saturi; alberi e piante stilizzati ma credibili.
 
 ## Strumenti principali (`lib/sdf.py`)
 

@@ -58,15 +58,16 @@ local function rampHeight(z: number): number
 	return 330 + (318 - 330) * t
 end
 
--- materiale del sentiero in ogni zona
-local PATH_MATERIAL = {
-	Meadow = Enum.Material.Sand,
-	Forest = Enum.Material.Cobblestone,
-	Canyon = Enum.Material.Ground,
-	Crystal = Enum.Material.Limestone,
-	Crater = Enum.Material.Asphalt,
+-- sentiero realistico: terra battuta al centro, ghiaia a chiazze, bordi irregolari mangiati
+-- dall'erba (o dalla roccia della zona); i colori dei materiali sono naturali e poco saturi
+local PATH_MATERIALS = {
+	Meadow = { base = Enum.Material.Ground, center = Enum.Material.Mud, patch = Enum.Material.Pebble, edge = Enum.Material.Grass },
+	Forest = { base = Enum.Material.Cobblestone, center = Enum.Material.Mud, patch = Enum.Material.Pebble, edge = Enum.Material.LeafyGrass },
+	Canyon = { base = Enum.Material.Sand, center = Enum.Material.Ground, patch = Enum.Material.Pebble, edge = Enum.Material.Sandstone },
+	Crystal = { base = Enum.Material.Limestone, center = Enum.Material.Slate, patch = Enum.Material.Pebble, edge = Enum.Material.Salt },
+	Crater = { base = Enum.Material.Asphalt, center = Enum.Material.Asphalt, patch = Enum.Material.Basalt, edge = Enum.Material.Basalt },
 }
-Terrain.PathMaterial = PATH_MATERIAL
+Terrain.PathMaterials = PATH_MATERIALS
 
 local function buildFeatures()
 	table.clear(features)
@@ -90,9 +91,11 @@ function Terrain.Prepare()
 	end
 end
 
--- Altezza della superficie nel punto (x, z), tipo di elemento dominante e zona
-function Terrain.HeightAt(x: number, z: number): (number, string, string)
+-- Altezza della superficie nel punto (x, z), tipo di elemento dominante, zona e, sul sentiero,
+-- la distanza dal centro in proporzione alla larghezza (0 = centro, 1 = bordo)
+function Terrain.HeightAt(x: number, z: number): (number, string, string, number)
 	local best, kind, zone = -math.huge, "flank", "Summit"
+	local pathMin = math.huge
 	-- vetta
 	local r = math.sqrt(x * x + z * z)
 	local plateau = (MapLayout.SummitY - 1) - math.max(0, r - MapLayout.PlateauRadius) * 2.0
@@ -116,6 +119,9 @@ function Terrain.HeightAt(x: number, z: number): (number, string, string)
 		local jitter = noise(x, z, 14, 5.5) * 9
 		for _, f in list do
 			local d = math.sqrt((x - f.x) ^ 2 + (z - f.z) ^ 2)
+			if f.kind == "path" and d < pathMin then
+				pathMin = d
+			end
 			if f.kind == "path" and d < f.r then
 				local w = (1 - d / f.r) ^ 3
 				terraceW += w
@@ -141,7 +147,7 @@ function Terrain.HeightAt(x: number, z: number): (number, string, string)
 	end
 	-- sulla terrazza del sentiero vince sempre il sentiero (anche dentro il cratere e sul bordo)
 	if terraceW > 0 then
-		return terraceSum / terraceW, "path", terraceZone
+		return terraceSum / terraceW, "path", terraceZone, 1 - terraceBest ^ (1 / 3)
 	end
 	-- cratere: conca con bordo rialzato e varco verso la rampa d'ingresso
 	local cc = MapLayout.Crater.Center
@@ -173,18 +179,33 @@ function Terrain.HeightAt(x: number, z: number): (number, string, string)
 			best, kind, zone = h, "rim", "Crater"
 		end
 	end
-	-- rumore sulle scarpate (mai sulle superfici calpestabili)
+	-- rumore sulle scarpate (mai sulle superfici calpestabili): ondulazioni ampie, dettaglio e
+	-- creste affilate (rumore "a cresta"); si attenua vicino al bordo del sentiero
 	if kind == "bank" or kind == "flank" or kind == "rim" then
-		best += noise(x, z, 26, 3.1) * 5 + noise(x, z, 9, 8.7) * 1.6
+		local fade = math.clamp((pathMin - (MapLayout.PathWidth / 2 + 1)) / 8, 0, 1)
+		local ridge = math.clamp(1 - math.abs(noise(x, z, 15, 6.3)) * 2.2, 0, 1) ^ 4
+		best += (noise(x, z, 26, 3.1) * 5 + noise(x, z, 9, 8.7) * 1.8 + ridge * 4) * fade
 	end
-	return best, kind, zone
+	return best, kind, zone, 1
 end
 
--- Materiale della superficie in base a zona e pendenza (ogni zona usa materiali propri,
--- cosi' i colori globali dei materiali restano distinti fra le zone)
-local function surfaceMaterial(y: number, kind: string, zone: string, slope: number): Enum.Material
+-- Materiale della superficie in base a zona, pendenza e (sul sentiero) posizione e distanza dal
+-- centro. Ogni zona usa materiali propri, cosi' i colori globali dei materiali restano distinti.
+local function surfaceMaterial(y: number, kind: string, zone: string, slope: number, x: number?, z: number?, edge: number?): Enum.Material
 	if kind == "path" then
-		return PATH_MATERIAL[zone] or Enum.Material.Sand
+		local set = PATH_MATERIALS[zone] or PATH_MATERIALS.Meadow
+		local px, pz = x or 0, z or 0
+		local e = (edge or 0) + noise(px, pz, 4.5, 4.2) * 0.22
+		if e > 0.84 then
+			return set.edge
+		end
+		if noise(px, pz, 10, 1.7) > 0.26 then
+			return set.patch
+		end
+		if e < 0.24 + noise(px, pz, 7, 9.1) * 0.15 then
+			return set.center
+		end
+		return set.base
 	end
 	if y < MapLayout.CloudSeaY - 6 then
 		return Enum.Material.Rock
@@ -205,7 +226,7 @@ local function surfaceMaterial(y: number, kind: string, zone: string, slope: num
 	elseif zone == "Meadow" then
 		return if cliff then Enum.Material.Rock else Enum.Material.Grass
 	elseif zone == "Forest" then
-		return if cliff then Enum.Material.Mud else Enum.Material.LeafyGrass
+		return if cliff then Enum.Material.Rock else Enum.Material.LeafyGrass
 	elseif zone == "Canyon" then
 		return if steep then Enum.Material.Sandstone else Enum.Material.Ground
 	elseif zone == "Crystal" then
@@ -217,29 +238,33 @@ end
 Terrain.SurfaceMaterial = surfaceMaterial
 
 Terrain.Colors = {
-	[Enum.Material.Grass] = Color3.fromRGB(112, 200, 74),
-	[Enum.Material.LeafyGrass] = Color3.fromRGB(70, 160, 76),
-	[Enum.Material.Rock] = Color3.fromRGB(146, 152, 170),
-	[Enum.Material.Slate] = Color3.fromRGB(116, 112, 146),
-	[Enum.Material.Snow] = Color3.fromRGB(242, 247, 255),
-	[Enum.Material.Glacier] = Color3.fromRGB(176, 226, 255),
-	[Enum.Material.Ground] = Color3.fromRGB(196, 152, 104),
-	[Enum.Material.Sandstone] = Color3.fromRGB(228, 132, 78),
-	[Enum.Material.Salt] = Color3.fromRGB(168, 150, 214),
-	[Enum.Material.Basalt] = Color3.fromRGB(66, 58, 72),
-	[Enum.Material.CrackedLava] = Color3.fromRGB(255, 104, 36),
-	[Enum.Material.Mud] = Color3.fromRGB(104, 78, 58),
-	[Enum.Material.Sand] = Color3.fromRGB(236, 204, 146),
-	[Enum.Material.Cobblestone] = Color3.fromRGB(176, 150, 118),
-	[Enum.Material.Limestone] = Color3.fromRGB(206, 196, 236),
-	[Enum.Material.Asphalt] = Color3.fromRGB(92, 80, 88),
+	[Enum.Material.Grass] = Color3.fromRGB(104, 166, 74),
+	[Enum.Material.LeafyGrass] = Color3.fromRGB(68, 128, 62),
+	[Enum.Material.Rock] = Color3.fromRGB(126, 130, 142),
+	[Enum.Material.Slate] = Color3.fromRGB(96, 94, 114),
+	[Enum.Material.Snow] = Color3.fromRGB(240, 245, 252),
+	[Enum.Material.Glacier] = Color3.fromRGB(170, 210, 234),
+	[Enum.Material.Ground] = Color3.fromRGB(140, 108, 78),
+	[Enum.Material.Sandstone] = Color3.fromRGB(184, 106, 70),
+	[Enum.Material.Salt] = Color3.fromRGB(146, 134, 180),
+	[Enum.Material.Basalt] = Color3.fromRGB(60, 54, 62),
+	[Enum.Material.CrackedLava] = Color3.fromRGB(236, 92, 34),
+	[Enum.Material.Mud] = Color3.fromRGB(104, 84, 64),
+	[Enum.Material.Sand] = Color3.fromRGB(196, 160, 116),
+	[Enum.Material.Cobblestone] = Color3.fromRGB(140, 130, 114),
+	[Enum.Material.Limestone] = Color3.fromRGB(168, 160, 190),
+	[Enum.Material.Asphalt] = Color3.fromRGB(74, 66, 72),
 }
+-- Pebble (ghiaia) non accetta un colore personalizzato: resta quello naturale del motore
 
 -- Costruisce tutto il terreno (alcuni secondi). Restituisce il numero di voxel pieni.
 function Terrain.Build(): number
 	local terrain = workspace.Terrain
 	for mat, color in Terrain.Colors do
-		terrain:SetMaterialColor(mat, color)
+		local ok, err = pcall(terrain.SetMaterialColor, terrain, mat, color)
+		if not ok then
+			warn(`[Terrain] colore di {mat.Name}: {err}`)
+		end
 	end
 	Terrain.Prepare()
 
@@ -250,21 +275,25 @@ function Terrain.Build(): number
 	local heights = table.create(nx)
 	local kinds = table.create(nx)
 	local zones = table.create(nx)
+	local edges = table.create(nx)
 	for ix = 1, nx do
 		local hx = table.create(nz)
 		local kx = table.create(nz)
 		local zx = table.create(nz)
+		local ex = table.create(nz)
 		local x = X0 + (ix - 0.5) * RES
 		for iz = 1, nz do
 			local z = Z0 + (iz - 0.5) * RES
-			local h, k, zn = Terrain.HeightAt(x, z)
+			local h, k, zn, e = Terrain.HeightAt(x, z)
 			hx[iz] = h
 			kx[iz] = k
 			zx[iz] = zn
+			ex[iz] = e
 		end
 		heights[ix] = hx
 		kinds[ix] = kx
 		zones[ix] = zx
+		edges[ix] = ex
 		if ix % 16 == 0 then
 			task.wait()
 		end
@@ -294,7 +323,8 @@ function Terrain.Build(): number
 					local hd = heights[ix][math.max(iz - 1, 1)]
 					local hu = heights[ix][math.min(iz + 1, nz)]
 					local slope = math.sqrt(((hr - hl) / (2 * RES)) ^ 2 + ((hu - hd) / (2 * RES)) ^ 2)
-					local top = surfaceMaterial(h, kinds[ix][iz], zones[ix][iz], slope)
+					local cx, cz = X0 + (ix - 0.5) * RES, Z0 + (iz - 0.5) * RES
+					local top = surfaceMaterial(h, kinds[ix][iz], zones[ix][iz], slope, cx, cz, edges[ix][iz])
 					for iy = 1, ny do
 						local yb = Y0 + (iy - 1) * RES
 						if yb >= h then

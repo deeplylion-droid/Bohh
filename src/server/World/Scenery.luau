@@ -217,13 +217,26 @@ end
 ---------------------------------------------------------------------------------------------
 -- Decorazioni sparse (alberi, rocce, fiori) per zona, lontano dal sentiero
 ---------------------------------------------------------------------------------------------
-local DECOR: { [string]: { { name: string, count: number, scale: { number }, edge: boolean?, light: { Color3 | number }? } } } = {
+type DecorItem = { name: string, count: number, scale: { number }, edge: boolean?, cliff: boolean?, tint: Color3?, light: { Color3 | number }? }
+
+-- colore della roccia per zona (le guglie e le schegge di roccia prendono il colore del posto)
+local ROCK_TINT = {
+	Meadow = Color3.fromRGB(128, 132, 142),
+	Forest = Color3.fromRGB(116, 118, 124),
+	Canyon = Color3.fromRGB(178, 104, 70),
+	Crystal = Color3.fromRGB(98, 92, 124),
+	Crater = Color3.fromRGB(62, 56, 64),
+}
+
+local DECOR: { [string]: { DecorItem } } = {
 	Summit = {
 		{ name = "PineSnowy", count = 46, scale = { 1.4, 2.2 } },
 		{ name = "SnowRock", count = 22, scale = { 1.0, 2.0 } },
 		{ name = "Rock2", count = 10, scale = { 1.2, 2.4 } },
 	},
 	Meadow = {
+		{ name = "RockShards", count = 14, scale = { 1.0, 1.8 }, cliff = true, tint = ROCK_TINT.Meadow },
+		{ name = "RockSpire", count = 6, scale = { 1.0, 1.6 }, cliff = true, tint = ROCK_TINT.Meadow },
 		{ name = "PineTree", count = 30, scale = { 1.3, 2.0 } },
 		{ name = "Bush1", count = 26, scale = { 1.0, 1.5 } },
 		{ name = "Flowers1", count = 40, scale = { 1.4, 2.0 } },
@@ -232,6 +245,8 @@ local DECOR: { [string]: { { name: string, count: number, scale: { number }, edg
 		{ name = "Rock1", count = 26, scale = { 0.8, 1.6 }, edge = true },
 	},
 	Forest = {
+		{ name = "RockSpire", count = 10, scale = { 1.0, 1.8 }, cliff = true, tint = ROCK_TINT.Forest },
+		{ name = "RockShards", count = 14, scale = { 1.0, 1.8 }, cliff = true, tint = ROCK_TINT.Forest },
 		{ name = "OakTree", count = 46, scale = { 1.2, 1.9 } },
 		{ name = "PineTree", count = 40, scale = { 1.8, 2.8 } },
 		{ name = "Bush1", count = 30, scale = { 1.2, 1.8 } },
@@ -242,6 +257,8 @@ local DECOR: { [string]: { { name: string, count: number, scale: { number }, edg
 		{ name = "Rock3", count = 20, scale = { 0.8, 1.6 }, edge = true },
 	},
 	Canyon = {
+		{ name = "RockSpire", count = 24, scale = { 1.2, 2.4 }, cliff = true, tint = ROCK_TINT.Canyon },
+		{ name = "RockShards", count = 20, scale = { 1.0, 2.0 }, cliff = true, tint = ROCK_TINT.Canyon },
 		{ name = "Mesa", count = 16, scale = { 1.4, 2.6 } },
 		{ name = "Cactus", count = 30, scale = { 1.0, 1.6 } },
 		{ name = "DryBush", count = 50, scale = { 1.2, 2.0 }, edge = true },
@@ -249,12 +266,16 @@ local DECOR: { [string]: { { name: string, count: number, scale: { number }, edg
 		{ name = "Rock3", count = 16, scale = { 0.8, 1.6 }, edge = true },
 	},
 	Crystal = {
+		{ name = "RockSpire", count = 12, scale = { 1.0, 2.0 }, cliff = true, tint = ROCK_TINT.Crystal },
+		{ name = "RockShards", count = 16, scale = { 1.0, 1.8 }, cliff = true, tint = ROCK_TINT.Crystal },
 		{ name = "CrystalCluster1", count = 26, scale = { 1.0, 2.2 }, light = { Color3.fromRGB(190, 120, 255), 18 } },
 		{ name = "CrystalCluster2", count = 34, scale = { 0.9, 1.6 }, edge = true, light = { Color3.fromRGB(110, 230, 255), 14 } },
 		{ name = "GlowShroom", count = 40, scale = { 1.0, 1.8 }, edge = true },
 		{ name = "Rock1", count = 18, scale = { 1.0, 2.0 } },
 	},
 	Crater = {
+		{ name = "RockSpire", count = 10, scale = { 1.0, 2.0 }, cliff = true, tint = ROCK_TINT.Crater },
+		{ name = "RockShards", count = 14, scale = { 1.0, 1.8 }, cliff = true, tint = ROCK_TINT.Crater },
 		{ name = "LavaRock", count = 34, scale = { 1.0, 2.4 }, light = { Color3.fromRGB(255, 120, 40), 16 } },
 		{ name = "DeadTree", count = 18, scale = { 1.0, 1.6 } },
 		{ name = "ObsidianSpikes", count = 26, scale = { 1.0, 2.0 } },
@@ -305,9 +326,13 @@ function Scenery.Decor(parent: Instance, assets, terrainHeight: (number, number)
 						continue
 					end
 				end
-				-- evita pendii troppo ripidi (gli oggetti sembrerebbero sospesi)
+				-- evita pendii troppo ripidi (gli oggetti sembrerebbero sospesi); le rocce di scarpata
+				-- invece vanno proprio sui pendii ripidi
 				local h2 = terrainHeight(x + 2, z + 2)
-				if math.abs(h2 - h) > 3.2 then
+				local steep = math.abs(h2 - h) > 2.5
+				if item.cliff ~= nil and item.cliff ~= steep then
+					continue
+				elseif not item.cliff and math.abs(h2 - h) > 3.2 then
 					continue
 				end
 				local model = assets.Clone("Props", item.name)
@@ -316,7 +341,15 @@ function Scenery.Decor(parent: Instance, assets, terrainHeight: (number, number)
 				end
 				local s = rng:NextNumber(item.scale[1], item.scale[2])
 				model:ScaleTo(s)
-				model:PivotTo(CFrame.new(x, h - 0.4, z) * CFrame.Angles(0, rng:NextNumber(0, math.pi * 2), 0))
+				local sink = if item.cliff then 1.6 * s else 0.4
+				model:PivotTo(CFrame.new(x, h - sink, z) * CFrame.Angles(0, rng:NextNumber(0, math.pi * 2), 0))
+				if item.tint then
+					for _, d in model:GetDescendants() do
+						if d:IsA("BasePart") and d:GetAttribute("Role") == "skin" then
+							d.Color = item.tint
+						end
+					end
+				end
 				if item.light and placed % LIGHT_EVERY == 0 then
 					local light = Instance.new("PointLight")
 					light.Color = item.light[1] :: Color3
@@ -334,6 +367,68 @@ function Scenery.Decor(parent: Instance, assets, terrainHeight: (number, number)
 			end
 		end
 	end
+	return folder
+end
+
+---------------------------------------------------------------------------------------------
+-- Bordi del sentiero: file di sassi e tronchi semi-interrati lungo i margini (solo decorazione)
+---------------------------------------------------------------------------------------------
+local EDGE_PROPS = {
+	Meadow = { "EdgeStones", "LogBorder" },
+	Forest = { "LogBorder", "LogBorder", "EdgeStones" },
+	Canyon = { "EdgeStones" },
+	Crystal = { "EdgeStones" },
+	Crater = { "EdgeStones" },
+}
+
+function Scenery.TrailEdges(parent: Instance, assets, terrainHeight: (number, number) -> number)
+	local folder = Build.Model("TrailEdges", parent)
+	local rng = Random.new(11)
+	local function blocked(s: number, side: number): boolean
+		for _, sh in MapLayout.Shelters do
+			if side > 0 and math.abs(sh.s - s) < 14 then
+				return true
+			end
+		end
+		for _, n in MapLayout.Nests do
+			if math.abs(n.s - s) < 7 then
+				return true
+			end
+		end
+		return false
+	end
+	local s = 24
+	local count = 0
+	while s < MapLayout.PathLength - 12 do
+		for _, side in { 1, -1 } do
+			local at = s + (if side < 0 then 8 else 0) + rng:NextNumber(-3, 3)
+			local _, _, zone = MapLayout.PathPoint(at)
+			local names = EDGE_PROPS[zone]
+			if names and not blocked(at, side) then
+				local name = names[rng:NextInteger(1, #names)]
+				local model = assets.Clone("Props", name)
+				if model then
+					-- l'asse lungo del modello (X) segue il bordo del sentiero
+					local cf = MapLayout.EdgeFrame(at, side, 1.4)
+					local y = terrainHeight(cf.Position.X, cf.Position.Z)
+					model:ScaleTo(rng:NextNumber(0.9, 1.25))
+					model:PivotTo(CFrame.new(cf.Position.X, y - 0.25, cf.Position.Z) * cf.Rotation * CFrame.Angles(0, rng:NextNumber(-0.15, 0.15), 0))
+					if name == "EdgeStones" and ROCK_TINT[zone] then
+						for _, d in model:GetDescendants() do
+							if d:IsA("BasePart") and d:GetAttribute("Role") == "skin" then
+								d.Color = ROCK_TINT[zone]
+							end
+						end
+					end
+					CollectionService:AddTag(model, "SmallDecor")
+					model.Parent = folder
+					count += 1
+				end
+			end
+		end
+		s += 16
+	end
+	folder:SetAttribute("Count", count)
 	return folder
 end
 
