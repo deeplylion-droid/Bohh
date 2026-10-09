@@ -209,6 +209,8 @@ VIEWS = {
     "summit": ((0, 430, 360), (0, 320, 20), 30),
     # trono del lotto 5 (Pentadrago) visto dalla piazza
     "throne": ((-14, 350, -38), (-58, 360, -160), 24),
+    # i giganti dei lotti 1-5 visti dall'alto, dalla parte del sentiero
+    "giants": ((60, 470, 330), (-20, 340, -30), 26),
     "plot": ((40, 352, 50), (88, 331, 104), 26),
     "trail": ((190, 340, 250), (20, 262, 320), 28),
     "crater": ((70, 210, 470), (70, 96, 630), 28),

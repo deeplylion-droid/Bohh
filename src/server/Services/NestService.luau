@@ -228,11 +228,20 @@ end
 
 -- Uovo speciale in un nido a caso della zona (sostituisce l'uovo presente)
 function NestService.SpawnSpecial(zone: string, rarity: string)
-	local candidates = {}
+	-- preferisce i nidi che non hanno gia' un uovo raro quanto quello speciale (un uovo Segreto
+	-- appena annunciato non deve sparire per far posto all'uovo Ultra)
+	local candidates, fallback = {}, {}
 	for _, nest in nests do
 		if nest.zone == zone and not nest.away and not nest.lair then
-			table.insert(candidates, nest)
+			table.insert(fallback, nest)
+			local held = nest.egg and nest.eggInfo and nest.eggInfo.rarity
+			if not held or Rarities.Compare(held, rarity) < 0 then
+				table.insert(candidates, nest)
+			end
 		end
+	end
+	if #candidates == 0 then
+		candidates = fallback
 	end
 	if #candidates == 0 then
 		return
