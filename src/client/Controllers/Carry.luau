@@ -19,7 +19,8 @@ local function armsUp(char: Model)
 	local r15 = char:FindFirstChild("RightUpperArm")
 	if r15 then
 		local rs = (char:FindFirstChild("RightUpperArm") :: BasePart):FindFirstChild("RightShoulder") :: Motor6D?
-		local ls = char:FindFirstChild("LeftUpperArm") and (char:FindFirstChild("LeftUpperArm") :: BasePart):FindFirstChild("LeftShoulder") :: Motor6D?
+		local ls = char:FindFirstChild("LeftUpperArm")
+			and (char:FindFirstChild("LeftUpperArm") :: BasePart):FindFirstChild("LeftShoulder") :: Motor6D?
 		if rs then
 			rs.Transform = CFrame.Angles(math.rad(170), 0, math.rad(-12))
 		end
@@ -68,7 +69,12 @@ local function thiefVisuals(p: Player)
 				Adornee = char:FindFirstChild("Head"),
 				Parent = char,
 			})
-			local label = Kit.Text({ Text = C.Lang.T("Thief"), TextColor3 = Color3.fromRGB(255, 70, 70), Size = UDim2.fromScale(1, 1), Parent = gui })
+			local label = Kit.Text({
+				Text = C.Lang.T("Thief"),
+				TextColor3 = Color3.fromRGB(255, 70, 70),
+				Size = UDim2.fromScale(1, 1),
+				Parent = gui,
+			})
 			Kit.Pop(label)
 			tags[p] = gui
 		end

@@ -59,7 +59,8 @@ local function emitter(parent: Instance, props: { [string]: any }): ParticleEmit
 	p.Color = props.color
 	p.LightEmission = props.lightEmission or 0.8
 	p.Size = props.size or NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.5), NumberSequenceKeypoint.new(1, 0) })
-	p.Transparency = props.transparency or NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.1), NumberSequenceKeypoint.new(1, 1) })
+	p.Transparency = props.transparency
+		or NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.1), NumberSequenceKeypoint.new(1, 1) })
 	p.Lifetime = props.lifetime or NumberRange.new(0.8, 1.4)
 	p.Rate = props.rate or 6
 	p.Speed = props.speed or NumberRange.new(0.6, 1.6)
@@ -103,7 +104,10 @@ function Visuals.EggEffects(model: Model, rarity: string)
 	local r = Rarities.Get(rarity)
 	if r.order >= 3 then
 		local rate = ({ 4, 6, 9, 12, 16, 22 })[r.order - 2]
-		local col = if rarity == "Divine" then Rarities.Gradients.Divine elseif rarity == "Secret" then Rarities.Gradients.Secret else ColorSequence.new(r.color)
+		local col = if rarity == "Divine"
+			then Rarities.Gradients.Divine
+			elseif rarity == "Secret" then Rarities.Gradients.Secret
+			else ColorSequence.new(r.color)
 		emitter(core, { color = col, rate = rate })
 	end
 	if r.order >= 4 then

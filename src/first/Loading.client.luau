@@ -68,7 +68,12 @@ local function new(className: string, props: { [string]: any }, children: { Inst
 end
 
 local function stroke(thickness: number, mode: Enum.ApplyStrokeMode?): UIStroke
-	return new("UIStroke", { Thickness = thickness, Color = OUTLINE, LineJoinMode = Enum.LineJoinMode.Round, ApplyStrokeMode = mode or Enum.ApplyStrokeMode.Contextual })
+	return new("UIStroke", {
+		Thickness = thickness,
+		Color = OUTLINE,
+		LineJoinMode = Enum.LineJoinMode.Round,
+		ApplyStrokeMode = mode or Enum.ApplyStrokeMode.Contextual,
+	})
 end
 
 local gui = new("ScreenGui", {
@@ -97,11 +102,13 @@ local bg = new("Frame", {
 
 -- montagne stilizzate (rombi ruotati) con la vetta innevata
 local mountains = new("Frame", { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), Parent = bg })
-for i, m in {
-	{ x = 0.18, size = 0.62, color = Color3.fromRGB(120, 104, 214) },
-	{ x = 0.82, size = 0.58, color = Color3.fromRGB(132, 112, 222) },
-	{ x = 0.5, size = 0.86, color = Color3.fromRGB(96, 80, 196) },
-} do
+for i, m in
+	{
+		{ x = 0.18, size = 0.62, color = Color3.fromRGB(120, 104, 214) },
+		{ x = 0.82, size = 0.58, color = Color3.fromRGB(132, 112, 222) },
+		{ x = 0.5, size = 0.86, color = Color3.fromRGB(96, 80, 196) },
+	}
+do
 	local peak = new("Frame", {
 		BackgroundColor3 = m.color,
 		BorderSizePixel = 0,
@@ -154,7 +161,10 @@ local title = new("TextLabel", {
 	Parent = content,
 }, {
 	stroke(8),
-	new("UIGradient", { Rotation = 90, Color = ColorSequence.new(Color3.fromRGB(255, 244, 140), Color3.fromRGB(255, 170, 30)) }),
+	new(
+		"UIGradient",
+		{ Rotation = 90, Color = ColorSequence.new(Color3.fromRGB(255, 244, 140), Color3.fromRGB(255, 170, 30)) }
+	),
 })
 
 -- uova che saltellano
@@ -207,7 +217,10 @@ local barFill = new("Frame", {
 	Parent = barBack,
 }, {
 	new("UICorner", { CornerRadius = UDim.new(1, 0) }),
-	new("UIGradient", { Rotation = 90, Color = ColorSequence.new(Color3.fromRGB(141, 255, 98), Color3.fromRGB(34, 194, 59)) }),
+	new(
+		"UIGradient",
+		{ Rotation = 90, Color = ColorSequence.new(Color3.fromRGB(141, 255, 98), Color3.fromRGB(34, 194, 59)) }
+	),
 })
 local percent = new("TextLabel", {
 	BackgroundTransparency = 1,

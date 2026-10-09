@@ -134,7 +134,9 @@ local function offlineEarnings(player: Player, data)
 	if away < 60 then
 		return
 	end
-	local rate = if S.MonetizationService.HasPass(player, "VIP") then GameConfig.OfflineRateVIP else GameConfig.OfflineRate
+	local rate = if S.MonetizationService.HasPass(player, "VIP")
+		then GameConfig.OfflineRateVIP
+		else GameConfig.OfflineRate
 	local amount = math.floor(S.PetService.TotalIncome(player) * away * rate)
 	if amount >= 1 then
 		S.DataService.AddCoins(player, amount, "Offline")

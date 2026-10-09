@@ -129,7 +129,14 @@ function Scenery.Shelters(parent: Instance)
 		local cf = MapLayout.ShelterFrame(i)
 		local hut = Build.Model(`Shelter{i}`, folder)
 		-- pavimento
-		Build.Part({ name = "Floor", size = Vector3.new(size.X + 2, 0.6, size.Z + 2), cframe = cf * CFrame.new(0, 0.3, 0), color = WOOD, material = Enum.Material.WoodPlanks, parent = hut })
+		Build.Part({
+			name = "Floor",
+			size = Vector3.new(size.X + 2, 0.6, size.Z + 2),
+			cframe = cf * CFrame.new(0, 0.3, 0),
+			color = WOOD,
+			material = Enum.Material.WoodPlanks,
+			parent = hut,
+		})
 		-- pali agli angoli
 		for _, sx in { -1, 1 } do
 			for _, sz in { -1, 1 } do
@@ -144,9 +151,23 @@ function Scenery.Shelters(parent: Instance)
 			end
 		end
 		-- parete di fondo (lato a monte) e pareti laterali basse
-		Build.Part({ name = "Back", size = Vector3.new(size.X, size.Y, 0.8), cframe = cf * CFrame.new(0, size.Y / 2, size.Z / 2), color = WOOD, material = Enum.Material.WoodPlanks, parent = hut })
+		Build.Part({
+			name = "Back",
+			size = Vector3.new(size.X, size.Y, 0.8),
+			cframe = cf * CFrame.new(0, size.Y / 2, size.Z / 2),
+			color = WOOD,
+			material = Enum.Material.WoodPlanks,
+			parent = hut,
+		})
 		for _, sx in { -1, 1 } do
-			Build.Part({ name = "Side", size = Vector3.new(0.8, size.Y * 0.55, size.Z), cframe = cf * CFrame.new(sx * size.X / 2, size.Y * 0.275, 0), color = WOOD, material = Enum.Material.WoodPlanks, parent = hut })
+			Build.Part({
+				name = "Side",
+				size = Vector3.new(0.8, size.Y * 0.55, size.Z),
+				cframe = cf * CFrame.new(sx * size.X / 2, size.Y * 0.275, 0),
+				color = WOOD,
+				material = Enum.Material.WoodPlanks,
+				parent = hut,
+			})
 		end
 		-- tetto a due falde
 		for _, sz in { -1, 1 } do
@@ -160,10 +181,17 @@ function Scenery.Shelters(parent: Instance)
 			})
 		end
 		-- cartello luminoso sopra l'apertura
-		local sign = Build.Sign(hut, cf * CFrame.new(0, size.Y + 0.2, -size.Z / 2 - 0.5), Vector3.new(10, 2.6, 0.4), "Shelter", nil, {
-			bg = Color3.fromRGB(110, 230, 120),
-			text = Color3.fromRGB(20, 70, 30),
-		})
+		local sign = Build.Sign(
+			hut,
+			cf * CFrame.new(0, size.Y + 0.2, -size.Z / 2 - 0.5),
+			Vector3.new(10, 2.6, 0.4),
+			"Shelter",
+			nil,
+			{
+				bg = Color3.fromRGB(110, 230, 120),
+				text = Color3.fromRGB(20, 70, 30),
+			}
+		)
 		local light = Instance.new("PointLight")
 		light.Color = Color3.fromRGB(150, 255, 160)
 		light.Range = 16
@@ -217,7 +245,15 @@ end
 ---------------------------------------------------------------------------------------------
 -- Decorazioni sparse (alberi, rocce, fiori) per zona, lontano dal sentiero
 ---------------------------------------------------------------------------------------------
-type DecorItem = { name: string, count: number, scale: { number }, edge: boolean?, cliff: boolean?, tint: Color3?, light: { Color3 | number }? }
+type DecorItem = {
+	name: string,
+	count: number,
+	scale: { number },
+	edge: boolean?,
+	cliff: boolean?,
+	tint: Color3?,
+	light: { Color3 | number }?,
+}
 
 -- colore della roccia per zona (le guglie e le schegge di roccia prendono il colore del posto)
 local ROCK_TINT = {
@@ -269,7 +305,13 @@ local DECOR: { [string]: { DecorItem } } = {
 		{ name = "RockSpire", count = 12, scale = { 1.0, 2.0 }, cliff = true, tint = ROCK_TINT.Crystal },
 		{ name = "RockShards", count = 16, scale = { 1.0, 1.8 }, cliff = true, tint = ROCK_TINT.Crystal },
 		{ name = "CrystalCluster1", count = 26, scale = { 1.0, 2.2 }, light = { Color3.fromRGB(190, 120, 255), 18 } },
-		{ name = "CrystalCluster2", count = 34, scale = { 0.9, 1.6 }, edge = true, light = { Color3.fromRGB(110, 230, 255), 14 } },
+		{
+			name = "CrystalCluster2",
+			count = 34,
+			scale = { 0.9, 1.6 },
+			edge = true,
+			light = { Color3.fromRGB(110, 230, 255), 14 },
+		},
 		{ name = "GlowShroom", count = 40, scale = { 1.0, 1.8 }, edge = true },
 		{ name = "Rock1", count = 18, scale = { 1.0, 2.0 } },
 	},
@@ -286,7 +328,15 @@ local DECOR: { [string]: { DecorItem } } = {
 -- una luce ogni LIGHT_EVERY oggetti luminosi (le luci costano: poche ma ben distribuite)
 local LIGHT_EVERY = 3
 
-local SMALL = { Grass1 = true, Flowers1 = true, Flowers2 = true, Fern = true, Mushrooms = true, DryBush = true, GlowShroom = true }
+local SMALL = {
+	Grass1 = true,
+	Flowers1 = true,
+	Flowers2 = true,
+	Fern = true,
+	Mushrooms = true,
+	DryBush = true,
+	GlowShroom = true,
+}
 
 function Scenery.Decor(parent: Instance, assets, terrainHeight: (number, number) -> (number, string, string))
 	local folder = Build.Model("Decor", parent)
@@ -412,7 +462,11 @@ function Scenery.TrailEdges(parent: Instance, assets, terrainHeight: (number, nu
 					local cf = MapLayout.EdgeFrame(at, side, 1.4)
 					local y = terrainHeight(cf.Position.X, cf.Position.Z)
 					model:ScaleTo(rng:NextNumber(0.9, 1.25))
-					model:PivotTo(CFrame.new(cf.Position.X, y - 0.25, cf.Position.Z) * cf.Rotation * CFrame.Angles(0, rng:NextNumber(-0.15, 0.15), 0))
+					model:PivotTo(
+						CFrame.new(cf.Position.X, y - 0.25, cf.Position.Z)
+							* cf.Rotation
+							* CFrame.Angles(0, rng:NextNumber(-0.15, 0.15), 0)
+					)
 					if name == "EdgeStones" and ROCK_TINT[zone] then
 						for _, d in model:GetDescendants() do
 							if d:IsA("BasePart") and d:GetAttribute("Role") == "skin" then

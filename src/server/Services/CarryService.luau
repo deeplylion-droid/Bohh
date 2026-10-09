@@ -181,7 +181,10 @@ function CarryService.AddEgg(player: Player, egg: EggInfo, model: Model): boolea
 		S.StateService.Notify(player, "BackpackFull", nil, "Bad")
 		return false
 	end
-	push(player, { kind = "Egg", model = model, egg = egg, rarity = egg.rarity, weight = Rarities.Get(egg.rarity).weight })
+	push(
+		player,
+		{ kind = "Egg", model = model, egg = egg, rarity = egg.rarity, weight = Rarities.Get(egg.rarity).weight }
+	)
 	S.StateService.Effect(player, "Pickup", { rarity = egg.rarity })
 	S.TutorialService.Advance(player, "PickedUp")
 	return true
@@ -316,7 +319,8 @@ function CarryService.DropAll(player: Player, reason: string)
 	end
 	local char = player.Character
 	local hrp = char and char:FindFirstChild("HumanoidRootPart") :: BasePart?
-	local rolls = (reason == "Slapped" or reason == "Trap" or reason == "Obstacle" or reason == "Guardian") and hrp ~= nil
+	local rolls = (reason == "Slapped" or reason == "Trap" or reason == "Obstacle" or reason == "Guardian")
+		and hrp ~= nil
 	carried[player] = {}
 	for i, item in list do
 		if item.stolen then

@@ -61,11 +61,36 @@ end
 -- sentiero realistico: terra battuta al centro, ghiaia a chiazze, bordi irregolari mangiati
 -- dall'erba (o dalla roccia della zona); i colori dei materiali sono naturali e poco saturi
 local PATH_MATERIALS = {
-	Meadow = { base = Enum.Material.Ground, center = Enum.Material.Mud, patch = Enum.Material.Pebble, edge = Enum.Material.Grass },
-	Forest = { base = Enum.Material.Cobblestone, center = Enum.Material.Mud, patch = Enum.Material.Pebble, edge = Enum.Material.LeafyGrass },
-	Canyon = { base = Enum.Material.Sand, center = Enum.Material.Ground, patch = Enum.Material.Pebble, edge = Enum.Material.Sandstone },
-	Crystal = { base = Enum.Material.Limestone, center = Enum.Material.Slate, patch = Enum.Material.Pebble, edge = Enum.Material.Salt },
-	Crater = { base = Enum.Material.Asphalt, center = Enum.Material.Asphalt, patch = Enum.Material.Basalt, edge = Enum.Material.Basalt },
+	Meadow = {
+		base = Enum.Material.Ground,
+		center = Enum.Material.Mud,
+		patch = Enum.Material.Pebble,
+		edge = Enum.Material.Grass,
+	},
+	Forest = {
+		base = Enum.Material.Cobblestone,
+		center = Enum.Material.Mud,
+		patch = Enum.Material.Pebble,
+		edge = Enum.Material.LeafyGrass,
+	},
+	Canyon = {
+		base = Enum.Material.Sand,
+		center = Enum.Material.Ground,
+		patch = Enum.Material.Pebble,
+		edge = Enum.Material.Sandstone,
+	},
+	Crystal = {
+		base = Enum.Material.Limestone,
+		center = Enum.Material.Slate,
+		patch = Enum.Material.Pebble,
+		edge = Enum.Material.Salt,
+	},
+	Crater = {
+		base = Enum.Material.Asphalt,
+		center = Enum.Material.Asphalt,
+		patch = Enum.Material.Basalt,
+		edge = Enum.Material.Basalt,
+	},
 }
 Terrain.PathMaterials = PATH_MATERIALS
 
@@ -74,12 +99,28 @@ local function buildFeatures()
 	table.clear(buckets)
 	-- terrazze del sentiero: campioni ogni 3 stud; la superficie del terreno E' il sentiero
 	for _, smp in MapLayout.SamplePath(3) do
-		addFeature({ x = smp.pos.X, z = smp.pos.Z, y = smp.pos.Y, r = MapLayout.PathWidth / 2 + 1, k = 1.75, kind = "path", zone = smp.zone })
+		addFeature({
+			x = smp.pos.X,
+			z = smp.pos.Z,
+			y = smp.pos.Y,
+			r = MapLayout.PathWidth / 2 + 1,
+			k = 1.75,
+			kind = "path",
+			zone = smp.zone,
+		})
 	end
 	-- isole al centro dei tornanti (altrimenti diventerebbero buche)
 	for i = 1, #MapLayout.Legs - 1 do
 		local leg, nxt = MapLayout.Legs[i], MapLayout.Legs[i + 1]
-		addFeature({ x = leg.x1, z = (leg.z + nxt.z) / 2, y = (leg.y1 + nxt.y0) / 2 + 7, r = 9, k = 0.9, kind = "island", zone = leg.zone })
+		addFeature({
+			x = leg.x1,
+			z = (leg.z + nxt.z) / 2,
+			y = (leg.y1 + nxt.y0) / 2 + 7,
+			r = 9,
+			k = 0.9,
+			kind = "island",
+			zone = leg.zone,
+		})
 	end
 	indexFeatures()
 end
@@ -191,7 +232,15 @@ end
 
 -- Materiale della superficie in base a zona, pendenza e (sul sentiero) posizione e distanza dal
 -- centro. Ogni zona usa materiali propri, cosi' i colori globali dei materiali restano distinti.
-local function surfaceMaterial(y: number, kind: string, zone: string, slope: number, x: number?, z: number?, edge: number?): Enum.Material
+local function surfaceMaterial(
+	y: number,
+	kind: string,
+	zone: string,
+	slope: number,
+	x: number?,
+	z: number?,
+	edge: number?
+): Enum.Material
 	if kind == "path" then
 		local set = PATH_MATERIALS[zone] or PATH_MATERIALS.Meadow
 		local px, pz = x or 0, z or 0
@@ -340,17 +389,20 @@ function Terrain.Build(): number
 			mats[i] = mx
 			occ[i] = ox
 		end
-		local region = Region3.new(
-			Vector3.new(X0 + (cx - 1) * RES, Y0, Z0),
-			Vector3.new(X0 + (cx - 1 + cw) * RES, Y1, Z1)
-		)
+		local region =
+			Region3.new(Vector3.new(X0 + (cx - 1) * RES, Y0, Z0), Vector3.new(X0 + (cx - 1 + cw) * RES, Y1, Z1))
 		terrain:WriteVoxels(region, RES, mats, occ)
 		task.wait()
 	end
 
 	-- lava nelle pozze del cratere
 	for _, pool in MapLayout.Crater.LavaPools do
-		terrain:FillCylinder(CFrame.new(pool.center + Vector3.new(0, -0.5, 0)), 3, pool.radius, Enum.Material.CrackedLava)
+		terrain:FillCylinder(
+			CFrame.new(pool.center + Vector3.new(0, -0.5, 0)),
+			3,
+			pool.radius,
+			Enum.Material.CrackedLava
+		)
 	end
 	return filled
 end

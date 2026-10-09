@@ -62,7 +62,17 @@ local function spawnGuardian(lair)
 	model:SetAttribute("Look", Vector3.zAxis)
 	model.Parent = workspace:FindFirstChild("Map")
 	game:GetService("CollectionService"):AddTag(model, "Guardian")
-	guardians[lair.id] = { lair = lair, model = model, pos = pos, facing = Vector3.zAxis, target = nil, chaseUntil = 0, cooldown = 0, wanderTo = pos, sent = 0 }
+	guardians[lair.id] = {
+		lair = lair,
+		model = model,
+		pos = pos,
+		facing = Vector3.zAxis,
+		target = nil,
+		chaseUntil = 0,
+		cooldown = 0,
+		wanderTo = pos,
+		sent = 0,
+	}
 end
 
 -- Chiamata quando qualcuno prende un uovo da una tana
@@ -104,10 +114,19 @@ local function step(g: Guardian, dt: number)
 	end
 	local target = g.target
 	local thrp = target and S.CharacterService.Root(target)
-	if target and thrp and now < g.chaseUntil and (thrp.Position - center).Magnitude < lair.leash and S.CarryService.Count(target) > 0 then
+	if
+		target
+		and thrp
+		and now < g.chaseUntil
+		and (thrp.Position - center).Magnitude < lair.leash
+		and S.CarryService.Count(target) > 0
+	then
 		goal = thrp.Position
 		speed = CHASE_SPEED
-		if now > g.cooldown and (Vector3.new(thrp.Position.X - g.pos.X, 0, thrp.Position.Z - g.pos.Z)).Magnitude < HIT_RANGE then
+		if
+			now > g.cooldown
+			and (Vector3.new(thrp.Position.X - g.pos.X, 0, thrp.Position.Z - g.pos.Z)).Magnitude < HIT_RANGE
+		then
 			g.cooldown = now + 2
 			local dir = (thrp.Position - g.pos) * Vector3.new(1, 0, 1)
 			dir = if dir.Magnitude > 0.1 then dir.Unit else Vector3.xAxis

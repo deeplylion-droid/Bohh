@@ -9,9 +9,21 @@ function Analytics.Init(_S) end
 
 function Analytics.Economy(player: Player, flow: "Source" | "Sink", amount: number, balance: number, reason: string)
 	pcall(function()
-		local flowType = if flow == "Source" then Enum.AnalyticsEconomyFlowType.Source else Enum.AnalyticsEconomyFlowType.Sink
-		local txType = if reason == "Purchase" then Enum.AnalyticsEconomyTransactionType.IAP.Name else Enum.AnalyticsEconomyTransactionType.Gameplay.Name
-		AnalyticsService:LogEconomyEvent(player, flowType, "Coins", math.floor(amount), math.floor(balance), txType, reason)
+		local flowType = if flow == "Source"
+			then Enum.AnalyticsEconomyFlowType.Source
+			else Enum.AnalyticsEconomyFlowType.Sink
+		local txType = if reason == "Purchase"
+			then Enum.AnalyticsEconomyTransactionType.IAP.Name
+			else Enum.AnalyticsEconomyTransactionType.Gameplay.Name
+		AnalyticsService:LogEconomyEvent(
+			player,
+			flowType,
+			"Coins",
+			math.floor(amount),
+			math.floor(balance),
+			txType,
+			reason
+		)
 	end)
 end
 

@@ -126,14 +126,25 @@ local function buildCard()
 		AnchorPoint = Vector2.new(0.5, 1),
 		Visible = false,
 		Parent = C.UI.Gui("HUD"),
-	}, { Kit.Corner(UDim.new(0, 24)), Kit.Stroke(5), Kit.Gradient(Color3.fromRGB(255, 236, 120), Color3.fromRGB(255, 168, 30)), New("UIScale") })
+	}, {
+		Kit.Corner(UDim.new(0, 24)),
+		Kit.Stroke(5),
+		Kit.Gradient(Color3.fromRGB(255, 236, 120), Color3.fromRGB(255, 168, 30)),
+		New("UIScale"),
+	})
 	local badge = New("Frame", {
 		BackgroundColor3 = Kit.Theme.Outline,
 		Size = UDim2.fromOffset(62, 62),
 		Position = UDim2.fromOffset(8, 7),
 		Parent = card,
 	}, { Kit.Corner(UDim.new(1, 0)) })
-	cardStep = Kit.Text({ Text = "1/5", Size = UDim2.fromScale(0.8, 0.5), Position = UDim2.fromScale(0.1, 0.25), TextColor3 = Kit.Theme.Gold, Parent = badge })
+	cardStep = Kit.Text({
+		Text = "1/5",
+		Size = UDim2.fromScale(0.8, 0.5),
+		Position = UDim2.fromScale(0.1, 0.25),
+		TextColor3 = Kit.Theme.Gold,
+		Parent = badge,
+	})
 	cardText = Kit.Text({
 		Text = "",
 		Font = Kit.Theme.BodyFont,
@@ -151,7 +162,10 @@ local function setIcon(name: string)
 	if old then
 		old:Destroy()
 	end
-	Kit.Icon(name, { Name = "StepIcon", Size = UDim2.fromOffset(50, 50), Position = UDim2.new(1, -62, 0, 13), Parent = card })
+	Kit.Icon(
+		name,
+		{ Name = "StepIcon", Size = UDim2.fromOffset(50, 50), Position = UDim2.new(1, -62, 0, 13), Parent = card }
+	)
 end
 
 local function buildPointer()
@@ -174,7 +188,11 @@ local function buildPointer()
 	core.Color = ColorSequence.new(Color3.fromRGB(255, 240, 120))
 	core.LightEmission = 1
 	core.LightInfluence = 0
-	core.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.7), NumberSequenceKeypoint.new(0.15, 0.35), NumberSequenceKeypoint.new(1, 0.25) })
+	core.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0.7),
+		NumberSequenceKeypoint.new(0.15, 0.35),
+		NumberSequenceKeypoint.new(1, 0.25),
+	})
 	core.Width0 = 0.35
 	core.Width1 = 0.35
 	core.FaceCamera = true
@@ -189,7 +207,11 @@ local function buildPointer()
 	sparkle.Width0 = 1.8
 	sparkle.Width1 = 1.8
 	sparkle.Color = ColorSequence.new(Color3.fromRGB(255, 255, 200), Color3.fromRGB(255, 200, 60))
-	sparkle.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.15, 0.2), NumberSequenceKeypoint.new(1, 0) })
+	sparkle.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 1),
+		NumberSequenceKeypoint.new(0.15, 0.2),
+		NumberSequenceKeypoint.new(1, 0),
+	})
 	beams = { core, sparkle }
 	for _, b in beams do
 		b.Attachment1 = targetAtt
@@ -237,9 +259,19 @@ local function showHand(on: boolean)
 		task.spawn(function()
 			local x0 = label.Position.X.Offset
 			while label.Parent do
-				Kit.Tween(label, 0.35, { Position = UDim2.fromOffset(x0 + 14, label.Position.Y.Offset) }, Enum.EasingStyle.Sine)
+				Kit.Tween(
+					label,
+					0.35,
+					{ Position = UDim2.fromOffset(x0 + 14, label.Position.Y.Offset) },
+					Enum.EasingStyle.Sine
+				)
 				task.wait(0.35)
-				Kit.Tween(label, 0.35, { Position = UDim2.fromOffset(x0, label.Position.Y.Offset) }, Enum.EasingStyle.Sine)
+				Kit.Tween(
+					label,
+					0.35,
+					{ Position = UDim2.fromOffset(x0, label.Position.Y.Offset) },
+					Enum.EasingStyle.Sine
+				)
 				task.wait(0.35)
 				Kit.Bounce(button, 0.06)
 			end

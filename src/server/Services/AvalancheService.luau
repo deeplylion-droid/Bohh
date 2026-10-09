@@ -56,7 +56,13 @@ local function runWave(startAt: number)
 				if hrp then
 					local pos = hrp.Position
 					local zone = MapLayout.ZoneAt(pos)
-					if zone ~= "Summit" and pos.Z < 545 and pos.Y <= front + 3 and pos.Y >= front - Avalanche.Band and not MapLayout.IsSheltered(pos) then
+					if
+						zone ~= "Summit"
+						and pos.Z < 545
+						and pos.Y <= front + 3
+						and pos.Y >= front - Avalanche.Band
+						and not MapLayout.IsSheltered(pos)
+					then
 						hit[player] = true
 						bury(player)
 					end

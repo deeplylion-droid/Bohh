@@ -51,7 +51,13 @@ end
 function Panel.Build(parent: Instance, C)
 	local T = C.Lang.T
 	local p = Kit.Panel(T("IndexTitle"), UDim2.fromOffset(880, 600), "Purple", parent)
-	local progress = Kit.Text({ Font = Theme.BodyFont, Size = UDim2.new(1, 0, 0, 26), Position = UDim2.fromOffset(0, 18), Stroke = 2, Parent = p.Body })
+	local progress = Kit.Text({
+		Font = Theme.BodyFont,
+		Size = UDim2.new(1, 0, 0, 26),
+		Position = UDim2.fromOffset(0, 18),
+		Stroke = 2,
+		Parent = p.Body,
+	})
 	local scroll = New("ScrollingFrame", {
 		BackgroundTransparency = 1,
 		Size = UDim2.new(1, 0, 1, -54),
@@ -64,7 +70,10 @@ function Panel.Build(parent: Instance, C)
 		Parent = p.Body,
 	}, {
 		New("UIListLayout", { Padding = UDim.new(0, 12), SortOrder = Enum.SortOrder.LayoutOrder }),
-		New("UIPadding", { PaddingRight = UDim.new(0, 14), PaddingBottom = UDim.new(0, 10), PaddingLeft = UDim.new(0, 4) }),
+		New(
+			"UIPadding",
+			{ PaddingRight = UDim.new(0, 14), PaddingBottom = UDim.new(0, 10), PaddingLeft = UDim.new(0, 4) }
+		),
 	})
 	local built = false
 	local rows = {}
@@ -73,20 +82,47 @@ function Panel.Build(parent: Instance, C)
 		built = true
 		for i, rarity in Rarities.Order do
 			local r = Rarities.List[rarity]
-			local row = New("Frame", { BackgroundColor3 = Color3.new(1, 1, 1), Size = UDim2.new(1, 0, 0, 196), LayoutOrder = i, Parent = scroll }, {
+			local row = New("Frame", {
+				BackgroundColor3 = Color3.new(1, 1, 1),
+				Size = UDim2.new(1, 0, 0, 196),
+				LayoutOrder = i,
+				Parent = scroll,
+			}, {
 				Kit.Corner(UDim.new(0, 20)),
 				Kit.Stroke(4),
 				Kit.Gradient(r.color:Lerp(Theme.Card, 0.6), Theme.Card),
 			})
-			local title = Kit.Text({ Size = UDim2.new(0.4, 0, 0, 32), Position = UDim2.fromOffset(14, 8), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = r.color, Parent = row })
+			local title = Kit.Text({
+				Size = UDim2.new(0.4, 0, 0, 32),
+				Position = UDim2.fromOffset(14, 8),
+				TextXAlignment = Enum.TextXAlignment.Left,
+				TextColor3 = r.color,
+				Parent = row,
+			})
 			if Rarities.Gradients[rarity] then
 				New("UIGradient", { Color = Rarities.Gradients[rarity], Parent = title })
 				title.TextColor3 = Color3.new(1, 1, 1)
 			end
-			local reward = Kit.Text({ Font = Theme.BodyFont, Size = UDim2.new(0.42, 0, 0, 22), Position = UDim2.new(0.4, 0, 0, 12), TextXAlignment = Enum.TextXAlignment.Right, TextColor3 = Theme.Muted, Stroke = false, Parent = row })
-			local claim = Kit.Button({ Text = "", Color = "Yellow", Size = UDim2.fromOffset(130, 40), Position = UDim2.new(1, -142, 0, 6), TextSize = 22, Parent = row, OnClick = function()
-				Net.Event("ClaimIndexRow"):FireServer(rarity)
-			end })
+			local reward = Kit.Text({
+				Font = Theme.BodyFont,
+				Size = UDim2.new(0.42, 0, 0, 22),
+				Position = UDim2.new(0.4, 0, 0, 12),
+				TextXAlignment = Enum.TextXAlignment.Right,
+				TextColor3 = Theme.Muted,
+				Stroke = false,
+				Parent = row,
+			})
+			local claim = Kit.Button({
+				Text = "",
+				Color = "Yellow",
+				Size = UDim2.fromOffset(130, 40),
+				Position = UDim2.new(1, -142, 0, 6),
+				TextSize = 22,
+				Parent = row,
+				OnClick = function()
+					Net.Event("ClaimIndexRow"):FireServer(rarity)
+				end,
+			})
 			local slots = {}
 			for k, pet in Pets.ByRarity[rarity] do
 				local slot = New("Frame", {
@@ -96,8 +132,21 @@ function Panel.Build(parent: Instance, C)
 					Position = UDim2.new((k - 1) * 0.25 + 0.0075, 0, 0, 50),
 					Parent = row,
 				}, { Kit.Corner(UDim.new(0, 16)) })
-				local name = Kit.Text({ Font = Theme.BodyFont, Size = UDim2.new(0.92, 0, 0, 22), Position = UDim2.new(0.04, 0, 1, -30), Stroke = 2, Parent = slot })
-				local dots = Kit.Text({ Font = Theme.BodyFont, Size = UDim2.new(0.9, 0, 0, 16), Position = UDim2.new(0.05, 0, 0, 4), TextXAlignment = Enum.TextXAlignment.Right, Stroke = false, Parent = slot })
+				local name = Kit.Text({
+					Font = Theme.BodyFont,
+					Size = UDim2.new(0.92, 0, 0, 22),
+					Position = UDim2.new(0.04, 0, 1, -30),
+					Stroke = 2,
+					Parent = slot,
+				})
+				local dots = Kit.Text({
+					Font = Theme.BodyFont,
+					Size = UDim2.new(0.9, 0, 0, 16),
+					Position = UDim2.new(0.05, 0, 0, 4),
+					TextXAlignment = Enum.TextXAlignment.Right,
+					Stroke = false,
+					Parent = slot,
+				})
 				slots[pet.id] = { frame = slot, name = name, dots = dots, vp = nil, discovered = nil }
 			end
 			rows[rarity] = { title = title, reward = reward, claim = claim, slots = slots }

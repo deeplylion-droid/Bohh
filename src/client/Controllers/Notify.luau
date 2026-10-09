@@ -35,7 +35,13 @@ function Notify.Toast(text: string, style: string?)
 		Size = UDim2.fromOffset(420, 58),
 		Parent = stack,
 	}, { Kit.Corner(UDim.new(0, 18)), Kit.Stroke(4), Kit.Gradient(colors[1], colors[2]), New("UIScale") })
-	Kit.Text({ Text = text, Size = UDim2.new(0.92, 0, 0.62, 0), Position = UDim2.new(0.04, 0, 0.19, 0), RichText = true, Parent = toast })
+	Kit.Text({
+		Text = text,
+		Size = UDim2.new(0.92, 0, 0.62, 0),
+		Position = UDim2.new(0.04, 0, 0.19, 0),
+		RichText = true,
+		Parent = toast,
+	})
 	Kit.Pop(toast)
 	task.delay(3.6, function()
 		local sc = toast:FindFirstChildOfClass("UIScale")
@@ -73,7 +79,13 @@ function Notify.Announce(text: string, rarity: string?)
 		AnchorPoint = Vector2.new(0.5, 0),
 		Parent = announceFrame,
 	}, { Kit.Corner(UDim.new(0, 22)), Kit.Stroke(5, color), New("UIScale") })
-	local label = Kit.Text({ Text = text, Size = UDim2.new(0.94, 0, 0.66, 0), Position = UDim2.new(0.03, 0, 0.17, 0), RichText = true, Parent = box })
+	local label = Kit.Text({
+		Text = text,
+		Size = UDim2.new(0.94, 0, 0.66, 0),
+		Position = UDim2.new(0.03, 0, 0.17, 0),
+		RichText = true,
+		Parent = box,
+	})
 	if rarity and Rarities.Gradients[rarity] then
 		local g = New("UIGradient", { Color = Rarities.Gradients[rarity], Parent = label })
 		task.spawn(function()
@@ -151,7 +163,14 @@ function Notify.Start()
 		Position = UDim2.new(1, -16, 1, -150),
 		AnchorPoint = Vector2.new(1, 1),
 		Parent = C.UI.Gui("Top"),
-	}, { New("UIListLayout", { Padding = UDim.new(0, 8), VerticalAlignment = Enum.VerticalAlignment.Bottom, HorizontalAlignment = Enum.HorizontalAlignment.Right, SortOrder = Enum.SortOrder.LayoutOrder }) })
+	}, {
+		New("UIListLayout", {
+			Padding = UDim.new(0, 8),
+			VerticalAlignment = Enum.VerticalAlignment.Bottom,
+			HorizontalAlignment = Enum.HorizontalAlignment.Right,
+			SortOrder = Enum.SortOrder.LayoutOrder,
+		}),
+	})
 	announceFrame = New("Frame", {
 		Name = "Announce",
 		BackgroundTransparency = 1,
@@ -175,7 +194,12 @@ function Notify.Start()
 	Net.Event("StealAlert").OnClientEvent:Connect(function(thiefId, itemKey)
 		local thief = Players:GetPlayerByUserId(thiefId)
 		local name = if thief then thief.DisplayName else "?"
-		C.UI.Hud.ShowBanner("🚨 " .. T("StealYourEgg", { name = name, item = itemKey }), T("StealCatchHint"), { Color3.fromRGB(255, 90, 78), Color3.fromRGB(216, 27, 43) }, 3)
+		C.UI.Hud.ShowBanner(
+			"🚨 " .. T("StealYourEgg", { name = name, item = itemKey }),
+			T("StealCatchHint"),
+			{ Color3.fromRGB(255, 90, 78), Color3.fromRGB(216, 27, 43) },
+			3
+		)
 		task.delay(4, function()
 			C.UI.Hud.ShowBanner(nil, nil, nil, 3)
 		end)

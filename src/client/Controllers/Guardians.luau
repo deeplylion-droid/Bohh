@@ -72,8 +72,20 @@ local function add(model: Instance)
 		Adornee = model.PrimaryPart or parts[1],
 		Parent = model,
 	})
-	local alert = Kit.Text({ Text = "!", TextColor3 = Color3.fromRGB(255, 70, 60), Size = UDim2.new(1, 0, 0.55, 0), Visible = false, Parent = gui })
-	local label = Kit.Text({ Text = C.Lang.T(nameKey), TextColor3 = Color3.fromRGB(255, 220, 120), Size = UDim2.new(1, 0, 0.42, 0), Position = UDim2.fromScale(0, 0.58), Parent = gui })
+	local alert = Kit.Text({
+		Text = "!",
+		TextColor3 = Color3.fromRGB(255, 70, 60),
+		Size = UDim2.new(1, 0, 0.55, 0),
+		Visible = false,
+		Parent = gui,
+	})
+	local label = Kit.Text({
+		Text = C.Lang.T(nameKey),
+		TextColor3 = Color3.fromRGB(255, 220, 120),
+		Size = UDim2.new(1, 0, 0.42, 0),
+		Position = UDim2.fromScale(0, 0.58),
+		Parent = gui,
+	})
 	C.Lang.Changed:Connect(function()
 		label.Text = C.Lang.T(nameKey)
 	end)
@@ -130,11 +142,16 @@ local function update(dt: number)
 		local bob = math.abs(math.sin(s)) * e.height * 0.05 * amp
 		local roll = math.sin(s) * math.rad(if e.angry then 7 else 4) * amp
 		local breathe = 1 + math.sin(t * 2 + e.seed) * 0.015
-		local base = CFrame.lookAt(e.pos, e.pos + flatLook) * CFrame.new(0, bob, 0) * CFrame.Angles(if e.angry then math.rad(-6) else 0, 0, roll)
+		local base = CFrame.lookAt(e.pos, e.pos + flatLook)
+			* CFrame.new(0, bob, 0)
+			* CFrame.Angles(if e.angry then math.rad(-6) else 0, 0, roll)
 		for i, part in e.parts do
 			local off = e.offsets[i]
 			table.insert(allParts, part)
-			table.insert(allCfs, base * (off - off.Position) + base:VectorToWorldSpace(off.Position * Vector3.new(1, breathe, 1)))
+			table.insert(
+				allCfs,
+				base * (off - off.Position) + base:VectorToWorldSpace(off.Position * Vector3.new(1, breathe, 1))
+			)
 		end
 		-- passi pesanti che fanno tremare la telecamera da vicino
 		if e.angry and hrp and math.abs(math.sin(s)) < 0.12 and t - e.lastStomp > 0.25 then

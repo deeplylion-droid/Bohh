@@ -69,7 +69,11 @@ local function meteor()
 	local rarity = Weighted.Pick(Weighted.FromMap(Events.Meteor.eggs, Rarities.Order), rng)
 	S.NestService.SpawnLoose(pos + Vector3.new(0, 0.3, 0), rarity, { cosmicMin = Events.Meteor.cosmicMin })
 	if Rarities.Get(rarity).order >= 6 then
-		S.StateService.Announce("AnnounceEgg", { rarity = "Rarity_" .. rarity, zone = "Zone_" .. MapLayout.ZoneAt(pos) }, rarity)
+		S.StateService.Announce(
+			"AnnounceEgg",
+			{ rarity = "Rarity_" .. rarity, zone = "Zone_" .. MapLayout.ZoneAt(pos) },
+			rarity
+		)
 	end
 end
 

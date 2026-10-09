@@ -54,10 +54,32 @@ function Hud.Build(gui: ScreenGui, C)
 		Kit.Corner(UDim.new(1, 0)),
 		Kit.Stroke(4),
 		Kit.Gradient(Color3.fromRGB(255, 240, 150), Color3.fromRGB(245, 155, 0)),
-		Kit.Text({ Text = "$", Size = UDim2.fromScale(0.7, 0.7), Position = UDim2.fromScale(0.15, 0.12), TextColor3 = Color3.fromRGB(184, 107, 0), Stroke = false }),
+		Kit.Text({
+			Text = "$",
+			Size = UDim2.fromScale(0.7, 0.7),
+			Position = UDim2.fromScale(0.15, 0.12),
+			TextColor3 = Color3.fromRGB(184, 107, 0),
+			Stroke = false,
+		}),
 	})
-	local coinText = Kit.Text({ Text = "$0", Size = UDim2.new(1, -86, 0, 40), Position = UDim2.new(0, 74, 0, 6), TextColor3 = Theme.Gold, TextXAlignment = Enum.TextXAlignment.Left, Parent = coins })
-	local rateText = Kit.Text({ Text = "+$0/s", Font = Theme.BodyFont, Size = UDim2.new(1, -86, 0, 22), Position = UDim2.new(0, 76, 0, 46), TextColor3 = Theme.Green, TextXAlignment = Enum.TextXAlignment.Left, Stroke = 2, Parent = coins })
+	local coinText = Kit.Text({
+		Text = "$0",
+		Size = UDim2.new(1, -86, 0, 40),
+		Position = UDim2.new(0, 74, 0, 6),
+		TextColor3 = Theme.Gold,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		Parent = coins,
+	})
+	local rateText = Kit.Text({
+		Text = "+$0/s",
+		Font = Theme.BodyFont,
+		Size = UDim2.new(1, -86, 0, 22),
+		Position = UDim2.new(0, 76, 0, 46),
+		TextColor3 = Theme.Green,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		Stroke = 2,
+		Parent = coins,
+	})
 	local shown = 0
 	local target = 0
 	RunService.RenderStepped:Connect(function(dt)
@@ -119,7 +141,11 @@ function Hud.Build(gui: ScreenGui, C)
 				C.UI.Toggle(it.name)
 			end,
 		})
-		local label = Kit.Text({ Size = UDim2.fromOffset(120, 26), Position = UDim2.fromOffset(it.x - 10, it.y + 98), Parent = menu })
+		local label = Kit.Text({
+			Size = UDim2.fromOffset(120, 26),
+			Position = UDim2.fromOffset(it.x - 10, it.y + 98),
+			Parent = menu,
+		})
 		bindText(label, it.key)
 		hud.Badges[it.name] = Kit.Badge(b.Frame)
 	end
@@ -141,15 +167,31 @@ function Hud.Build(gui: ScreenGui, C)
 		})
 	end
 	if player:GetAttribute("IsAdmin") or RunService:IsStudio() then
-		Kit.Button({ Name = "Admin", Icon = "Admin", Color = "Red", Size = UDim2.fromOffset(62, 58), Position = UDim2.fromOffset(148, 262), Parent = menu, OnClick = function()
-			C.UI.Toggle("Admin")
-		end })
+		Kit.Button({
+			Name = "Admin",
+			Icon = "Admin",
+			Color = "Red",
+			Size = UDim2.fromOffset(62, 58),
+			Position = UDim2.fromOffset(148, 262),
+			Parent = menu,
+			OnClick = function()
+				C.UI.Toggle("Admin")
+			end,
+		})
 	else
 		player:GetAttributeChangedSignal("IsAdmin"):Connect(function()
 			if player:GetAttribute("IsAdmin") and not menu:FindFirstChild("Admin") then
-				Kit.Button({ Name = "Admin", Icon = "Admin", Color = "Red", Size = UDim2.fromOffset(62, 58), Position = UDim2.fromOffset(148, 262), Parent = menu, OnClick = function()
-					C.UI.Toggle("Admin")
-				end })
+				Kit.Button({
+					Name = "Admin",
+					Icon = "Admin",
+					Color = "Red",
+					Size = UDim2.fromOffset(62, 58),
+					Position = UDim2.fromOffset(148, 262),
+					Parent = menu,
+					OnClick = function()
+						C.UI.Toggle("Admin")
+					end,
+				})
 			end
 		end)
 	end
@@ -164,7 +206,13 @@ function Hud.Build(gui: ScreenGui, C)
 		Position = UDim2.new(1, -16, 0, 70),
 		AnchorPoint = Vector2.new(1, 0),
 		Parent = gui,
-	}, { New("UIListLayout", { Padding = UDim.new(0, 10), HorizontalAlignment = Enum.HorizontalAlignment.Right, SortOrder = Enum.SortOrder.LayoutOrder }) })
+	}, {
+		New("UIListLayout", {
+			Padding = UDim.new(0, 10),
+			HorizontalAlignment = Enum.HorizontalAlignment.Right,
+			SortOrder = Enum.SortOrder.LayoutOrder,
+		}),
+	})
 
 	local eventCard = New("Frame", {
 		Name = "Event",
@@ -173,10 +221,31 @@ function Hud.Build(gui: ScreenGui, C)
 		Visible = false,
 		LayoutOrder = 1,
 		Parent = right,
-	}, { Kit.Corner(UDim.new(0, 22)), Kit.Stroke(5), Kit.Gradient(Color3.fromRGB(255, 227, 107), Color3.fromRGB(255, 171, 23)), New("UIScale") })
-	local eventIcon = Kit.Icon("GoldenHour", { Size = UDim2.fromOffset(56, 56), Position = UDim2.fromOffset(10, 14), Parent = eventCard })
-	local eventTitle = Kit.Text({ Size = UDim2.new(1, -84, 0, 34), Position = UDim2.fromOffset(74, 8), TextXAlignment = Enum.TextXAlignment.Left, Parent = eventCard })
-	local eventSub = Kit.Text({ Font = Theme.BodyFont, Size = UDim2.new(1, -84, 0, 24), Position = UDim2.fromOffset(74, 48), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Color3.fromRGB(90, 50, 0), Stroke = false, Parent = eventCard })
+	}, {
+		Kit.Corner(UDim.new(0, 22)),
+		Kit.Stroke(5),
+		Kit.Gradient(Color3.fromRGB(255, 227, 107), Color3.fromRGB(255, 171, 23)),
+		New("UIScale"),
+	})
+	local eventIcon = Kit.Icon(
+		"GoldenHour",
+		{ Size = UDim2.fromOffset(56, 56), Position = UDim2.fromOffset(10, 14), Parent = eventCard }
+	)
+	local eventTitle = Kit.Text({
+		Size = UDim2.new(1, -84, 0, 34),
+		Position = UDim2.fromOffset(74, 8),
+		TextXAlignment = Enum.TextXAlignment.Left,
+		Parent = eventCard,
+	})
+	local eventSub = Kit.Text({
+		Font = Theme.BodyFont,
+		Size = UDim2.new(1, -84, 0, 24),
+		Position = UDim2.fromOffset(74, 48),
+		TextXAlignment = Enum.TextXAlignment.Left,
+		TextColor3 = Color3.fromRGB(90, 50, 0),
+		Stroke = false,
+		Parent = eventCard,
+	})
 
 	local function chip(order: number, iconName: string)
 		local f = New("Frame", {
@@ -188,7 +257,15 @@ function Hud.Build(gui: ScreenGui, C)
 			Parent = right,
 		}, { Kit.Corner(UDim.new(1, 0)), Kit.Stroke(4) })
 		Kit.Icon(iconName, { Size = UDim2.fromOffset(32, 32), Position = UDim2.fromOffset(8, 6), Parent = f })
-		local text = Kit.Text({ Font = Theme.BodyFont, Size = UDim2.new(1, -54, 0, 28), Position = UDim2.fromOffset(46, 8), TextXAlignment = Enum.TextXAlignment.Left, Stroke = 2, RichText = true, Parent = f })
+		local text = Kit.Text({
+			Font = Theme.BodyFont,
+			Size = UDim2.new(1, -54, 0, 28),
+			Position = UDim2.fromOffset(46, 8),
+			TextXAlignment = Enum.TextXAlignment.Left,
+			Stroke = 2,
+			RichText = true,
+			Parent = f,
+		})
 		return f, text
 	end
 	local luckChip, luckText = chip(2, "Luck")
@@ -207,7 +284,12 @@ function Hud.Build(gui: ScreenGui, C)
 			Net.Event("ToggleBarrier"):FireServer()
 		end,
 	})
-	local barrierLabel = Kit.Text({ Size = UDim2.fromOffset(140, 26), Position = UDim2.new(0.5, 0, 1, 6), AnchorPoint = Vector2.new(0.5, 0), Parent = barrier.Frame })
+	local barrierLabel = Kit.Text({
+		Size = UDim2.fromOffset(140, 26),
+		Position = UDim2.new(0.5, 0, 1, 6),
+		AnchorPoint = Vector2.new(0.5, 0),
+		Parent = barrier.Frame,
+	})
 
 	local function refreshRight()
 		local now = workspace:GetServerTimeNow()
@@ -241,7 +323,9 @@ function Hud.Build(gui: ScreenGui, C)
 		local plotIndex = player:GetAttribute("PlotIndex")
 		barrier.Frame.Visible = plotIndex ~= nil
 		local readyAt = player:GetAttribute("BarrierReadyAt") or 0
-		local plot = plotIndex and workspace:FindFirstChild("Plots") and workspace.Plots:FindFirstChild("Plot" .. plotIndex)
+		local plot = plotIndex
+			and workspace:FindFirstChild("Plots")
+			and workspace.Plots:FindFirstChild("Plot" .. plotIndex)
 		if plot and plot:GetAttribute("BarrierOn") then
 			local untilT = plot:GetAttribute("BarrierUntil") or now
 			barrierLabel.Text = Format.Clock(untilT - now)
@@ -279,9 +363,30 @@ function Hud.Build(gui: ScreenGui, C)
 		Position = UDim2.fromOffset(12, 10),
 		Parent = carry,
 	}, { Kit.Corner(UDim.new(0.5, 0)), Kit.Stroke(4) })
-	local carryTitle = Kit.Text({ Size = UDim2.new(1, -96, 0, 34), Position = UDim2.fromOffset(86, 8), TextXAlignment = Enum.TextXAlignment.Left, Parent = carry })
-	local carrySub = Kit.Text({ Font = Theme.BodyFont, Size = UDim2.new(1, -96, 0, 22), Position = UDim2.fromOffset(88, 44), TextXAlignment = Enum.TextXAlignment.Left, Stroke = 2, RichText = true, Parent = carry })
-	local carryHint = Kit.Text({ Font = Theme.BodyFont, Size = UDim2.new(1, -96, 0, 18), Position = UDim2.fromOffset(88, 68), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Theme.Muted, Stroke = false, Parent = carry })
+	local carryTitle = Kit.Text({
+		Size = UDim2.new(1, -96, 0, 34),
+		Position = UDim2.fromOffset(86, 8),
+		TextXAlignment = Enum.TextXAlignment.Left,
+		Parent = carry,
+	})
+	local carrySub = Kit.Text({
+		Font = Theme.BodyFont,
+		Size = UDim2.new(1, -96, 0, 22),
+		Position = UDim2.fromOffset(88, 44),
+		TextXAlignment = Enum.TextXAlignment.Left,
+		Stroke = 2,
+		RichText = true,
+		Parent = carry,
+	})
+	local carryHint = Kit.Text({
+		Font = Theme.BodyFont,
+		Size = UDim2.new(1, -96, 0, 18),
+		Position = UDim2.fromOffset(88, 68),
+		TextXAlignment = Enum.TextXAlignment.Left,
+		TextColor3 = Theme.Muted,
+		Stroke = false,
+		Parent = carry,
+	})
 
 	local function refreshCarry()
 		local n = player:GetAttribute("Carrying") or 0
@@ -303,7 +408,8 @@ function Hud.Build(gui: ScreenGui, C)
 		local data = C.State.Data
 		local base = 16 + 1.5 * ((data and data.Upgrades and data.Upgrades.Speed) or 0)
 		local pct = math.floor((speed / base - 1) * 100 + 0.5)
-		carrySub.Text = T("CarrySpeed", { pct = `<font color="#ff8a7a">{pct}%</font>` }) .. (if pct <= -20 then " · " .. T("Heavy") else "")
+		carrySub.Text = T("CarrySpeed", { pct = `<font color="#ff8a7a">{pct}%</font>` })
+			.. (if pct <= -20 then " · " .. T("Heavy") else "")
 		carryHint.Text = if stolen then T("CarryStolenHint") else T("CarryHint")
 		if not wasVisible then
 			Kit.Pop(carry)
@@ -331,7 +437,12 @@ function Hud.Build(gui: ScreenGui, C)
 			C.Combat.SlapButton()
 		end,
 	})
-	local slapLabel = Kit.Text({ Size = UDim2.fromOffset(130, 26), Position = UDim2.new(0.5, 0, 1, -2), AnchorPoint = Vector2.new(0.5, 0), Parent = slap.Frame })
+	local slapLabel = Kit.Text({
+		Size = UDim2.fromOffset(130, 26),
+		Position = UDim2.new(0.5, 0, 1, -2),
+		AnchorPoint = Vector2.new(0.5, 0),
+		Parent = slap.Frame,
+	})
 	bindText(slapLabel, "BatSlap")
 	slap.Frame.Visible = UserInputService.TouchEnabled
 	hud.Slap = slap
@@ -348,9 +459,25 @@ function Hud.Build(gui: ScreenGui, C)
 		Rotation = -1.5,
 		Visible = false,
 		Parent = gui,
-	}, { Kit.Corner(UDim.new(0, 22)), Kit.Stroke(5), Kit.Gradient(Color3.fromRGB(255, 90, 78), Color3.fromRGB(216, 27, 43)), New("UIScale") })
-	local bannerTitle = Kit.Text({ Size = UDim2.new(0.92, 0, 0, 52), Position = UDim2.new(0.04, 0, 0, 8), RichText = true, Parent = banner })
-	local bannerSub = Kit.Text({ Font = Theme.BodyFont, Size = UDim2.new(0.92, 0, 0, 26), Position = UDim2.new(0.04, 0, 0, 60), Stroke = 2, Parent = banner })
+	}, {
+		Kit.Corner(UDim.new(0, 22)),
+		Kit.Stroke(5),
+		Kit.Gradient(Color3.fromRGB(255, 90, 78), Color3.fromRGB(216, 27, 43)),
+		New("UIScale"),
+	})
+	local bannerTitle = Kit.Text({
+		Size = UDim2.new(0.92, 0, 0, 52),
+		Position = UDim2.new(0.04, 0, 0, 8),
+		RichText = true,
+		Parent = banner,
+	})
+	local bannerSub = Kit.Text({
+		Font = Theme.BodyFont,
+		Size = UDim2.new(0.92, 0, 0, 26),
+		Position = UDim2.new(0.04, 0, 0, 60),
+		Stroke = 2,
+		Parent = banner,
+	})
 	hud.Banner = banner
 	-- priority: chi ha la priorita' piu' alta tiene lo striscione (furto 3 > valanga 2 > altro 1);
 	-- quando lo libera, gli altri lo riprendono al loro aggiornamento successivo
@@ -379,7 +506,14 @@ function Hud.Build(gui: ScreenGui, C)
 		end
 	end
 
-	local zoneLabel = Kit.Text({ Size = UDim2.fromOffset(520, 64), Position = UDim2.new(0.5, 0, 0.2, 0), AnchorPoint = Vector2.new(0.5, 0.5), TextTransparency = 1, Stroke = 5, Parent = gui })
+	local zoneLabel = Kit.Text({
+		Size = UDim2.fromOffset(520, 64),
+		Position = UDim2.new(0.5, 0, 0.2, 0),
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		TextTransparency = 1,
+		Stroke = 5,
+		Parent = gui,
+	})
 	local zoneStroke = zoneLabel:FindFirstChildOfClass("UIStroke") :: UIStroke
 	zoneStroke.Transparency = 1
 	function hud.ShowZone(name: string, color: Color3)

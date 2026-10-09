@@ -21,7 +21,15 @@ Upgrades.List = {
 	-- riduce il rallentamento dovuto al peso del 5% per livello (fino a -75%)
 	Strength = { id = "Strength", order = 2, max = 15, base = 120, growth = 1.7, icon = "Strength" },
 	-- uova trasportabili insieme: 1 -> 2 -> 3
-	Backpack = { id = "Backpack", order = 3, max = 2, base = 0, growth = 1, costs = { 7500, 400000 }, icon = "Backpack" },
+	Backpack = {
+		id = "Backpack",
+		order = 3,
+		max = 2,
+		base = 0,
+		growth = 1,
+		costs = { 7500, 400000 },
+		icon = "Backpack",
+	},
 	-- incubatrici nel lotto: 3 -> 8
 	Incubators = {
 		id = "Incubators",

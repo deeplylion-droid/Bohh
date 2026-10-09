@@ -128,7 +128,14 @@ local function startSteal(thief: Player, plot, base: BasePart, kind: "Egg" | "Pe
 		if not entry then
 			return
 		end
-		st = { victim = victim, kind = "Egg", slot = slotOrUid, rarity = entry.Rarity, base = base, hidden = S.HatchService.Visual(victim, slotOrUid) }
+		st = {
+			victim = victim,
+			kind = "Egg",
+			slot = slotOrUid,
+			rarity = entry.Rarity,
+			base = base,
+			hidden = S.HatchService.Visual(victim, slotOrUid),
+		}
 		carryModel = Visuals.MakeEgg(entry.Rarity)
 	else
 		local pet = data.Pets[slotOrUid]
@@ -136,7 +143,15 @@ local function startSteal(thief: Player, plot, base: BasePart, kind: "Egg" | "Pe
 			return
 		end
 		local rarity = Pets.Get(pet.Id).rarity
-		st = { victim = victim, kind = "Pet", uid = slotOrUid, petId = pet.Id, rarity = rarity, base = base, hidden = S.PetService.Model(victim, slotOrUid) }
+		st = {
+			victim = victim,
+			kind = "Pet",
+			uid = slotOrUid,
+			petId = pet.Id,
+			rarity = rarity,
+			base = base,
+			hidden = S.PetService.Model(victim, slotOrUid),
+		}
 		carryModel = Visuals.MakePet(pet.Id, pet.Mutation, "Mini")
 	end
 	base:SetAttribute("BeingStolen", true)
@@ -192,7 +207,10 @@ function StealService.Complete(thief: Player, item): boolean
 			restore(st)
 			return true
 		end
-		S.HatchService.Insert(thief, { rarity = entry.Rarity, remaining = remaining, duration = entry.Duration, cosmicMin = entry.CosmicMin })
+		S.HatchService.Insert(
+			thief,
+			{ rarity = entry.Rarity, remaining = remaining, duration = entry.Duration, cosmicMin = entry.CosmicMin }
+		)
 	else
 		if not S.PetService.FreeSlot(thief) then
 			return false
@@ -215,7 +233,11 @@ function StealService.Complete(thief: Player, item): boolean
 	S.StateService.Notify(victim, "StealSuccessVictim", { item = itemKey(st), name = thief.DisplayName }, "Bad")
 	S.StateService.Effect(thief, "StealSuccess", { rarity = st.rarity })
 	if st.kind == "Pet" and Rarities.Get(st.rarity).order >= 5 then
-		S.StateService.Announce("AnnounceSteal", { thief = thief.DisplayName, victim = victim.DisplayName, pet = "Pet_" .. (st.petId :: string) }, st.rarity)
+		S.StateService.Announce(
+			"AnnounceSteal",
+			{ thief = thief.DisplayName, victim = victim.DisplayName, pet = "Pet_" .. (st.petId :: string) },
+			st.rarity
+		)
 	end
 	S.AnalyticsService.Custom(thief, "StealDone", 1, { kind = st.kind, rarity = st.rarity })
 	return true

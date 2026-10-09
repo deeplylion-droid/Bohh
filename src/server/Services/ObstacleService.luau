@@ -37,19 +37,59 @@ local function buildStatic()
 			local x = sx * (p.logLength / 2 + 3)
 			local footCf = ground(top * CFrame.new(x, 0, 0))
 			local height = top.Position.Y - footCf.Position.Y + 1
-			Build.Part({ name = "Post", size = Vector3.new(2.2, height, 2.2), cframe = top * CFrame.new(x, -height / 2 + 1, 0), color = WOOD, material = Enum.Material.Wood, parent = folder })
+			Build.Part({
+				name = "Post",
+				size = Vector3.new(2.2, height, 2.2),
+				cframe = top * CFrame.new(x, -height / 2 + 1, 0),
+				color = WOOD,
+				material = Enum.Material.Wood,
+				parent = folder,
+			})
 		end
-		Build.Part({ name = "Beam", size = Vector3.new(p.logLength + 10, 2.2, 2.2), cframe = top * CFrame.new(0, 1, 0), color = WOOD, material = Enum.Material.Wood, parent = folder })
+		Build.Part({
+			name = "Beam",
+			size = Vector3.new(p.logLength + 10, 2.2, 2.2),
+			cframe = top * CFrame.new(0, 1, 0),
+			color = WOOD,
+			material = Enum.Material.Wood,
+			parent = folder,
+		})
 	end
 	-- bocche dei geyser e canali di lava (la parte animata la disegna il client)
 	for _, p in Obstacles.Pulses do
 		local cf = ground(p.cframe)
 		if p.kind == "Geyser" or p.kind == "FireGeyser" then
 			local color = if p.kind == "Geyser" then Color3.fromRGB(150, 140, 210) else Color3.fromRGB(70, 56, 64)
-			Build.Part({ name = "Vent", size = Vector3.new(1.4, 6.5, 6.5), cframe = cf * CFrame.new(0, 0.4, 0) * CFrame.Angles(0, 0, math.rad(90)), color = color, material = Enum.Material.Slate, shape = Enum.PartType.Cylinder, parent = folder })
-			Build.Part({ name = "VentHole", size = Vector3.new(1.5, 4, 4), cframe = cf * CFrame.new(0, 0.45, 0) * CFrame.Angles(0, 0, math.rad(90)), color = if p.kind == "Geyser" then Color3.fromRGB(120, 230, 255) else Color3.fromRGB(255, 110, 30), material = Enum.Material.Neon, shape = Enum.PartType.Cylinder, collide = false, castShadow = false, parent = folder })
+			Build.Part({
+				name = "Vent",
+				size = Vector3.new(1.4, 6.5, 6.5),
+				cframe = cf * CFrame.new(0, 0.4, 0) * CFrame.Angles(0, 0, math.rad(90)),
+				color = color,
+				material = Enum.Material.Slate,
+				shape = Enum.PartType.Cylinder,
+				parent = folder,
+			})
+			Build.Part({
+				name = "VentHole",
+				size = Vector3.new(1.5, 4, 4),
+				cframe = cf * CFrame.new(0, 0.45, 0) * CFrame.Angles(0, 0, math.rad(90)),
+				color = if p.kind == "Geyser" then Color3.fromRGB(120, 230, 255) else Color3.fromRGB(255, 110, 30),
+				material = Enum.Material.Neon,
+				shape = Enum.PartType.Cylinder,
+				collide = false,
+				castShadow = false,
+				parent = folder,
+			})
 		else
-			Build.Part({ name = "LavaChannel", size = Vector3.new(p.size.X, 0.6, p.size.Z), cframe = cf * CFrame.new(0, 0.1, 0), color = Color3.fromRGB(60, 46, 50), material = Enum.Material.Basalt, collide = false, parent = folder })
+			Build.Part({
+				name = "LavaChannel",
+				size = Vector3.new(p.size.X, 0.6, p.size.Z),
+				cframe = cf * CFrame.new(0, 0.1, 0),
+				color = Color3.fromRGB(60, 46, 50),
+				material = Enum.Material.Basalt,
+				collide = false,
+				parent = folder,
+			})
 		end
 	end
 	-- scorciatoie: sporgenze di legno sul pendio che si sbriciolano quando le calpesti
@@ -66,7 +106,14 @@ local function buildStatic()
 			local x = sc.x + (if k % 2 == 0 then 5 else -5)
 			local z = zLow + (zHigh - zLow) * t
 			local y = yLow + (yHigh - yLow) * (k / steps) - 0.6
-			local ledge = Build.Part({ name = "Ledge", size = Vector3.new(6, 1, 4.6), cframe = CFrame.new(x, y, z), color = Color3.fromRGB(196, 140, 84), material = Enum.Material.WoodPlanks, parent = folder })
+			local ledge = Build.Part({
+				name = "Ledge",
+				size = Vector3.new(6, 1, 4.6),
+				cframe = CFrame.new(x, y, z),
+				color = Color3.fromRGB(196, 140, 84),
+				material = Enum.Material.WoodPlanks,
+				parent = folder,
+			})
 			ledge.CanTouch = true
 			ledge:SetAttribute("Shortcut", sc.id)
 			local busy = false
@@ -97,7 +144,11 @@ local function onHit(player: Player, id: any)
 		return
 	end
 	local now = os.clock()
-	if now - (lastHit[player] or 0) < 1.1 or S.RagdollService.IsRagdolled(player) or S.CharacterService.IsProtected(player) then
+	if
+		now - (lastHit[player] or 0) < 1.1
+		or S.RagdollService.IsRagdolled(player)
+		or S.CharacterService.IsProtected(player)
+	then
 		return
 	end
 	local hrp = S.CharacterService.Root(player)

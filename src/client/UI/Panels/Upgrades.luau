@@ -24,13 +24,19 @@ local function effectText(T, id: string, level: number, C): string
 	elseif id == "Backpack" then
 		return T("UpgradeDesc_Backpack", { value = tostring(Upgrades.CarryCapacity(level, passes("BigBackpack"))) })
 	elseif id == "Incubators" then
-		return T("UpgradeDesc_Incubators", { value = tostring(Upgrades.IncubatorCount(level, passes("ExtraIncubator"))) })
+		return T(
+			"UpgradeDesc_Incubators",
+			{ value = tostring(Upgrades.IncubatorCount(level, passes("ExtraIncubator"))) }
+		)
 	elseif id == "HatchSpeed" then
 		return T("UpgradeDesc_HatchSpeed", { value = Format.Percent(1 - Upgrades.HatchFactor(level, false)) })
 	elseif id == "Pedestals" then
 		return T("UpgradeDesc_Pedestals", { value = tostring(Upgrades.PedestalCount(level)) })
 	elseif id == "Barrier" then
-		return T("UpgradeDesc_Barrier", { value = Format.Duration(Upgrades.BarrierDuration(level, passes("SuperBarrier"))) })
+		return T(
+			"UpgradeDesc_Barrier",
+			{ value = Format.Duration(Upgrades.BarrierDuration(level, passes("SuperBarrier"))) }
+		)
 	end
 	local _ = C
 	return ""
@@ -50,7 +56,12 @@ function Panel.Build(parent: Instance, C)
 		Parent = p.Body,
 	}, {
 		New("UIListLayout", { Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder }),
-		New("UIPadding", { PaddingTop = UDim.new(0, 18), PaddingLeft = UDim.new(0, 6), PaddingRight = UDim.new(0, 14), PaddingBottom = UDim.new(0, 10) }),
+		New("UIPadding", {
+			PaddingTop = UDim.new(0, 18),
+			PaddingLeft = UDim.new(0, 6),
+			PaddingRight = UDim.new(0, 14),
+			PaddingBottom = UDim.new(0, 10),
+		}),
 	})
 
 	local rows = {}
@@ -58,12 +69,40 @@ function Panel.Build(parent: Instance, C)
 		local def = Upgrades.List[id]
 		local card = Kit.Card({ Size = UDim2.new(1, 0, 0, 84), LayoutOrder = i, Parent = scroll })
 		Kit.Icon(def.icon, { Size = UDim2.fromOffset(56, 56), Position = UDim2.fromOffset(12, 14), Parent = card })
-		local name = Kit.Text({ Size = UDim2.new(0.5, 0, 0, 30), Position = UDim2.fromOffset(80, 10), TextXAlignment = Enum.TextXAlignment.Left, Parent = card })
-		local desc = Kit.Text({ Font = Theme.BodyFont, Size = UDim2.new(0.55, 0, 0, 22), Position = UDim2.fromOffset(82, 46), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Theme.Muted, Stroke = false, Parent = card })
+		local name = Kit.Text({
+			Size = UDim2.new(0.5, 0, 0, 30),
+			Position = UDim2.fromOffset(80, 10),
+			TextXAlignment = Enum.TextXAlignment.Left,
+			Parent = card,
+		})
+		local desc = Kit.Text({
+			Font = Theme.BodyFont,
+			Size = UDim2.new(0.55, 0, 0, 22),
+			Position = UDim2.fromOffset(82, 46),
+			TextXAlignment = Enum.TextXAlignment.Left,
+			TextColor3 = Theme.Muted,
+			Stroke = false,
+			Parent = card,
+		})
 		-- barra del livello
-		local bar = New("Frame", { BackgroundColor3 = Color3.fromRGB(29, 22, 48), Size = UDim2.new(0.18, 0, 0, 16), Position = UDim2.new(0.62, -40, 0, 34), Parent = card }, { Kit.Corner(UDim.new(1, 0)) })
-		local fill = New("Frame", { BackgroundColor3 = Theme.Green, Size = UDim2.fromScale(0, 1), Parent = bar }, { Kit.Corner(UDim.new(1, 0)) })
-		local lvl = Kit.Text({ Font = Theme.BodyFont, Size = UDim2.new(0.18, 0, 0, 20), Position = UDim2.new(0.62, -40, 0, 10), Stroke = 2, Parent = card })
+		local bar = New("Frame", {
+			BackgroundColor3 = Color3.fromRGB(29, 22, 48),
+			Size = UDim2.new(0.18, 0, 0, 16),
+			Position = UDim2.new(0.62, -40, 0, 34),
+			Parent = card,
+		}, { Kit.Corner(UDim.new(1, 0)) })
+		local fill = New(
+			"Frame",
+			{ BackgroundColor3 = Theme.Green, Size = UDim2.fromScale(0, 1), Parent = bar },
+			{ Kit.Corner(UDim.new(1, 0)) }
+		)
+		local lvl = Kit.Text({
+			Font = Theme.BodyFont,
+			Size = UDim2.new(0.18, 0, 0, 20),
+			Position = UDim2.new(0.62, -40, 0, 10),
+			Stroke = 2,
+			Parent = card,
+		})
 		local buy = Kit.Button({
 			Color = "Green",
 			Text = "",
@@ -85,8 +124,22 @@ function Panel.Build(parent: Instance, C)
 		local def = Combat.Traps[id]
 		local card = Kit.Card({ Size = UDim2.new(1, 0, 0, 74), LayoutOrder = 100 + i, Parent = scroll })
 		Kit.Icon("Trap", { Size = UDim2.fromOffset(48, 48), Position = UDim2.fromOffset(14, 13), Parent = card })
-		local name = Kit.Text({ Size = UDim2.new(0.45, 0, 0, 28), Position = UDim2.fromOffset(76, 8), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = def.color, Parent = card })
-		local desc = Kit.Text({ Font = Theme.BodyFont, Size = UDim2.new(0.5, 0, 0, 20), Position = UDim2.fromOffset(78, 42), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Theme.Muted, Stroke = false, Parent = card })
+		local name = Kit.Text({
+			Size = UDim2.new(0.45, 0, 0, 28),
+			Position = UDim2.fromOffset(76, 8),
+			TextXAlignment = Enum.TextXAlignment.Left,
+			TextColor3 = def.color,
+			Parent = card,
+		})
+		local desc = Kit.Text({
+			Font = Theme.BodyFont,
+			Size = UDim2.new(0.5, 0, 0, 20),
+			Position = UDim2.fromOffset(78, 42),
+			TextXAlignment = Enum.TextXAlignment.Left,
+			TextColor3 = Theme.Muted,
+			Stroke = false,
+			Parent = card,
+		})
 		local slots = {}
 		for s = 1, Combat.TrapSlots do
 			local slot = tostring(s)

@@ -124,9 +124,22 @@ end
 local function buildRoller(r: Obstacles.Roller): Visual
 	local rad = r.radius
 	if r.kind == "Snowball" then
-		local ball = newPart({ Shape = Enum.PartType.Ball, Size = Vector3.one * rad * 2, Color = Color3.fromRGB(246, 251, 255), Material = Enum.Material.Snow })
-		local lump = newPart({ Shape = Enum.PartType.Ball, Size = Vector3.one * rad * 1.1, Color = Color3.fromRGB(236, 245, 255), Material = Enum.Material.Snow })
-		local v = assemble("Snowball", { { part = ball, offset = CFrame.new() }, { part = lump, offset = CFrame.new(rad * 0.55, rad * 0.35, 0) } })
+		local ball = newPart({
+			Shape = Enum.PartType.Ball,
+			Size = Vector3.one * rad * 2,
+			Color = Color3.fromRGB(246, 251, 255),
+			Material = Enum.Material.Snow,
+		})
+		local lump = newPart({
+			Shape = Enum.PartType.Ball,
+			Size = Vector3.one * rad * 1.1,
+			Color = Color3.fromRGB(236, 245, 255),
+			Material = Enum.Material.Snow,
+		})
+		local v = assemble(
+			"Snowball",
+			{ { part = ball, offset = CFrame.new() }, { part = lump, offset = CFrame.new(rad * 0.55, rad * 0.35, 0) } }
+		)
 		emitter(ball, {
 			Texture = SMOKE,
 			Color = ColorSequence.new(Color3.fromRGB(255, 255, 255)),
@@ -140,10 +153,25 @@ local function buildRoller(r: Obstacles.Roller): Visual
 		return v
 	elseif r.kind == "Log" then
 		local len = r.length or 16
-		local body = newPart({ Shape = Enum.PartType.Cylinder, Size = Vector3.new(len, rad * 2, rad * 2), Color = WOOD, Material = Enum.Material.Wood })
-		local capA = newPart({ Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.3, rad * 1.8, rad * 1.8), Color = WOOD_CUT, Material = Enum.Material.Wood })
+		local body = newPart({
+			Shape = Enum.PartType.Cylinder,
+			Size = Vector3.new(len, rad * 2, rad * 2),
+			Color = WOOD,
+			Material = Enum.Material.Wood,
+		})
+		local capA = newPart({
+			Shape = Enum.PartType.Cylinder,
+			Size = Vector3.new(0.3, rad * 1.8, rad * 1.8),
+			Color = WOOD_CUT,
+			Material = Enum.Material.Wood,
+		})
 		local capB = capA:Clone()
-		local ring = newPart({ Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.34, rad * 0.9, rad * 0.9), Color = Color3.fromRGB(200, 150, 92), Material = Enum.Material.Wood })
+		local ring = newPart({
+			Shape = Enum.PartType.Cylinder,
+			Size = Vector3.new(0.34, rad * 0.9, rad * 0.9),
+			Color = Color3.fromRGB(200, 150, 92),
+			Material = Enum.Material.Wood,
+		})
 		local ringB = ring:Clone()
 		return assemble("RollingLog", {
 			{ part = body, offset = CFrame.new() },
@@ -160,10 +188,20 @@ local function buildRoller(r: Obstacles.Roller): Visual
 		return visualOf(custom)
 	end
 	local color = ROCK[r.zone] or Color3.fromRGB(150, 140, 130)
-	local main = newPart({ Shape = Enum.PartType.Ball, Size = Vector3.one * rad * 2, Color = color, Material = Enum.Material.Slate })
+	local main = newPart({
+		Shape = Enum.PartType.Ball,
+		Size = Vector3.one * rad * 2,
+		Color = color,
+		Material = Enum.Material.Slate,
+	})
 	local parts = { { part = main, offset = CFrame.new() } }
 	for i, o in { Vector3.new(0.6, 0.35, 0.2), Vector3.new(-0.45, 0.5, -0.4), Vector3.new(0.1, -0.3, 0.7) } do
-		local lump = newPart({ Shape = Enum.PartType.Ball, Size = Vector3.one * rad * (1.05 - i * 0.12), Color = color:Lerp(Color3.new(0, 0, 0), 0.06 * i), Material = Enum.Material.Slate })
+		local lump = newPart({
+			Shape = Enum.PartType.Ball,
+			Size = Vector3.one * rad * (1.05 - i * 0.12),
+			Color = color:Lerp(Color3.new(0, 0, 0), 0.06 * i),
+			Material = Enum.Material.Slate,
+		})
 		table.insert(parts, { part = lump, offset = CFrame.new(o * rad) })
 	end
 	return assemble("Boulder", parts)
@@ -174,16 +212,60 @@ local function buildPendulum(p: Obstacles.Pendulum)
 	local len = p.logLength
 	local rad = p.radius
 	local log = assemble("SwingLog", {
-		{ part = newPart({ Shape = Enum.PartType.Cylinder, Size = Vector3.new(len, rad * 2, rad * 2), Color = WOOD, Material = Enum.Material.Wood }), offset = CFrame.new() },
-		{ part = newPart({ Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.3, rad * 1.8, rad * 1.8), Color = WOOD_CUT, Material = Enum.Material.Wood }), offset = CFrame.new(len / 2, 0, 0) },
-		{ part = newPart({ Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.3, rad * 1.8, rad * 1.8), Color = WOOD_CUT, Material = Enum.Material.Wood }), offset = CFrame.new(-len / 2, 0, 0) },
+		{
+			part = newPart({
+				Shape = Enum.PartType.Cylinder,
+				Size = Vector3.new(len, rad * 2, rad * 2),
+				Color = WOOD,
+				Material = Enum.Material.Wood,
+			}),
+			offset = CFrame.new(),
+		},
+		{
+			part = newPart({
+				Shape = Enum.PartType.Cylinder,
+				Size = Vector3.new(0.3, rad * 1.8, rad * 1.8),
+				Color = WOOD_CUT,
+				Material = Enum.Material.Wood,
+			}),
+			offset = CFrame.new(len / 2, 0, 0),
+		},
+		{
+			part = newPart({
+				Shape = Enum.PartType.Cylinder,
+				Size = Vector3.new(0.3, rad * 1.8, rad * 1.8),
+				Color = WOOD_CUT,
+				Material = Enum.Material.Wood,
+			}),
+			offset = CFrame.new(-len / 2, 0, 0),
+		},
 		-- fasce di metallo dove si legano le corde
-		{ part = newPart({ Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.8, rad * 2.1, rad * 2.1), Color = Color3.fromRGB(90, 90, 104), Material = Enum.Material.Metal }), offset = CFrame.new(len / 2 - 3, 0, 0) },
-		{ part = newPart({ Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.8, rad * 2.1, rad * 2.1), Color = Color3.fromRGB(90, 90, 104), Material = Enum.Material.Metal }), offset = CFrame.new(-len / 2 + 3, 0, 0) },
+		{
+			part = newPart({
+				Shape = Enum.PartType.Cylinder,
+				Size = Vector3.new(0.8, rad * 2.1, rad * 2.1),
+				Color = Color3.fromRGB(90, 90, 104),
+				Material = Enum.Material.Metal,
+			}),
+			offset = CFrame.new(len / 2 - 3, 0, 0),
+		},
+		{
+			part = newPart({
+				Shape = Enum.PartType.Cylinder,
+				Size = Vector3.new(0.8, rad * 2.1, rad * 2.1),
+				Color = Color3.fromRGB(90, 90, 104),
+				Material = Enum.Material.Metal,
+			}),
+			offset = CFrame.new(-len / 2 + 3, 0, 0),
+		},
 	})
 	local ropes = {}
 	for _, sx in { -1, 1 } do
-		local rope = newPart({ Size = Vector3.new(0.38, p.length, 0.38), Color = Color3.fromRGB(196, 160, 110), Material = Enum.Material.Fabric })
+		local rope = newPart({
+			Size = Vector3.new(0.38, p.length, 0.38),
+			Color = Color3.fromRGB(196, 160, 110),
+			Material = Enum.Material.Fabric,
+		})
 		rope.Parent = folder
 		table.insert(ropes, { part = rope, x = sx * (len / 2 - 3) })
 	end
@@ -202,21 +284,64 @@ local function buildGoat(): Visual
 	local parts = {
 		{ part = ellipsoid(Vector3.new(2.5, 2.3, 3.6), white), offset = CFrame.new(0, 2.3, 0.2) },
 		{ part = ellipsoid(Vector3.new(1.6, 1.6, 1.9), white), offset = CFrame.new(0, 3.4, -1.8) },
-		{ part = ellipsoid(Vector3.new(1.1, 0.9, 1.0), Color3.fromRGB(255, 196, 196)), offset = CFrame.new(0, 3.05, -2.65) },
+		{
+			part = ellipsoid(Vector3.new(1.1, 0.9, 1.0), Color3.fromRGB(255, 196, 196)),
+			offset = CFrame.new(0, 3.05, -2.65),
+		},
 		{ part = ellipsoid(Vector3.new(0.5, 0.9, 0.5), white), offset = CFrame.new(0, 2.45, -2.4) }, -- barbetta
-		{ part = newPart({ Shape = Enum.PartType.Ball, Size = Vector3.one * 0.42, Color = Color3.fromRGB(30, 24, 40) }), offset = CFrame.new(0.48, 3.65, -2.55) },
-		{ part = newPart({ Shape = Enum.PartType.Ball, Size = Vector3.one * 0.42, Color = Color3.fromRGB(30, 24, 40) }), offset = CFrame.new(-0.48, 3.65, -2.55) },
-		{ part = ellipsoid(Vector3.new(0.5, 0.35, 1.0), white), offset = CFrame.new(0.95, 3.7, -1.6) * CFrame.Angles(0, 0, math.rad(-30)) }, -- orecchie
-		{ part = ellipsoid(Vector3.new(0.5, 0.35, 1.0), white), offset = CFrame.new(-0.95, 3.7, -1.6) * CFrame.Angles(0, 0, math.rad(30)) },
-		{ part = ellipsoid(Vector3.new(0.6, 0.6, 1.0), white), offset = CFrame.new(0, 2.9, 2.0) * CFrame.Angles(math.rad(-40), 0, 0) }, -- coda
+		{
+			part = newPart({
+				Shape = Enum.PartType.Ball,
+				Size = Vector3.one * 0.42,
+				Color = Color3.fromRGB(30, 24, 40),
+			}),
+			offset = CFrame.new(0.48, 3.65, -2.55),
+		},
+		{
+			part = newPart({
+				Shape = Enum.PartType.Ball,
+				Size = Vector3.one * 0.42,
+				Color = Color3.fromRGB(30, 24, 40),
+			}),
+			offset = CFrame.new(-0.48, 3.65, -2.55),
+		},
+		{
+			part = ellipsoid(Vector3.new(0.5, 0.35, 1.0), white),
+			offset = CFrame.new(0.95, 3.7, -1.6) * CFrame.Angles(0, 0, math.rad(-30)),
+		}, -- orecchie
+		{
+			part = ellipsoid(Vector3.new(0.5, 0.35, 1.0), white),
+			offset = CFrame.new(-0.95, 3.7, -1.6) * CFrame.Angles(0, 0, math.rad(30)),
+		},
+		{
+			part = ellipsoid(Vector3.new(0.6, 0.6, 1.0), white),
+			offset = CFrame.new(0, 2.9, 2.0) * CFrame.Angles(math.rad(-40), 0, 0),
+		}, -- coda
 	}
 	-- corna ricurve (due segmenti per lato)
 	for _, sx in { -1, 1 } do
-		table.insert(parts, { part = newPart({ Shape = Enum.PartType.Cylinder, Size = Vector3.new(1.0, 0.42, 0.42), Color = horn }), offset = CFrame.new(sx * 0.45, 4.25, -1.6) * CFrame.Angles(0, math.rad(90), 0) * CFrame.Angles(0, 0, math.rad(-60)) })
-		table.insert(parts, { part = newPart({ Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.9, 0.34, 0.34), Color = horn }), offset = CFrame.new(sx * 0.5, 4.55, -1.0) * CFrame.Angles(0, math.rad(90), 0) * CFrame.Angles(0, 0, math.rad(20)) })
+		table.insert(parts, {
+			part = newPart({ Shape = Enum.PartType.Cylinder, Size = Vector3.new(1.0, 0.42, 0.42), Color = horn }),
+			offset = CFrame.new(sx * 0.45, 4.25, -1.6)
+				* CFrame.Angles(0, math.rad(90), 0)
+				* CFrame.Angles(0, 0, math.rad(-60)),
+		})
+		table.insert(parts, {
+			part = newPart({ Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.9, 0.34, 0.34), Color = horn }),
+			offset = CFrame.new(sx * 0.5, 4.55, -1.0)
+				* CFrame.Angles(0, math.rad(90), 0)
+				* CFrame.Angles(0, 0, math.rad(20)),
+		})
 	end
 	-- zampe con zoccoli (oscillano attorno all'anca, a coppie diagonali)
-	for i, lp in { Vector3.new(0.75, 0, -0.9), Vector3.new(-0.75, 0, -0.9), Vector3.new(0.75, 0, 1.2), Vector3.new(-0.75, 0, 1.2) } do
+	for i, lp in
+		{
+			Vector3.new(0.75, 0, -0.9),
+			Vector3.new(-0.75, 0, -0.9),
+			Vector3.new(0.75, 0, 1.2),
+			Vector3.new(-0.75, 0, 1.2),
+		}
+	do
 		local hip = lp + Vector3.new(0, 1.7, 0)
 		local phase = if i == 1 or i == 4 then 1 else -1
 		local leg = newPart({ Shape = Enum.PartType.Cylinder, Size = Vector3.new(1.4, 0.5, 0.5), Color = white })
@@ -225,8 +350,14 @@ local function buildGoat(): Visual
 			part:SetAttribute("Hip", hip)
 			part:SetAttribute("Phase", phase)
 		end
-		table.insert(parts, { part = leg, offset = CFrame.new(lp + Vector3.new(0, 0.95, 0)) * CFrame.Angles(0, 0, math.rad(90)) })
-		table.insert(parts, { part = foot, offset = CFrame.new(lp + Vector3.new(0, 0.18, 0)) * CFrame.Angles(0, 0, math.rad(90)) })
+		table.insert(
+			parts,
+			{ part = leg, offset = CFrame.new(lp + Vector3.new(0, 0.95, 0)) * CFrame.Angles(0, 0, math.rad(90)) }
+		)
+		table.insert(
+			parts,
+			{ part = foot, offset = CFrame.new(lp + Vector3.new(0, 0.18, 0)) * CFrame.Angles(0, 0, math.rad(90)) }
+		)
 	end
 	return assemble("Goat", parts)
 end
@@ -258,9 +389,11 @@ end
 ---------------------------------------------------------------------------------------------
 local rollers: { { def: Obstacles.Roller, active: { [number]: Visual }, pool: { Visual }, mid: Vector3 } } = {}
 local pendulums: { { def: Obstacles.Pendulum, vis: any, wasNear: boolean } } = {}
-local goats: { { def: Obstacles.Goat, vis: Visual, alert: BillboardGui, dust: ParticleEmitter, charging: boolean } } = {}
+local goats: { { def: Obstacles.Goat, vis: Visual, alert: BillboardGui, dust: ParticleEmitter, charging: boolean } } =
+	{}
 local pulses: { { def: Obstacles.Pulse, cf: CFrame?, state: string, vis: { [string]: any } } } = {}
-local winds: { { def: Obstacles.Wind, streaks: ParticleEmitter, leaves: ParticleEmitter, part: Part, active: boolean } } = {}
+local winds: { { def: Obstacles.Wind, streaks: ParticleEmitter, leaves: ParticleEmitter, part: Part, active: boolean } } =
+	{}
 
 local function moveVisual(v: Visual, cf: CFrame, parts: { BasePart }, cfs: { CFrame })
 	for _, piece in v.pieces do
@@ -316,12 +449,15 @@ local function buildPulse(p: Obstacles.Pulse)
 			Parent = folder,
 		})
 		local top = newPart({ Size = Vector3.new(1, 1, 1), Transparency = 1, Parent = folder })
-		local base = newPart({ Size = Vector3.new(p.size.X * 0.7, 0.2, p.size.X * 0.7), Transparency = 1, Parent = folder })
+		local base =
+			newPart({ Size = Vector3.new(p.size.X * 0.7, 0.2, p.size.X * 0.7), Transparency = 1, Parent = folder })
 		vis.core, vis.shell, vis.top, vis.base = core, shell, top, base
 		-- spruzzo in cima alla colonna
 		vis.spray = emitter(top, {
 			Texture = if water then SMOKE else FIRE,
-			Color = if water then ColorSequence.new(Color3.fromRGB(255, 255, 255)) else ColorSequence.new(Color3.fromRGB(255, 220, 90), Color3.fromRGB(255, 70, 20)),
+			Color = if water
+				then ColorSequence.new(Color3.fromRGB(255, 255, 255))
+				else ColorSequence.new(Color3.fromRGB(255, 220, 90), Color3.fromRGB(255, 70, 20)),
 			LightEmission = if water then 0.2 else 1,
 			Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 2.5), NumberSequenceKeypoint.new(1, 6) }),
 			Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.3), NumberSequenceKeypoint.new(1, 1) }),
@@ -334,7 +470,9 @@ local function buildPulse(p: Obstacles.Pulse)
 		-- gocce o scintille che ricadono
 		vis.drops = emitter(top, {
 			Texture = SPARKLE,
-			Color = if water then ColorSequence.new(Color3.fromRGB(180, 240, 255)) else ColorSequence.new(Color3.fromRGB(255, 200, 60)),
+			Color = if water
+				then ColorSequence.new(Color3.fromRGB(180, 240, 255))
+				else ColorSequence.new(Color3.fromRGB(255, 200, 60)),
 			LightEmission = 0.8,
 			Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.5), NumberSequenceKeypoint.new(1, 0.1) }),
 			Lifetime = NumberRange.new(0.8, 1.4),
@@ -346,7 +484,9 @@ local function buildPulse(p: Obstacles.Pulse)
 		-- bolle/fumo durante l'avviso
 		vis.warn = emitter(base, {
 			Texture = SMOKE,
-			Color = if water then ColorSequence.new(Color3.fromRGB(220, 240, 255)) else ColorSequence.new(Color3.fromRGB(120, 100, 100)),
+			Color = if water
+				then ColorSequence.new(Color3.fromRGB(220, 240, 255))
+				else ColorSequence.new(Color3.fromRGB(120, 100, 100)),
 			Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(1, 3) }),
 			Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.4), NumberSequenceKeypoint.new(1, 1) }),
 			Lifetime = NumberRange.new(0.6, 1),
@@ -476,7 +616,10 @@ local function updatePulse(entry, t: number, hrpPos: Vector3?)
 		end
 		vis.lava.CFrame = cf * CFrame.new(0, y, 0)
 		vis.glow.CFrame = cf * CFrame.new(0, y + 0.5, 0)
-		vis.glow.Transparency = if state == "Active" then 0.55 + math.sin(t * 6) * 0.15 elseif state == "Warn" then 0.9 - f * 0.3 else 1
+		vis.glow.Transparency = if state == "Active"
+			then 0.55 + math.sin(t * 6) * 0.15
+			elseif state == "Warn" then 0.9 - f * 0.3
+			else 1
 		if changed then
 			vis.fire.Rate = if state == "Active" then (if lowGfx then 10 else 30) elseif state == "Warn" then 6 else 0
 			vis.light.Brightness = if state == "Active" then 3 elseif state == "Warn" then 1.2 else 0
@@ -489,7 +632,12 @@ local function updatePulse(entry, t: number, hrpPos: Vector3?)
 	if hrpPos and state == "Active" then
 		local lp = cf:PointToObjectSpace(hrpPos)
 		local margin = if p.kind == "Lava" then 0.5 else 0
-		if math.abs(lp.X) <= p.size.X / 2 + margin and math.abs(lp.Z) <= p.size.Z / 2 + margin and lp.Y >= -2 and lp.Y <= p.size.Y then
+		if
+			math.abs(lp.X) <= p.size.X / 2 + margin
+			and math.abs(lp.Z) <= p.size.Z / 2 + margin
+			and lp.Y >= -2
+			and lp.Y <= p.size.Y
+		then
 			report(p.id)
 		end
 	end
@@ -500,14 +648,21 @@ end
 ---------------------------------------------------------------------------------------------
 local function buildWind(w: Obstacles.Wind)
 	local part = newPart({ Size = Vector3.new(w.radius * 1.6, 14, w.radius * 1.6), Transparency = 1, Parent = folder })
-	part.CFrame = CFrame.lookAt(w.center + Vector3.new(0, 7, 0), w.center + Vector3.new(0, 7, 0) + Vector3.new(w.direction.Z, 0, -w.direction.X))
+	part.CFrame = CFrame.lookAt(
+		w.center + Vector3.new(0, 7, 0),
+		w.center + Vector3.new(0, 7, 0) + Vector3.new(w.direction.Z, 0, -w.direction.X)
+	)
 	-- con questo orientamento l'asse X locale (faccia Right) coincide con la direzione del vento
 	local streaks = emitter(part, {
 		Texture = SPARKLE,
 		Color = ColorSequence.new(Color3.fromRGB(255, 255, 255)),
 		LightEmission = 0.4,
 		Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.35), NumberSequenceKeypoint.new(1, 0.2) }),
-		Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.2, 0.3), NumberSequenceKeypoint.new(1, 1) }),
+		Transparency = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, 1),
+			NumberSequenceKeypoint.new(0.2, 0.3),
+			NumberSequenceKeypoint.new(1, 1),
+		}),
 		Squash = NumberSequence.new(3),
 		Orientation = Enum.ParticleOrientation.VelocityParallel,
 		Lifetime = NumberRange.new(0.8, 1.3),
@@ -522,7 +677,11 @@ local function buildWind(w: Obstacles.Wind)
 		Texture = SMOKE,
 		Color = ColorSequence.new(Color3.fromRGB(236, 190, 140)),
 		Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 2), NumberSequenceKeypoint.new(1, 5) }),
-		Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.3, 0.75), NumberSequenceKeypoint.new(1, 1) }),
+		Transparency = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, 1),
+			NumberSequenceKeypoint.new(0.3, 0.75),
+			NumberSequenceKeypoint.new(1, 1),
+		}),
 		Lifetime = NumberRange.new(1.2, 2),
 		Speed = NumberRange.new(25, 40),
 		SpreadAngle = Vector2.new(10, 10),
@@ -573,7 +732,16 @@ local function build()
 		local anchor = vis.pieces[1].part
 		local bbCf, bbSize = vis.model:GetBoundingBox()
 		local above = bbCf.Position.Y + bbSize.Y / 2 + 1.4 - anchor.Position.Y
-		local alert = C.UI.Kit.New("BillboardGui", { Size = UDim2.fromOffset(60, 60), StudsOffsetWorldSpace = Vector3.new(0, above, 0), AlwaysOnTop = true, MaxDistance = 120, LightInfluence = 0, Enabled = false, Adornee = anchor, Parent = vis.model })
+		local alert = C.UI.Kit.New("BillboardGui", {
+			Size = UDim2.fromOffset(60, 60),
+			StudsOffsetWorldSpace = Vector3.new(0, above, 0),
+			AlwaysOnTop = true,
+			MaxDistance = 120,
+			LightInfluence = 0,
+			Enabled = false,
+			Adornee = anchor,
+			Parent = vis.model,
+		})
 		C.UI.Kit.Text({ Text = "!", TextColor3 = Color3.fromRGB(255, 70, 60), Parent = alert })
 		local dust = emitter(vis.pieces[1].part, {
 			Texture = SMOKE,
@@ -679,7 +847,10 @@ local function update(dt: number)
 				local hip = piece.hip
 				if hip then
 					local h = CFrame.new(hip)
-					table.insert(cfs, body * h * CFrame.Angles(swing * (piece.phase or 1), 0, 0) * h:Inverse() * piece.offset)
+					table.insert(
+						cfs,
+						body * h * CFrame.Angles(swing * (piece.phase or 1), 0, 0) * h:Inverse() * piece.offset
+					)
 				else
 					table.insert(cfs, body * piece.offset)
 				end

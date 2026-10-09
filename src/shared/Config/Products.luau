@@ -17,7 +17,8 @@ Products.Passes = {
 	SuperBarrier = { key = "SuperBarrier", id = 0, price = 149, icon = "Barrier" },
 } :: { [string]: Pass }
 
-Products.ProductOrder = { "SkipHatchSmall", "SkipHatchMedium", "SkipHatchLarge", "Luck15", "CoinsSmall", "CoinsMedium", "CoinsLarge" }
+Products.ProductOrder =
+	{ "SkipHatchSmall", "SkipHatchMedium", "SkipHatchLarge", "Luck15", "CoinsSmall", "CoinsMedium", "CoinsLarge" }
 Products.Products = {
 	-- salta l'attesa di un'incubatrice: piccolo fino a Raro, medio fino a Leggendario, grande per tutto
 	SkipHatchSmall = { key = "SkipHatchSmall", id = 0, price = 19, icon = "SkipHatch" },

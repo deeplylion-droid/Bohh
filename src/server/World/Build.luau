@@ -40,7 +40,14 @@ function Build.Part(p: PartProps): BasePart
 end
 
 -- Cartello con testo (SurfaceGui). Il testo viene localizzato dal client tramite il tag "LocalizedSign".
-function Build.Sign(parent: Instance, cframe: CFrame, size: Vector3, key: string, args: { [string]: any }?, colors: { bg: Color3, text: Color3 }?): BasePart
+function Build.Sign(
+	parent: Instance,
+	cframe: CFrame,
+	size: Vector3,
+	key: string,
+	args: { [string]: any }?,
+	colors: { bg: Color3, text: Color3 }?
+): BasePart
 	local board = Build.Part({
 		name = "Sign",
 		size = size,

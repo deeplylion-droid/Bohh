@@ -83,19 +83,45 @@ local function petBillboard(model: Model): BillboardGui
 		tagText ..= T("Size_" .. size)
 	end
 	if tagText ~= "" then
-		local tag = Kit.Text({ Text = tagText, Size = UDim2.new(1, 0, 0, 22), Position = UDim2.fromOffset(0, 0), TextColor3 = Variants.Mutations[mutation] and Variants.Mutations[mutation].color or Color3.new(1, 1, 1), Parent = gui })
+		local tag = Kit.Text({
+			Text = tagText,
+			Size = UDim2.new(1, 0, 0, 22),
+			Position = UDim2.fromOffset(0, 0),
+			TextColor3 = Variants.Mutations[mutation] and Variants.Mutations[mutation].color or Color3.new(1, 1, 1),
+			Parent = gui,
+		})
 		if mutation == "Rainbow" then
 			Kit.New("UIGradient", { Color = Rarities.Gradients.Divine, Parent = tag })
 			tag.TextColor3 = Color3.new(1, 1, 1)
 		end
 	end
-	local name = Kit.Text({ Text = T("Pet_" .. petId), Size = UDim2.new(1, 0, 0, 28), Position = UDim2.fromOffset(0, 22), TextColor3 = r and r.color or Color3.new(1, 1, 1), Parent = gui })
+	local name = Kit.Text({
+		Text = T("Pet_" .. petId),
+		Size = UDim2.new(1, 0, 0, 28),
+		Position = UDim2.fromOffset(0, 22),
+		TextColor3 = r and r.color or Color3.new(1, 1, 1),
+		Parent = gui,
+	})
 	if def and Rarities.Gradients[def.rarity] then
 		Kit.New("UIGradient", { Color = Rarities.Gradients[def.rarity], Parent = name })
 		name.TextColor3 = Color3.new(1, 1, 1)
 	end
-	Kit.Text({ Text = def and T("Rarity_" .. def.rarity) or "", Font = Kit.Theme.BodyFont, Size = UDim2.new(1, 0, 0, 18), Position = UDim2.fromOffset(0, 50), Stroke = 2, Parent = gui })
-	local income = Kit.Text({ Name = "Income", Text = "", Size = UDim2.new(1, 0, 0, 22), Position = UDim2.fromOffset(0, 68), TextColor3 = Kit.Theme.Green, Parent = gui })
+	Kit.Text({
+		Text = def and T("Rarity_" .. def.rarity) or "",
+		Font = Kit.Theme.BodyFont,
+		Size = UDim2.new(1, 0, 0, 18),
+		Position = UDim2.fromOffset(0, 50),
+		Stroke = 2,
+		Parent = gui,
+	})
+	local income = Kit.Text({
+		Name = "Income",
+		Text = "",
+		Size = UDim2.new(1, 0, 0, 22),
+		Position = UDim2.fromOffset(0, 68),
+		TextColor3 = Kit.Theme.Green,
+		Parent = gui,
+	})
 	local base = model.Parent
 	local function refreshIncome()
 		local v = base and base:GetAttribute("Income")
@@ -132,7 +158,14 @@ local function addPet(model: Model)
 			})
 		end
 	end
-	local anim: PetAnim = { model = model, base = pivot, parts = parts, seed = math.random() * 10, flying = model:GetAttribute("Flying") == true, billboard = nil }
+	local anim: PetAnim = {
+		model = model,
+		base = pivot,
+		parts = parts,
+		seed = math.random() * 10,
+		flying = model:GetAttribute("Flying") == true,
+		billboard = nil,
+	}
 	pets[model] = anim
 	anim.billboard = petBillboard(model)
 end
@@ -186,8 +219,17 @@ local function incubatorBillboard(base: BasePart)
 		Parent = base,
 	})
 	local label = Kit.Text({ Text = "", Size = UDim2.new(1, 0, 0, 30), Parent = gui })
-	local bar = Kit.New("Frame", { BackgroundColor3 = Color3.fromRGB(29, 22, 48), Size = UDim2.new(0.86, 0, 0, 14), Position = UDim2.new(0.07, 0, 0, 34), Parent = gui }, { Kit.Corner(UDim.new(1, 0)), Kit.Stroke(3) })
-	local fill = Kit.New("Frame", { BackgroundColor3 = Kit.Theme.Green, Size = UDim2.fromScale(0, 1), Parent = bar }, { Kit.Corner(UDim.new(1, 0)) })
+	local bar = Kit.New("Frame", {
+		BackgroundColor3 = Color3.fromRGB(29, 22, 48),
+		Size = UDim2.new(0.86, 0, 0, 14),
+		Position = UDim2.new(0.07, 0, 0, 34),
+		Parent = gui,
+	}, { Kit.Corner(UDim.new(1, 0)), Kit.Stroke(3) })
+	local fill = Kit.New(
+		"Frame",
+		{ BackgroundColor3 = Kit.Theme.Green, Size = UDim2.fromScale(0, 1), Parent = bar },
+		{ Kit.Corner(UDim.new(1, 0)) }
+	)
 	incubatorGuis[base] = { gui = gui, label = label, bar = bar, fill = fill }
 end
 
@@ -270,20 +312,61 @@ local function drawBoard(board: BasePart)
 	local T = C.Lang.T
 	local New = Kit.New
 	New("Frame", { BackgroundColor3 = Color3.fromRGB(40, 30, 72), Size = UDim2.fromScale(1, 1), Parent = gui })
-	Kit.Text({ Text = T(board:GetAttribute("TitleKey") or "LbMoney"), TextColor3 = Kit.Theme.Gold, Size = UDim2.new(0.9, 0, 0.12, 0), Position = UDim2.new(0.05, 0, 0.02, 0), Parent = gui })
+	Kit.Text({
+		Text = T(board:GetAttribute("TitleKey") or "LbMoney"),
+		TextColor3 = Kit.Theme.Gold,
+		Size = UDim2.new(0.9, 0, 0.12, 0),
+		Position = UDim2.new(0.05, 0, 0.02, 0),
+		Parent = gui,
+	})
 	local ok, list = pcall(HttpService.JSONDecode, HttpService, board:GetAttribute("Data") or "[]")
 	if not ok or type(list) ~= "table" or #list == 0 then
-		Kit.Text({ Text = T("LbEmpty"), Font = Kit.Theme.BodyFont, Size = UDim2.new(0.9, 0, 0.08, 0), Position = UDim2.new(0.05, 0, 0.45, 0), Parent = gui })
+		Kit.Text({
+			Text = T("LbEmpty"),
+			Font = Kit.Theme.BodyFont,
+			Size = UDim2.new(0.9, 0, 0.08, 0),
+			Position = UDim2.new(0.05, 0, 0.45, 0),
+			Parent = gui,
+		})
 		return
 	end
 	local key = board:GetAttribute("BoardKey")
 	for i, e in list do
 		local y = 0.15 + (i - 1) * 0.084
-		local color = if i == 1 then Kit.Theme.Gold elseif i == 2 then Color3.fromRGB(210, 220, 235) elseif i == 3 then Color3.fromRGB(230, 150, 80) else Color3.new(1, 1, 1)
-		Kit.Text({ Text = `#{e.rank}`, TextColor3 = color, Size = UDim2.new(0.14, 0, 0.07, 0), Position = UDim2.new(0.04, 0, y, 0), TextXAlignment = Enum.TextXAlignment.Left, Parent = gui })
-		Kit.Text({ Text = e.name, Font = Kit.Theme.BodyFont, Size = UDim2.new(0.5, 0, 0.065, 0), Position = UDim2.new(0.18, 0, y, 0), TextXAlignment = Enum.TextXAlignment.Left, Stroke = 2, Parent = gui })
-		local value = if key == "Steals" then tostring(math.floor(e.value + 0.5)) elseif key == "Income" then Format.Rate(e.value) else Format.Money(e.value)
-		Kit.Text({ Text = value, TextColor3 = Kit.Theme.Green, Size = UDim2.new(0.3, 0, 0.065, 0), Position = UDim2.new(0.66, 0, y, 0), TextXAlignment = Enum.TextXAlignment.Right, Parent = gui })
+		local color = if i == 1
+			then Kit.Theme.Gold
+			elseif i == 2 then Color3.fromRGB(210, 220, 235)
+			elseif i == 3 then Color3.fromRGB(230, 150, 80)
+			else Color3.new(1, 1, 1)
+		Kit.Text({
+			Text = `#{e.rank}`,
+			TextColor3 = color,
+			Size = UDim2.new(0.14, 0, 0.07, 0),
+			Position = UDim2.new(0.04, 0, y, 0),
+			TextXAlignment = Enum.TextXAlignment.Left,
+			Parent = gui,
+		})
+		Kit.Text({
+			Text = e.name,
+			Font = Kit.Theme.BodyFont,
+			Size = UDim2.new(0.5, 0, 0.065, 0),
+			Position = UDim2.new(0.18, 0, y, 0),
+			TextXAlignment = Enum.TextXAlignment.Left,
+			Stroke = 2,
+			Parent = gui,
+		})
+		local value = if key == "Steals"
+			then tostring(math.floor(e.value + 0.5))
+			elseif key == "Income" then Format.Rate(e.value)
+			else Format.Money(e.value)
+		Kit.Text({
+			Text = value,
+			TextColor3 = Kit.Theme.Green,
+			Size = UDim2.new(0.3, 0, 0.065, 0),
+			Position = UDim2.new(0.66, 0, y, 0),
+			TextXAlignment = Enum.TextXAlignment.Right,
+			Parent = gui,
+		})
 	end
 end
 
@@ -314,8 +397,19 @@ local function homeMarker()
 		Adornee = floor,
 		Parent = workspace,
 	})
-	local label = Kit.Text({ Text = C.Lang.T("YourBase"), TextColor3 = Kit.Theme.Gold, Size = UDim2.new(1, 0, 0.5, 0), Parent = gui })
-	Kit.Text({ Text = "▼", TextColor3 = Kit.Theme.Gold, Size = UDim2.new(1, 0, 0.5, 0), Position = UDim2.fromScale(0, 0.5), Parent = gui })
+	local label = Kit.Text({
+		Text = C.Lang.T("YourBase"),
+		TextColor3 = Kit.Theme.Gold,
+		Size = UDim2.new(1, 0, 0.5, 0),
+		Parent = gui,
+	})
+	Kit.Text({
+		Text = "▼",
+		TextColor3 = Kit.Theme.Gold,
+		Size = UDim2.new(1, 0, 0.5, 0),
+		Position = UDim2.fromScale(0, 0.5),
+		Parent = gui,
+	})
 	C.Lang.Changed:Connect(function()
 		label.Text = C.Lang.T("YourBase")
 	end)
@@ -410,7 +504,8 @@ function World.Start()
 				local left = readyAt - workspace:GetServerTimeNow()
 				local intensity = if left <= 0 then 1 elseif left < 10 then 0.6 else 0.15
 				local s = t * 6 + e.seed
-				local wobble = CFrame.Angles(math.sin(s * 2.3) * 0.08 * intensity, 0, math.sin(s * 3.1) * 0.12 * intensity)
+				local wobble =
+					CFrame.Angles(math.sin(s * 2.3) * 0.08 * intensity, 0, math.sin(s * 3.1) * 0.12 * intensity)
 				local hop = if left <= 0 then math.abs(math.sin(s * 1.5)) * 0.5 else 0
 				local root = e.base * CFrame.new(0, hop, 0) * wobble
 				for _, p in e.parts do

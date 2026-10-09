@@ -88,7 +88,15 @@ local function addLine(a: Vector3, b: Vector3, zone: string, leg: number?)
 end
 
 -- arco orizzontale attorno a center (piano XZ), angoli misurati da +X verso +Z
-local function addArc(center: Vector3, radius: number, startAngle: number, sweep: number, y0: number, y1: number, zone: string)
+local function addArc(
+	center: Vector3,
+	radius: number,
+	startAngle: number,
+	sweep: number,
+	y0: number,
+	y1: number,
+	zone: string
+)
 	local horiz = math.abs(sweep) * radius
 	table.insert(segments, {
 		kind = "arc",
@@ -152,7 +160,11 @@ function MapLayout.PathPoint(s: number): (Vector3, Vector3, string)
 				local ang = (seg.startAngle :: number) + (seg.sweep :: number) * t
 				local c = seg.center :: Vector3
 				local r = seg.radius :: number
-				local p = Vector3.new(c.X + math.cos(ang) * r, (seg.y0 :: number) + ((seg.y1 :: number) - (seg.y0 :: number)) * t, c.Z + math.sin(ang) * r)
+				local p = Vector3.new(
+					c.X + math.cos(ang) * r,
+					(seg.y0 :: number) + ((seg.y1 :: number) - (seg.y0 :: number)) * t,
+					c.Z + math.sin(ang) * r
+				)
 				local sign = if (seg.sweep :: number) > 0 then 1 else -1
 				local tan = Vector3.new(-math.sin(ang) * sign, 0, math.cos(ang) * sign)
 				local dy = ((seg.y1 :: number) - (seg.y0 :: number)) / seg.length
@@ -281,7 +293,12 @@ function MapLayout.IsSheltered(pos: Vector3): boolean
 		local cf = MapLayout.ShelterFrame(i)
 		local lp = cf:PointToObjectSpace(pos)
 		local size = MapLayout.ShelterSize
-		if math.abs(lp.X) <= size.X / 2 + 1 and lp.Y >= -2 and lp.Y <= size.Y + 2 and math.abs(lp.Z) <= size.Z / 2 + 1.5 then
+		if
+			math.abs(lp.X) <= size.X / 2 + 1
+			and lp.Y >= -2
+			and lp.Y <= size.Y + 2
+			and math.abs(lp.Z) <= size.Z / 2 + 1.5
+		then
 			return true
 		end
 	end
@@ -337,7 +354,7 @@ MapLayout.Nests = (function()
 end)()
 
 -- Tane delle guardiane (nidi preziosi sorvegliati)
-MapLayout.Lairs = ({
+MapLayout.Lairs = {
 	{
 		id = "Crystal",
 		zone = "Crystal",
@@ -358,7 +375,7 @@ MapLayout.Lairs = ({
 		nests = 3,
 		eggs = { Legendary = 45, Mythic = 40, Divine = 13, Secret = 2 },
 	},
-} :: { any })
+} :: { any }
 do
 	local lair = MapLayout.Lairs[1]
 	local leg = LEGS[4]

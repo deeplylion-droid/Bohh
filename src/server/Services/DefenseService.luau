@@ -138,7 +138,11 @@ local function triggerTrap(plot, owner: Player, slot: string, trapId: string, vi
 	if def.effect == "Slip" then
 		local hrp = S.CharacterService.Root(victim)
 		S.CarryService.DropAll(victim, "Trap")
-		S.RagdollService.Ragdoll(victim, def.duration, (if hrp then hrp.CFrame.LookVector * 30 else Vector3.zero) + Vector3.new(0, 34, 0))
+		S.RagdollService.Ragdoll(
+			victim,
+			def.duration,
+			(if hrp then hrp.CFrame.LookVector * 30 else Vector3.zero) + Vector3.new(0, 34, 0)
+		)
 	elseif def.effect == "Slow" then
 		S.CharacterService.ApplyEffect(victim, "Slow", def.duration)
 	elseif def.effect == "Root" then
@@ -211,7 +215,11 @@ function DefenseService.Start()
 							if other ~= owner then
 								local hrp = S.CharacterService.Root(other)
 								if hrp then
-									local d = Vector3.new(hrp.Position.X - spot.Position.X, 0, hrp.Position.Z - spot.Position.Z).Magnitude
+									local d = Vector3.new(
+										hrp.Position.X - spot.Position.X,
+										0,
+										hrp.Position.Z - spot.Position.Z
+									).Magnitude
 									if d < 2.8 and math.abs(hrp.Position.Y - spot.Position.Y) < 6 then
 										triggerTrap(plot, owner, slot, trapId, other)
 										break

@@ -102,13 +102,54 @@ Obstacles.Winds = {} :: { Wind }
 
 do
 	local s0, s1 = legRange(1)
-	table.insert(Obstacles.Rollers, { id = "Snow1", kind = "Snowball", zone = "Meadow", s0 = s0 + 4, s1 = s1 + 60, speed = 22, period = 4.2, radius = 3, lanes = { -12, 4, -4, 13, -15, 9 } })
+	table.insert(Obstacles.Rollers, {
+		id = "Snow1",
+		kind = "Snowball",
+		zone = "Meadow",
+		s0 = s0 + 4,
+		s1 = s1 + 60,
+		speed = 22,
+		period = 4.2,
+		radius = 3,
+		lanes = { -12, 4, -4, 13, -15, 9 },
+	})
 	local a, b = legRange(2)
-	table.insert(Obstacles.Rollers, { id = "Log2", kind = "Log", zone = "Forest", s0 = a + 4, s1 = b - 6, speed = 20, period = 6.5, radius = 2.2, length = 16, lanes = { -10, 8, 0, -12, 11 } })
+	table.insert(Obstacles.Rollers, {
+		id = "Log2",
+		kind = "Log",
+		zone = "Forest",
+		s0 = a + 4,
+		s1 = b - 6,
+		speed = 20,
+		period = 6.5,
+		radius = 2.2,
+		length = 16,
+		lanes = { -10, 8, 0, -12, 11 },
+	})
 	local c, d = legRange(3)
-	table.insert(Obstacles.Rollers, { id = "Rock3", kind = "Boulder", zone = "Canyon", s0 = c + 4, s1 = d - 4, speed = 27, period = 3.4, radius = 4.2, lanes = { -11, 6, -2, 13, -14, 10, 0 } })
+	table.insert(Obstacles.Rollers, {
+		id = "Rock3",
+		kind = "Boulder",
+		zone = "Canyon",
+		s0 = c + 4,
+		s1 = d - 4,
+		speed = 27,
+		period = 3.4,
+		radius = 4.2,
+		lanes = { -11, 6, -2, 13, -14, 10, 0 },
+	})
 	local e, f = legRange(5)
-	table.insert(Obstacles.Rollers, { id = "Rock5", kind = "Boulder", zone = "Crater", s0 = e + 4, s1 = f - 4, speed = 30, period = 4.6, radius = 3.8, lanes = { 8, -10, 2, 13, -5 } })
+	table.insert(Obstacles.Rollers, {
+		id = "Rock5",
+		kind = "Boulder",
+		zone = "Crater",
+		s0 = e + 4,
+		s1 = f - 4,
+		speed = 30,
+		period = 4.6,
+		radius = 3.8,
+		lanes = { 8, -10, 2, 13, -5 },
+	})
 
 	-- tronchi oscillanti nel bosco (attraverso il sentiero)
 	for k, frac in { 0.22, 0.5, 0.78 } do
@@ -130,7 +171,14 @@ do
 	-- capre che vanno avanti e indietro (e caricano) sul primo tratto e nel tornante
 	for k, frac in { 0.45, 0.85 } do
 		local s = lerp(s0, s1, frac)
-		table.insert(Obstacles.Goats, { id = `Goat{k}`, zone = "Meadow", center = frameAt(s, 0), halfWidth = 17, period = 5.5 + k, phase = k * 2.1 })
+		table.insert(Obstacles.Goats, {
+			id = `Goat{k}`,
+			zone = "Meadow",
+			center = frameAt(s, 0),
+			halfWidth = 17,
+			period = 5.5 + k,
+			phase = k * 2.1,
+		})
 	end
 
 	-- geyser nelle grotte di cristallo
@@ -285,7 +333,9 @@ function Obstacles.InPulse(p: Pulse, pos: Vector3): boolean
 end
 
 function Obstacles.ById(id: string): any
-	for _, list in { Obstacles.Rollers, Obstacles.Pendulums, Obstacles.Goats, Obstacles.Pulses, Obstacles.Winds } :: { any } do
+	for _, list in
+		{ Obstacles.Rollers, Obstacles.Pendulums, Obstacles.Goats, Obstacles.Pulses, Obstacles.Winds } :: { any }
+	do
 		for _, o in list :: { any } do
 			if o.id == id then
 				return o

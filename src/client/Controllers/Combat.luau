@@ -46,7 +46,10 @@ local function swingPose(char: Model, t: number)
 	local angle = math.sin(k * math.pi) * math.rad(120)
 	local upper = char:FindFirstChild("RightUpperArm")
 	local torso = char:FindFirstChild("Torso")
-	local motor = if upper then upper:FindFirstChild("RightShoulder") elseif torso then torso:FindFirstChild("Right Shoulder") else nil
+	local motor = if upper
+		then upper:FindFirstChild("RightShoulder")
+		elseif torso then torso:FindFirstChild("Right Shoulder")
+		else nil
 	if motor and motor:IsA("Motor6D") then
 		if upper then
 			motor.Transform = motor.Transform * CFrame.Angles(angle, 0, -angle * 0.4)

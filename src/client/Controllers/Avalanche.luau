@@ -17,7 +17,13 @@ local C
 local player = Players.LocalPlayer
 local samples: { { s: number, y: number } } = {}
 local markers: { BillboardGui } = {}
-local wall: { model: Model, balls: { { part: BasePart, x: number, size: number, seed: number } }, cloud: Part, front: Part, rumble: Sound? }
+local wall: {
+	model: Model,
+	balls: { { part: BasePart, x: number, size: number, seed: number } },
+	cloud: Part,
+	front: Part,
+	rumble: Sound?,
+}
 local phase = "none" -- none | warn | wave
 local lowGfx = false
 local lastWarn = 0
@@ -116,7 +122,11 @@ local function buildWall()
 	e.Color = ColorSequence.new(Color3.fromRGB(255, 255, 255), Color3.fromRGB(220, 234, 255))
 	e.LightInfluence = 0.4
 	e.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 8), NumberSequenceKeypoint.new(1, 18) })
-	e.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.25), NumberSequenceKeypoint.new(0.7, 0.55), NumberSequenceKeypoint.new(1, 1) })
+	e.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0.25),
+		NumberSequenceKeypoint.new(0.7, 0.55),
+		NumberSequenceKeypoint.new(1, 1),
+	})
 	e.Lifetime = NumberRange.new(1.6, 2.6)
 	e.Speed = NumberRange.new(4, 10)
 	e.SpreadAngle = Vector2.new(50, 50)
@@ -172,8 +182,19 @@ local function buildMarkers()
 			Adornee = att,
 			Parent = att,
 		})
-		local label = Kit.Text({ Text = "🏠 " .. C.Lang.T("Shelter"), TextColor3 = Color3.fromRGB(150, 255, 120), Size = UDim2.new(1, 0, 0.55, 0), Parent = gui })
-		Kit.Text({ Text = "▼", TextColor3 = Color3.fromRGB(150, 255, 120), Size = UDim2.new(0.4, 0, 0.42, 0), Position = UDim2.new(0.3, 0, 0.56, 0), Parent = gui })
+		local label = Kit.Text({
+			Text = "🏠 " .. C.Lang.T("Shelter"),
+			TextColor3 = Color3.fromRGB(150, 255, 120),
+			Size = UDim2.new(1, 0, 0.55, 0),
+			Parent = gui,
+		})
+		Kit.Text({
+			Text = "▼",
+			TextColor3 = Color3.fromRGB(150, 255, 120),
+			Size = UDim2.new(0.4, 0, 0.42, 0),
+			Position = UDim2.new(0.3, 0, 0.56, 0),
+			Parent = gui,
+		})
 		C.Lang.Changed:Connect(function()
 			label.Text = "🏠 " .. C.Lang.T("Shelter")
 		end)
@@ -241,7 +262,10 @@ local function moveWall(front: number, t: number)
 		local roll = t * 9 / b.size + b.seed
 		local bob = math.abs(math.sin(t * 5 + b.seed)) * 1.2
 		table.insert(parts, b.part)
-		table.insert(cfs, lead * CFrame.new(b.x, b.size * 0.42 + bob, -math.sin(b.seed * 3) * 2) * CFrame.Angles(-roll, 0, 0))
+		table.insert(
+			cfs,
+			lead * CFrame.new(b.x, b.size * 0.42 + bob, -math.sin(b.seed * 3) * 2) * CFrame.Angles(-roll, 0, 0)
+		)
 	end
 	table.insert(parts, wall.front)
 	table.insert(cfs, lead * CFrame.new(0, 3, -5))

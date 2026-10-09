@@ -89,7 +89,13 @@ local function confetti(parent: Instance, colors: { Color3 }, count: number)
 		local ang = math.random() * math.pi * 2
 		local dist = math.random(260, 560)
 		local target = UDim2.new(0.5, math.cos(ang) * dist, 0.45, math.sin(ang) * dist * 0.7 + 120)
-		Kit.Tween(c, math.random(10, 16) / 10, { Position = target, Rotation = c.Rotation + math.random(-360, 360), BackgroundTransparency = 1 }, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+		Kit.Tween(
+			c,
+			math.random(10, 16) / 10,
+			{ Position = target, Rotation = c.Rotation + math.random(-360, 360), BackgroundTransparency = 1 },
+			Enum.EasingStyle.Quad,
+			Enum.EasingDirection.Out
+		)
 		task.delay(1.7, function()
 			c:Destroy()
 		end)
@@ -104,8 +110,23 @@ local function chip(parent: Instance, text: string, colors: { Color3 }, order: n
 		LayoutOrder = order,
 		ZIndex = 62,
 		Parent = parent,
-	}, { Kit.Corner(UDim.new(1, 0)), Kit.Stroke(4), Kit.Gradient(colors[1], colors[2]), Kit.New("UIPadding", { PaddingLeft = UDim.new(0, 16), PaddingRight = UDim.new(0, 16) }), Kit.New("UIScale") })
-	Kit.Text({ Text = text, Size = UDim2.fromOffset(0, 30), AutomaticSize = Enum.AutomaticSize.X, TextScaled = false, TextSize = 26, Position = UDim2.fromOffset(0, 5), ZIndex = 63, Parent = f })
+	}, {
+		Kit.Corner(UDim.new(1, 0)),
+		Kit.Stroke(4),
+		Kit.Gradient(colors[1], colors[2]),
+		Kit.New("UIPadding", { PaddingLeft = UDim.new(0, 16), PaddingRight = UDim.new(0, 16) }),
+		Kit.New("UIScale"),
+	})
+	Kit.Text({
+		Text = text,
+		Size = UDim2.fromOffset(0, 30),
+		AutomaticSize = Enum.AutomaticSize.X,
+		TextScaled = false,
+		TextSize = 26,
+		Position = UDim2.fromOffset(0, 5),
+		ZIndex = 63,
+		Parent = f,
+	})
 	return f
 end
 
@@ -162,7 +183,14 @@ local function play(info)
 	cam.FieldOfView = 40
 	cam.Parent = viewport
 	viewport.CurrentCamera = cam
-	local title = Kit.Text({ Text = T("Hatching"), Size = UDim2.fromOffset(700, 54), Position = UDim2.new(0.5, 0, 0, 40), AnchorPoint = Vector2.new(0.5, 0), ZIndex = 61, Parent = stage })
+	local title = Kit.Text({
+		Text = T("Hatching"),
+		Size = UDim2.fromOffset(700, 54),
+		Position = UDim2.new(0.5, 0, 0, 40),
+		AnchorPoint = Vector2.new(0.5, 0),
+		ZIndex = 61,
+		Parent = stage,
+	})
 	Kit.Pop(title)
 
 	-- l'uovo
@@ -187,7 +215,10 @@ local function play(info)
 		local freq = 10 + k * 22
 		local amp = math.rad(4 + k * 18)
 		local tt = os.clock() - t0
-		egg:PivotTo(CFrame.new(0, math.abs(math.sin(tt * freq * 0.5)) * k * 0.25, 0) * CFrame.Angles(0, 0, math.sin(tt * freq) * amp))
+		egg:PivotTo(
+			CFrame.new(0, math.abs(math.sin(tt * freq * 0.5)) * k * 0.25, 0)
+				* CFrame.Angles(0, 0, math.sin(tt * freq) * amp)
+		)
 		spinRays = 0.15 + k * 2.5
 		glow.BackgroundTransparency = 0.55 - k * 0.3
 		if tt >= nextTick then
@@ -198,7 +229,13 @@ local function play(info)
 	end
 
 	-- lampo
-	local flash = Kit.New("Frame", { BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0, Size = UDim2.fromScale(1, 1), ZIndex = 70, Parent = root })
+	local flash = Kit.New("Frame", {
+		BackgroundColor3 = Color3.new(1, 1, 1),
+		BackgroundTransparency = 0,
+		Size = UDim2.fromScale(1, 1),
+		ZIndex = 70,
+		Parent = root,
+	})
 	Kit.Tween(flash, 0.7, { BackgroundTransparency = 1 })
 	task.delay(0.75, function()
 		flash:Destroy()
@@ -214,7 +251,9 @@ local function play(info)
 	local zoom = 2.2
 	placeCamera(cam, center, dist * zoom, h, 0)
 	if rarity.order >= 5 or mutation.id ~= "None" then
-		local colors = if mutation.id ~= "None" then { mutation.color, Color3.new(1, 1, 1), rarity.color } else { rarity.color, Color3.new(1, 1, 1), Color3.fromRGB(255, 225, 77) }
+		local colors = if mutation.id ~= "None"
+			then { mutation.color, Color3.new(1, 1, 1), rarity.color }
+			else { rarity.color, Color3.new(1, 1, 1), Color3.fromRGB(255, 225, 77) }
 		confetti(stage, colors, 40 + rarity.order * 6)
 	end
 	spinRays = 0.6
@@ -222,7 +261,16 @@ local function play(info)
 	-- testi
 	title.Text = T("YouGot")
 	Kit.Pop(title)
-	local nameLabel = Kit.Text({ Text = T("Pet_" .. info.pet), TextColor3 = rarity.color, Size = UDim2.fromOffset(760, 70), Position = UDim2.new(0.5, 0, 0, 520), AnchorPoint = Vector2.new(0.5, 0), ZIndex = 61, Stroke = 5, Parent = stage })
+	local nameLabel = Kit.Text({
+		Text = T("Pet_" .. info.pet),
+		TextColor3 = rarity.color,
+		Size = UDim2.fromOffset(760, 70),
+		Position = UDim2.new(0.5, 0, 0, 520),
+		AnchorPoint = Vector2.new(0.5, 0),
+		ZIndex = 61,
+		Stroke = 5,
+		Parent = stage,
+	})
 	local gradient = Rarities.Gradients[info.rarity]
 	if gradient then
 		nameLabel.TextColor3 = Color3.new(1, 1, 1)
@@ -236,7 +284,14 @@ local function play(info)
 		AnchorPoint = Vector2.new(0.5, 0),
 		ZIndex = 61,
 		Parent = stage,
-	}, { Kit.New("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center, Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder }) })
+	}, {
+		Kit.New("UIListLayout", {
+			FillDirection = Enum.FillDirection.Horizontal,
+			HorizontalAlignment = Enum.HorizontalAlignment.Center,
+			Padding = UDim.new(0, 10),
+			SortOrder = Enum.SortOrder.LayoutOrder,
+		}),
+	})
 	local rc = { rarity.color, rarity.colorDark }
 	local order = 0
 	local function addChip(text: string, colors: { Color3 })
@@ -246,7 +301,10 @@ local function play(info)
 	end
 	addChip(T("Rarity_" .. info.rarity), rc)
 	if mutation.id ~= "None" then
-		addChip(`{T("Mutation_" .. mutation.id)} ×{mutation.mult}`, { mutation.color, mutation.color:Lerp(Color3.new(0, 0, 0), 0.35) })
+		addChip(
+			`{T("Mutation_" .. mutation.id)} ×{mutation.mult}`,
+			{ mutation.color, mutation.color:Lerp(Color3.new(0, 0, 0), 0.35) }
+		)
 	end
 	if size.id ~= "Normal" then
 		addChip(T("Size_" .. size.id), { Color3.fromRGB(120, 220, 255), Color3.fromRGB(30, 120, 230) })
@@ -264,8 +322,19 @@ local function play(info)
 			Rotation = 12,
 			ZIndex = 64,
 			Parent = stage,
-		}, { Kit.Corner(UDim.new(0, 16)), Kit.Stroke(5), Kit.Gradient(Color3.fromRGB(255, 236, 120), Color3.fromRGB(255, 150, 20)), Kit.New("UIScale") })
-		Kit.Text({ Text = T("NewPet"), Size = UDim2.fromScale(0.86, 0.7), Position = UDim2.fromScale(0.07, 0.15), ZIndex = 65, Parent = badge })
+		}, {
+			Kit.Corner(UDim.new(0, 16)),
+			Kit.Stroke(5),
+			Kit.Gradient(Color3.fromRGB(255, 236, 120), Color3.fromRGB(255, 150, 20)),
+			Kit.New("UIScale"),
+		})
+		Kit.Text({
+			Text = T("NewPet"),
+			Size = UDim2.fromScale(0.86, 0.7),
+			Position = UDim2.fromScale(0.07, 0.15),
+			ZIndex = 65,
+			Parent = badge,
+		})
 		Kit.Pop(badge, 0.35)
 		task.spawn(function()
 			while badge.Parent do
@@ -274,7 +343,18 @@ local function play(info)
 			end
 		end)
 	end
-	local hint = Kit.Text({ Text = T("TapToContinue"), Font = Kit.Theme.BodyFont, TextColor3 = Kit.Theme.Muted, Size = UDim2.fromOffset(400, 26), Position = UDim2.new(0.5, 0, 1, -24), AnchorPoint = Vector2.new(0.5, 1), Stroke = 2, ZIndex = 61, TextTransparency = 1, Parent = stage })
+	local hint = Kit.Text({
+		Text = T("TapToContinue"),
+		Font = Kit.Theme.BodyFont,
+		TextColor3 = Kit.Theme.Muted,
+		Size = UDim2.fromOffset(400, 26),
+		Position = UDim2.new(0.5, 0, 1, -24),
+		AnchorPoint = Vector2.new(0.5, 1),
+		Stroke = 2,
+		ZIndex = 61,
+		TextTransparency = 1,
+		Parent = stage,
+	})
 
 	-- il pet si avvicina e gira lentamente
 	local revealAt = os.clock()

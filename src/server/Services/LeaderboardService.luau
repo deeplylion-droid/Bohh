@@ -13,9 +13,30 @@ local LeaderboardService = {}
 
 local S
 local BOARDS = {
-	{ key = "Money", store = "LB_TotalEarned_v1", title = "LbMoney", value = function(data) return data.TotalEarned end },
-	{ key = "Steals", store = "LB_Steals_v1", title = "LbSteals", value = function(data) return data.Stats.Steals end },
-	{ key = "Income", store = "LB_BestIncome_v1", title = "LbIncome", value = function(data) return data.Stats.BestIncome or 0 end },
+	{
+		key = "Money",
+		store = "LB_TotalEarned_v1",
+		title = "LbMoney",
+		value = function(data)
+			return data.TotalEarned
+		end,
+	},
+	{
+		key = "Steals",
+		store = "LB_Steals_v1",
+		title = "LbSteals",
+		value = function(data)
+			return data.Stats.Steals
+		end,
+	},
+	{
+		key = "Income",
+		store = "LB_BestIncome_v1",
+		title = "LbIncome",
+		value = function(data)
+			return data.Stats.BestIncome or 0
+		end,
+	},
 }
 local stores = {}
 local cache = { Money = {}, Steals = {}, Income = {} }
@@ -45,9 +66,22 @@ local function buildBoards()
 		local angle = math.rad(-55 + (i - 1) * 55)
 		local pos = c + Vector3.new(math.sin(angle) * 58, 9, -math.cos(angle) * 58)
 		local cf = CFrame.lookAt(pos, Vector3.new(c.X, pos.Y, c.Z))
-		local board = Build.Part({ name = "Board" .. b.key, size = Vector3.new(16, 18, 1), cframe = cf, color = Color3.fromRGB(40, 30, 72), parent = folder })
+		local board = Build.Part({
+			name = "Board" .. b.key,
+			size = Vector3.new(16, 18, 1),
+			cframe = cf,
+			color = Color3.fromRGB(40, 30, 72),
+			parent = folder,
+		})
 		for _, sx in { -1, 1 } do
-			Build.Part({ name = "Leg", size = Vector3.new(1.2, 10, 1.2), cframe = cf * CFrame.new(sx * 6, -13, 0.6), color = Color3.fromRGB(120, 80, 50), material = Enum.Material.Wood, parent = folder })
+			Build.Part({
+				name = "Leg",
+				size = Vector3.new(1.2, 10, 1.2),
+				cframe = cf * CFrame.new(sx * 6, -13, 0.6),
+				color = Color3.fromRGB(120, 80, 50),
+				material = Enum.Material.Wood,
+				parent = folder,
+			})
 		end
 		local gui = Instance.new("SurfaceGui")
 		gui.Name = "BoardGui"

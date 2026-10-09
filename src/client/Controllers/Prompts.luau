@@ -70,7 +70,8 @@ local function intended(prompt: ProximityPrompt): boolean
 	elseif name == "SellPrompt" then
 		return base:GetAttribute("PetUid") ~= nil
 	elseif name == "StealPrompt" then
-		return (base:GetAttribute("PetUid") ~= nil or base:GetAttribute("EggRarity") ~= nil) and not base:GetAttribute("BeingStolen")
+		return (base:GetAttribute("PetUid") ~= nil or base:GetAttribute("EggRarity") ~= nil)
+			and not base:GetAttribute("BeingStolen")
 	elseif name == "BarrierPrompt" then
 		return true
 	end
@@ -105,7 +106,9 @@ end
 local function promptTexts(prompt: ProximityPrompt): (string, string)
 	local T = C.Lang.T
 	local style = STYLE[prompt.Name]
-	local action = if style then T(style.key, { price = Format.Money(tonumber(prompt.ObjectText) or 0) }) else prompt.ActionText
+	local action = if style
+		then T(style.key, { price = Format.Money(tonumber(prompt.ObjectText) or 0) })
+		else prompt.ActionText
 	local object = ""
 	local rarity = prompt:GetAttribute("Rarity")
 	if prompt.Name == "PickupPrompt" and rarity then
@@ -138,7 +141,11 @@ local function build(prompt: ProximityPrompt, inputType: Enum.ProximityPromptInp
 		Adornee = prompt.Parent,
 		Parent = player:WaitForChild("PlayerGui"),
 	})
-	local holder = New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), Parent = gui }, { New("UIScale", { Scale = math.max(0.75, C.UI.Scale or 1) }) })
+	local holder = New(
+		"Frame",
+		{ BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), Parent = gui },
+		{ New("UIScale", { Scale = math.max(0.75, C.UI.Scale or 1) }) }
+	)
 	-- tasto rotondo con anello di caricamento
 	local key = New("TextButton", {
 		Text = "",
@@ -148,14 +155,22 @@ local function build(prompt: ProximityPrompt, inputType: Enum.ProximityPromptInp
 		Position = UDim2.fromOffset(8, 12),
 		Parent = holder,
 	}, { Kit.Corner(UDim.new(1, 0)), Kit.Stroke(5), Kit.Gradient(colors[1], colors[2]) })
-	local keyText = if inputType == Enum.ProximityPromptInputType.Touch then "👆" elseif inputType == Enum.ProximityPromptInputType.Gamepad then "X" else prompt.KeyboardKeyCode.Name
+	local keyText = if inputType == Enum.ProximityPromptInputType.Touch
+		then "👆"
+		elseif inputType == Enum.ProximityPromptInputType.Gamepad then "X"
+		else prompt.KeyboardKeyCode.Name
 	Kit.Text({ Text = keyText, Size = UDim2.fromScale(0.6, 0.6), Position = UDim2.fromScale(0.2, 0.2), Parent = key })
-	local ring = New("UIStroke", { Thickness = 7, Color = Color3.new(1, 1, 1), Transparency = 1, Parent = New("Frame", {
-		BackgroundTransparency = 1,
-		Size = UDim2.fromScale(1.2, 1.2),
-		Position = UDim2.fromScale(-0.1, -0.1),
-		Parent = key,
-	}, { Kit.Corner(UDim.new(1, 0)) }) })
+	local ring = New("UIStroke", {
+		Thickness = 7,
+		Color = Color3.new(1, 1, 1),
+		Transparency = 1,
+		Parent = New("Frame", {
+			BackgroundTransparency = 1,
+			Size = UDim2.fromScale(1.2, 1.2),
+			Position = UDim2.fromScale(-0.1, -0.1),
+			Parent = key,
+		}, { Kit.Corner(UDim.new(1, 0)) }),
+	})
 	local box = New("Frame", {
 		BackgroundColor3 = Color3.fromRGB(29, 22, 48),
 		BackgroundTransparency = 0.12,
@@ -164,8 +179,22 @@ local function build(prompt: ProximityPrompt, inputType: Enum.ProximityPromptInp
 		Parent = holder,
 	}, { Kit.Corner(UDim.new(0, 16)), Kit.Stroke(4) })
 	local action, object = promptTexts(prompt)
-	Kit.Text({ Text = action, Size = UDim2.new(0.9, 0, 0, 32), Position = UDim2.new(0.05, 0, 0, 4), TextXAlignment = Enum.TextXAlignment.Left, Parent = box })
-	local objLabel = Kit.Text({ Text = object, Font = Kit.Theme.BodyFont, Size = UDim2.new(0.9, 0, 0, 22), Position = UDim2.new(0.05, 0, 0, 36), TextXAlignment = Enum.TextXAlignment.Left, Stroke = 2, Parent = box })
+	Kit.Text({
+		Text = action,
+		Size = UDim2.new(0.9, 0, 0, 32),
+		Position = UDim2.new(0.05, 0, 0, 4),
+		TextXAlignment = Enum.TextXAlignment.Left,
+		Parent = box,
+	})
+	local objLabel = Kit.Text({
+		Text = object,
+		Font = Kit.Theme.BodyFont,
+		Size = UDim2.new(0.9, 0, 0, 22),
+		Position = UDim2.new(0.05, 0, 0, 36),
+		TextXAlignment = Enum.TextXAlignment.Left,
+		Stroke = 2,
+		Parent = box,
+	})
 	local rarity = prompt:GetAttribute("Rarity") or (prompt.Parent and prompt.Parent:GetAttribute("EggRarity"))
 	if rarity and Rarities.List[rarity] then
 		objLabel.TextColor3 = Rarities.List[rarity].color
@@ -174,12 +203,18 @@ local function build(prompt: ProximityPrompt, inputType: Enum.ProximityPromptInp
 
 	-- tocco / clic sul tasto: inizio e fine della pressione
 	key.InputBegan:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+		if
+			input.UserInputType == Enum.UserInputType.Touch
+			or input.UserInputType == Enum.UserInputType.MouseButton1
+		then
 			prompt:InputHoldBegin()
 		end
 	end)
 	key.InputEnded:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+		if
+			input.UserInputType == Enum.UserInputType.Touch
+			or input.UserInputType == Enum.UserInputType.MouseButton1
+		then
 			prompt:InputHoldEnd()
 		end
 	end)
@@ -188,7 +223,11 @@ local function build(prompt: ProximityPrompt, inputType: Enum.ProximityPromptInp
 		if prompt.HoldDuration > 0 then
 			ring.Transparency = 0
 			ring.Color = Color3.new(1, 1, 1)
-			local tween = TweenService:Create(ring, TweenInfo.new(prompt.HoldDuration, Enum.EasingStyle.Linear), { Color = colors[1] })
+			local tween = TweenService:Create(
+				ring,
+				TweenInfo.new(prompt.HoldDuration, Enum.EasingStyle.Linear),
+				{ Color = colors[1] }
+			)
 			holdTween = tween
 			tween:Play()
 		end
@@ -199,7 +238,12 @@ local function build(prompt: ProximityPrompt, inputType: Enum.ProximityPromptInp
 			holdTween:Cancel()
 		end
 		ring.Transparency = 1
-		Kit.Tween(key, 0.15, { Size = UDim2.fromOffset(72, 72), Position = UDim2.fromOffset(8, 12) }, Enum.EasingStyle.Back)
+		Kit.Tween(
+			key,
+			0.15,
+			{ Size = UDim2.fromOffset(72, 72), Position = UDim2.fromOffset(8, 12) },
+			Enum.EasingStyle.Back
+		)
 	end)
 	local c3 = prompt.Triggered:Connect(function()
 		Kit.Bounce(holder, 0.18)

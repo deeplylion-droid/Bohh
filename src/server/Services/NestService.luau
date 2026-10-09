@@ -79,7 +79,11 @@ end
 local function placeEgg(nest: Nest, info)
 	local egg = Visuals.MakeEgg(info.rarity)
 	egg.Name = "Egg"
-	egg:PivotTo(nest.cframe * CFrame.new(0, 0.55, 0) * CFrame.Angles(0, rng:NextNumber(0, math.pi * 2), math.rad(rng:NextNumber(-6, 6))))
+	egg:PivotTo(
+		nest.cframe
+			* CFrame.new(0, 0.55, 0)
+			* CFrame.Angles(0, rng:NextNumber(0, math.pi * 2), math.rad(rng:NextNumber(-6, 6)))
+	)
 	egg:SetAttribute("EggId", info.id)
 	egg.Parent = nest.model or folder
 	CollectionService:AddTag(egg, "Egg")
@@ -132,7 +136,18 @@ local function buildNest(id: string, zone: string, cframe: CFrame, lair: string?
 		model.Parent = folder
 	end
 	model:SetAttribute("Zone", zone)
-	local nest: Nest = { id = id, zone = zone, cframe = cframe, model = model, egg = nil, eggInfo = nil, away = false, respawnAt = 0, lair = lair, weights = weights }
+	local nest: Nest = {
+		id = id,
+		zone = zone,
+		cframe = cframe,
+		model = model,
+		egg = nil,
+		eggInfo = nil,
+		away = false,
+		respawnAt = 0,
+		lair = lair,
+		weights = weights,
+	}
 	nests[id] = nest
 	return nest
 end

@@ -125,8 +125,18 @@ function Kit.Icon(name: string, props: { [string]: any }?): GuiObject
 	return inst
 end
 
-function Kit.Tween(inst: Instance, time: number, goal: { [string]: any }, style: Enum.EasingStyle?, dir: Enum.EasingDirection?): Tween
-	local t = TweenService:Create(inst, TweenInfo.new(time, style or Enum.EasingStyle.Quad, dir or Enum.EasingDirection.Out), goal)
+function Kit.Tween(
+	inst: Instance,
+	time: number,
+	goal: { [string]: any },
+	style: Enum.EasingStyle?,
+	dir: Enum.EasingDirection?
+): Tween
+	local t = TweenService:Create(
+		inst,
+		TweenInfo.new(time, style or Enum.EasingStyle.Quad, dir or Enum.EasingDirection.Out),
+		goal
+	)
 	t:Play()
 	return t
 end
@@ -220,12 +230,32 @@ function Kit.Button(p: ButtonProps)
 	}, { Kit.Corner(UDim.new(1, 0)) })
 	local label, icon
 	if p.Icon and p.Text then
-		icon = Kit.Icon(p.Icon, { Size = UDim2.fromScale(0.3, 0.7), Position = UDim2.fromScale(0.05, 0.15), ZIndex = 4, Parent = face })
-		label = Kit.Text({ Text = p.Text, Size = UDim2.fromScale(0.62, 0.62), Position = UDim2.fromScale(0.35, 0.19), ZIndex = 4, Parent = face, MaxTextSize = p.TextSize })
+		icon = Kit.Icon(
+			p.Icon,
+			{ Size = UDim2.fromScale(0.3, 0.7), Position = UDim2.fromScale(0.05, 0.15), ZIndex = 4, Parent = face }
+		)
+		label = Kit.Text({
+			Text = p.Text,
+			Size = UDim2.fromScale(0.62, 0.62),
+			Position = UDim2.fromScale(0.35, 0.19),
+			ZIndex = 4,
+			Parent = face,
+			MaxTextSize = p.TextSize,
+		})
 	elseif p.Icon then
-		icon = Kit.Icon(p.Icon, { Size = UDim2.fromScale(0.68, 0.68), Position = UDim2.fromScale(0.16, 0.14), ZIndex = 4, Parent = face })
+		icon = Kit.Icon(
+			p.Icon,
+			{ Size = UDim2.fromScale(0.68, 0.68), Position = UDim2.fromScale(0.16, 0.14), ZIndex = 4, Parent = face }
+		)
 	else
-		label = Kit.Text({ Text = p.Text or "", Size = UDim2.fromScale(0.86, 0.64), Position = UDim2.fromScale(0.07, 0.18), ZIndex = 4, Parent = face, MaxTextSize = p.TextSize })
+		label = Kit.Text({
+			Text = p.Text or "",
+			Size = UDim2.fromScale(0.86, 0.64),
+			Position = UDim2.fromScale(0.07, 0.18),
+			ZIndex = 4,
+			Parent = face,
+			MaxTextSize = p.TextSize,
+		})
 	end
 	face.MouseButton1Down:Connect(function()
 		Kit.Tween(scale, 0.08, { Scale = 0.92 })
@@ -279,7 +309,13 @@ function Kit.Badge(parent: GuiObject): TextLabel
 		Visible = false,
 		Parent = parent,
 	}, { Kit.Corner(UDim.new(1, 0)), Kit.Stroke(3) })
-	local text = Kit.Text({ Text = "!", Size = UDim2.fromScale(0.8, 0.8), Position = UDim2.fromScale(0.1, 0.1), ZIndex = 11, Parent = badge })
+	local text = Kit.Text({
+		Text = "!",
+		Size = UDim2.fromScale(0.8, 0.8),
+		Position = UDim2.fromScale(0.1, 0.1),
+		ZIndex = 11,
+		Parent = badge,
+	})
 	return text
 end
 
@@ -306,8 +342,21 @@ function Kit.Panel(title: string, size: UDim2, color: string?, parent: Instance)
 		ZIndex = 22,
 		Parent = frame,
 	}, { Kit.Corner(UDim.new(0, 20)), Kit.Stroke(5), Kit.Gradient(colors[1], colors[2]) })
-	local titleLabel = Kit.Text({ Text = title, Size = UDim2.fromScale(0.9, 0.72), Position = UDim2.fromScale(0.05, 0.14), ZIndex = 23, Parent = ribbon, Stroke = 4 })
-	local close = Kit.Button({ Icon = "Close", Color = "Red", Size = UDim2.fromOffset(58, 58), Position = UDim2.new(1, -30, 0, -22), Parent = frame })
+	local titleLabel = Kit.Text({
+		Text = title,
+		Size = UDim2.fromScale(0.9, 0.72),
+		Position = UDim2.fromScale(0.05, 0.14),
+		ZIndex = 23,
+		Parent = ribbon,
+		Stroke = 4,
+	})
+	local close = Kit.Button({
+		Icon = "Close",
+		Color = "Red",
+		Size = UDim2.fromOffset(58, 58),
+		Position = UDim2.new(1, -30, 0, -22),
+		Parent = frame,
+	})
 	close.Frame.ZIndex = 24
 	for _, d in close.Frame:GetDescendants() do
 		if d:IsA("GuiObject") then

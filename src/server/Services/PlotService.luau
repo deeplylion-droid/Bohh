@@ -42,8 +42,24 @@ export type Plot = {
 	model: Model,
 	owner: Player?,
 	theme: { wall: Color3, trim: Color3 },
-	incubators: { { base: BasePart, ring: BasePart, slot: string, prompt: ProximityPrompt, stealPrompt: ProximityPrompt } },
-	pedestals: { { base: BasePart, pad: BasePart, slot: number, prompt: ProximityPrompt, stealPrompt: ProximityPrompt } },
+	incubators: {
+		{
+			base: BasePart,
+			ring: BasePart,
+			slot: string,
+			prompt: ProximityPrompt,
+			stealPrompt: ProximityPrompt,
+		}
+	},
+	pedestals: {
+		{
+			base: BasePart,
+			pad: BasePart,
+			slot: number,
+			prompt: ProximityPrompt,
+			stealPrompt: ProximityPrompt,
+		}
+	},
 	gateBarrier: BasePart,
 	console: BasePart,
 	consolePrompt: ProximityPrompt,
@@ -52,7 +68,13 @@ export type Plot = {
 	occupants: { [Player]: boolean },
 }
 
-local function prompt(parent: Instance, name: string, action: string, hold: number, forWhom: "Owner" | "Others"): ProximityPrompt
+local function prompt(
+	parent: Instance,
+	name: string,
+	action: string,
+	hold: number,
+	forWhom: "Owner" | "Others"
+): ProximityPrompt
 	local p = Instance.new("ProximityPrompt")
 	p.Name = name
 	p.ActionText = action
@@ -76,10 +98,39 @@ local function buildPlot(index: number, parent: Instance): Plot
 	end
 	local W, D, H = MapLayout.PlotSize.X, MapLayout.PlotSize.Z, L.WallHeight
 	-- pavimento in legno con tappeto del colore del lotto e bordo
-	Build.Part({ name = "Floor", size = Vector3.new(W, L.FloorHeight + 2, D), cframe = at(Vector3.new(0, -(L.FloorHeight + 2) / 2, 0)), color = WOOD, material = Enum.Material.WoodPlanks, parent = model })
-	Build.Part({ name = "FloorInset", size = Vector3.new(W - 9, 0.2, D - 9), cframe = at(Vector3.new(0, 0.06, 0)), color = theme.wall:Lerp(Color3.new(1, 1, 1), 0.35), material = Enum.Material.Fabric, collide = false, parent = model })
-	for _, edge in { { W - 7, 1, 0, -(D - 8) / 2 }, { W - 7, 1, 0, (D - 8) / 2 }, { 1, D - 7, -(W - 8) / 2, 0 }, { 1, D - 7, (W - 8) / 2, 0 } } do
-		Build.Part({ name = "FloorBorder", size = Vector3.new(edge[1], 0.3, edge[2]), cframe = at(Vector3.new(edge[3], 0.1, edge[4])), color = theme.trim, collide = false, parent = model })
+	Build.Part({
+		name = "Floor",
+		size = Vector3.new(W, L.FloorHeight + 2, D),
+		cframe = at(Vector3.new(0, -(L.FloorHeight + 2) / 2, 0)),
+		color = WOOD,
+		material = Enum.Material.WoodPlanks,
+		parent = model,
+	})
+	Build.Part({
+		name = "FloorInset",
+		size = Vector3.new(W - 9, 0.2, D - 9),
+		cframe = at(Vector3.new(0, 0.06, 0)),
+		color = theme.wall:Lerp(Color3.new(1, 1, 1), 0.35),
+		material = Enum.Material.Fabric,
+		collide = false,
+		parent = model,
+	})
+	for _, edge in
+		{
+			{ W - 7, 1, 0, -(D - 8) / 2 },
+			{ W - 7, 1, 0, (D - 8) / 2 },
+			{ 1, D - 7, -(W - 8) / 2, 0 },
+			{ 1, D - 7, (W - 8) / 2, 0 },
+		}
+	do
+		Build.Part({
+			name = "FloorBorder",
+			size = Vector3.new(edge[1], 0.3, edge[2]),
+			cframe = at(Vector3.new(edge[3], 0.1, edge[4])),
+			color = theme.trim,
+			collide = false,
+			parent = model,
+		})
 	end
 	-- mura a vetrina: zoccolo pieno, vetri colorati, corrimano e pilastri (i pet si vedono da fuori)
 	local walls = Build.Model("Walls", model)
@@ -89,17 +140,54 @@ local function buildPlot(index: number, parent: Instance): Plot
 		local size = function(thick: number, h: number): Vector3
 			return if alongX then Vector3.new(length, h, thick) else Vector3.new(thick, h, length)
 		end
-		Build.Part({ name = name .. "Base", size = size(2, BASE_H), cframe = at(center + Vector3.new(0, BASE_H / 2, 0)), color = theme.wall, material = Enum.Material.WoodPlanks, parent = walls })
-		local glass = Build.Part({ name = name .. "Glass", size = size(0.6, GLASS_H), cframe = at(center + Vector3.new(0, BASE_H + GLASS_H / 2, 0)), color = glassColor, material = Enum.Material.Glass, transparency = 0.55, castShadow = false, parent = walls })
+		Build.Part({
+			name = name .. "Base",
+			size = size(2, BASE_H),
+			cframe = at(center + Vector3.new(0, BASE_H / 2, 0)),
+			color = theme.wall,
+			material = Enum.Material.WoodPlanks,
+			parent = walls,
+		})
+		local glass = Build.Part({
+			name = name .. "Glass",
+			size = size(0.6, GLASS_H),
+			cframe = at(center + Vector3.new(0, BASE_H + GLASS_H / 2, 0)),
+			color = glassColor,
+			material = Enum.Material.Glass,
+			transparency = 0.55,
+			castShadow = false,
+			parent = walls,
+		})
 		glass.Reflectance = 0.08
-		Build.Part({ name = name .. "Rail", size = size(2.4, 1.2), cframe = at(center + Vector3.new(0, BASE_H + GLASS_H + 0.6, 0)), color = theme.trim, material = Enum.Material.Wood, parent = walls })
+		Build.Part({
+			name = name .. "Rail",
+			size = size(2.4, 1.2),
+			cframe = at(center + Vector3.new(0, BASE_H + GLASS_H + 0.6, 0)),
+			color = theme.trim,
+			material = Enum.Material.Wood,
+			parent = walls,
+		})
 		-- pilastri ogni ~10 stud lungo il tratto
 		local count = math.max(1, math.floor(length / 10))
 		for k = if skipEnds then 1 else 0, if skipEnds then count - 1 else count do
 			local t = -length / 2 + length * k / count
 			local offset = if alongX then Vector3.new(t, 0, 0) else Vector3.new(0, 0, t)
-			Build.Part({ name = "Post", size = Vector3.new(1.8, H, 1.8), cframe = at(center + offset + Vector3.new(0, H / 2, 0)), color = theme.trim, material = Enum.Material.Wood, parent = walls })
-			Build.Part({ name = "PostCap", size = Vector3.new(2.4, 0.8, 2.4), cframe = at(center + offset + Vector3.new(0, H + 0.4, 0)), color = CAP, material = Enum.Material.Slate, parent = walls })
+			Build.Part({
+				name = "Post",
+				size = Vector3.new(1.8, H, 1.8),
+				cframe = at(center + offset + Vector3.new(0, H / 2, 0)),
+				color = theme.trim,
+				material = Enum.Material.Wood,
+				parent = walls,
+			})
+			Build.Part({
+				name = "PostCap",
+				size = Vector3.new(2.4, 0.8, 2.4),
+				cframe = at(center + offset + Vector3.new(0, H + 0.4, 0)),
+				color = CAP,
+				material = Enum.Material.Slate,
+				parent = walls,
+			})
 		end
 	end
 	wallRun("Back", Vector3.new(0, 0, D / 2 - 1), W - 2, true)
@@ -110,14 +198,57 @@ local function buildPlot(index: number, parent: Instance): Plot
 		local seg = (W / 2 - 1) - inner
 		wallRun("Front", Vector3.new(sx * (inner + seg / 2), 0, -D / 2 + 1), seg, true)
 		-- torri ai lati del cancello con bandierine
-		Build.Part({ name = "GatePost", size = Vector3.new(4, H + 4, 4), cframe = at(Vector3.new(sx * (L.GateWidth / 2 + 2), (H + 4) / 2, -D / 2 + 1)), color = STONE_GATE, material = Enum.Material.Cobblestone, parent = walls })
-		Build.Part({ name = "GateCap", size = Vector3.new(5, 1.6, 5), cframe = at(Vector3.new(sx * (L.GateWidth / 2 + 2), H + 4.8, -D / 2 + 1)), color = CAP, material = Enum.Material.Slate, parent = walls })
-		Build.Part({ name = "FlagPole", size = Vector3.new(6, 0.35, 0.35), cframe = at(Vector3.new(sx * (L.GateWidth / 2 + 2), H + 8.6, -D / 2 + 1)) * CFrame.Angles(0, 0, math.rad(90)), color = Color3.fromRGB(255, 255, 255), shape = Enum.PartType.Cylinder, parent = walls })
-		Build.Part({ name = "Flag", size = Vector3.new(3.2, 2, 0.2), cframe = at(Vector3.new(sx * (L.GateWidth / 2 + 2) + sx * 1.6, H + 10.4, -D / 2 + 1)), color = theme.wall, collide = false, parent = walls })
+		Build.Part({
+			name = "GatePost",
+			size = Vector3.new(4, H + 4, 4),
+			cframe = at(Vector3.new(sx * (L.GateWidth / 2 + 2), (H + 4) / 2, -D / 2 + 1)),
+			color = STONE_GATE,
+			material = Enum.Material.Cobblestone,
+			parent = walls,
+		})
+		Build.Part({
+			name = "GateCap",
+			size = Vector3.new(5, 1.6, 5),
+			cframe = at(Vector3.new(sx * (L.GateWidth / 2 + 2), H + 4.8, -D / 2 + 1)),
+			color = CAP,
+			material = Enum.Material.Slate,
+			parent = walls,
+		})
+		Build.Part({
+			name = "FlagPole",
+			size = Vector3.new(6, 0.35, 0.35),
+			cframe = at(Vector3.new(sx * (L.GateWidth / 2 + 2), H + 8.6, -D / 2 + 1))
+				* CFrame.Angles(0, 0, math.rad(90)),
+			color = Color3.fromRGB(255, 255, 255),
+			shape = Enum.PartType.Cylinder,
+			parent = walls,
+		})
+		Build.Part({
+			name = "Flag",
+			size = Vector3.new(3.2, 2, 0.2),
+			cframe = at(Vector3.new(sx * (L.GateWidth / 2 + 2) + sx * 1.6, H + 10.4, -D / 2 + 1)),
+			color = theme.wall,
+			collide = false,
+			parent = walls,
+		})
 	end
 	-- trave sopra il cancello con insegna del proprietario
-	Build.Part({ name = "GateBeam", size = Vector3.new(L.GateWidth + 8, 3, 3), cframe = at(Vector3.new(0, H + 2, -D / 2 + 1)), color = theme.trim, material = Enum.Material.Wood, parent = walls })
-	local sign = Build.Part({ name = "OwnerSign", size = Vector3.new(L.GateWidth + 4, 5, 0.6), cframe = at(Vector3.new(0, H + 6.3, -D / 2 + 0.6)), color = Color3.fromRGB(236, 212, 170), material = Enum.Material.Wood, parent = walls })
+	Build.Part({
+		name = "GateBeam",
+		size = Vector3.new(L.GateWidth + 8, 3, 3),
+		cframe = at(Vector3.new(0, H + 2, -D / 2 + 1)),
+		color = theme.trim,
+		material = Enum.Material.Wood,
+		parent = walls,
+	})
+	local sign = Build.Part({
+		name = "OwnerSign",
+		size = Vector3.new(L.GateWidth + 4, 5, 0.6),
+		cframe = at(Vector3.new(0, H + 6.3, -D / 2 + 0.6)),
+		color = Color3.fromRGB(236, 212, 170),
+		material = Enum.Material.Wood,
+		parent = walls,
+	})
 	local gui = Instance.new("SurfaceGui")
 	gui.Name = "SignGui"
 	gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
@@ -161,8 +292,25 @@ local function buildPlot(index: number, parent: Instance): Plot
 	local incubators = {}
 	for i, pos in L.Incubators do
 		local cf = at(pos)
-		local baseP = Build.Part({ name = `Incubator{i}`, size = Vector3.new(1.4, 5.2, 5.2), cframe = cf * CFrame.new(0, 0.7, 0) * CFrame.Angles(0, 0, math.rad(90)), color = STONE, shape = Enum.PartType.Cylinder, parent = model })
-		local ring = Build.Part({ name = "Ring", size = Vector3.new(0.4, 5.6, 5.6), cframe = cf * CFrame.new(0, 1.25, 0) * CFrame.Angles(0, 0, math.rad(90)), color = Color3.fromRGB(255, 160, 60), material = Enum.Material.Neon, shape = Enum.PartType.Cylinder, collide = false, castShadow = false, parent = baseP })
+		local baseP = Build.Part({
+			name = `Incubator{i}`,
+			size = Vector3.new(1.4, 5.2, 5.2),
+			cframe = cf * CFrame.new(0, 0.7, 0) * CFrame.Angles(0, 0, math.rad(90)),
+			color = STONE,
+			shape = Enum.PartType.Cylinder,
+			parent = model,
+		})
+		local ring = Build.Part({
+			name = "Ring",
+			size = Vector3.new(0.4, 5.6, 5.6),
+			cframe = cf * CFrame.new(0, 1.25, 0) * CFrame.Angles(0, 0, math.rad(90)),
+			color = Color3.fromRGB(255, 160, 60),
+			material = Enum.Material.Neon,
+			shape = Enum.PartType.Cylinder,
+			collide = false,
+			castShadow = false,
+			parent = baseP,
+		})
 		-- l'attachment va prima messo nella parte: WorldCFrame dipende dalla parte che lo contiene
 		local att = Instance.new("Attachment")
 		att.Name = "EggPoint"
@@ -179,13 +327,35 @@ local function buildPlot(index: number, parent: Instance): Plot
 	local pedestals = {}
 	for i, pos in L.Pedestals do
 		local cf = at(pos)
-		local baseP = Build.Part({ name = `Pedestal{i}`, size = Vector3.new(2, 6.4, 6.4), cframe = cf * CFrame.new(0, 1, 0) * CFrame.Angles(0, 0, math.rad(90)), color = STONE, shape = Enum.PartType.Cylinder, parent = model })
-		Build.Part({ name = "Top", size = Vector3.new(0.3, 6.8, 6.8), cframe = cf * CFrame.new(0, 2.05, 0) * CFrame.Angles(0, 0, math.rad(90)), color = theme.wall, shape = Enum.PartType.Cylinder, collide = false, parent = baseP })
+		local baseP = Build.Part({
+			name = `Pedestal{i}`,
+			size = Vector3.new(2, 6.4, 6.4),
+			cframe = cf * CFrame.new(0, 1, 0) * CFrame.Angles(0, 0, math.rad(90)),
+			color = STONE,
+			shape = Enum.PartType.Cylinder,
+			parent = model,
+		})
+		Build.Part({
+			name = "Top",
+			size = Vector3.new(0.3, 6.8, 6.8),
+			cframe = cf * CFrame.new(0, 2.05, 0) * CFrame.Angles(0, 0, math.rad(90)),
+			color = theme.wall,
+			shape = Enum.PartType.Cylinder,
+			collide = false,
+			parent = baseP,
+		})
 		local stand = Instance.new("Attachment")
 		stand.Name = "PetPoint"
 		stand.Parent = baseP
 		stand.WorldCFrame = cf * CFrame.new(0, 2.2, 0) -- i pet guardano il cancello
-		local pad = Build.Part({ name = "CollectPad", size = Vector3.new(4.6, 0.5, 3.2), cframe = cf * CFrame.new(L.CollectPadOffset) * CFrame.new(0, 0.25, 0), color = Color3.fromRGB(120, 230, 110), material = Enum.Material.SmoothPlastic, parent = baseP })
+		local pad = Build.Part({
+			name = "CollectPad",
+			size = Vector3.new(4.6, 0.5, 3.2),
+			cframe = cf * CFrame.new(L.CollectPadOffset) * CFrame.new(0, 0.25, 0),
+			color = Color3.fromRGB(120, 230, 110),
+			material = Enum.Material.SmoothPlastic,
+			parent = baseP,
+		})
 		pad:SetAttribute("Slot", i)
 		CollectionService:AddTag(pad, "CollectPad")
 		local sell = prompt(baseP, "SellPrompt", "SELL", 1, "Owner")
@@ -197,14 +367,38 @@ local function buildPlot(index: number, parent: Instance): Plot
 
 	-- console della barriera
 	local consoleCf = at(L.BarrierConsole)
-	local console = Build.Part({ name = "BarrierConsole", size = Vector3.new(3.4, 3.2, 3.4), cframe = consoleCf * CFrame.new(0, 1.6, 0), color = theme.trim, parent = model })
-	Build.Part({ name = "Button", size = Vector3.new(0.8, 2.6, 2.6), cframe = consoleCf * CFrame.new(0, 3.5, 0) * CFrame.Angles(0, 0, math.rad(90)), color = Color3.fromRGB(255, 60, 70), material = Enum.Material.Neon, shape = Enum.PartType.Cylinder, collide = false, parent = console })
+	local console = Build.Part({
+		name = "BarrierConsole",
+		size = Vector3.new(3.4, 3.2, 3.4),
+		cframe = consoleCf * CFrame.new(0, 1.6, 0),
+		color = theme.trim,
+		parent = model,
+	})
+	Build.Part({
+		name = "Button",
+		size = Vector3.new(0.8, 2.6, 2.6),
+		cframe = consoleCf * CFrame.new(0, 3.5, 0) * CFrame.Angles(0, 0, math.rad(90)),
+		color = Color3.fromRGB(255, 60, 70),
+		material = Enum.Material.Neon,
+		shape = Enum.PartType.Cylinder,
+		collide = false,
+		parent = console,
+	})
 	local consolePrompt = prompt(console, "BarrierPrompt", "LOCK BASE", 0.3, "Owner")
 
 	-- posti per le trappole
 	local traps = {}
 	for i, pos in L.Traps do
-		local spot = Build.Part({ name = `TrapSpot{i}`, size = Vector3.new(0.1, 4, 4), cframe = at(pos) * CFrame.new(0, 0.06, 0) * CFrame.Angles(0, 0, math.rad(90)), color = theme.wall:Lerp(Color3.new(0, 0, 0), 0.15), shape = Enum.PartType.Cylinder, collide = false, transparency = 0.5, parent = model })
+		local spot = Build.Part({
+			name = `TrapSpot{i}`,
+			size = Vector3.new(0.1, 4, 4),
+			cframe = at(pos) * CFrame.new(0, 0.06, 0) * CFrame.Angles(0, 0, math.rad(90)),
+			color = theme.wall:Lerp(Color3.new(0, 0, 0), 0.15),
+			shape = Enum.PartType.Cylinder,
+			collide = false,
+			transparency = 0.5,
+			parent = model,
+		})
 		spot:SetAttribute("Slot", tostring(i))
 		traps[i] = spot
 	end
@@ -307,7 +501,10 @@ function PlotService.IncubatorCount(player: Player): number
 	if not data then
 		return 0
 	end
-	return math.min(Upgrades.IncubatorCount(data.Upgrades.Incubators, S.MonetizationService.HasPass(player, "ExtraIncubator")), Upgrades.MaxIncubators)
+	return math.min(
+		Upgrades.IncubatorCount(data.Upgrades.Incubators, S.MonetizationService.HasPass(player, "ExtraIncubator")),
+		Upgrades.MaxIncubators
+	)
 end
 
 function PlotService.PedestalCount(player: Player): number
@@ -432,7 +629,10 @@ end
 -- Vero se la posizione e' dentro il recinto del lotto
 function PlotService.Contains(plot: Plot, pos: Vector3): boolean
 	local lp = plot.cframe:PointToObjectSpace(pos)
-	return math.abs(lp.X) <= MapLayout.PlotSize.X / 2 - 1 and math.abs(lp.Z) <= MapLayout.PlotSize.Z / 2 - 1 and lp.Y > -3 and lp.Y < 20
+	return math.abs(lp.X) <= MapLayout.PlotSize.X / 2 - 1
+		and math.abs(lp.Z) <= MapLayout.PlotSize.Z / 2 - 1
+		and lp.Y > -3
+		and lp.Y < 20
 end
 
 function PlotService.PlotAt(pos: Vector3): Plot?

@@ -19,7 +19,13 @@ end
 
 local function setupRig(character: Model)
 	for _, motor in character:GetDescendants() do
-		if motor:IsA("Motor6D") and motor.Part0 and motor.Part1 and motor.Name ~= "RootJoint" and motor.Name ~= "Root" then
+		if
+			motor:IsA("Motor6D")
+			and motor.Part0
+			and motor.Part1
+			and motor.Name ~= "RootJoint"
+			and motor.Name ~= "Root"
+		then
 			local a0 = Instance.new("Attachment")
 			a0.Name = "RagA_" .. motor.Name
 			a0.CFrame = motor.C0
@@ -58,7 +64,16 @@ local function setRagdoll(character: Model, on: boolean)
 		end
 	end
 	for _, d in character:GetDescendants() do
-		if d:IsA("BasePart") and (d.Name == "Head" or string.find(d.Name, "Arm") or string.find(d.Name, "Leg") or string.find(d.Name, "Hand") or string.find(d.Name, "Foot")) then
+		if
+			d:IsA("BasePart")
+			and (
+				d.Name == "Head"
+				or string.find(d.Name, "Arm")
+				or string.find(d.Name, "Leg")
+				or string.find(d.Name, "Hand")
+				or string.find(d.Name, "Foot")
+			)
+		then
 			d.CanCollide = on
 		end
 	end

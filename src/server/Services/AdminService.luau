@@ -37,7 +37,12 @@ local ACTIONS = {
 		S.EventService.StopEvent()
 	end,
 	SpawnEgg = function(_player, args)
-		if type(args.rarity) == "string" and Rarities.List[args.rarity] and type(args.zone) == "string" and Zones.List[args.zone] then
+		if
+			type(args.rarity) == "string"
+			and Rarities.List[args.rarity]
+			and type(args.zone) == "string"
+			and Zones.List[args.zone]
+		then
 			S.NestService.SpawnSpecial(args.zone, args.rarity)
 		end
 	end,

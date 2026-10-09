@@ -107,7 +107,10 @@ function HatchService.FreeSlot(player: Player): string?
 end
 
 -- Mette un uovo nella prima incubatrice libera. egg.remaining (uova rubate) conserva il tempo rimasto.
-function HatchService.Insert(player: Player, egg: { rarity: string, remaining: number?, duration: number?, cosmicMin: number? }): boolean
+function HatchService.Insert(
+	player: Player,
+	egg: { rarity: string, remaining: number?, duration: number?, cosmicMin: number? }
+): boolean
 	local slot = HatchService.FreeSlot(player)
 	local data = S.DataService.Get(player)
 	if not slot or not data then

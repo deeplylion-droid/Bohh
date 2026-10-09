@@ -19,23 +19,40 @@ function Panel.Build(parent: Instance, C)
 	local p = Kit.Panel(T("SettingsTitle"), UDim2.fromOffset(580, 450), "Grey", parent)
 	local rows = {}
 	for i, r in ROWS do
-		local card = Kit.Card({ Size = UDim2.new(1, -10, 0, 74), Position = UDim2.new(0, 5, 0, 30 + (i - 1) * 86), Parent = p.Body })
+		local card = Kit.Card({
+			Size = UDim2.new(1, -10, 0, 74),
+			Position = UDim2.new(0, 5, 0, 30 + (i - 1) * 86),
+			Parent = p.Body,
+		})
 		Kit.Icon(r.icon, { Size = UDim2.fromOffset(46, 46), Position = UDim2.fromOffset(14, 14), Parent = card })
-		local label = Kit.Text({ Size = UDim2.new(0.55, 0, 0, 34), Position = UDim2.fromOffset(74, 20), TextXAlignment = Enum.TextXAlignment.Left, Parent = card })
-		local btn = Kit.Button({ Text = "", Color = "Green", Size = UDim2.fromOffset(150, 54), Position = UDim2.new(1, -162, 0, 10), TextSize = 26, Parent = card, OnClick = function()
-			local settings = C.State.Get("Settings") or {}
-			local value
-			if r.key == "Lang" then
-				value = if C.Lang.Current == "it" then "en" else "it"
-				C.Lang.Set(value)
-			else
-				value = not settings[r.key]
-			end
-			settings[r.key] = value
-			Net.Event("SetSetting"):FireServer(r.key, value)
-			C.Audio.ApplySettings(settings)
-			Panel.refresh()
-		end })
+		local label = Kit.Text({
+			Size = UDim2.new(0.55, 0, 0, 34),
+			Position = UDim2.fromOffset(74, 20),
+			TextXAlignment = Enum.TextXAlignment.Left,
+			Parent = card,
+		})
+		local btn = Kit.Button({
+			Text = "",
+			Color = "Green",
+			Size = UDim2.fromOffset(150, 54),
+			Position = UDim2.new(1, -162, 0, 10),
+			TextSize = 26,
+			Parent = card,
+			OnClick = function()
+				local settings = C.State.Get("Settings") or {}
+				local value
+				if r.key == "Lang" then
+					value = if C.Lang.Current == "it" then "en" else "it"
+					C.Lang.Set(value)
+				else
+					value = not settings[r.key]
+				end
+				settings[r.key] = value
+				Net.Event("SetSetting"):FireServer(r.key, value)
+				C.Audio.ApplySettings(settings)
+				Panel.refresh()
+			end,
+		})
 		rows[r.key] = { label = label, btn = btn, def = r }
 	end
 	function Panel.refresh()

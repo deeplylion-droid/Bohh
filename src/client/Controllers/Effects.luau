@@ -35,7 +35,14 @@ function Effects.CameraShake(amount: number, duration: number)
 end
 
 -- Esplosione di particelle in un punto
-function Effects.Burst(position: Vector3, color: ColorSequence | Color3, count: number, texture: string?, speed: number?, size: number?)
+function Effects.Burst(
+	position: Vector3,
+	color: ColorSequence | Color3,
+	count: number,
+	texture: string?,
+	speed: number?,
+	size: number?
+)
 	local att = Instance.new("Attachment")
 	att.Parent = workspace.Terrain
 	att.WorldPosition = position
@@ -61,8 +68,12 @@ function Effects.FloatText(position: Vector3, text: string, color: Color3?)
 	local att = Instance.new("Attachment")
 	att.Parent = workspace.Terrain
 	att.WorldPosition = position
-	local gui = Kit.New("BillboardGui", { Size = UDim2.fromOffset(220, 60), AlwaysOnTop = true, LightInfluence = 0, Adornee = att, Parent = att })
-	local label = Kit.Text({ Text = text, TextColor3 = color or Kit.Theme.Gold, Size = UDim2.fromScale(1, 1), Parent = gui })
+	local gui = Kit.New(
+		"BillboardGui",
+		{ Size = UDim2.fromOffset(220, 60), AlwaysOnTop = true, LightInfluence = 0, Adornee = att, Parent = att }
+	)
+	local label =
+		Kit.Text({ Text = text, TextColor3 = color or Kit.Theme.Gold, Size = UDim2.fromScale(1, 1), Parent = gui })
 	Kit.Pop(label)
 	Kit.Tween(gui, 1.2, { StudsOffset = Vector3.new(0, 4, 0) })
 	task.delay(0.8, function()
@@ -173,7 +184,14 @@ local BUILTIN: { [string]: (any) -> () } = {
 	end,
 	MeteorImpact = function(params)
 		C.Audio.Play("Explosion", params.position, 1.2)
-		Effects.Burst(params.position, ColorSequence.new(Color3.fromRGB(200, 140, 255), Color3.fromRGB(80, 40, 200)), 50, SPARKLE, 40, 2)
+		Effects.Burst(
+			params.position,
+			ColorSequence.new(Color3.fromRGB(200, 140, 255), Color3.fromRGB(80, 40, 200)),
+			50,
+			SPARKLE,
+			40,
+			2
+		)
 		Effects.Burst(params.position, Color3.fromRGB(120, 100, 140), 24, SMOKE, 16, 5)
 		local pos = myPosition()
 		if pos and (pos - params.position).Magnitude < 60 then
@@ -185,7 +203,14 @@ local BUILTIN: { [string]: (any) -> () } = {
 	end,
 	LavaBombImpact = function(params)
 		C.Audio.Play("Explosion", params.position, 1)
-		Effects.Burst(params.position, ColorSequence.new(Color3.fromRGB(255, 200, 60), Color3.fromRGB(255, 60, 20)), 40, FIRE, 30, 2)
+		Effects.Burst(
+			params.position,
+			ColorSequence.new(Color3.fromRGB(255, 200, 60), Color3.fromRGB(255, 60, 20)),
+			40,
+			FIRE,
+			30,
+			2
+		)
 		local pos = myPosition()
 		if pos and (pos - params.position).Magnitude < 40 then
 			Effects.CameraShake(0.6, 0.5)
@@ -220,7 +245,8 @@ function Effects.Start()
 		if now < shake.untilT then
 			local a = shake.amount * (shake.untilT - now)
 			local cam = workspace.CurrentCamera
-			cam.CFrame = cam.CFrame * CFrame.Angles(math.rad((math.random() - 0.5) * a * 2), math.rad((math.random() - 0.5) * a * 2), 0)
+			cam.CFrame = cam.CFrame
+				* CFrame.Angles(math.rad((math.random() - 0.5) * a * 2), math.rad((math.random() - 0.5) * a * 2), 0)
 		else
 			shake.amount = 0
 		end

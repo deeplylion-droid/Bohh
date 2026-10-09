@@ -117,7 +117,10 @@ local T: { [string]: Entry } = {
 	Carrying = { en = "{item}", it = "{item}" },
 	CarrySpeed = { en = "Speed {pct}", it = "Velocità {pct}" },
 	CarryHint = { en = "Bring it to your base at the top!", it = "Portalo nel tuo lotto in cima!" },
-	CarryStolenHint = { en = "Run to your base before they catch you!", it = "Corri al tuo lotto prima che ti prendano!" },
+	CarryStolenHint = {
+		en = "Run to your base before they catch you!",
+		it = "Corri al tuo lotto prima che ti prendano!",
+	},
 	Heavy = { en = "Heavy!", it = "Pesante!" },
 	BackpackFull = { en = "Your hands are full!", it = "Hai le mani piene!" },
 	IncomeRate = { en = "+{rate}/s", it = "+{rate}/s" },
@@ -133,8 +136,14 @@ local T: { [string]: Entry } = {
 	-- notifiche
 	EggDropped = { en = "You dropped your egg!", it = "Hai perso il tuo uovo!" },
 	EggDelivered = { en = "{egg} is incubating!", it = "{egg} è in incubazione!" },
-	NoIncubator = { en = "No free incubator! Upgrade or hatch your eggs.", it = "Nessuna incubatrice libera! Potenzia o schiudi le uova." },
-	NoPedestal = { en = "No free pedestal! Sell a pet or expand your base.", it = "Nessun piedistallo libero! Vendi un pet o espandi il lotto." },
+	NoIncubator = {
+		en = "No free incubator! Upgrade or hatch your eggs.",
+		it = "Nessuna incubatrice libera! Potenzia o schiudi le uova.",
+	},
+	NoPedestal = {
+		en = "No free pedestal! Sell a pet or expand your base.",
+		it = "Nessun piedistallo libero! Vendi un pet o espandi il lotto.",
+	},
 	PetSold = { en = "Sold {pet} for {price}!", it = "Hai venduto {pet} per {price}!" },
 	Collected = { en = "+{amount}", it = "+{amount}" },
 	UpgradeBought = { en = "{upgrade} upgraded!", it = "{upgrade} potenziato!" },
@@ -148,8 +157,14 @@ local T: { [string]: Entry } = {
 	StealSuccessThief = { en = "You stole {item} from {name}!", it = "Hai rubato {item} a {name}!" },
 	StealSuccessVictim = { en = "{name} stole your {item}!", it = "{name} ti ha rubato {item}!" },
 	StealStopped = { en = "{item} is back home!", it = "{item} è tornato a casa!" },
-	StealOwnerLeft = { en = "The owner left: the loot vanished!", it = "Il proprietario è uscito: la refurtiva è sparita!" },
-	CantStealProtected = { en = "This player just arrived: give them a minute!", it = "Questo giocatore è appena arrivato: lascialo respirare!" },
+	StealOwnerLeft = {
+		en = "The owner left: the loot vanished!",
+		it = "Il proprietario è uscito: la refurtiva è sparita!",
+	},
+	CantStealProtected = {
+		en = "This player just arrived: give them a minute!",
+		it = "Questo giocatore è appena arrivato: lascialo respirare!",
+	},
 	CantStealNoRoom = { en = "No room in your base for it!", it = "Non hai spazio nel tuo lotto!" },
 	Intruder = { en = "{name} entered your base!", it = "{name} è entrato nel tuo lotto!" },
 	Thief = { en = "THIEF!", it = "LADRO!" },
@@ -187,7 +202,10 @@ local T: { [string]: Entry } = {
 	Upgrade_Pedestals = { en = "Bigger Base", it = "Lotto Più Grande" },
 	Upgrade_Barrier = { en = "Laser Barrier", it = "Barriera Laser" },
 	UpgradeDesc_Speed = { en = "Walk faster: {value} speed", it = "Cammini più veloce: velocità {value}" },
-	UpgradeDesc_Strength = { en = "Heavy eggs slow you {value} less", it = "Le uova pesanti ti rallentano il {value} in meno" },
+	UpgradeDesc_Strength = {
+		en = "Heavy eggs slow you {value} less",
+		it = "Le uova pesanti ti rallentano il {value} in meno",
+	},
 	UpgradeDesc_Backpack = { en = "Carry {value} eggs at once", it = "Porti {value} uova alla volta" },
 	UpgradeDesc_Incubators = { en = "{value} incubators in your base", it = "{value} incubatrici nel lotto" },
 	UpgradeDesc_HatchSpeed = { en = "Eggs hatch {value} faster", it = "Le uova si schiudono il {value} più in fretta" },
@@ -204,12 +222,24 @@ local T: { [string]: Entry } = {
 	Pass_BigBackpack = { en = "Big Backpack", it = "Zaino Grande" },
 	Pass_FastHatch = { en = "Fast Hatch", it = "Schiusa Veloce" },
 	Pass_SuperBarrier = { en = "Super Barrier", it = "Super Barriera" },
-	PassDesc_VIP = { en = "+20% coins, VIP tag, Golden Mallet, better offline earnings", it = "+20% monete, tag VIP, Martello d'Oro, più guadagni offline" },
-	PassDesc_DoubleCoins = { en = "All your pets earn double, forever", it = "Tutti i tuoi pet guadagnano il doppio, per sempre" },
+	PassDesc_VIP = {
+		en = "+20% coins, VIP tag, Golden Mallet, better offline earnings",
+		it = "+20% monete, tag VIP, Martello d'Oro, più guadagni offline",
+	},
+	PassDesc_DoubleCoins = {
+		en = "All your pets earn double, forever",
+		it = "Tutti i tuoi pet guadagnano il doppio, per sempre",
+	},
 	PassDesc_ExtraIncubator = { en = "One more incubator in your base", it = "Un'incubatrice in più nel tuo lotto" },
 	PassDesc_BigBackpack = { en = "Carry one more egg at a time", it = "Porti un uovo in più alla volta" },
-	PassDesc_FastHatch = { en = "Every egg hatches twice as fast", it = "Ogni uovo si schiude il doppio più in fretta" },
-	PassDesc_SuperBarrier = { en = "Barrier lasts 60s longer and recharges faster", it = "La barriera dura 60s in più e si ricarica prima" },
+	PassDesc_FastHatch = {
+		en = "Every egg hatches twice as fast",
+		it = "Ogni uovo si schiude il doppio più in fretta",
+	},
+	PassDesc_SuperBarrier = {
+		en = "Barrier lasts 60s longer and recharges faster",
+		it = "La barriera dura 60s in più e si ricarica prima",
+	},
 	Product_SkipHatchSmall = { en = "Skip Hatch (up to Rare)", it = "Salta Schiusa (fino a Raro)" },
 	Product_SkipHatchMedium = { en = "Skip Hatch (up to Legendary)", it = "Salta Schiusa (fino a Leggendario)" },
 	Product_SkipHatchLarge = { en = "Skip Hatch (any egg)", it = "Salta Schiusa (qualsiasi uovo)" },
@@ -217,7 +247,10 @@ local T: { [string]: Entry } = {
 	Product_CoinsSmall = { en = "Coin Pouch", it = "Sacchetto di Monete" },
 	Product_CoinsMedium = { en = "Coin Chest", it = "Forziere di Monete" },
 	Product_CoinsLarge = { en = "Coin Mountain", it = "Montagna di Monete" },
-	ProductDesc_Luck = { en = "More mutations, giant pets and rare pets", it = "Più mutazioni, pet giganti e pet rari" },
+	ProductDesc_Luck = {
+		en = "More mutations, giant pets and rare pets",
+		it = "Più mutazioni, pet giganti e pet rari",
+	},
 	ProductDesc_Coins = { en = "Get {amount} coins now", it = "Ricevi subito {amount} monete" },
 	PurchaseThanks = { en = "Thank you for your purchase!", it = "Grazie per l'acquisto!" },
 	SkipHatchWhich = { en = "Skips the egg that needs the most time", it = "Salta l'uovo con più tempo rimanente" },
@@ -233,7 +266,10 @@ local T: { [string]: Entry } = {
 	-- album
 	IndexTitle = { en = "PET INDEX", it = "ALBUM DEI PET" },
 	IndexProgress = { en = "{n}/{total} discovered", it = "{n}/{total} scoperti" },
-	IndexRowReward = { en = "Complete the row: +{bonus} coins forever and {coins}", it = "Completa la riga: +{bonus} monete per sempre e {coins}" },
+	IndexRowReward = {
+		en = "Complete the row: +{bonus} coins forever and {coins}",
+		it = "Completa la riga: +{bonus} monete per sempre e {coins}",
+	},
 	IndexRowDone = { en = "Row complete! +{bonus} income", it = "Riga completa! +{bonus} guadagni" },
 	Undiscovered = { en = "???", it = "???" },
 
@@ -250,9 +286,15 @@ local T: { [string]: Entry } = {
 	RewardLuck = { en = "2x Luck {t}", it = "Fortuna x2 {t}" },
 	RewardEgg = { en = "{egg}", it = "{egg}" },
 	RewardGot = { en = "You received {reward}!", it = "Hai ricevuto {reward}!" },
-	EggStored = { en = "Your gift egg is waiting for a free incubator", it = "Il tuo uovo regalo aspetta un'incubatrice libera" },
+	EggStored = {
+		en = "Your gift egg is waiting for a free incubator",
+		it = "Il tuo uovo regalo aspetta un'incubatrice libera",
+	},
 	WelcomeBack = { en = "WELCOME BACK!", it = "BENTORNATO!" },
-	OfflineEarned = { en = "Your pets earned {amount} while you were away", it = "I tuoi pet hanno guadagnato {amount} mentre eri via" },
+	OfflineEarned = {
+		en = "Your pets earned {amount} while you were away",
+		it = "I tuoi pet hanno guadagnato {amount} mentre eri via",
+	},
 
 	-- codici
 	CodesTitle = { en = "CODES", it = "CODICI" },
@@ -275,7 +317,10 @@ local T: { [string]: Entry } = {
 	Event_MeteorShower = { en = "METEOR SHOWER", it = "PIOGGIA DI METEORE" },
 	Event_GoldenHour = { en = "GOLDEN HOUR", it = "ORA D'ORO" },
 	Event_SuperAvalanche = { en = "SUPER AVALANCHE", it = "SUPER VALANGA" },
-	EventDesc_MeteorShower = { en = "Meteors bring rare cosmic eggs!", it = "I meteoriti portano uova rare e cosmiche!" },
+	EventDesc_MeteorShower = {
+		en = "Meteors bring rare cosmic eggs!",
+		it = "I meteoriti portano uova rare e cosmiche!",
+	},
 	EventDesc_GoldenHour = { en = "Gold mutation at least 25%", it = "Mutazione Oro almeno al 25%" },
 	EventDesc_SuperAvalanche = { en = "Avalanches every 55s, rare eggs x3!", it = "Valanghe ogni 55s, uova rare x3!" },
 	EventStarted = { en = "{event} has started!", it = "È iniziata: {event}!" },
@@ -289,8 +334,14 @@ local T: { [string]: Entry } = {
 	AnnounceAdmin = { en = "{text}", it = "{text}" },
 
 	-- tutorial
-	Tut_Hatch = { en = "Your first egg is hatching! Press HATCH when it's ready", it = "Il tuo primo uovo si sta schiudendo! Premi SCHIUDI quando è pronto" },
-	Tut_Collect = { en = "Your pet makes money! Step on the green pad to collect", it = "Il tuo pet guadagna soldi! Sali sulla pedana verde per raccoglierli" },
+	Tut_Hatch = {
+		en = "Your first egg is hatching! Press HATCH when it's ready",
+		it = "Il tuo primo uovo si sta schiudendo! Premi SCHIUDI quando è pronto",
+	},
+	Tut_Collect = {
+		en = "Your pet makes money! Step on the green pad to collect",
+		it = "Il tuo pet guadagna soldi! Sali sulla pedana verde per raccoglierli",
+	},
 	Tut_Upgrade = { en = "Buy an upgrade to climb faster!", it = "Compra un potenziamento per salire più in fretta!" },
 	Tut_Pickup = { en = "Go down the mountain and pick up an egg!", it = "Scendi dalla montagna e raccogli un uovo!" },
 	Tut_Deliver = { en = "Bring the egg back to your base at the top!", it = "Riporta l'uovo nel tuo lotto in cima!" },
@@ -312,10 +363,12 @@ local function format(s: string, args: { [string]: any }?): string
 	if not args then
 		return s
 	end
-	return (string.gsub(s, "{(%w+)}", function(k)
-		local v = args[k]
-		return if v ~= nil then tostring(v) else "{" .. k .. "}"
-	end))
+	return (
+		string.gsub(s, "{(%w+)}", function(k)
+			local v = args[k]
+			return if v ~= nil then tostring(v) else "{" .. k .. "}"
+		end)
+	)
 end
 
 function Strings.Get(key: string, lang: string, args: { [string]: any }?): string

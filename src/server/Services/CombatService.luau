@@ -168,7 +168,11 @@ function CombatService.Swing(player: Player)
 		dir = look
 	end
 	S.CarryService.DropAll(best, "Slapped")
-	S.RagdollService.Ragdoll(best, GameConfig.SlapRagdoll, dir * def.knockback + Vector3.new(0, def.knockback * 0.45, 0))
+	S.RagdollService.Ragdoll(
+		best,
+		GameConfig.SlapRagdoll,
+		dir * def.knockback + Vector3.new(0, def.knockback * 0.45, 0)
+	)
 	S.StateService.Notify(best, "SlappedBy", { name = player.DisplayName }, "Bad")
 	S.StateService.Effect(nil, "Slap", { position = bhrp.Position, bat = data and data.EquippedBat })
 end
