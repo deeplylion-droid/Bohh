@@ -70,25 +70,35 @@ function Panel.Build(parent: Instance, C)
 		local card = Kit.Card({ Size = UDim2.new(1, 0, 0, 84), LayoutOrder = i, Parent = scroll })
 		Kit.Icon(def.icon, { Size = UDim2.fromOffset(56, 56), Position = UDim2.fromOffset(12, 14), Parent = card })
 		local name = Kit.Text({
-			Size = UDim2.new(0.5, 0, 0, 30),
-			Position = UDim2.fromOffset(80, 10),
+			Size = UDim2.new(1, -420, 0, 30),
+			Position = UDim2.fromOffset(80, 8),
 			TextXAlignment = Enum.TextXAlignment.Left,
 			Parent = card,
 		})
 		local desc = Kit.Text({
 			Font = Theme.BodyFont,
-			Size = UDim2.new(0.55, 0, 0, 22),
-			Position = UDim2.fromOffset(82, 46),
+			Size = UDim2.new(1, -420, 0, 36),
+			Position = UDim2.fromOffset(82, 42),
 			TextXAlignment = Enum.TextXAlignment.Left,
+			TextYAlignment = Enum.TextYAlignment.Top,
+			TextWrapped = true,
 			TextColor3 = Theme.Muted,
 			Stroke = false,
+			MaxTextSize = 18,
 			Parent = card,
 		})
-		-- barra del livello
+		-- livello: numero e barra tra la descrizione e il pulsante
+		local lvl = Kit.Text({
+			Font = Theme.BodyFont,
+			Size = UDim2.fromOffset(128, 22),
+			Position = UDim2.new(1, -326, 0, 12),
+			Stroke = 2,
+			Parent = card,
+		})
 		local bar = New("Frame", {
 			BackgroundColor3 = Color3.fromRGB(29, 22, 48),
-			Size = UDim2.new(0.18, 0, 0, 16),
-			Position = UDim2.new(0.62, -40, 0, 34),
+			Size = UDim2.fromOffset(128, 16),
+			Position = UDim2.new(1, -326, 0, 42),
 			Parent = card,
 		}, { Kit.Corner(UDim.new(1, 0)) })
 		local fill = New(
@@ -96,13 +106,6 @@ function Panel.Build(parent: Instance, C)
 			{ BackgroundColor3 = Theme.Green, Size = UDim2.fromScale(0, 1), Parent = bar },
 			{ Kit.Corner(UDim.new(1, 0)) }
 		)
-		local lvl = Kit.Text({
-			Font = Theme.BodyFont,
-			Size = UDim2.new(0.18, 0, 0, 20),
-			Position = UDim2.new(0.62, -40, 0, 10),
-			Stroke = 2,
-			Parent = card,
-		})
 		local buy = Kit.Button({
 			Color = "Green",
 			Text = "",
@@ -208,7 +211,7 @@ function Panel.Build(parent: Instance, C)
 		end)
 	end
 	C.Lang.Changed:Connect(refresh)
-	return { Frame = p.Frame, Close = p.Close, OnOpen = refresh }
+	return { Frame = p.Frame, Close = p.Close, OnOpen = refresh, Resizable = true }
 end
 
 return Panel

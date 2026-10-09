@@ -141,19 +141,22 @@ function Kit.Tween(
 	return t
 end
 
--- Animazione di comparsa con rimbalzo (serve un UIScale figlio)
+-- Animazione di comparsa con rimbalzo (serve un UIScale figlio). La scala finale e' l'attributo
+-- "BaseScale" del riquadro (i pannelli si rimpiccioliscono sugli schermi bassi), altrimenti 1.
 function Kit.Pop(inst: GuiObject, delay: number?)
 	local scale = inst:FindFirstChildOfClass("UIScale") or New("UIScale", { Parent = inst })
-	scale.Scale = 0.4
+	local base = inst:GetAttribute("BaseScale") or 1
+	scale.Scale = 0.4 * base
 	task.delay(delay or 0, function()
-		Kit.Tween(scale, 0.35, { Scale = 1 }, Enum.EasingStyle.Back)
+		Kit.Tween(scale, 0.35, { Scale = base }, Enum.EasingStyle.Back)
 	end)
 end
 
 function Kit.Bounce(inst: GuiObject, amount: number?)
 	local scale = inst:FindFirstChildOfClass("UIScale") or New("UIScale", { Parent = inst })
-	scale.Scale = 1 + (amount or 0.12)
-	Kit.Tween(scale, 0.3, { Scale = 1 }, Enum.EasingStyle.Back)
+	local base = inst:GetAttribute("BaseScale") or 1
+	scale.Scale = base * (1 + (amount or 0.12))
+	Kit.Tween(scale, 0.3, { Scale = base }, Enum.EasingStyle.Back)
 end
 
 local clickSound: Sound? = nil

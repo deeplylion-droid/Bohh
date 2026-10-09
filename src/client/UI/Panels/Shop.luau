@@ -226,7 +226,7 @@ function Panel.Build(parent: Instance, C)
 			elseif key == "Luck15" then
 				pc.desc.Text = T("ProductDesc_Luck")
 			else
-				pc.desc.Text = T("SkipHatchWhich")
+				pc.desc.Text = T("ProductDesc_" .. key)
 			end
 		end
 		for id, bc in batCards do
@@ -271,7 +271,7 @@ function Panel.Build(parent: Instance, C)
 		end)
 	end
 	C.Lang.Changed:Connect(refresh)
-	return { Frame = p.Frame, Close = p.Close, OnOpen = onOpen }
+	return { Frame = p.Frame, Close = p.Close, OnOpen = onOpen, Resizable = true }
 end
 
 return Panel

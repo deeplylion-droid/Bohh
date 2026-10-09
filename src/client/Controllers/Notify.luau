@@ -3,6 +3,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
 
 local Net = require(ReplicatedStorage.Shared.Net)
 local Rarities = require(ReplicatedStorage.Shared.Config.Rarities)
@@ -156,26 +157,28 @@ end
 function Notify.Start()
 	Kit = C.UI.Kit
 	local New = Kit.New
+	local touch = UserInputService.TouchEnabled
 	stack = New("Frame", {
 		Name = "Toasts",
 		BackgroundTransparency = 1,
 		Size = UDim2.fromOffset(430, 300),
-		Position = UDim2.new(1, -16, 1, -150),
-		AnchorPoint = Vector2.new(1, 1),
+		Position = if touch then UDim2.new(1, -16, 0, 96) else UDim2.new(1, -16, 1, -24),
+		AnchorPoint = if touch then Vector2.new(1, 0) else Vector2.new(1, 1),
 		Parent = C.UI.Gui("Top"),
 	}, {
 		New("UIListLayout", {
 			Padding = UDim.new(0, 8),
-			VerticalAlignment = Enum.VerticalAlignment.Bottom,
+			VerticalAlignment = if touch then Enum.VerticalAlignment.Top else Enum.VerticalAlignment.Bottom,
 			HorizontalAlignment = Enum.HorizontalAlignment.Right,
 			SortOrder = Enum.SortOrder.LayoutOrder,
 		}),
 	})
+	-- annunci sotto le monete e la riga di stato dell'HUD
 	announceFrame = New("Frame", {
 		Name = "Announce",
 		BackgroundTransparency = 1,
 		Size = UDim2.fromOffset(660, 80),
-		Position = UDim2.new(0.5, 0, 0, 200),
+		Position = UDim2.new(0.5, 0, 0, 300),
 		AnchorPoint = Vector2.new(0.5, 0),
 		Parent = C.UI.Gui("Top"),
 	})

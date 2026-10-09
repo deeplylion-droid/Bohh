@@ -55,6 +55,16 @@ Test d'integrazione su un server vero (carica una versione *salvata*, non pubbli
 python tools/cloud_test.py tests/cloud/boot_test.luau
 ```
 
+Anteprima dell'interfaccia senza Roblox: `tests/ui/render_ui.luau` costruisce HUD, pannelli,
+schiusa, tutorial e schermata di caricamento con il codice vero del client in un ambiente
+simulato (Lune), e `tests/ui/to_html.py` li disegna con Chromium, con sopra la sagoma della chat,
+dell'elenco giocatori, della barra degli strumenti e dei comandi touch di Roblox:
+
+```bash
+.tools/bin/lune run tests/ui/render_ui.luau          # scene in art/out/ui/*.json
+.tools/venv/bin/python tests/ui/to_html.py          # art/out/ui/*.png e contact.png
+```
+
 ## Modelli 3D, immagini e suoni
 
 I modelli si generano con gli script in `art/` (Blender in modalità libreria) e si caricano con

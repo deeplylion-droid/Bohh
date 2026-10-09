@@ -150,6 +150,9 @@ local function play(info)
 		Parent = overlay,
 	})
 	Kit.Tween(root, 0.3, { BackgroundTransparency = 0.3 })
+	-- il palco (900x700) sta tutto nello schermo anche sui telefoni
+	local vp = workspace.CurrentCamera.ViewportSize
+	local stageScale = math.min(C.UI.Scale or 1, (vp.Y - 16) / 700, (vp.X - 16) / 900)
 	local stage = Kit.New("Frame", {
 		BackgroundTransparency = 1,
 		Size = UDim2.fromOffset(900, 700),
@@ -157,7 +160,9 @@ local function play(info)
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		ZIndex = 56,
 		Parent = root,
-	}, { Kit.New("UIScale", { Scale = C.UI.Scale or 1 }) })
+	}, { Kit.New("UIScale", { Scale = stageScale }) })
+	-- la barra degli strumenti e l'elenco giocatori di Roblox non coprono la scena
+	C.UI.SetCoreHidden(true)
 	local rayFrame = rays(stage, rarity.color, 56)
 	local glow = Kit.New("Frame", {
 		BackgroundColor3 = rarity.color,
@@ -395,6 +400,9 @@ local function play(info)
 	task.wait(0.32)
 	conn:Disconnect()
 	root:Destroy()
+	if not C.UI.IsOpen() then
+		C.UI.SetCoreHidden(false)
+	end
 end
 
 local function pump()
@@ -411,6 +419,7 @@ local function pump()
 			if leftover then
 				leftover:Destroy()
 			end
+			C.UI.SetCoreHidden(false)
 		end
 	end
 	busy = false

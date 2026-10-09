@@ -220,7 +220,7 @@ function Panel.Build(parent: Instance, C)
 			refresh()
 		end
 	end)
-	return { Frame = p.Frame, Close = p.Close, OnOpen = refresh }
+	return { Frame = p.Frame, Close = p.Close, OnOpen = refresh, Resizable = true }
 end
 
 return Panel

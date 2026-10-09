@@ -297,6 +297,8 @@ local function setStep(s: number)
 	end
 	cardText.Text = C.Lang.T(KEYS[s])
 	cardStep.Text = `{s}/5`
+	-- sopra al pannello del trasporto dell'HUD, che sta sopra alla barra degli strumenti di Roblox
+	card.Position = UDim2.new(0.5, 0, 1, -(math.floor(80 / (C.UI.Scale or 1)) + 96 + 14))
 	setIcon(ICONS[s])
 	Kit.Pop(card)
 	if previous > 0 and s > previous then
