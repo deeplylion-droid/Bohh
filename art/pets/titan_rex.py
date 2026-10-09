@@ -724,11 +724,12 @@ for side in (1, -1):
 # cosce
 for sx, L in LEGS.items():
     TH = polyline([np.array(L["hip"]) + np.array([0, 0, 0.1]), np.array(L["knee"])])
-    for f_ in (0.2, 0.4, 0.6, 0.8):
-        f2 = f_ + rng.normal(0, 0.04)
-        pts = wrap_curves(core, TH, TH[3][-1] * f2, -80 + rng.normal(0, 12), 70 + rng.normal(0, 14), 1, up=(sx, 0, 0),
-                          lean=rng.normal(0, 0.18), wob=0.05, n=15, phase=rng.uniform(0, 6))
-        stripes.append(stripe_tube(pts, 0.07 + rng.normal(0, 0.012), both=True))
+    for f_ in (0.15, 0.32, 0.5, 0.68, 0.84):
+        f2 = f_ + rng.normal(0, 0.03)
+        a0 = -70 + rng.normal(0, 18)
+        pts = wrap_curves(core, TH, TH[3][-1] * f2, a0, a0 + 100 + rng.normal(0, 18), 1, up=(sx, 0, 0),
+                          lean=0.3 * rng.choice((-1, 1)) + rng.normal(0, 0.08), wob=0.05, n=14, phase=rng.uniform(0, 6))
+        stripes.append(stripe_tube(pts, 0.068 + rng.normal(0, 0.01), both=True))
 # testa: strisce a V sul cranio e sulle guance
 HP_ = polyline([(0, 0.08, 0.12), (0, -0.62, 0.12)])
 for side in (1, -1):
