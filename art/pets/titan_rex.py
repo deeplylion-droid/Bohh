@@ -416,10 +416,6 @@ def JW(s):
     return s.rotate(R_JAW, pivot=J)
 
 
-def jp(p):
-    return rot_pts(R_JAW, p, J)
-
-
 # --- cranio con muscoli temporali e cresta, guance larghe, muso squadrato, arcate sopraccigliari
 cran = ellipsoid((0.46, 0.44, 0.36), (0, -0.30, 0.13))
 temporal = [ellipsoid((0.21, 0.27, 0.15), (sx * 0.19, -0.22, 0.33)) for sx in (1, -1)]
@@ -507,7 +503,7 @@ up_ch = loft(0.05, -1.40, 0.24, 0.16, 0.6, 0.6, -0.66, -0.73, r=0.08, rc=0.12)
 lo_ch = loft(0.05, -1.25, 0.23, 0.14, 0.6, 0.6, 0.20, 0.26, r=0.08, rc=0.12)
 throat = ellipsoid((0.17, 0.25, 0.18), (0.0, -0.13, -0.29))
 cavity = union(up_ch.intersect(above_bis), JW(lo_ch).intersect(below_bis), throat, k=0.05)
-nostrils = union(*[ellipsoid((0.022, 0.05, 0.034), (0, 0, 0)).rot(0, sx * 35, sx * 28).translate((sx * 0.155, -1.51, 0.085))
+nostrils = union(*[ellipsoid((0.022, 0.05, 0.034)).rot(0, sx * 35, sx * 28).translate((sx * 0.155, -1.51, 0.085))
                    for sx in (1, -1)])
 
 # ============================================================ corpo (spazio Blender)
@@ -541,7 +537,7 @@ for sx, L in LEGS.items():
         ell(hip + fem * 0.56 + np.array([sx * 0.19, -0.13, 0.0]), (0.26, 0.28, 0.44), axis=fem),   # quadricipite
         ell(hip + fem * 0.45 + np.array([sx * 0.12, 0.22, -0.02]), (0.24, 0.26, 0.42), axis=fem),  # femorali
         round_cone(knee, ankle, 0.31, 0.19),
-        ell(knee + (ankle - knee) * 0.3 + np.array([0, 0.11, 0.03]), (0.25, 0.27, 0.38), axis=ankle - knee),  # polpaccio
+        ell(knee + (ankle - knee) * 0.3 + np.array([0, 0.11, 0.03]), (0.25, 0.27, 0.38), axis=ankle - knee),  # polp.
         round_cone(ankle, ball, 0.19, 0.165),
         ellipsoid((0.25, 0.28, 0.14), tuple(ball + np.array([0, -0.05, -0.01]))),
     ]
@@ -571,7 +567,7 @@ for sx, L in LEGS.items():
 legs = legs.subtract(union(*creases), k=0.035)
 
 # braccine corte alzate, due dita
-ARMS, arm_parts = [], []
+ARMS, ELBOWS, arm_parts = [], [], []
 for sx in (1, -1):
     sh = np.array([sx * 0.46, -0.94, 2.18])
     el = np.array([sx * 0.66, -1.12, 2.02])
@@ -582,10 +578,11 @@ for sx in (1, -1):
         f = np.array([sx * 0.05 + dx, -0.11, -0.03])
         arm_parts.append(round_cone(wr, wr + f, 0.066, 0.05))
         ARMS.append((wr + f, norm(f + np.array([0, -0.04, -0.06]))))
+    ELBOWS.append((el, norm((sx * 0.35, 0.75, -0.25))))
 arms = union(*arm_parts, k=0.04)
 
 # coda (parte separata, gruppo "Tail") e moncone nel corpo
-TAIL_PTS = bezier((0.0, 0.62, 1.98), (0.0, 1.32, 2.14), (0.42, 1.98, 2.56), (0.92, 2.14, 3.0), 16)
+TAIL_PTS = bezier((0.0, 0.62, 1.98), (0.0, 1.32, 2.14), (0.55, 1.86, 2.42), (0.95, 1.86, 2.98), 16)
 TAIL_R = [0.06 + 0.46 * (1 - i / 16) ** 1.15 for i in range(17)]
 TAIL_PIVOT = (0.0, 0.66, 1.99)
 stump = tube(TAIL_PTS[:5], [r - 0.03 for r in TAIL_R[:5]])
@@ -602,6 +599,7 @@ core = core.subtract(H(nostrils), k=0.02)
 core0 = shrink(core.intersect(halfspace_z(0.0, above=True)))
 
 # ============================================================ cicatrici di artigli (solchi che brillano)
+# linea della schiena (dentro il corpo): guida per strisce, spine e pancia
 SPINE = polyline([hp((0, -0.30, 0.16)), (0, -1.06, 2.98), (0, -0.92, 2.78), (0, -0.70, 2.52), (0, -0.40, 2.24),
                   (0, 0.0, 2.10), (0, 0.38, 2.02), (0, 0.70, 2.02)])
 
@@ -617,7 +615,7 @@ def slash(base, origin, a, b, n=9, w=0.04):
 
 
 scar_cut, scar_glow = [], []
-# tre graffi sul muso (lato verso la camera 3/4) e uno che attraversa l'occhio dall'altra parte
+# tre graffi sul muso (lato verso la camera 3/4) e due sulla guancia dall'altra parte
 for i in range(3):
     dy = -0.1 * i
     a, b = hp((0.22, -0.90 + dy, 0.40)), hp((0.36, -1.12 + dy, -0.08))
@@ -647,16 +645,31 @@ for i in range(3):
 core = core0.subtract(fast_union(scar_cut), k=0.025)
 m.add("Body", core, SKIN, tris=15000, voxel=0.0285)
 
+
+def vein(base, origin, p0, d0, n=7, step=0.065, turn=0.45, r0=0.02):
+    """Vena di rabbia: linea serpeggiante sulla superficie che si assottiglia."""
+    pts, d = [np.asarray(p0, float)], norm(d0)
+    for _ in range(n):
+        d = norm(d + rng.normal(0, turn, 3) * 0.5)
+        pts.append(pts[-1] + d * step)
+    q, nr = project_many(base, [origin] * len(pts), [p - np.asarray(origin, float) for p in pts])
+    q = [p + nn * 0.004 for p, nn in zip(q, nr)]
+    return tube([tuple(p) for p in q], [max(r0 * (1 - j / len(q)) ** 0.8, 0.008) for j in range(len(q))])
+
+
+# vene incandescenti che si diramano dai graffi (la rabbia che brucia sotto la pelle)
+veins = [vein(core, (0.0, 0.05, 2.05), p0, d0) for p0, d0 in (
+    ((0.62, 0.42, 2.42), (0, 0.5, 0.8)), ((0.6, 0.22, 2.5), (0.0, 0.15, 1.0)), ((0.74, -0.30, 1.62), (0, -0.6, -0.7)),
+    ((0.74, 0.12, 1.58), (0, 0.35, -0.9)), ((0.72, -0.24, 2.05), (0, -1.0, 0.2)))]
+veins += [vein(core, (-0.5, 0.0, 1.45), p0, d0) for p0, d0 in (
+    ((-0.97, -0.24, 1.6), (0, 0.2, 1.0)), ((-0.85, -0.6, 1.05), (0, -0.4, -0.9)))]
+scar_glow += veins
+
 tail = tube(TAIL_PTS, TAIL_R)
 m.add("Tail", tail, SKIN, role="skin", tris=3000, voxel=0.0279, group="Tail", pivot=TAIL_PIVOT)
 
 # ============================================================ pancia a placche (rosso polvere)
 P_SP = SPINE
-seg_ups = []
-for k in range(len(P_SP[1])):
-    t = P_SP[1][k] / P_SP[2][k]
-    seg_ups.append(norm(np.array([0, 0, 1.0]) - t * t[2]))
-seg_ups = np.array(seg_ups)
 # linea ventrale (gola -> petto -> ventre) tracciata con un ventaglio di raggi nel piano di simmetria
 fan = [(0, -math.cos(math.radians(a)), math.sin(math.radians(a))) for a in np.linspace(-8, -132, 20)]
 v_pts, v_nrm = project_many(core0, [(0, -0.62, 2.12)], fan)
@@ -768,9 +781,11 @@ for j, (p, nr, t) in enumerate(zip(sp_p, sp_n, sp_t)):
 # corna sopra gli occhi e dietro, spuntoni sulle guance
 horns_l = []
 for sx in (1, -1):
-    p, nr = surf(upper, (sx * 0.15, -0.70, 0.12), (sx * 0.24, -0.76, 0.48))
+    o = np.array((sx * 0.25, -0.785, 0.36))  # dentro l'arcata sopraccigliare
+    p, nr = surf(upper, o, o + np.array((sx * 0.2, 0.1, 1.0)))
     horns_l.append(horn(p - nr * 0.03, nr + np.array([sx * 0.15, 0.55, 0.2]), 0.31, 0.097, curl=(0, 0.38, -0.1), n=6))
-    p, nr = surf(upper, (sx * 0.15, -0.55, 0.12), (sx * 0.44, -0.56, 0.42))
+    o = np.array((sx * 0.37, -0.67, 0.37))
+    p, nr = surf(upper, o, o + np.array((sx * 0.5, 0.3, 0.8)))
     horns_l.append(horn(p - nr * 0.03, nr + np.array([0, 0.6, 0.1]), 0.22, 0.075, curl=(0, 0.32, -0.12), n=5))
     for y, z, L_ in ((-0.46, 0.0, 0.14), (-0.30, -0.08, 0.17), (-0.15, -0.14, 0.12)):
         p, nr = surf(upper, (sx * 0.1, y, z), (sx * 0.7, y + 0.05, z))
@@ -779,7 +794,8 @@ for sx in (1, -1):
     p, nr = surf(upper, (sx * 0.05, -1.12, 0.1), (sx * 0.14, -1.12, 0.32))
     horns_l.append(horn(p - nr * 0.02, nr, 0.06, 0.04, n=3, r1=0.015))
 spikes += [H(h_) for h_ in horns_l]
-m.add("Spikes", fast_union(spikes), SPIKE, role="detail", tris=3000, voxel=0.0184)
+spikes += [horn(e, d, 0.17, 0.05, curl=(0, 0.2, -0.1), n=4) for e, d in ELBOWS]   # speroni sui gomiti
+m.add("Spikes", fast_union(spikes), SPIKE, role="detail", tris=3000, voxel=0.019)
 
 tail_sp = []
 ts_s = np.linspace(0.25, T_P[3][-1] * 0.92, 9)
@@ -863,7 +879,7 @@ for sx in (1, -1):
 pupils += [H(ll) for ll in lid_lines]
 m.add("Maw", maw, MAW, role="eye", tris=3300, voxel=0.0268)
 m.add("Pupils", fast_union(pupils), MAW, role="eye", tris=1400, voxel=0.012)
-m.add("Rage", fast_union(eyes + scar_glow), RAGE, material="Neon", role="glow", tris=3000, voxel=0.0135)
+m.add("Rage", fast_union(eyes + scar_glow), RAGE, material="Neon", role="glow", tris=3000, voxel=0.014)
 
 # ============================================================ artigli: piedi (enormi, uncinati verso terra) e mani
 claws = []
@@ -874,11 +890,12 @@ for p, d in DEWS:
     claws.append(horn(p, d, 0.12, 0.05, curl=(0, 0, -0.4), n=4, r1=0.005))
 for p, d in ARMS:
     claws.append(horn(p - d * 0.01, d, 0.13, 0.042, curl=(0, 0, -0.6), n=4, r1=0.004))
-m.add("Claws", fast_union(claws).intersect(halfspace_z(0.004, above=True)), BONE, role="detail", tris=2000, voxel=0.0133)
+m.add("Claws", fast_union(claws).intersect(halfspace_z(0.004, above=True)), BONE, role="detail", tris=2000,
+      voxel=0.0133)
 
 # ============================================================ toy horror: cucitura sul petto
 seam_pts = list(v_pts[2:12])
-seam_surf = core.offset(0.016)
+seam_surf = core.offset(0.026)
 seam = stitch_row(seam_surf, [on_surface(seam_surf, p) for p in seam_pts], dash=0.06, gap=0.06, r=0.026, cross=True,
                   cross_len=0.22)
 seam += stitch_row(seam_surf, [on_surface(seam_surf, p) for p in seam_pts], dash=0.08, gap=0.03, r=0.02)
@@ -889,7 +906,8 @@ L1 = LEGS[1]
 ank, bal = np.array(L1["ankle"]), np.array(L1["ball"])
 ax = norm(bal - ank)
 cc = ank + (bal - ank) * 0.42
-cuff = cylinder(cc - ax * 0.07, cc + ax * 0.07, 0.235, round=0.025).subtract(cylinder(cc - ax * 0.3, cc + ax * 0.3, 0.165))
+cuff = cylinder(cc - ax * 0.07, cc + ax * 0.07, 0.235, round=0.025)
+cuff = cuff.subtract(cylinder(cc - ax * 0.3, cc + ax * 0.3, 0.165))
 ring_side = norm(np.cross(ax, (0, 0, 1)))
 if ring_side[0] < 0:
     ring_side = -ring_side
@@ -899,9 +917,9 @@ for a in np.linspace(0, 2 * math.pi, 9)[:-1]:
     iron.append(sphere(0.028, tuple(cc + dvec * 0.245)))
 hook = cc + ring_side * 0.27 + np.array([0, 0, -0.05])
 iron.append(chain_link(hook + np.array([0.0, 0.0, -0.06]), (0, 0, 1), ax, 0.04, 0.05, 0.022))
-iron.append(chain_link(hook + np.array([0.13, 0.04, -0.16]), (1, 0.3, 0), (0, 0, 1), 0.05, 0.055, 0.024))
-broken = chain_link(hook + np.array([0.33, 0.12, -0.16]), (1, 0.45, 0.05), (0.2, -0.3, 1), 0.05, 0.055, 0.024)
-iron.append(broken.subtract(sphere(0.05, tuple(hook + np.array([0.45, 0.17, -0.16])))))
+iron.append(chain_link(hook + np.array([0.06, 0.12, -0.16]), (0.35, 1, 0), (0, 0, 1), 0.05, 0.055, 0.024))
+broken = chain_link(hook + np.array([0.14, 0.33, -0.16]), (0.45, 1, 0.05), (0.3, -0.2, 1), 0.05, 0.055, 0.024)
+iron.append(broken.subtract(sphere(0.05, tuple(hook + np.array([0.19, 0.45, -0.16])))))
 m.add("Shackle", fast_union(iron).intersect(halfspace_z(0.004, above=True)), IRON, material="Metal", role="detail",
       tris=1800, voxel=0.0134)
 
