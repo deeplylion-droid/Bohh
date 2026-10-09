@@ -50,20 +50,29 @@ local function setHidden(model: Model?, hidden: boolean)
 	end
 end
 
-local function countStolen(thief: Player, kind: string): number
+local function countStolen(thief: Player, kind: string, rarity: string?): number
 	local n = 0
 	for _, c in S.CarryService.Items(thief) do
-		if c.stolen and c.stolen.kind == kind then
+		-- i pet Ultra si contano a parte: vanno sul trono, non sui piedistalli
+		if
+			c.stolen
+			and c.stolen.kind == kind
+			and (kind ~= "Pet" or (c.stolen.rarity == "Ultra") == (rarity == "Ultra"))
+		then
 			n += 1
 		end
 	end
 	return n
 end
 
-local function freeCount(thief: Player, kind: string): number
+local function freeCount(thief: Player, kind: string, rarity: string?): number
 	local data = S.DataService.Get(thief)
 	if not data then
 		return 0
+	end
+	if kind == "Pet" and rarity == "Ultra" then
+		-- un pet Ultra va solo sul trono
+		return if S.PetService.HasRoomFor(thief, "Ultra") then 1 else 0
 	end
 	if kind == "Egg" then
 		local free = 0
@@ -75,13 +84,15 @@ local function freeCount(thief: Player, kind: string): number
 		return free
 	end
 	local used = 0
-	for _ in data.Pets do
-		used += 1
+	for _, pet in data.Pets do
+		if pet.Slot ~= 0 then
+			used += 1
+		end
 	end
 	return S.PlotService.PedestalCount(thief) - used
 end
 
-local function canStart(thief: Player, victim: Player?, base: BasePart, kind: string): boolean
+local function canStart(thief: Player, victim: Player?, base: BasePart, kind: string, rarity: string?): boolean
 	if not victim or victim == thief or not S.DataService.Get(thief) or not S.PlotService.Get(thief) then
 		return false
 	end
@@ -99,7 +110,7 @@ local function canStart(thief: Player, victim: Player?, base: BasePart, kind: st
 		S.StateService.Notify(thief, "CantStealProtected", nil, "Bad")
 		return false
 	end
-	if freeCount(thief, kind) - countStolen(thief, kind) < 1 then
+	if freeCount(thief, kind, rarity) - countStolen(thief, kind, rarity) < 1 then
 		S.StateService.Notify(thief, "CantStealNoRoom", nil, "Bad")
 		return false
 	end
@@ -152,7 +163,8 @@ local function startSteal(thief: Player, plot, base: BasePart, kind: "Egg" | "Pe
 			base = base,
 			hidden = S.PetService.Model(victim, slotOrUid),
 		}
-		carryModel = Visuals.MakePet(pet.Id, pet.Mutation, "Mini")
+		-- in braccio il pet e' piccolo (anche i giganti Ultra)
+		carryModel = Visuals.MakePet(pet.Id, pet.Mutation, "Mini", 4.5)
 	end
 	base:SetAttribute("BeingStolen", true)
 	local prompt = base:FindFirstChild("StealPrompt") :: ProximityPrompt?
@@ -212,7 +224,7 @@ function StealService.Complete(thief: Player, item): boolean
 			{ rarity = entry.Rarity, remaining = remaining, duration = entry.Duration, cosmicMin = entry.CosmicMin }
 		)
 	else
-		if not S.PetService.FreeSlot(thief) then
+		if not S.PetService.HasRoomFor(thief, st.rarity) then
 			return false
 		end
 		local pet = S.PetService.RemovePet(victim, st.uid :: string)
@@ -269,10 +281,12 @@ function StealService.Start()
 				end
 			end)
 		end
-		for _, ped in plot.pedestals do
+		for _, ped in S.PlotService.Stands(plot) do
 			ped.stealPrompt.Triggered:Connect(function(thief)
 				local uid = ped.base:GetAttribute("PetUid")
-				if uid and canStart(thief, plot.owner, ped.base, "Pet") then
+				local petId = ped.base:GetAttribute("PetId")
+				local rarity = if petId and Pets.ById[petId] then Pets.ById[petId].rarity else nil
+				if uid and canStart(thief, plot.owner, ped.base, "Pet", rarity) then
 					startSteal(thief, plot, ped.base, "Pet", uid)
 				end
 			end)

@@ -21,6 +21,19 @@ do
 		pet:PivotTo(point.WorldCFrame)
 		pet.Parent = plot.model
 	end
+	-- i giganti Ultra sui troni dei lotti 1-5
+	local Pets = require(ReplicatedStorage.Shared.Config.Pets)
+	local k = 0
+	for _, def in Pets.List do
+		if def.giant then
+			k += 1
+			local p = S.PlotService.ByIndex(k)
+			local giant = Visuals.MakePet(def.id, "None", "Normal")
+			local point = p.throne.base:FindFirstChild("PetPoint") :: Attachment
+			giant:PivotTo(point.WorldCFrame)
+			giant.Parent = p.model
+		end
+	end
 	for i, rarity in { "Common", "Epic", "Legendary" } do
 		local inc = plot.incubators[i]
 		local egg = Visuals.MakeEgg(rarity)
@@ -43,7 +56,9 @@ local function modelName(part: BasePart): string?
 				return pet
 			end
 			local rarity = node:GetAttribute("Rarity")
-			if rarity and (node.Name == "Egg" or node.Name == "IncubatingEgg" or string.sub(node.Name, 1, 3) == "Egg") then
+			if
+				rarity and (node.Name == "Egg" or node.Name == "IncubatingEgg" or string.sub(node.Name, 1, 3) == "Egg")
+			then
 				return "Egg" .. rarity
 			end
 			if ReplicatedStorage.Assets:FindFirstChild(node.Name, true) then
@@ -64,8 +79,19 @@ for _, d in workspace:GetDescendants() do
 			n = d.Name,
 			s = { r3(d.Size.X), r3(d.Size.Y), r3(d.Size.Z) },
 			p = { r3(cf.X), r3(cf.Y), r3(cf.Z) },
-			r = { r3(cf.RightVector.X), r3(cf.RightVector.Y), r3(cf.RightVector.Z), r3(cf.UpVector.X), r3(cf.UpVector.Y), r3(cf.UpVector.Z) },
-			k = { math.floor(d.Color.R * 255 + 0.5), math.floor(d.Color.G * 255 + 0.5), math.floor(d.Color.B * 255 + 0.5) },
+			r = {
+				r3(cf.RightVector.X),
+				r3(cf.RightVector.Y),
+				r3(cf.RightVector.Z),
+				r3(cf.UpVector.X),
+				r3(cf.UpVector.Y),
+				r3(cf.UpVector.Z),
+			},
+			k = {
+				math.floor(d.Color.R * 255 + 0.5),
+				math.floor(d.Color.G * 255 + 0.5),
+				math.floor(d.Color.B * 255 + 0.5),
+			},
 			m = d.Material.Name,
 			t = r3(d.Transparency),
 		}

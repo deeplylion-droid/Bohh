@@ -1,5 +1,5 @@
 --!strict
--- I 32 pet (4 per rarita'). income = monete al secondo di base.
+-- I 37 pet (4 per rarita', 5 Ultra). income = monete al secondo di base.
 -- chance = peso dentro la propria rarita' (il pet piu' raro della fascia guadagna di piu').
 -- model = nome del modello 3D in ReplicatedStorage.Assets.Pets
 
@@ -11,12 +11,22 @@ export type Pet = {
 	model: string,
 	height: number, -- altezza di riferimento in stud (taglia Normale)
 	flying: boolean?, -- fluttua sul piedistallo
+	giant: boolean?, -- creatura Ultra: sta sul trono dietro al lotto, non su un piedistallo
 }
 
 local Pets = {}
 
 local function pet(id: string, rarity: string, income: number, chance: number, height: number, flying: boolean?): Pet
-	return { id = id, rarity = rarity, income = income, chance = chance, model = id, height = height, flying = flying }
+	return {
+		id = id,
+		rarity = rarity,
+		income = income,
+		chance = chance,
+		model = id,
+		height = height,
+		flying = flying,
+		giant = rarity == "Ultra",
+	}
 end
 
 Pets.List = {
@@ -60,6 +70,12 @@ Pets.List = {
 	pet("TortelloneCosmico", "Secret", 60000, 30, 4.6, true),
 	pet("ArancinoAstronauta", "Secret", 70000, 20, 4.8),
 	pet("MozzarellaNinjella", "Secret", 80000, 10, 4.4),
+	-- Ultra: creature colossali, 10 volte piu' grandi degli altri pet
+	pet("InfernoKomodo", "Ultra", 250000, 30, 22),
+	pet("VenomWidow", "Ultra", 300000, 25, 24),
+	pet("ThunderGriffin", "Ultra", 350000, 20, 38),
+	pet("TitanRex", "Ultra", 400000, 15, 40),
+	pet("PentaDragon", "Ultra", 500000, 10, 42),
 }
 
 Pets.ById = {} :: { [string]: Pet }

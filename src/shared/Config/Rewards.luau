@@ -40,6 +40,7 @@ Rewards.IndexRow = {
 	Mythic = 8000000,
 	Divine = 60000000,
 	Secret = 500000000,
+	Ultra = 5000000000,
 }
 
 -- Monete premio per i coin pack si calcolano in Products; le monete dei premi giornalieri crescono

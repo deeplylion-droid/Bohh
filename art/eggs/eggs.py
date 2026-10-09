@@ -1,4 +1,4 @@
-"""Uova per rarita'. Uso: python eggs/eggs.py Common Uncommon Rare Epic Legendary Mythic Divine Secret"""
+"""Uova per rarita'. Uso: python eggs/eggs.py Common Uncommon Rare Epic Legendary Mythic Divine Secret Ultra"""
 import math
 import os
 import sys
@@ -7,8 +7,8 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from lib.sdf import (SDF, Frame, box, crystal, egg, ellipsoid, octahedron, prism, project, sphere, star_points,  # noqa: E402
-                     torus, tube, union)
+from lib.sdf import (SDF, Frame, bezier, box, crystal, egg, ellipsoid, octahedron, prism, project, sphere,  # noqa: E402
+                     star_points, torus, tube, union)
 from lib.toy import Model  # noqa: E402
 
 R, H = 1.15, 3.1
@@ -216,6 +216,34 @@ def build(kind: str) -> Model:
         m.add("Stars", s.offset(0.02).intersect(spots(s, 40, 0.025, 0.05, seed=77)), (235, 255, 255), material="Neon", role="glow", tris=2500, voxel=0.012)
         ring = torus(R + 0.42, 0.06).rot(68, 0, 18).translate(CENTER)
         m.add("Ring", ring, (120, 255, 240), material="Neon", role="glow", tris=1400, voxel=0.015)
+    elif kind == "Ultra":
+        # uovo di drago d'ossidiana, piu' grande degli altri: crepe incandescenti cremisi e oro,
+        # corona di corna d'oro, fascia a zig-zag con gemme e due anelli di energia incrociati
+        US = 1.22
+        m.add("Shell", s.scale(US), (26, 14, 26), reflectance=0.14, tris=9000)
+        m.add("Cracks", cracks(s, 11, seed=91).scale(US), (255, 52, 88), material="Neon", role="glow", tris=5000, voxel=0.013)
+        veins = cracks(s, 6, seed=57, steps=5, step=0.15)
+        m.add("Veins", veins.scale(US), (255, 200, 70), material="Neon", role="glow", tris=3500, voxel=0.012)
+        thin = s.offset(-0.07)
+        band_shape = lift.subtract(thin).intersect(band(1.02, 1.3, 0.12, 10, 0.0, sharp=True))
+        m.add("Band", band_shape.scale(US), (230, 178, 60), material="Foil", role="detail", tris=3000, voxel=0.013)
+        m.add("Gems", gem_ring(s, 7, 1.16, 0.3).scale(US), (255, 40, 80), material="Glass", role="glow", tris=1800, voxel=0.014)
+        horns = []
+        for i in range(6):
+            a = math.radians(i * 60 + 30)
+            d = (math.cos(a) * 0.62, math.sin(a) * 0.62, 0.78)
+            p0, nrm = project(s, CENTER, d)
+            out = np.array([math.cos(a), math.sin(a), 0.0])
+            p0 = np.asarray(p0) - nrm * 0.05
+            pts = bezier(tuple(p0), tuple(p0 + out * 0.25 + np.array([0, 0, 0.12])),
+                         tuple(p0 + out * 0.42 + np.array([0, 0, 0.45])), tuple(p0 + out * 0.3 + np.array([0, 0, 0.82])), 10)
+            radii = [0.17 * (1 - j / 10) ** 0.9 + 0.012 for j in range(len(pts))]
+            horns.append(tube(pts, radii))
+        m.add("Horns", union(*horns).scale(US), (232, 182, 64), material="Foil", role="detail", tris=4000, voxel=0.013)
+        ring_a = torus(R + 0.5, 0.07).rot(72, 0, 20).translate(CENTER)
+        ring_b = torus(R + 0.58, 0.05).rot(16, 0, 25).translate((CENTER[0], CENTER[1], CENTER[2] - 0.15))
+        m.add("RingA", ring_a.scale(US), (255, 60, 100), material="Neon", role="glow", tris=1600, voxel=0.015)
+        m.add("RingB", ring_b.scale(US), (255, 205, 80), material="Neon", role="glow", tris=1600, voxel=0.015)
     else:
         raise SystemExit(f"Rarita' sconosciuta: {kind}")
     m.meta["rarity"] = kind

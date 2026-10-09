@@ -24,6 +24,7 @@ type PetAnim = {
 	parts: { { part: BasePart, offset: CFrame, group: string?, pivot: CFrame? } },
 	seed: number,
 	flying: boolean,
+	giant: boolean,
 	billboard: BillboardGui?,
 }
 
@@ -65,11 +66,13 @@ local function petBillboard(model: Model): BillboardGui
 	local mutation = model:GetAttribute("Mutation") or "None"
 	local size = model:GetAttribute("Size") or "Normal"
 	local _, bbSize = model:GetBoundingBox()
+	-- i giganti Ultra hanno la targhetta piu' grande, visibile da tutta la vetta
+	local giant = model:GetAttribute("Giant") == true
 	local gui = Kit.New("BillboardGui", {
 		Name = "PetInfo",
-		Size = UDim2.fromOffset(220, 92),
-		StudsOffsetWorldSpace = Vector3.new(0, bbSize.Y + 1.6, 0),
-		MaxDistance = 60,
+		Size = if giant then UDim2.fromOffset(330, 138) else UDim2.fromOffset(220, 92),
+		StudsOffsetWorldSpace = Vector3.new(0, bbSize.Y + (if giant then 4 else 1.6), 0),
+		MaxDistance = if giant then 320 else 60,
 		LightInfluence = 0,
 		AlwaysOnTop = false,
 		Adornee = model.PrimaryPart,
@@ -164,6 +167,7 @@ local function addPet(model: Model)
 		parts = parts,
 		seed = math.random() * 10,
 		flying = model:GetAttribute("Flying") == true,
+		giant = model:GetAttribute("Giant") == true,
 		billboard = nil,
 	}
 	pets[model] = anim
@@ -171,15 +175,20 @@ local function addPet(model: Model)
 end
 
 local function animatePet(a: PetAnim, t: number)
-	local s = t + a.seed
+	-- i giganti Ultra si muovono lenti e maestosi
+	local s = (if a.giant then t * 0.4 else t) + a.seed
 	local bob = if a.flying then 1.2 + math.sin(s * 2.2) * 0.45 else math.abs(math.sin(s * 3.1)) * 0.22
-	local sway = math.sin(s * 1.3) * math.rad(7)
+	local sway = math.sin(s * 1.3) * math.rad(if a.giant then 3 else 7)
+	if a.giant then
+		bob = math.sin(s * 2) * 0.35
+	end
 	local squash = 1 + math.sin(s * 6.2) * 0.02
 	local root = a.base * CFrame.new(0, bob, 0) * CFrame.Angles(0, sway, math.sin(s * 2.6) * math.rad(2))
 	for _, p in a.parts do
 		local cf = root * p.offset
 		if p.group and p.pivot then
-			local flap = math.sin(s * (if a.flying then 14 else 9)) * math.rad(if a.flying then 28 else 16)
+			local amp = if a.flying then 28 elseif a.giant then 10 else 16
+			local flap = math.sin(s * (if a.flying then 14 else 9)) * math.rad(amp)
 			local dir = if string.find(p.group, "L") == #p.group then -1 else 1
 			cf = root * p.pivot * CFrame.Angles(0, 0, flap * dir) * p.pivot:Inverse() * p.offset
 		end
@@ -490,7 +499,7 @@ function World.Start()
 		for m, a in pets do
 			if not m.Parent then
 				pets[m] = nil
-			elseif (a.base.Position - camPos).Magnitude < range then
+			elseif (a.base.Position - camPos).Magnitude < (if a.giant then range * 3.5 else range) then
 				animatePet(a, t)
 			end
 		end

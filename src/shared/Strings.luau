@@ -43,6 +43,7 @@ local T: { [string]: Entry } = {
 	Rarity_Mythic = { en = "MYTHIC", it = "MITICO" },
 	Rarity_Divine = { en = "DIVINE", it = "DIVINO" },
 	Rarity_Secret = { en = "SECRET", it = "SEGRETO" },
+	Rarity_Ultra = { en = "ULTRA", it = "ULTRA" },
 
 	-- uova
 	Egg_Common = { en = "Common Egg", it = "Uovo Comune" },
@@ -53,6 +54,7 @@ local T: { [string]: Entry } = {
 	Egg_Mythic = { en = "Mythic Egg", it = "Uovo Mitico" },
 	Egg_Divine = { en = "Divine Egg", it = "Uovo Divino" },
 	Egg_Secret = { en = "Secret Egg", it = "Uovo Segreto" },
+	Egg_Ultra = { en = "Ultra Egg", it = "Uovo Ultra" },
 
 	-- pet
 	Pet_Chick = { en = "Chick", it = "Pulcino" },
@@ -87,6 +89,11 @@ local T: { [string]: Entry } = {
 	Pet_TortelloneCosmico = { en = "Tortellone Cosmico", it = "Tortellone Cosmico" },
 	Pet_ArancinoAstronauta = { en = "Arancino Astronauta", it = "Arancino Astronauta" },
 	Pet_MozzarellaNinjella = { en = "Mozzarella Ninjella", it = "Mozzarella Ninjella" },
+	Pet_InfernoKomodo = { en = "Inferno Komodo", it = "Komodo Infernale" },
+	Pet_VenomWidow = { en = "Venom Widow", it = "Vedova Velenosa" },
+	Pet_ThunderGriffin = { en = "Thunder Griffin", it = "Grifone del Tuono" },
+	Pet_TitanRex = { en = "Titan Rex", it = "Titano Rex" },
+	Pet_PentaDragon = { en = "Penta Dragon", it = "Pentadrago" },
 
 	-- mutazioni e taglie
 	Mutation_Gold = { en = "GOLD", it = "ORO" },
@@ -144,6 +151,11 @@ local T: { [string]: Entry } = {
 		en = "No free pedestal! Sell a pet or expand your base.",
 		it = "Nessun piedistallo libero! Vendi un pet o espandi il lotto.",
 	},
+	NoThrone = {
+		en = "Your Ultra throne is taken! Sell your Ultra pet first.",
+		it = "Il trono Ultra è occupato! Vendi prima il tuo pet Ultra.",
+	},
+	ThroneSign = { en = "ULTRA THRONE", it = "TRONO ULTRA" },
 	PetSold = { en = "Sold {pet} for {price}!", it = "Hai venduto {pet} per {price}!" },
 	Collected = { en = "+{amount}", it = "+{amount}" },
 	UpgradeBought = { en = "{upgrade} upgraded!", it = "{upgrade} potenziato!" },

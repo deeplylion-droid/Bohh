@@ -13,7 +13,12 @@ su per farle schiudere e guadagnano monete con i pet. Si possono rubare uova e p
 2. Le monete si accumulano sulla pedana verde davanti a ogni piedistallo: basta salirci.
 3. Si comprano potenziamenti (velocità, forza, zaino, incubatrici, schiusa rapida, lotto più grande, barriera).
 4. Si scende dalla vetta: Prati → Bosco → Canyon → Grotte di Cristallo → Cratere Vulcanico.
-   Più si scende, più le uova sono rare (8 rarità, 32 pet). Le uova rare pesano e rallentano.
+   Più si scende, più le uova sono rare (9 rarità, 37 pet). Le uova rare pesano e rallentano.
+   Ogni 30-45 minuti nel cratere compare un **uovo Ultra** (annunciato a tutti, con una colonna di
+   luce visibile da tutta la montagna): pesantissimo, si schiude in un'ora e dà uno dei 5 giganti
+   Ultra (Pentadrago, Grifone del Tuono, Komodo Infernale, Titano Rex, Vedova Velenosa), alti
+   10 volte gli altri pet. Il gigante sta sul **trono**, la torre dietro il muro di fondo del lotto
+   (uno per lotto); vendita, furto e raccolta monete sono sull'altare dentro il lotto.
 5. Ostacoli: palle di neve, tronchi e massi che rotolano, tronchi oscillanti, capre che caricano,
    geyser, colate di lava, raffiche di vento, bombe di lava e le mamme guardiane delle tane.
    Ogni 2-3 minuti arriva una valanga: bisogna ripararsi nei rifugi lungo il sentiero.

@@ -79,6 +79,13 @@ Zones.SecretSpawn = {
 	maxInterval = 32 * 60,
 }
 
+-- uovo Ultra: ancora piu' raro, annunciato a tutti e visibile da lontano (colonna di luce)
+Zones.UltraSpawn = {
+	zone = "Crater",
+	minInterval = 30 * 60,
+	maxInterval = 45 * 60,
+}
+
 function Zones.Get(id: string): Zone
 	local z = Zones.List[id]
 	assert(z, `Zona sconosciuta: {id}`)

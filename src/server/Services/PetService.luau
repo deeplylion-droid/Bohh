@@ -60,7 +60,9 @@ function PetService.SellValue(pet): number
 	return math.floor(PetService.BaseIncome(pet) * Rarities.Get(Pets.Get(pet.Id).rarity).sell)
 end
 
-function PetService.FreeSlot(player: Player): number?
+-- Posto libero per un pet: i pet Ultra (giganti) vanno solo sul trono (slot 0), gli altri sui
+-- piedistalli sbloccati. Senza petId si cerca un piedistallo normale.
+function PetService.FreeSlot(player: Player, petId: string?): number?
 	local data = S.DataService.Get(player)
 	if not data then
 		return nil
@@ -68,6 +70,9 @@ function PetService.FreeSlot(player: Player): number?
 	local used = {}
 	for _, pet in data.Pets do
 		used[pet.Slot] = true
+	end
+	if petId and Pets.Get(petId).giant then
+		return if used[0] then nil else 0
 	end
 	for i = 1, S.PlotService.PedestalCount(player) do
 		if not used[i] then
@@ -77,9 +82,16 @@ function PetService.FreeSlot(player: Player): number?
 	return nil
 end
 
+-- C'e' posto per un pet di questa rarita'? (prima di sapere quale pet uscira' dall'uovo)
+function PetService.HasRoomFor(player: Player, rarity: string): boolean
+	local list = Pets.ByRarity[rarity]
+	local sample = list and list[1]
+	return PetService.FreeSlot(player, if sample then sample.id else nil) ~= nil
+end
+
 local function pedestal(player: Player, slot: number)
 	local plot = S.PlotService.Get(player)
-	return plot and plot.pedestals[slot]
+	return plot and S.PlotService.Stand(plot, slot)
 end
 
 local function petAt(player: Player, slot: number): (string?, any)
@@ -152,7 +164,7 @@ end
 -- Aggiunge un pet nuovo (schiusa) o rubato. Ritorna l'uid o nil se non c'e' posto.
 function PetService.AddPet(player: Player, pet: { Id: string, Mutation: string?, Size: string? }): string?
 	local data = S.DataService.Get(player)
-	local slot = PetService.FreeSlot(player)
+	local slot = PetService.FreeSlot(player, pet.Id)
 	if not data or not slot then
 		return nil
 	end
@@ -240,7 +252,7 @@ function PetService.Reflow(player: Player)
 	local count = S.PlotService.PedestalCount(player)
 	for uid, pet in data.Pets do
 		if pet.Slot > count then
-			local free = PetService.FreeSlot(player)
+			local free = PetService.FreeSlot(player, pet.Id)
 			if free then
 				pet.Slot = free
 				S.StateService.Set(player, { "Pets", uid }, pet)
@@ -259,10 +271,11 @@ function PetService.Start()
 		if not data then
 			return
 		end
-		-- slot doppi o oltre il limite (dati vecchi): ricolloca
+		-- slot doppi, oltre il limite o sbagliati per il tipo di pet (dati vecchi): ricolloca
 		local seen = {}
 		for _, pet in data.Pets do
-			if seen[pet.Slot] or pet.Slot > S.PlotService.PedestalCount(player) then
+			local giant = Pets.Get(pet.Id).giant == true
+			if seen[pet.Slot] or pet.Slot > S.PlotService.PedestalCount(player) or (pet.Slot == 0) ~= giant then
 				pet.Slot = 999
 			else
 				seen[pet.Slot] = true
@@ -270,22 +283,23 @@ function PetService.Start()
 		end
 		for uid, pet in data.Pets do
 			if pet.Slot == 999 then
-				local free = PetService.FreeSlot(player)
+				local free = PetService.FreeSlot(player, pet.Id)
 				pet.Slot = free or 999
 			end
 			if pet.Slot ~= 999 then
 				showPet(player, uid)
 			end
 		end
-		for i in plot.pedestals do
-			updatePedestal(player, i)
+		for _, ped in S.PlotService.Stands(plot) do
+			updatePedestal(player, ped.slot)
 		end
 		S.StateService.Push(player, { "Pets" })
 		PetService.PublishIncome(player)
 	end)
 	-- pulsanti collegati una sola volta: il proprietario si legge al momento dell'uso
 	for _, plot in S.PlotService.Plots do
-		for i, ped in plot.pedestals do
+		for _, ped in S.PlotService.Stands(plot) do
+			local i = ped.slot
 			ped.prompt.Triggered:Connect(function(who)
 				if plot.owner == who then
 					sell(who, i)
@@ -321,12 +335,10 @@ function PetService.Start()
 				if data and plot then
 					local mult = PetService.Multiplier(player)
 					for _, pet in data.Pets do
-						if pet.Slot <= #plot.pedestals then
+						local ped = S.PlotService.Stand(plot, pet.Slot)
+						if ped then
 							pet.Bank = (pet.Bank or 0) + PetService.BaseIncome(pet) * mult * GameConfig.IncomeTick
-							local ped = plot.pedestals[pet.Slot]
-							if ped then
-								ped.pad:SetAttribute("Bank", math.floor(pet.Bank))
-							end
+							ped.pad:SetAttribute("Bank", math.floor(pet.Bank))
 						end
 					end
 				end

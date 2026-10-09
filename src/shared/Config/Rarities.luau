@@ -17,7 +17,7 @@ export type Rarity = {
 
 local Rarities = {}
 
-Rarities.Order = { "Common", "Uncommon", "Rare", "Epic", "Legendary", "Mythic", "Divine", "Secret" }
+Rarities.Order = { "Common", "Uncommon", "Rare", "Epic", "Legendary", "Mythic", "Divine", "Secret", "Ultra" }
 
 Rarities.List = {
 	Common = {
@@ -100,9 +100,20 @@ Rarities.List = {
 		sell = 120,
 		announce = true,
 	},
+	-- creature colossali: uova rarissime e pesantissime, un solo pet Ultra per lotto (sul trono)
+	Ultra = {
+		id = "Ultra",
+		order = 9,
+		color = Color3.fromRGB(255, 52, 88),
+		colorDark = Color3.fromRGB(150, 0, 40),
+		weight = 0.3,
+		hatch = 3600,
+		sell = 120,
+		announce = true,
+	},
 } :: { [string]: Rarity }
 
--- Divine e Secret usano un gradiente animato nell'interfaccia
+-- Divine, Secret e Ultra usano un gradiente animato nell'interfaccia
 Rarities.Gradients = {
 	Divine = ColorSequence.new({
 		ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 90, 90)),
@@ -116,6 +127,12 @@ Rarities.Gradients = {
 		ColorSequenceKeypoint.new(0, Color3.fromRGB(40, 255, 220)),
 		ColorSequenceKeypoint.new(0.5, Color3.fromRGB(160, 60, 255)),
 		ColorSequenceKeypoint.new(1, Color3.fromRGB(40, 255, 220)),
+	}),
+	Ultra = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 40, 80)),
+		ColorSequenceKeypoint.new(0.35, Color3.fromRGB(255, 196, 40)),
+		ColorSequenceKeypoint.new(0.7, Color3.fromRGB(190, 60, 255)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 40, 80)),
 	}),
 }
 

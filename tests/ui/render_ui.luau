@@ -320,6 +320,38 @@ SCENES.carry_pet = {
 	run = function() end,
 }
 
+-- novita' Ultra: album con la riga dei giganti, schiusa di un gigante, uovo Ultra in braccio
+SCENES.index_ultra = {
+	data = function(d)
+		d.Index.PentaDragon = { Normal = true }
+		d.Index.VenomWidow = { Normal = true, Gold = true }
+	end,
+	run = function(ctx)
+		ctx.C.UI.Open("Index")
+		-- scorre l'album fino alla riga Ultra (l'ultima)
+		for _, sf in ctx.gui("Panels"):GetDescendants() do
+			if sf:IsA("ScrollingFrame") and sf.Parent and sf.Parent.Name == "Body" then
+				sf.CanvasPosition = roblox.Vector2.new(0, 1600)
+			end
+		end
+	end,
+}
+SCENES.hatch_ultra = {
+	run = function(ctx)
+		local ev = ctx.req("ReplicatedStorage/Shared/Net").Event("HatchReveal")
+		ev.OnClientEvent:Fire({ pet = "PentaDragon", rarity = "Ultra", mutation = "None", size = "Normal", new = true })
+	end,
+	advance = 5.6,
+}
+SCENES.carry_ultra = {
+	attributes = { Carrying = 1, CarryRarity = "Ultra", CarryKind = "Egg", WalkSpeed = 4.8 },
+	workspace = { EventId = "SuperAvalanche", EventEndsAt = NOW + 140 },
+	run = function(ctx)
+		local T = ctx.C.Lang.T
+		ctx.C.UI.Hud.ShowBanner("❄️ " .. T("AvalancheWarn", { t = "9s" }), T("AvalancheWarnSub"), nil, 2)
+	end,
+}
+
 SCENES.loading = {
 	loading = true,
 	workspace = { ServerReady = false },

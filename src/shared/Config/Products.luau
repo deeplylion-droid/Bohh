@@ -34,7 +34,7 @@ Products.Products = {
 Products.SkipHatchTier = {
 	SkipHatchSmall = "Rare",
 	SkipHatchMedium = "Legendary",
-	SkipHatchLarge = "Secret",
+	SkipHatchLarge = "Ultra",
 }
 
 -- Pacchetti monete: minuti di guadagno attuale, con un minimo garantito

@@ -419,13 +419,16 @@ class Renderer:
             inner.append(self.viewport_html(node))
         if cls == "ScrollingFrame":
             kids_html, extent = self.children_html(node, w, h, scrolling=True)
-            inner.append(f'<div style="position:absolute;left:0;top:0;width:{w:.2f}px;height:{max(h, extent):.2f}px">'
-                         f"{kids_html}</div>")
+            cp = p.get("CanvasPosition", ["Vector2", 0, 0])
+            scroll_y = max(0.0, min(cp[2], extent - h))
+            inner.append(f'<div style="position:absolute;left:0;top:{-scroll_y:.2f}px;width:{w:.2f}px;'
+                         f'height:{max(h, extent):.2f}px">{kids_html}</div>')
             if extent > h + 1:
                 th = p.get("ScrollBarThickness", 12)
                 col = rgb(p.get("ScrollBarImageColor3", ["Color3", 0, 0, 0]), 1 - p.get("ScrollBarImageTransparency", 0))
                 bar_h = h * h / extent
-                inner.append(f'<div style="position:absolute;right:0;top:0;width:{th}px;height:{bar_h:.1f}px;'
+                bar_y = (h - bar_h) * scroll_y / max(1.0, extent - h)
+                inner.append(f'<div style="position:absolute;right:0;top:{bar_y:.1f}px;width:{th}px;height:{bar_h:.1f}px;'
                              f'background:{col};border-radius:{th / 2}px"></div>')
         else:
             kids_html, _ = self.children_html(node, w, h)

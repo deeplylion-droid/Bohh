@@ -103,11 +103,8 @@ function Visuals.EggEffects(model: Model, rarity: string)
 	end
 	local r = Rarities.Get(rarity)
 	if r.order >= 3 then
-		local rate = ({ 4, 6, 9, 12, 16, 22 })[r.order - 2]
-		local col = if rarity == "Divine"
-			then Rarities.Gradients.Divine
-			elseif rarity == "Secret" then Rarities.Gradients.Secret
-			else ColorSequence.new(r.color)
+		local rate = ({ 4, 6, 9, 12, 16, 22, 30 })[r.order - 2] or 30
+		local col = Rarities.Gradients[rarity] or ColorSequence.new(r.color)
 		emitter(core, { color = col, rate = rate })
 	end
 	if r.order >= 4 then
@@ -130,6 +127,126 @@ function Visuals.EggEffects(model: Model, rarity: string)
 			speed = NumberRange.new(2, 4),
 			lightEmission = 1,
 		})
+	elseif rarity == "Ultra" then
+		emitter(core, {
+			texture = FIRE,
+			color = ColorSequence.new(Color3.fromRGB(255, 200, 60), Color3.fromRGB(255, 40, 80)),
+			size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1.1), NumberSequenceKeypoint.new(1, 0) }),
+			rate = 18,
+			speed = NumberRange.new(1.5, 3),
+			acceleration = Vector3.new(0, 4, 0),
+			lightEmission = 1,
+		})
+		-- colonna di luce verso il cielo: si vede da tutta la montagna, anche mentre lo si porta via
+		local a0 = Instance.new("Attachment")
+		a0.Name = "BeaconBase"
+		a0.Parent = core
+		local a1 = Instance.new("Attachment")
+		a1.Name = "BeaconTop"
+		a1.Position = Vector3.new(0, 260, 0)
+		a1.Parent = core
+		local beam = Instance.new("Beam")
+		beam.Name = "UltraBeacon"
+		beam.Attachment0 = a0
+		beam.Attachment1 = a1
+		beam.FaceCamera = true
+		beam.Width0 = 3.2
+		beam.Width1 = 1.2
+		beam.LightEmission = 1
+		beam.LightInfluence = 0
+		beam.Segments = 2
+		beam.Color = ColorSequence.new(Color3.fromRGB(255, 70, 110), Color3.fromRGB(255, 210, 90))
+		beam.Transparency = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, 0.15),
+			NumberSequenceKeypoint.new(0.6, 0.5),
+			NumberSequenceKeypoint.new(1, 1),
+		})
+		beam.Parent = core
+		light(core, r.color, 22, 3)
+	end
+end
+
+-- Effetti dei pet Ultra: particelle sulle parti luminose con un nome preciso (vedi gli script in
+-- art/pets). Dimensioni in proporzione alla scala del modello; intensity riduce la quantita'
+-- (pet in braccio o anteprime piccole).
+local PET_FX: { [string]: { [string]: any } } = {
+	Aura = {
+		color = ColorSequence.new(Color3.fromRGB(255, 90, 230), Color3.fromRGB(150, 60, 255)),
+		size = 0.35,
+		rate = 26,
+		speed = NumberRange.new(0.6, 1.6),
+		acceleration = Vector3.new(0, 1.2, 0),
+		lifetime = NumberRange.new(1.4, 2.4),
+		light = Color3.fromRGB(200, 90, 255),
+	},
+	Mane = {
+		color = ColorSequence.new(Color3.fromRGB(255, 255, 210), Color3.fromRGB(80, 220, 255)),
+		size = 0.22,
+		rate = 40,
+		speed = NumberRange.new(2.5, 5),
+		acceleration = Vector3.new(0, 0, 0),
+		lifetime = NumberRange.new(0.15, 0.4),
+		light = Color3.fromRGB(120, 230, 255),
+	},
+	Flames = {
+		texture = FIRE,
+		color = ColorSequence.new(Color3.fromRGB(255, 210, 80), Color3.fromRGB(255, 60, 20)),
+		size = 0.45,
+		rate = 34,
+		speed = NumberRange.new(0.8, 1.8),
+		acceleration = Vector3.new(0, 2.2, 0),
+		lifetime = NumberRange.new(0.6, 1.2),
+		light = Color3.fromRGB(255, 120, 40),
+	},
+	Rage = {
+		texture = FIRE,
+		color = ColorSequence.new(Color3.fromRGB(255, 120, 60), Color3.fromRGB(200, 0, 20)),
+		size = 0.25,
+		rate = 18,
+		speed = NumberRange.new(0.4, 1.0),
+		acceleration = Vector3.new(0, 1.5, 0),
+		lifetime = NumberRange.new(0.8, 1.6),
+		light = Color3.fromRGB(255, 40, 30),
+	},
+	Venom = {
+		color = ColorSequence.new(Color3.fromRGB(190, 255, 80), Color3.fromRGB(40, 220, 60)),
+		size = 0.18,
+		rate = 24,
+		speed = NumberRange.new(0, 0.3),
+		acceleration = Vector3.new(0, -3.5, 0),
+		lifetime = NumberRange.new(0.8, 1.4),
+		light = Color3.fromRGB(110, 255, 80),
+	},
+}
+
+function Visuals.PetEffects(model: Model, petId: string, intensity: number)
+	local def = Pets.ById[petId]
+	if not def or not def.giant then
+		return
+	end
+	local k = model:GetScale()
+	for _, d in model:GetDescendants() do
+		local fx = if d:IsA("BasePart") then PET_FX[d.Name] else nil
+		if fx then
+			local size = fx.size * k
+			emitter(d, {
+				texture = fx.texture,
+				color = fx.color,
+				size = NumberSequence.new({
+					NumberSequenceKeypoint.new(0, size),
+					NumberSequenceKeypoint.new(0.6, size * 0.7),
+					NumberSequenceKeypoint.new(1, 0),
+				}),
+				rate = fx.rate * intensity,
+				speed = NumberRange.new(fx.speed.Min * k, fx.speed.Max * k),
+				acceleration = fx.acceleration * k,
+				lifetime = fx.lifetime,
+				lightEmission = 1,
+			})
+			if intensity >= 1 then
+				light(d, fx.light, 3 * k, 2.2)
+			end
+		end
 	end
 end
 
@@ -205,20 +322,27 @@ function Visuals.ApplyMutation(model: Model, mutation: string)
 	end
 end
 
-function Visuals.MakePet(petId: string, mutation: string?, size: string?): Model
+-- maxHeight: altezza massima in stud (pet portati in braccio o anteprime), anche per i giganti Ultra
+function Visuals.MakePet(petId: string, mutation: string?, size: string?, maxHeight: number?): Model
 	local pet = Pets.Get(petId)
 	local model: Model = clone("Pets", petId) or fallbackEgg(pet.rarity)
 	model.Name = petId
 	model:SetAttribute("PetId", petId)
 	model:SetAttribute("Rarity", pet.rarity)
 	model:SetAttribute("Size", size or "Normal")
+	model:SetAttribute("Giant", pet.giant == true and maxHeight == nil)
 	-- scala: altezza di riferimento del pet x moltiplicatore della taglia
 	local h = (model:GetAttribute("Height") :: number?) or pet.height
-	local scale = (pet.height / math.max(h, 0.1)) * Variants.Sizes[size or "Normal"].scale
+	local target = pet.height * Variants.Sizes[size or "Normal"].scale
+	if maxHeight then
+		target = math.min(target, maxHeight)
+	end
+	local scale = target / math.max(h, 0.1)
 	if math.abs(scale - 1) > 0.01 then
 		model:ScaleTo(scale)
 	end
 	Visuals.ApplyMutation(model, mutation or "None")
+	Visuals.PetEffects(model, petId, if maxHeight then 0.25 else 1)
 	return model
 end
 

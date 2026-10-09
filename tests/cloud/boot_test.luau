@@ -171,7 +171,13 @@ while sPos > 0 do
 end
 table.insert(up, "plaza:" .. reach(from, MapLayout.SummitCenter + Vector3.new(0, 3, 40)))
 add("pathfinding_up", table.concat(up, " "))
-add("crater_floor", reach(MapLayout.PathPoint(MapLayout.PathLength) + Vector3.new(0, 3, 0), MapLayout.Crater.Center + Vector3.new(30, 3, 20)))
+add(
+	"crater_floor",
+	reach(
+		MapLayout.PathPoint(MapLayout.PathLength) + Vector3.new(0, 3, 0),
+		MapLayout.Crater.Center + Vector3.new(30, 3, 20)
+	)
+)
 
 -- modelli 3D caricati (InsertService) e segnaposto rimasti
 local assets = ReplicatedStorage:FindFirstChild("Assets")
@@ -193,6 +199,66 @@ local decor = workspace:FindFirstChild("Decor", true)
 add("decor_models", decor and #decor:GetChildren() or 0)
 local edges = workspace:FindFirstChild("TrailEdges", true)
 add("trail_edges", edges and #edges:GetChildren() or 0)
+
+-- trono Ultra di ogni lotto: torre, altare con i comandi, pedana, punto del pet in cima
+do
+	local bad = {}
+	local plots = S and S.PlotService and S.PlotService.Plots or {}
+	local L = MapLayout.Plot
+	for i, plot in plots do
+		local th = plot.throne
+		if not th then
+			table.insert(bad, `{i}:manca`)
+			continue
+		end
+		local point = th.base:FindFirstChild("PetPoint") :: Attachment?
+		local floorY = plot.cframe.Position.Y
+		if not point or math.abs(point.WorldPosition.Y - (floorY + L.Throne.TowerTop + 0.3)) > 0.05 then
+			table.insert(bad, `{i}:punto`)
+		end
+		if not (th.prompt and th.stealPrompt and th.pad and th.pad:GetAttribute("Slot") == 0) then
+			table.insert(bad, `{i}:comandi`)
+		end
+		if S.PlotService.Stand(plot, 0) ~= th or S.PlotService.Stand(plot, 1) ~= plot.pedestals[1] then
+			table.insert(bad, `{i}:stand`)
+		end
+		-- il piedistallo spostato non deve toccare l'altare ne' gli altri
+		local p18 = plot.cframe:PointToObjectSpace(plot.pedestals[18].base.Position)
+		if (Vector3.new(p18.X, 0, p18.Z) - L.Pedestals[18]).Magnitude > 0.1 then
+			table.insert(bad, `{i}:ped18`)
+		end
+	end
+	add("thrones", #plots)
+	add("throne_problems", #bad == 0 and "none" or table.concat(bad, ","))
+end
+
+-- giganti Ultra sul trono: altezza in gioco rispetto a quella prevista
+do
+	local Pets = require(ReplicatedStorage.Shared.Config.Pets)
+	local Visuals = require(ReplicatedStorage.Shared.Visuals)
+	local sizes = {}
+	local k = 0
+	for _, def in Pets.List do
+		if def.giant and S then
+			k += 1
+			local plot = S.PlotService.ByIndex(k)
+			local m = Visuals.MakePet(def.id, "None", "Normal")
+			local point = plot.throne.base:FindFirstChild("PetPoint") :: Attachment
+			m:PivotTo(point.WorldCFrame)
+			m.Parent = workspace
+			local _, size = m:GetBoundingBox()
+			local emitters = 0
+			for _, d in m:GetDescendants() do
+				if d:IsA("ParticleEmitter") then
+					emitters += 1
+				end
+			end
+			table.insert(sizes, string.format("%s:%.0fx%.0fx%.0f/fx%d", def.id, size.X, size.Y, size.Z, emitters))
+			m:Destroy()
+		end
+	end
+	add("giants", table.concat(sizes, " "))
+end
 
 -- avvisi raccolti durante l'avvio
 add("warnings", #warnings)

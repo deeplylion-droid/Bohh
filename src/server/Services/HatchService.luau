@@ -195,9 +195,9 @@ function HatchService.Hatch(player: Player, slot: string, skipRequirement: boole
 	if inc and inc.base:GetAttribute("BeingStolen") then
 		return -- un ladro lo sta portando via
 	end
-	-- serve un piedistallo libero
-	if not S.PetService.FreeSlot(player) then
-		S.StateService.Notify(player, "NoPedestal", nil, "Bad")
+	-- serve un posto libero: un piedistallo, o il trono per i pet Ultra
+	if not S.PetService.HasRoomFor(player, entry.Rarity) then
+		S.StateService.Notify(player, if entry.Rarity == "Ultra" then "NoThrone" else "NoPedestal", nil, "Bad")
 		return
 	end
 	local luck = S.MonetizationService.LuckMultiplier(player)

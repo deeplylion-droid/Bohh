@@ -60,6 +60,15 @@ export type Plot = {
 			stealPrompt: ProximityPrompt,
 		}
 	},
+	-- trono dei pet Ultra: altare (vendi/ruba) e pedana nel lotto, il pet in cima alla torre
+	throne: {
+		base: BasePart,
+		pad: BasePart,
+		slot: number,
+		prompt: ProximityPrompt,
+		stealPrompt: ProximityPrompt,
+		tower: BasePart,
+	},
 	gateBarrier: BasePart,
 	console: BasePart,
 	consolePrompt: ProximityPrompt,
@@ -365,6 +374,136 @@ local function buildPlot(index: number, parent: Instance): Plot
 		pedestals[i] = { base = baseP, pad = pad, slot = i, prompt = sell, stealPrompt = steal }
 	end
 
+	-- trono Ultra: torre di pietra dietro il muro di fondo (sprofonda nel pendio), anello d'oro e
+	-- bordo luminoso in cima; il gigante sta sulla piattaforma e guarda il cancello
+	local T = L.Throne
+	local ULTRA = Color3.fromRGB(255, 52, 88)
+	local GOLD_TRIM = Color3.fromRGB(230, 178, 60)
+	local towerDepth = 70
+	local tower = Build.Part({
+		name = "ThroneTower",
+		size = Vector3.new(T.TowerTop + towerDepth, T.TowerRadius * 2, T.TowerRadius * 2),
+		cframe = at(T.Tower) * CFrame.new(0, (T.TowerTop - towerDepth) / 2, 0) * CFrame.Angles(0, 0, math.rad(90)),
+		color = STONE_GATE,
+		material = Enum.Material.Slate,
+		shape = Enum.PartType.Cylinder,
+		parent = model,
+	})
+	for _, band in { { T.TowerTop - 0.5, 0.9, 0.7, GOLD_TRIM }, { T.TowerTop - 4, 1.2, 0.5, theme.trim } } do
+		Build.Part({
+			name = "ThroneBand",
+			size = Vector3.new(band[2], T.TowerRadius * 2 + band[3] * 2, T.TowerRadius * 2 + band[3] * 2),
+			cframe = at(T.Tower) * CFrame.new(0, band[1], 0) * CFrame.Angles(0, 0, math.rad(90)),
+			color = band[4],
+			material = Enum.Material.SmoothPlastic,
+			shape = Enum.PartType.Cylinder,
+			collide = false,
+			parent = tower,
+		})
+	end
+	Build.Part({
+		name = "ThroneTop",
+		size = Vector3.new(0.3, T.TowerRadius * 2 - 1.4, T.TowerRadius * 2 - 1.4),
+		cframe = at(T.Tower) * CFrame.new(0, T.TowerTop + 0.1, 0) * CFrame.Angles(0, 0, math.rad(90)),
+		color = theme.wall,
+		material = Enum.Material.SmoothPlastic,
+		shape = Enum.PartType.Cylinder,
+		collide = false,
+		parent = tower,
+	})
+	Build.Part({
+		name = "ThroneGlow",
+		size = Vector3.new(0.25, T.TowerRadius * 2 - 0.4, T.TowerRadius * 2 - 0.4),
+		cframe = at(T.Tower) * CFrame.new(0, T.TowerTop + 0.02, 0) * CFrame.Angles(0, 0, math.rad(90)),
+		color = ULTRA,
+		material = Enum.Material.Neon,
+		shape = Enum.PartType.Cylinder,
+		collide = false,
+		parent = tower,
+	})
+	-- altare nel lotto: come un piedistallo, ma scuro con il piano d'oro e un anello Ultra
+	local altarCf = at(T.Altar)
+	local altar = Build.Part({
+		name = "ThroneAltar",
+		size = Vector3.new(2.6, 6.4, 6.4),
+		cframe = altarCf * CFrame.new(0, 1.3, 0) * CFrame.Angles(0, 0, math.rad(90)),
+		color = Color3.fromRGB(60, 52, 70),
+		material = Enum.Material.Slate,
+		shape = Enum.PartType.Cylinder,
+		parent = model,
+	})
+	Build.Part({
+		name = "Top",
+		size = Vector3.new(0.3, 6.8, 6.8),
+		cframe = altarCf * CFrame.new(0, 2.65, 0) * CFrame.Angles(0, 0, math.rad(90)),
+		color = GOLD_TRIM,
+		shape = Enum.PartType.Cylinder,
+		collide = false,
+		parent = altar,
+	})
+	Build.Part({
+		name = "Ring",
+		size = Vector3.new(0.4, 7.2, 7.2),
+		cframe = altarCf * CFrame.new(0, 0.5, 0) * CFrame.Angles(0, 0, math.rad(90)),
+		color = ULTRA,
+		material = Enum.Material.Neon,
+		shape = Enum.PartType.Cylinder,
+		collide = false,
+		parent = altar,
+	})
+	local throneSign = Build.Part({
+		name = "ThroneSign",
+		size = Vector3.new(6, 1.4, 0.2),
+		cframe = altarCf * CFrame.new(0, 4.2, 0),
+		color = theme.trim,
+		collide = false,
+		transparency = 1,
+		parent = altar,
+	})
+	do
+		local gui = Instance.new("SurfaceGui")
+		gui.Name = "SignGui"
+		gui.Face = Enum.NormalId.Front
+		gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+		gui.PixelsPerStud = 40
+		gui.LightInfluence = 0
+		gui.Parent = throneSign
+		local label = Instance.new("TextLabel")
+		label.Name = "Label"
+		label.BackgroundTransparency = 1
+		label.Size = UDim2.fromScale(1, 1)
+		label.Font = Enum.Font.LuckiestGuy
+		label.TextScaled = true
+		label.TextColor3 = Color3.fromRGB(255, 225, 120)
+		label.TextStrokeTransparency = 0
+		label.TextStrokeColor3 = Color3.fromRGB(29, 22, 48)
+		label.Text = "ULTRA THRONE"
+		label:SetAttribute("Key", "ThroneSign")
+		label.Parent = gui
+		CollectionService:AddTag(label, "LocalizedSign")
+	end
+	local thronePoint = Instance.new("Attachment")
+	thronePoint.Name = "PetPoint"
+	thronePoint.Parent = altar
+	thronePoint.WorldCFrame = at(T.Tower) * CFrame.new(0, T.TowerTop + 0.3, 0)
+	local thronePad = Build.Part({
+		name = "CollectPad",
+		size = Vector3.new(4.6, 0.5, 3.2),
+		cframe = altarCf * CFrame.new(L.CollectPadOffset) * CFrame.new(0, 0.25, 0),
+		color = Color3.fromRGB(120, 230, 110),
+		material = Enum.Material.SmoothPlastic,
+		parent = altar,
+	})
+	thronePad:SetAttribute("Slot", 0)
+	CollectionService:AddTag(thronePad, "CollectPad")
+	local throneSell = prompt(altar, "SellPrompt", "SELL", 1, "Owner")
+	local throneSteal = prompt(altar, "StealPrompt", "STEAL", 2, "Others")
+	altar:SetAttribute("Slot", 0)
+	altar:SetAttribute("Throne", true)
+	CollectionService:AddTag(altar, "Pedestal")
+	local throne =
+		{ base = altar, pad = thronePad, slot = 0, prompt = throneSell, stealPrompt = throneSteal, tower = tower }
+
 	-- console della barriera
 	local consoleCf = at(L.BarrierConsole)
 	local console = Build.Part({
@@ -412,6 +551,7 @@ local function buildPlot(index: number, parent: Instance): Plot
 		theme = theme,
 		incubators = incubators,
 		pedestals = pedestals,
+		throne = throne,
 		gateBarrier = barrier,
 		console = console,
 		consolePrompt = consolePrompt,
@@ -496,6 +636,21 @@ function PlotService.RefreshLocks(player: Player)
 	end
 end
 
+-- Posto di un pet: piedistallo 1..20 oppure il trono Ultra (slot 0)
+function PlotService.Stand(plot: Plot, slot: number)
+	if slot == 0 then
+		return plot.throne
+	end
+	return plot.pedestals[slot]
+end
+
+-- Tutti i posti per i pet (piedistalli e trono), per i cicli che li trattano allo stesso modo
+function PlotService.Stands(plot: Plot): { any }
+	local list = table.clone(plot.pedestals) :: { any }
+	table.insert(list, plot.throne)
+	return list
+end
+
 function PlotService.IncubatorCount(player: Player): number
 	local data = S.DataService.Get(player)
 	if not data then
@@ -566,7 +721,7 @@ local function release(player: Player)
 		inc.stealPrompt.Enabled = false
 		inc.base:SetAttribute("BeingStolen", nil)
 	end
-	for _, ped in plot.pedestals do
+	for _, ped in PlotService.Stands(plot) do
 		ped.prompt.Enabled = false
 		ped.stealPrompt.Enabled = false
 		ped.base:SetAttribute("BeingStolen", nil)

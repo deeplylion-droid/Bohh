@@ -42,16 +42,29 @@ MapLayout.Plot = {
 		end
 		return list
 	end)(),
-	-- 20 piedistalli 5x4 nella parte posteriore (in ordine di sblocco: dalla prima fila)
+	-- 20 piedistalli 5x4 nella parte posteriore (in ordine di sblocco: dalla prima fila). Il posto
+	-- centrale dell'ultima fila e' dell'altare del trono Ultra: quel piedistallo sta davanti a destra.
 	Pedestals = (function()
 		local list = {}
 		for row = 0, 3 do
 			for col = 0, 4 do
-				table.insert(list, Vector3.new(-22 + col * 11, 0, -4 + row * 10))
+				if row == 3 and col == 2 then
+					table.insert(list, Vector3.new(12, 0, -14))
+				else
+					table.insert(list, Vector3.new(-22 + col * 11, 0, -4 + row * 10))
+				end
 			end
 		end
 		return list
 	end)(),
+	-- Trono dei pet Ultra (giganti): torre dietro il muro di fondo con il pet in cima; l'altare con
+	-- vendita/furto e la pedana di raccolta sono dentro il lotto, protetti dalla barriera
+	Throne = {
+		Altar = Vector3.new(0, 0, 26),
+		Tower = Vector3.new(0, 0, 45),
+		TowerRadius = 10,
+		TowerTop = 14, -- quota della piattaforma sopra il pavimento del lotto
+	},
 	CollectPadOffset = Vector3.new(0, 0, -4.6), -- pedana di raccolta davanti a ogni piedistallo
 	BarrierConsole = Vector3.new(20, 0, -25),
 	Traps = { Vector3.new(-5, 0, -29), Vector3.new(5, 0, -29), Vector3.new(0, 0, -23) },

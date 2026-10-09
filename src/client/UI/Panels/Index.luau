@@ -124,12 +124,14 @@ function Panel.Build(parent: Instance, C)
 				end,
 			})
 			local slots = {}
-			for k, pet in Pets.ByRarity[rarity] do
+			local list = Pets.ByRarity[rarity]
+			local w = 1 / #list -- 4 pet per riga, 5 per gli Ultra
+			for k, pet in list do
 				local slot = New("Frame", {
 					BackgroundColor3 = Color3.fromRGB(29, 22, 48),
 					BackgroundTransparency = 0.35,
-					Size = UDim2.new(0.235, 0, 0, 138),
-					Position = UDim2.new((k - 1) * 0.25 + 0.0075, 0, 0, 50),
+					Size = UDim2.new(w - 0.015, 0, 0, 138),
+					Position = UDim2.new((k - 1) * w + 0.0075, 0, 0, 50),
 					Parent = row,
 				}, { Kit.Corner(UDim.new(0, 16)) })
 				local name = Kit.Text({

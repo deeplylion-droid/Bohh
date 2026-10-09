@@ -191,6 +191,16 @@ function NestService.Start()
 			NestService.SpawnSpecial(Zones.SecretSpawn.zone, "Secret")
 		end
 	end)
+	-- uovo Ultra: rarissimo, una colonna di luce lo rende visibile da tutta la montagna
+	task.spawn(function()
+		while true do
+			task.wait(rng:NextNumber(Zones.UltraSpawn.minInterval, Zones.UltraSpawn.maxInterval))
+			-- se un altro uovo Ultra e' ancora in giro se ne aspetta un altro giro
+			if not NestService.UltraAround() then
+				NestService.SpawnSpecial(Zones.UltraSpawn.zone, "Ultra")
+			end
+		end
+	end)
 end
 
 -- L'uovo e' stato messo in un'incubatrice: il nido ricomincia a contare
@@ -269,6 +279,16 @@ end
 
 function NestService.All()
 	return nests
+end
+
+-- C'e' gia' un uovo Ultra in un nido o portato in giro da qualcuno?
+function NestService.UltraAround(): boolean
+	for _, nest in nests do
+		if nest.eggInfo and nest.eggInfo.rarity == "Ultra" and (nest.egg or nest.away) then
+			return true
+		end
+	end
+	return false
 end
 
 return NestService
