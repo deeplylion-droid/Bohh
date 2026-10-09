@@ -76,3 +76,22 @@ asset della libreria ufficiale di Roblox elencati in `tools/sounds.json`.
 Il proprietario (e gli id in `Config/Game.luau` → `ExtraAdmins`) vede il pulsante rosso con la
 chiave inglese: avvio/stop degli eventi, uova speciali in una zona, valanga immediata, monete e
 fortuna di prova, annunci a tutto il server.
+
+## Icona, miniature e pubblicazione
+
+Icona (512×512) e miniature (1920×1080) sono in `art/promo/final/`: si rigenerano con
+`art/promo/render_heroes.py` (render dei pet e delle uova senza ombra, dalla cartella `art/`) e
+`art/promo/make_promo.py` (composizione in HTML fotografata con Chromium).
+
+Passi da fare a mano su Creator Hub (le API non li permettono):
+
+1. **Prova** il gioco: è pubblicato ma **privato**, quindi può entrare solo il proprietario.
+2. **Questionario sulla maturità** dei contenuti (obbligatorio prima di renderlo pubblico).
+3. **Icona e miniature**: caricare `icon.png` e `thumbnail_1/2/3.png` nella configurazione
+   dell'esperienza.
+4. Facoltativo: per il premio "unisciti al gruppo" mettere l'id del gruppo in
+   `Config/Game.luau` → `GroupId` (con 0 il pulsante resta nascosto).
+5. Quando è tutto pronto: impostare l'esperienza come **pubblica**.
+
+Nome e descrizione (inglese con un paragrafo in italiano), server da 8 giocatori, server privati a
+50 R$, game pass e prodotti sono già configurati.
