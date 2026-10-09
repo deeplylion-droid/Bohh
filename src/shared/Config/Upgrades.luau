@@ -15,11 +15,15 @@ local Upgrades = {}
 
 Upgrades.Order = { "Speed", "Strength", "Backpack", "Incubators", "HatchSpeed", "Pedestals", "Barrier" }
 
+-- Costi ripidi: i pet delle zone profonde rendono migliaia di monete al secondo, quindi i livelli alti
+-- devono costare milioni e miliardi per durare (tools/balance_sim.py: un giocatore molto efficiente
+-- completa tutto in circa 20 ore di gioco, uno normale in molte di piu')
+
 Upgrades.List = {
 	-- +1.5 velocita' di camminata per livello (16 -> 46)
-	Speed = { id = "Speed", order = 1, max = 20, base = 60, growth = 1.62, icon = "Speed" },
+	Speed = { id = "Speed", order = 1, max = 20, base = 60, growth = 2.45, icon = "Speed" },
 	-- riduce il rallentamento dovuto al peso del 5% per livello (fino a -75%)
-	Strength = { id = "Strength", order = 2, max = 15, base = 120, growth = 1.7, icon = "Strength" },
+	Strength = { id = "Strength", order = 2, max = 15, base = 120, growth = 3.0, icon = "Strength" },
 	-- uova trasportabili insieme: 1 -> 2 -> 3
 	Backpack = {
 		id = "Backpack",
@@ -27,7 +31,7 @@ Upgrades.List = {
 		max = 2,
 		base = 0,
 		growth = 1,
-		costs = { 7500, 400000 },
+		costs = { 25000, 50000000 },
 		icon = "Backpack",
 	},
 	-- incubatrici nel lotto: 3 -> 8
@@ -37,15 +41,15 @@ Upgrades.List = {
 		max = 5,
 		base = 0,
 		growth = 1,
-		costs = { 2500, 25000, 250000, 2500000, 25000000 },
+		costs = { 2500, 100000, 5000000, 250000000, 10000000000 },
 		icon = "Incubator",
 	},
 	-- schiusa piu' veloce: -6% del tempo per livello (fino a -60%)
-	HatchSpeed = { id = "HatchSpeed", order = 5, max = 10, base = 400, growth = 2.05, icon = "HatchSpeed" },
+	HatchSpeed = { id = "HatchSpeed", order = 5, max = 10, base = 400, growth = 4.0, icon = "HatchSpeed" },
 	-- piedistalli per i pet: 6 -> 20
-	Pedestals = { id = "Pedestals", order = 6, max = 14, base = 800, growth = 1.85, icon = "Pedestal" },
+	Pedestals = { id = "Pedestals", order = 6, max = 14, base = 800, growth = 3.0, icon = "Pedestal" },
 	-- durata della barriera: 60s + 15s per livello (fino a 180s)
-	Barrier = { id = "Barrier", order = 7, max = 8, base = 1500, growth = 2.1, icon = "Barrier" },
+	Barrier = { id = "Barrier", order = 7, max = 8, base = 1500, growth = 4.0, icon = "Barrier" },
 } :: { [string]: Upgrade }
 
 function Upgrades.Cost(id: string, level: number): number?
