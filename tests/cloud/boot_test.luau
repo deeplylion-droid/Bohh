@@ -173,6 +173,27 @@ table.insert(up, "plaza:" .. reach(from, MapLayout.SummitCenter + Vector3.new(0,
 add("pathfinding_up", table.concat(up, " "))
 add("crater_floor", reach(MapLayout.PathPoint(MapLayout.PathLength) + Vector3.new(0, 3, 0), MapLayout.Crater.Center + Vector3.new(30, 3, 20)))
 
+-- modelli 3D caricati (InsertService) e segnaposto rimasti
+local assets = ReplicatedStorage:FindFirstChild("Assets")
+local loaded, placeholders = 0, {}
+if assets then
+	for _, folder in assets:GetChildren() do
+		for _, m in folder:GetChildren() do
+			if m:GetAttribute("Placeholder") then
+				table.insert(placeholders, m.Name)
+			else
+				loaded += 1
+			end
+		end
+	end
+end
+add("assets_loaded", loaded)
+add("assets_placeholders", #placeholders == 0 and "none" or table.concat(placeholders, ","))
+local decor = workspace:FindFirstChild("Decor", true)
+add("decor_models", decor and #decor:GetChildren() or 0)
+local edges = workspace:FindFirstChild("TrailEdges", true)
+add("trail_edges", edges and #edges:GetChildren() or 0)
+
 -- avvisi raccolti durante l'avvio
 add("warnings", #warnings)
 for i = 1, math.min(#warnings, 25) do

@@ -1,13 +1,278 @@
 {
- "images": {},
+ "images": {
+  "IconAlarm": {
+   "decal": 113157752651766,
+   "hash": "7b9fff0fe309a247ea796b79d1047fd994c5e154",
+   "image": 101193026476857
+  },
+  "IconAvalanche": {
+   "decal": 71791028198537,
+   "hash": "88d25cb45de549db9a95d4b8c7006e0b06e2960c",
+   "image": 82572462992371
+  },
+  "IconBackpack": {
+   "decal": 124103663439921,
+   "hash": "0ca74c9640d4c3ac1c09ca3ce2b394726b0bc565",
+   "image": 132415985112294
+  },
+  "IconBarrier": {
+   "decal": 76477918171368,
+   "hash": "1fc2863e7e5ee8bc7734c8c1e1208706e5cdda74",
+   "image": 107466252273848
+  },
+  "IconBat": {
+   "decal": 103394996132187,
+   "hash": "a910c1e270123dcd63cc440bce847704e6afb8a7",
+   "image": 134779205505239
+  },
+  "IconCodes": {
+   "decal": 90835661259367,
+   "hash": "b086b08a7ab0b02bccabc10c841fdf9028a3522f",
+   "image": 94033053251444
+  },
+  "IconCoin": {
+   "decal": 88446830491718,
+   "hash": "00d795ed8843b08d9497b7c4d3eb9b4cf4f52583",
+   "image": 115367231756571
+  },
+  "IconCoinsLarge": {
+   "decal": 77686685247554,
+   "hash": "c441d5e8ec3664e993a9f8feafae8c1ddc11296a",
+   "image": 110604183474573
+  },
+  "IconCoinsMedium": {
+   "decal": 109972553226856,
+   "hash": "7326a047b1f1b61f51301649ba6658d97f40f2ca",
+   "image": 108256651211811
+  },
+  "IconCoinsSmall": {
+   "decal": 93119919201644,
+   "hash": "c29521cc3d60f6fb5f6c749c2178a844a2eddbfd",
+   "image": 71773846891399
+  },
+  "IconDoubleCoins": {
+   "decal": 129444419902709,
+   "hash": "ad7f7a793f95d8398b1d236340c6cc3518cbb795",
+   "image": 81546533011678
+  },
+  "IconEgg": {
+   "decal": 89669706174183,
+   "hash": "c30845d01efb63197996ed99c53aaa5766d33e25",
+   "image": 116380791731128
+  },
+  "IconFriends": {
+   "decal": 106559902442909,
+   "hash": "48af2ef241153568e0ddd49d8aeeb08d8d053788",
+   "image": 140132396413436
+  },
+  "IconGifts": {
+   "decal": 81997584813852,
+   "hash": "30f3ea58867ba518c2a95e4ff18759ab1983b28f",
+   "image": 113426268000131
+  },
+  "IconGoldenHour": {
+   "decal": 87601068107013,
+   "hash": "d218418564e243db62a822793d716501475d1347",
+   "image": 107998422511073
+  },
+  "IconHatchSpeed": {
+   "decal": 137716345224460,
+   "hash": "bd27370343b547eee1e753a99e4b11edb2a62443",
+   "image": 119426363592599
+  },
+  "IconIncubator": {
+   "decal": 86850847150717,
+   "hash": "83fa30c488e9d2cb239db60aa5ff0797260f1389",
+   "image": 108272715936133
+  },
+  "IconIndex": {
+   "decal": 120305526985085,
+   "hash": "0c645b04e3ac2659c93b5699d6a4846304b37f2a",
+   "image": 138755183386090
+  },
+  "IconLock": {
+   "decal": 123264869625598,
+   "hash": "da6a11a48c9daa5fdcc96c7ed311c8a18cd9e85f",
+   "image": 127556457115513
+  },
+  "IconLuck": {
+   "decal": 126279681588988,
+   "hash": "f7f8cb08753290eec515d06008223490cd75183f",
+   "image": 122449666275268
+  },
+  "IconMeteor": {
+   "decal": 127184917916245,
+   "hash": "274f2a58d096204e6b0c69b576d9fafc66b15d06",
+   "image": 106843909265085
+  },
+  "IconPedestal": {
+   "decal": 93485810088662,
+   "hash": "cbeecceae323b2937fa994dbb44fe3ac9ccb0cd0",
+   "image": 110178684696715
+  },
+  "IconSettings": {
+   "decal": 120858429482552,
+   "hash": "f3a36e26a70591a3dfe004739f9475e7848b5ed4",
+   "image": 119207855429322
+  },
+  "IconShop": {
+   "decal": 84485969614245,
+   "hash": "41908d15e15af1109387e65b110ac50e4f19195f",
+   "image": 111194082405153
+  },
+  "IconSkipHatch": {
+   "decal": 85674516749515,
+   "hash": "12dbb836872748616fa055cc7a29a096a6212fbb",
+   "image": 136352348191892
+  },
+  "IconSlap": {
+   "decal": 135447029551543,
+   "hash": "a7a496c459aa306a01f441279f5f309a122f47bc",
+   "image": 132567986358081
+  },
+  "IconSpeed": {
+   "decal": 71325955923422,
+   "hash": "5a056ed35e73a3b8be577d6beb610eabbbfb9992",
+   "image": 139407782555278
+  },
+  "IconStar": {
+   "decal": 112641489386534,
+   "hash": "e949246f2c1605559434e2af3b27853c2cd7fa5c",
+   "image": 99600701305322
+  },
+  "IconStrength": {
+   "decal": 133357354690587,
+   "hash": "579f15c7c0014e70d9a21b0f2b6582795331c085",
+   "image": 122467738951022
+  },
+  "IconThief": {
+   "decal": 136144896659557,
+   "hash": "1ab563cfa7643388fa5381f64a78ae895f167b8a",
+   "image": 76008074958182
+  },
+  "IconTrap": {
+   "decal": 84790592888342,
+   "hash": "e482011df43da3701017b8c8165ee54d348056c9",
+   "image": 136802229080571
+  },
+  "IconUpgrades": {
+   "decal": 103529677605107,
+   "hash": "ee46abc1cf7f46f26ba42cc0997127db1cd2e73d",
+   "image": 138849743472100
+  },
+  "IconVIP": {
+   "decal": 80721587760937,
+   "hash": "0984f5933bfd7e00ac251185b2d4a3b52ebf6657",
+   "image": 126447849633466
+  },
+  "SkyDn": {
+   "decal": 99796846626844,
+   "hash": "1e94f97b30dfc17123be54a0324722e0ba09f5e6",
+   "image": 90690804494524
+  },
+  "SkySide": {
+   "decal": 134623291738404,
+   "hash": "b8f0ef4f9908344b2cac8011151a95dd1ef6b550",
+   "image": 76770476327285
+  },
+  "SkyUp": {
+   "decal": 135226943448644,
+   "hash": "ac2d2d5aae3a0fb7b4662824948af38b935e286a",
+   "image": 115456508303091
+  }
+ },
  "models": {
+  "ArancinoAstronauta": {
+   "asset": 75194894811808,
+   "hash": "d85caf7fd397ef7cd65f3834da9f89eaa5742499"
+  },
+  "BabyGriffin": {
+   "asset": 81018292058388,
+   "hash": "e0948d2fc603839e1a204f35641b727ee7b6ab29"
+  },
+  "BatBaguette": {
+   "asset": 105913763043446,
+   "hash": "8e822c0a187b77e16a27f1d934950203ef4660d9"
+  },
+  "BatCandyCane": {
+   "asset": 95184339535345,
+   "hash": "a2b24c0da79ce3a09757cae9c2f0caebc6a9b228"
+  },
+  "BatFrozenFish": {
+   "asset": 86755016828384,
+   "hash": "61c2ee6a34bd33c5e180978c41ab648f7e79bad4"
+  },
+  "BatGiantSpoon": {
+   "asset": 71772714308143,
+   "hash": "92bb31dd4e7f5bdd91d07233769b91b710150382"
+  },
+  "BatGoldenMallet": {
+   "asset": 89591187155333,
+   "hash": "ba95ad6fcc5b351b10d1794a9fd2d9fc941bf4eb"
+  },
+  "BatRubberMallet": {
+   "asset": 102462824877629,
+   "hash": "d5bb6f6b7250014c589e83e71d8383f4090e7366"
+  },
+  "Bench": {
+   "asset": 102514670772746,
+   "hash": "322e10fb0332904dd7826009c9d1f996dc0bccfa"
+  },
+  "Boulder": {
+   "asset": 73922759028700,
+   "hash": "9d1d049595ddc765e7ad67a7ef53441f4d1480c0"
+  },
   "Bunny": {
    "asset": 108172631570660,
    "hash": "bf4a8c508616c2b2e84fa765fc1c42eaab4c1776"
   },
+  "Bush1": {
+   "asset": 91454754787934,
+   "hash": "a4cd8470374ff8b96f55383e9734cc5584cbb0d9"
+  },
+  "Cactus": {
+   "asset": 136232664545062,
+   "hash": "a9af403772f0927c5a941b10dd387a9a57e90972"
+  },
+  "CanyonRock": {
+   "asset": 93354568282480,
+   "hash": "80063147df60a201573f71caaf92929e565d7cb2"
+  },
   "Chick": {
    "asset": 87872955844098,
    "hash": "af172f34a1a51e7731b14a3531ac2ae95c22cbd9"
+  },
+  "CrystalCluster1": {
+   "asset": 120748511100766,
+   "hash": "9802828fc7d2feaf5f4e0e0c963f982411d8888e"
+  },
+  "CrystalCluster2": {
+   "asset": 133549091213665,
+   "hash": "7dfcd73ec0e6c1f62d8698d9592de3a1f1397589"
+  },
+  "CrystalMother": {
+   "asset": 131071898605393,
+   "hash": "08ea16a9c8ca35ea5336a2a58d7fa90198a52529"
+  },
+  "CrystalTurtle": {
+   "asset": 73895074286810,
+   "hash": "3343b26ea78be19cc28f6e879660155cd973e1ec"
+  },
+  "DeadTree": {
+   "asset": 122979684983032,
+   "hash": "cfc5783d30ee8aee9a65777aea37b06840f10a1f"
+  },
+  "DragonMother": {
+   "asset": 117058120413708,
+   "hash": "9afdd6ea3b32d91048a808127371e537023f1196"
+  },
+  "DryBush": {
+   "asset": 73861310417700,
+   "hash": "0eec90ca79406159c0a6668b4abc77f91be60f07"
+  },
+  "EdgeStones": {
+   "asset": 109619795692992,
+   "hash": "9dab9999d153573dd058416dc4d2d7c66e7902ea"
   },
   "EggCommon": {
    "asset": 118447612830356,
@@ -41,37 +306,217 @@
    "asset": 124179252034752,
    "hash": "cbe9cfd747bd6887d1a0c566ababb43c11b93d59"
   },
+  "FallenLog": {
+   "asset": 73444359042831,
+   "hash": "163c846e637c271d0b7d5e58eb6185765db9106f"
+  },
   "Fawn": {
    "asset": 135402707078067,
    "hash": "2c1df76cb9563c7fed465ba233bedec79390c59b"
+  },
+  "Fern": {
+   "asset": 118720931352280,
+   "hash": "f398c9fc57c057452a1a7d793f175447f828da1c"
+  },
+  "Flowers1": {
+   "asset": 126965206360854,
+   "hash": "d350426e51577fb3894d087dc8171e016f3d15d8"
+  },
+  "Flowers2": {
+   "asset": 123723787700520,
+   "hash": "ccf93ef1001f22e9739f803f6a1efe6af9625b8e"
+  },
+  "FontinelloVolantello": {
+   "asset": 122237248884729,
+   "hash": "6835537ba29ab9a1ae4e1a8e8d1834a7dc50113a"
   },
   "FoxKit": {
    "asset": 116069774612624,
    "hash": "5c3ff5ea021ae4ab1e5e41045672f56c9e40ccc1"
   },
+  "FrostFox": {
+   "asset": 109311377448450,
+   "hash": "3f9604fee70fc546849d1034eb9ac219bd2b5d89"
+  },
+  "GallinaGalattica": {
+   "asset": 135310737444730,
+   "hash": "b7c6a1e34644d407761162ae7a33e3cbed79476f"
+  },
+  "GelatoneMontagnone": {
+   "asset": 139448583479098,
+   "hash": "1f4e64a5aa053405757f3d1af66716b6e72ac3c9"
+  },
+  "GlowAxolotl": {
+   "asset": 76964501214214,
+   "hash": "ce38280b1a3257727ceb22f0beb399e123af574e"
+  },
+  "GlowShroom": {
+   "asset": 82820672262360,
+   "hash": "933c557744e6f8686ff424577c2edddb6840bb34"
+  },
+  "Goat": {
+   "asset": 74754050625434,
+   "hash": "156e6285ee6a0b1b8eed0170d0a4bf6fd039ecb0"
+  },
+  "Grass1": {
+   "asset": 78460483304038,
+   "hash": "3a1edd7a5e0b5c4c0a544e07f14b44ebba2f3af6"
+  },
   "Hedgehog": {
    "asset": 123103805396472,
    "hash": "7aef6c72ab5c8478aa3d5f70cb808b16f35cc8f1"
+  },
+  "Ibex": {
+   "asset": 139765917659775,
+   "hash": "2caa3ca2f9c62802a52b6b58ea86074ad34af7d5"
   },
   "Lamb": {
    "asset": 110152343940847,
    "hash": "241f77f02657a06d854af024b3f8ea51d14ae467"
   },
+  "LampPost": {
+   "asset": 75353498227841,
+   "hash": "4d733c84070a94d7cbbb961d6514087f163ca8ee"
+  },
   "LavaDragon": {
    "asset": 95954678416787,
-   "hash": "389e0f182e85a78fdbf4d2f2dae5e2f15845cbb3"
+   "hash": "0e5dc39856ec5f89bf38a528ac2c2ff92f798044"
+  },
+  "LavaRock": {
+   "asset": 89542298226496,
+   "hash": "c98466ad2463411dc700047224ea972ea72f9d6a"
+  },
+  "LogBorder": {
+   "asset": 133774901876491,
+   "hash": "7b8d65b436990a3f9f56054ba4d476664bdd1a70"
+  },
+  "LumachelloLimoncello": {
+   "asset": 135622641513226,
+   "hash": "05cccdbc708d5656bfa8c356f1ed49652f565c9f"
+  },
+  "Marmot": {
+   "asset": 73465633819925,
+   "hash": "920c310c2230afbb38daa4e83933c04fb91d6dd1"
+  },
+  "Mesa": {
+   "asset": 123405524648238,
+   "hash": "2bf7ee772695ebcdee84e24f4109b2618967c0d3"
+  },
+  "MozzarellaNinjella": {
+   "asset": 132701753839176,
+   "hash": "66e152b69fe7aa56c0026f508eca19725f625d0f"
+  },
+  "MuccaMoka": {
+   "asset": 104222394270053,
+   "hash": "65db1d9d6e5149d483b8d6bf1840c5526f02c32f"
+  },
+  "Mushrooms": {
+   "asset": 75818989221643,
+   "hash": "a4b43e34f006674053438dc702604715ff618c43"
+  },
+  "Nest": {
+   "asset": 130357805851694,
+   "hash": "29039f869e4651742d79dd446191a7510973b168"
+  },
+  "OakTree": {
+   "asset": 135955614453106,
+   "hash": "33a1b31fd75cb912139ec3dea24b3ab7fa13d2e0"
+  },
+  "ObsidianSpikes": {
+   "asset": 106668339020522,
+   "hash": "0011e80bd211582de32ca339472d4c1e68e80eaf"
   },
   "Owlet": {
    "asset": 71876116607799,
    "hash": "a26fb22f0bcbbf4469a5e92156e43c9f4ba58f6b"
   },
+  "Phoenix": {
+   "asset": 91152643182273,
+   "hash": "00b6302cf290f0a82390ccbcbd41a321893e39ac"
+  },
   "Piglet": {
    "asset": 130611433935922,
    "hash": "12ccb915dafc5f8320ea4872fe13fcf2d1f5eca4"
   },
+  "PineSnowy": {
+   "asset": 78652390272557,
+   "hash": "ef8f31e22573a27c3c5e796d729c174acfbabd86"
+  },
+  "PineTree": {
+   "asset": 94655324649946,
+   "hash": "70428647d631b3ea6d31ad7e12ef207c3b0e96b6"
+  },
   "PinguinoPanettone": {
    "asset": 125750564024260,
-   "hash": "8ff1a268626283092643a15109afef01ad233439"
+   "hash": "142fbbab396e2804b4c32b43f262051dbaa4b7ab"
+  },
+  "PizzasauroRex": {
+   "asset": 140654900127918,
+   "hash": "b3c583c233bbd9ddb2f88a3b55847c5824528fea"
+  },
+  "RedPanda": {
+   "asset": 99395105538247,
+   "hash": "e3f6fcbf3e54a9167dda3d89ba466f8f6eb9c247"
+  },
+  "Rock1": {
+   "asset": 74743496234562,
+   "hash": "ba1ea16f0cacec9bcfa8a4b4fe91a46b7aa2c32b"
+  },
+  "Rock2": {
+   "asset": 79960989537013,
+   "hash": "b7409ebf5514e2d1bd0801b9a552a2851ab13caf"
+  },
+  "Rock3": {
+   "asset": 95076207438429,
+   "hash": "b5fd8414eda18b8edd72ea18e2b30c0ca0f14169"
+  },
+  "RockShards": {
+   "asset": 135868428241000,
+   "hash": "9c571f9ef5606ddc9af5bb873d8de8f85d2b5846"
+  },
+  "RockSpire": {
+   "asset": 130151522848403,
+   "hash": "c014fa655b12c539647beb34b3c79d7a1e201b20"
+  },
+  "SnowLeopard": {
+   "asset": 105068395096915,
+   "hash": "c595276b0fcd4765c576e1a0a41dca390bdaed1c"
+  },
+  "SnowRock": {
+   "asset": 139950194340297,
+   "hash": "03c82c582add3293dc745eb112a2fed4bc0f0a09"
+  },
+  "TortelloneCosmico": {
+   "asset": 96403061085622,
+   "hash": "a69b117956130aee11fb4e349a88a5892fd4577a"
+  },
+  "TrapBananaPeel": {
+   "asset": 136493694056328,
+   "hash": "cee82f614de360975ff5346e07934e4158a813d0"
+  },
+  "TrapBearTrap": {
+   "asset": 94420855242408,
+   "hash": "22edb0fd235abe13672d9d41d535056de29b1760"
+  },
+  "TrapSlimePuddle": {
+   "asset": 108297979399546,
+   "hash": "cc07206b858fc609f1a97b76a3ce07d35c0dd839"
+  },
+  "Unicorn": {
+   "asset": 78496939781858,
+   "hash": "2a1a77ebc1bc0dba776f9bde250e5cf53a028969"
+  },
+  "UovissimoImperatore": {
+   "asset": 109110092030919,
+   "hash": "53ae99b79034ee92e8be478185a4a417d8f08fad"
+  },
+  "VulcanoSpaghettone": {
+   "asset": 111369780589501,
+   "hash": "f50c974aac0c3662787678d524a893ee1a0be3ec"
+  },
+  "Yeti": {
+   "asset": 81608070901357,
+   "hash": "2745e2133c2dd850a502139209537a7776e76e7c"
   }
  }
 }
