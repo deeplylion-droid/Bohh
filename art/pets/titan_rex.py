@@ -665,7 +665,7 @@ v_pts, v_nrm = v_pts[keep], v_nrm[keep]
 V_P = polyline(v_pts)
 belly_band = tube([tuple(p) for p in v_pts], 0.38)
 jaw_band = H(JW(capsule((0, -0.12, -0.72), (0, -1.28, -0.52), 0.28)))
-B_PERIOD, B_GROOVE = 0.14, 0.022
+B_PERIOD, B_GROOVE = 0.17, 0.05
 
 
 def belly_fn(p):
@@ -677,7 +677,7 @@ def belly_fn(p):
 
 belly = paint(core, SDF(belly_fn, np.minimum(belly_band.lo, jaw_band.lo), np.maximum(belly_band.hi, jaw_band.hi)),
               out=0.018, inn=0.05)
-m.add("Belly", belly, BELLY, role="detail", tris=4600, voxel=0.0256)
+m.add("Belly", belly, BELLY, role="detail", tris=4600, voxel=0.0245)
 
 T_P = polyline(TAIL_PTS)
 t_ups = np.array([norm(np.array([0, 0, 1.0]) - (sg / ln) * (sg / ln)[2]) for sg, ln in zip(T_P[1], T_P[2])])
@@ -689,13 +689,11 @@ def tail_belly_fn(p):
     vn = np.linalg.norm(v, axis=1) + 1e-9
     cosd = -(v * t_ups[k]).sum(1) / vn
     reg = (0.7 - cosd) * vn
-    reg = np.maximum(reg, s - T_P[3][-1] * 0.6)
-    g = np.abs(np.mod(s / 0.13, 1.0) - 0.5) * 0.13
-    return np.maximum(reg, 0.011 - g).astype(np.float32)
+    return np.maximum(reg, s - T_P[3][-1] * 0.6).astype(np.float32)
 
 
 m.add("TailBelly", paint(tail, SDF(tail_belly_fn, tail.lo, tail.hi), out=0.018, inn=0.05), BELLY, role="detail",
-      tris=1400, voxel=0.0289, group="Tail", pivot=TAIL_PIVOT)
+      tris=1400, voxel=0.0274, group="Tail", pivot=TAIL_PIVOT)
 
 # ============================================================ strisce nere da tigre
 stripes = []
@@ -781,7 +779,7 @@ for sx in (1, -1):
     p, nr = surf(upper, (sx * 0.05, -1.12, 0.1), (sx * 0.14, -1.12, 0.32))
     horns_l.append(horn(p - nr * 0.02, nr, 0.06, 0.04, n=3, r1=0.015))
 spikes += [H(h_) for h_ in horns_l]
-m.add("Spikes", fast_union(spikes), SPIKE, role="detail", tris=4500, voxel=0.0185)
+m.add("Spikes", fast_union(spikes), SPIKE, role="detail", tris=3000, voxel=0.0184)
 
 tail_sp = []
 ts_s = np.linspace(0.25, T_P[3][-1] * 0.92, 9)
@@ -844,7 +842,7 @@ for sx in (1, -1):
                        back_lean=0.22)
     teeth_all += [H(JW(t)) for t in t_]
     gums_all += [H(JW(g)) for g in g_]
-m.add("Teeth", fast_union(teeth_all), BONE, role="shine", tris=5200, voxel=0.0176)
+m.add("Teeth", fast_union(teeth_all), BONE, role="shine", tris=6000, voxel=0.0166)
 m.add("Gums", fast_union(gums_all, k=0.03), GUM, role="detail", tris=1800, voxel=0.0227)
 
 # lingua grossa con il solco centrale, punta che si alza
