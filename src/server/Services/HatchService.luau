@@ -7,6 +7,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Events = require(ReplicatedStorage.Shared.Config.Events)
 local GameConfig = require(ReplicatedStorage.Shared.Config.Game)
 local Net = require(ReplicatedStorage.Shared.Net)
+local Format = require(ReplicatedStorage.Shared.Util.Format)
 local Pets = require(ReplicatedStorage.Shared.Config.Pets)
 local Rarities = require(ReplicatedStorage.Shared.Config.Rarities)
 local Upgrades = require(ReplicatedStorage.Shared.Config.Upgrades)
@@ -128,7 +129,9 @@ function HatchService.Insert(
 		CosmicMin = egg.cosmicMin,
 	})
 	HatchService.ShowEgg(player, slot)
-	S.StateService.Notify(player, "EggDelivered", { egg = "Egg_" .. egg.rarity }, "Good")
+	-- il messaggio dice anche quando sara' pronto (il timer e' sopra l'incubatrice)
+	local left = math.max(0, start + duration - now())
+	S.StateService.Notify(player, "EggDeliveredTime", { egg = "Egg_" .. egg.rarity, t = Format.Clock(left) }, "Good")
 	S.StateService.Effect(player, "Deliver", { rarity = egg.rarity })
 	return true
 end

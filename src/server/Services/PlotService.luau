@@ -97,6 +97,33 @@ local function prompt(
 	return p
 end
 
+-- Pedana di raccolta: disco verde basso (si sale sopra per prendere le monete del pet)
+local PAD_COLOR = Color3.fromRGB(120, 230, 110)
+local function collectPad(cf: CFrame, parent: Instance): BasePart
+	local d = L.CollectPadDiameter
+	local pad = Build.Part({
+		name = "CollectPad",
+		size = Vector3.new(0.3, d, d),
+		cframe = cf * CFrame.new(0, 0.15, 0) * CFrame.Angles(0, 0, math.rad(90)),
+		color = PAD_COLOR,
+		material = Enum.Material.SmoothPlastic,
+		shape = Enum.PartType.Cylinder,
+		parent = parent,
+	})
+	-- bordo piu' scuro: sembra un pulsante a terra
+	Build.Part({
+		name = "PadRim",
+		size = Vector3.new(0.2, d + 0.3, d + 0.3),
+		cframe = cf * CFrame.new(0, 0.1, 0) * CFrame.Angles(0, 0, math.rad(90)),
+		color = PAD_COLOR:Lerp(Color3.new(0, 0, 0), 0.35),
+		material = Enum.Material.SmoothPlastic,
+		shape = Enum.PartType.Cylinder,
+		collide = false,
+		parent = pad,
+	})
+	return pad
+end
+
 local function buildPlot(index: number, parent: Instance): Plot
 	local base = MapLayout.PlotFrame(index) * CFrame.new(0, L.FloorHeight, 0)
 	local theme = THEMES[index]
@@ -128,8 +155,8 @@ local function buildPlot(index: number, parent: Instance): Plot
 		{
 			{ W - 7, 1, 0, -(D - 8) / 2 },
 			{ W - 7, 1, 0, (D - 8) / 2 },
-			{ 1, D - 7, -(W - 8) / 2, 0 },
-			{ 1, D - 7, (W - 8) / 2, 0 },
+			{ 1, D - 9, -(W - 8) / 2, 0 },
+			{ 1, D - 9, (W - 8) / 2, 0 },
 		}
 	do
 		Build.Part({
@@ -145,22 +172,39 @@ local function buildPlot(index: number, parent: Instance): Plot
 	local walls = Build.Model("Walls", model)
 	local BASE_H, GLASS_H = 3.5, 7
 	local glassColor = theme.wall:Lerp(Color3.new(1, 1, 1), 0.55)
-	local function wallRun(name: string, center: Vector3, length: number, alongX: boolean, skipEnds: boolean?)
-		local size = function(thick: number, h: number): Vector3
-			return if alongX then Vector3.new(length, h, thick) else Vector3.new(thick, h, length)
+	-- ends = { inizio, fine }: +1 il pezzo si allunga di mezzo spessore (copre l'angolo), -1 si
+	-- accorcia di mezzo spessore (si ferma contro il muro perpendicolare): negli angoli nessun pezzo
+	-- si sovrappone a un altro con le facce sullo stesso piano (sfarfallio)
+	local function wallRun(
+		name: string,
+		center: Vector3,
+		length: number,
+		alongX: boolean,
+		skipEnds: boolean?,
+		ends: { number }?
+	)
+		local e0, e1 = (ends or { 0, 0 })[1], (ends or { 0, 0 })[2]
+		local function piece(thick: number, h: number, y: number): (Vector3, CFrame)
+			local len = length + (e0 + e1) * thick / 2
+			local shift = (e1 - e0) * thick / 4
+			local size = if alongX then Vector3.new(len, h, thick) else Vector3.new(thick, h, len)
+			local offset = if alongX then Vector3.new(shift, y, 0) else Vector3.new(0, y, shift)
+			return size, at(center + offset)
 		end
+		local baseSize, baseCf = piece(2, BASE_H, BASE_H / 2)
 		Build.Part({
 			name = name .. "Base",
-			size = size(2, BASE_H),
-			cframe = at(center + Vector3.new(0, BASE_H / 2, 0)),
+			size = baseSize,
+			cframe = baseCf,
 			color = theme.wall,
 			material = Enum.Material.WoodPlanks,
 			parent = walls,
 		})
+		local glassSize, glassCf = piece(0.6, GLASS_H, BASE_H + GLASS_H / 2)
 		local glass = Build.Part({
 			name = name .. "Glass",
-			size = size(0.6, GLASS_H),
-			cframe = at(center + Vector3.new(0, BASE_H + GLASS_H / 2, 0)),
+			size = glassSize,
+			cframe = glassCf,
 			color = glassColor,
 			material = Enum.Material.Glass,
 			transparency = 0.55,
@@ -168,10 +212,11 @@ local function buildPlot(index: number, parent: Instance): Plot
 			parent = walls,
 		})
 		glass.Reflectance = 0.08
+		local railSize, railCf = piece(2.4, 1.2, BASE_H + GLASS_H + 0.6)
 		Build.Part({
 			name = name .. "Rail",
-			size = size(2.4, 1.2),
-			cframe = at(center + Vector3.new(0, BASE_H + GLASS_H + 0.6, 0)),
+			size = railSize,
+			cframe = railCf,
 			color = theme.trim,
 			material = Enum.Material.Wood,
 			parent = walls,
@@ -199,13 +244,21 @@ local function buildPlot(index: number, parent: Instance): Plot
 			})
 		end
 	end
-	wallRun("Back", Vector3.new(0, 0, D / 2 - 1), W - 2, true)
+	wallRun("Back", Vector3.new(0, 0, D / 2 - 1), W - 2, true, false, { 1, 1 })
 	for _, sx in { -1, 1 } do
 		-- i pilastri d'angolo li mettono il retro e il fronte (niente doppioni sovrapposti)
-		wallRun("Side", Vector3.new(sx * (W / 2 - 1), 0, 0), D - 2, false, true)
+		wallRun("Side", Vector3.new(sx * (W / 2 - 1), 0, 0), D - 2, false, true, { -1, -1 })
 		local inner = L.GateWidth / 2 + 4
 		local seg = (W / 2 - 1) - inner
-		wallRun("Front", Vector3.new(sx * (inner + seg / 2), 0, -D / 2 + 1), seg, true)
+		-- il tratto davanti copre l'angolo solo dalla parte esterna (verso il cancello si ferma)
+		wallRun(
+			"Front",
+			Vector3.new(sx * (inner + seg / 2), 0, -D / 2 + 1),
+			seg,
+			true,
+			false,
+			if sx < 0 then { 1, 0 } else { 0, 1 }
+		)
 		-- torri ai lati del cancello con bandierine
 		Build.Part({
 			name = "GatePost",
@@ -244,7 +297,7 @@ local function buildPlot(index: number, parent: Instance): Plot
 	-- trave sopra il cancello con insegna del proprietario
 	Build.Part({
 		name = "GateBeam",
-		size = Vector3.new(L.GateWidth + 8, 3, 3),
+		size = Vector3.new(L.GateWidth + 4, 3, 3),
 		cframe = at(Vector3.new(0, H + 2, -D / 2 + 1)),
 		color = theme.trim,
 		material = Enum.Material.Wood,
@@ -357,14 +410,7 @@ local function buildPlot(index: number, parent: Instance): Plot
 		stand.Name = "PetPoint"
 		stand.Parent = baseP
 		stand.WorldCFrame = cf * CFrame.new(0, 2.2, 0) -- i pet guardano il cancello
-		local pad = Build.Part({
-			name = "CollectPad",
-			size = Vector3.new(4.6, 0.5, 3.2),
-			cframe = cf * CFrame.new(L.CollectPadOffset) * CFrame.new(0, 0.25, 0),
-			color = Color3.fromRGB(120, 230, 110),
-			material = Enum.Material.SmoothPlastic,
-			parent = baseP,
-		})
+		local pad = collectPad(cf * CFrame.new(L.CollectPadOffset), baseP)
 		pad:SetAttribute("Slot", i)
 		CollectionService:AddTag(pad, "CollectPad")
 		local sell = prompt(baseP, "SellPrompt", "SELL", 1, "Owner")
@@ -404,7 +450,7 @@ local function buildPlot(index: number, parent: Instance): Plot
 		Build.Part({
 			name = "ThroneTierCap",
 			size = Vector3.new(0.6, r * 2 + 0.6, r * 2 + 0.6),
-			cframe = at(T.Tower) * CFrame.new(0, top - 0.3, 0) * CFrame.Angles(0, 0, math.rad(90)),
+			cframe = at(T.Tower) * CFrame.new(0, top + 0.05, 0) * CFrame.Angles(0, 0, math.rad(90)),
 			color = theme.trim,
 			material = Enum.Material.SmoothPlastic,
 			shape = Enum.PartType.Cylinder,
@@ -466,7 +512,7 @@ local function buildPlot(index: number, parent: Instance): Plot
 	})
 	Build.Part({
 		name = "Ring",
-		size = Vector3.new(0.4, 7.2, 7.2),
+		size = Vector3.new(0.4, 6.9, 6.9),
 		cframe = altarCf * CFrame.new(0, 0.5, 0) * CFrame.Angles(0, 0, math.rad(90)),
 		color = ULTRA,
 		material = Enum.Material.Neon,
@@ -509,14 +555,8 @@ local function buildPlot(index: number, parent: Instance): Plot
 	thronePoint.Name = "PetPoint"
 	thronePoint.Parent = altar
 	thronePoint.WorldCFrame = at(T.Tower) * CFrame.new(0, T.TowerTop + 0.3, 0)
-	local thronePad = Build.Part({
-		name = "CollectPad",
-		size = Vector3.new(4.6, 0.5, 3.2),
-		cframe = altarCf * CFrame.new(L.CollectPadOffset) * CFrame.new(0, 0.25, 0),
-		color = Color3.fromRGB(120, 230, 110),
-		material = Enum.Material.SmoothPlastic,
-		parent = altar,
-	})
+	-- l'anello luminoso dell'altare e' piu' largo del piedistallo: la pedana sta un po' piu' avanti
+	local thronePad = collectPad(altarCf * CFrame.new(L.CollectPadOffset - Vector3.new(0, 0, 0.35)), altar)
 	thronePad:SetAttribute("Slot", 0)
 	CollectionService:AddTag(thronePad, "CollectPad")
 	local throneSell = prompt(altar, "SellPrompt", "SELL", 1, "Owner")
@@ -650,6 +690,11 @@ function PlotService.RefreshLocks(player: Player)
 		local locked = i > pedCount
 		ped.base.Transparency = if locked then 0.7 else 0
 		ped.pad.Transparency = if locked then 1 else 0
+		for _, d in ped.pad:GetChildren() do
+			if d:IsA("BasePart") then
+				d.Transparency = if locked then 1 else 0
+			end
+		end
 		ped.base:SetAttribute("Locked", locked)
 		for _, d in ped.base:GetChildren() do
 			if d:IsA("BasePart") and d ~= ped.pad then

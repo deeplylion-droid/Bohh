@@ -32,12 +32,13 @@ MapLayout.Plot = {
 	WallHeight = 12,
 	GateWidth = 18,
 	SpawnOffset = Vector3.new(0, 3, -20),
-	-- 9 incubatrici in una griglia 3x3 nella parte anteriore sinistra
+	-- 9 incubatrici in una griglia 3x3 nella parte anteriore sinistra (l'ultima fila lascia spazio
+	-- alle pedane della prima fila di piedistalli)
 	Incubators = (function()
 		local list = {}
 		for row = 0, 2 do
 			for col = 0, 2 do
-				table.insert(list, Vector3.new(-24 + col * 7, 0, -26 + row * 7.5))
+				table.insert(list, Vector3.new(-24 + col * 7, 0, -27 + row * 7))
 			end
 		end
 		return list
@@ -61,11 +62,13 @@ MapLayout.Plot = {
 	-- vendita/furto e la pedana di raccolta sono dentro il lotto, protetti dalla barriera
 	Throne = {
 		Altar = Vector3.new(0, 0, 26),
-		Tower = Vector3.new(0, 0, 45),
+		Tower = Vector3.new(0, 0, 47),
 		TowerRadius = 10,
 		TowerTop = 14, -- quota della piattaforma sopra il pavimento del lotto
 	},
-	CollectPadOffset = Vector3.new(0, 0, -4.6), -- pedana di raccolta davanti a ogni piedistallo
+	-- pedana di raccolta: disco verde appoggiato davanti a ogni piedistallo (raggio del piedistallo 3.2)
+	CollectPadOffset = Vector3.new(0, 0, -4.5),
+	CollectPadDiameter = 2.6,
 	BarrierConsole = Vector3.new(20, 0, -25),
 	Traps = { Vector3.new(-5, 0, -29), Vector3.new(5, 0, -29), Vector3.new(0, 0, -23) },
 	Sign = Vector3.new(0, 17, -33),

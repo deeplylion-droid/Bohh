@@ -663,12 +663,40 @@ function G.makeServices(opts)
 	market.PromptProductPurchase = function() end
 	local loc = Instance.new("LocalizationService")
 	loc.RobloxLocaleId = opts.locale or "it-it"
+	-- tag (CollectionService) con i segnali di aggiunta e rimozione
 	local collection = Instance.new("CollectionService")
-	collection.GetTagged = function()
-		return {}
+	local tagged: { [string]: { any } } = {}
+	local added: { [string]: any } = {}
+	local removed: { [string]: any } = {}
+	local function sig(map, tag)
+		map[tag] = map[tag] or newSignal()
+		return map[tag]
 	end
-	collection.GetInstanceAddedSignal = function()
-		return newSignal()
+	collection.GetTagged = function(_, tag)
+		return table.clone(tagged[tag] or {})
+	end
+	collection.HasTag = function(_, inst, tag)
+		return table.find(tagged[tag] or {}, inst) ~= nil
+	end
+	collection.AddTag = function(_, inst, tag)
+		tagged[tag] = tagged[tag] or {}
+		if not table.find(tagged[tag], inst) then
+			table.insert(tagged[tag], inst)
+			sig(added, tag):Fire(inst)
+		end
+	end
+	collection.RemoveTag = function(_, inst, tag)
+		local i = tagged[tag] and table.find(tagged[tag], inst)
+		if i then
+			table.remove(tagged[tag], i)
+			sig(removed, tag):Fire(inst)
+		end
+	end
+	collection.GetInstanceAddedSignal = function(_, tag)
+		return sig(added, tag)
+	end
+	collection.GetInstanceRemovedSignal = function(_, tag)
+		return sig(removed, tag)
 	end
 	local replicatedFirst = Instance.new("ReplicatedFirst")
 	replicatedFirst.RemoveDefaultLoadingScreen = function() end

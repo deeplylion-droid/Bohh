@@ -219,19 +219,20 @@ local incubatorGuis: { [BasePart]: { gui: BillboardGui, label: TextLabel, bar: F
 local function incubatorBillboard(base: BasePart)
 	local gui = Kit.New("BillboardGui", {
 		Name = "IncubatorInfo",
-		Size = UDim2.fromOffset(150, 56),
-		StudsOffsetWorldSpace = Vector3.new(0, 6.2, 0),
-		MaxDistance = 70,
+		Size = UDim2.fromOffset(170, 66),
+		StudsOffsetWorldSpace = Vector3.new(0, 6.6, 0),
+		MaxDistance = 60,
+		AlwaysOnTop = true,
 		LightInfluence = 0,
 		Adornee = base,
 		Enabled = false,
 		Parent = base,
 	})
-	local label = Kit.Text({ Text = "", Size = UDim2.new(1, 0, 0, 30), Parent = gui })
+	local label = Kit.Text({ Text = "", Size = UDim2.new(1, 0, 0, 38), Stroke = 4, Parent = gui })
 	local bar = Kit.New("Frame", {
 		BackgroundColor3 = Color3.fromRGB(29, 22, 48),
-		Size = UDim2.new(0.86, 0, 0, 14),
-		Position = UDim2.new(0.07, 0, 0, 34),
+		Size = UDim2.new(0.86, 0, 0, 16),
+		Position = UDim2.new(0.07, 0, 0, 44),
 		Parent = gui,
 	}, { Kit.Corner(UDim.new(1, 0)), Kit.Stroke(3) })
 	local fill = Kit.New(
@@ -488,9 +489,32 @@ function World.Start()
 		applySmallDecor()
 	end)
 
-	local acc = 0
-	RunService.RenderStepped:Connect(function(dt)
-		acc += dt
+	-- etichette col timer delle incubatrici: ciclo a parte, un errore altrove non le ferma
+	task.spawn(function()
+		while true do
+			local ok, err = pcall(refreshIncubators)
+			if not ok then
+				warn("[World] incubatrici: " .. tostring(err))
+			end
+			task.wait(0.2)
+		end
+	end)
+	-- monumento: rotazione lenta (la posizione di partenza resta in una tabella)
+	local spinnerBase: { [Model]: CFrame } = {}
+	RunService.RenderStepped:Connect(function()
+		local t = os.clock()
+		for _, m in CollectionService:GetTagged("Spinner") do
+			if m:IsA("Model") then
+				local base = spinnerBase[m]
+				if not base then
+					base = m:GetPivot()
+					spinnerBase[m] = base
+				end
+				m:PivotTo(base * CFrame.new(0, math.sin(t) * 0.8, 0) * CFrame.Angles(0, t * 0.4, 0))
+			end
+		end
+	end)
+	RunService.RenderStepped:Connect(function()
 		local t = os.clock()
 		local cam = workspace.CurrentCamera
 		local camPos = cam.CFrame.Position
@@ -503,6 +527,11 @@ function World.Start()
 				animatePet(a, t)
 			end
 		end
+	end)
+	RunService.RenderStepped:Connect(function()
+		local t = os.clock()
+		local camPos = workspace.CurrentCamera.CFrame.Position
+		local range = if lowGfx then 45 else 90
 		-- uova in incubazione: tremolio
 		for m, e in eggs do
 			if not m.Parent then
@@ -521,21 +550,6 @@ function World.Start()
 					p.part.CFrame = root * p.offset
 				end
 			end
-		end
-		-- monumento: rotazione lenta
-		for _, m in CollectionService:GetTagged("Spinner") do
-			if m:IsA("Model") then
-				local base = m:GetAttribute("BaseCF")
-				if not base then
-					m:SetAttribute("BaseCF", m:GetPivot())
-					base = m:GetPivot()
-				end
-				m:PivotTo((base :: CFrame) * CFrame.new(0, math.sin(t) * 0.8, 0) * CFrame.Angles(0, t * 0.4, 0))
-			end
-		end
-		if acc > 0.25 then
-			acc = 0
-			refreshIncubators()
 		end
 	end)
 	-- pet arcobaleno: colore che scorre

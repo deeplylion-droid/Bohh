@@ -143,6 +143,7 @@ local T: { [string]: Entry } = {
 	-- notifiche
 	EggDropped = { en = "You dropped your egg!", it = "Hai perso il tuo uovo!" },
 	EggDelivered = { en = "{egg} is incubating!", it = "{egg} è in incubazione!" },
+	EggDeliveredTime = { en = "{egg} is incubating: ready in {t}!", it = "{egg} è in incubazione: pronto tra {t}!" },
 	NoIncubator = {
 		en = "No free incubator! Upgrade or hatch your eggs.",
 		it = "Nessuna incubatrice libera! Potenzia o schiudi le uova.",
