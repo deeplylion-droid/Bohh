@@ -29,7 +29,7 @@ local THEMES = {
 	{ wall = Color3.fromRGB(66, 100, 196), trim = Color3.fromRGB(34, 52, 112) },
 	{ wall = Color3.fromRGB(128, 82, 196), trim = Color3.fromRGB(70, 42, 116) },
 	{ wall = Color3.fromRGB(198, 86, 152), trim = Color3.fromRGB(112, 42, 86) },
-}}
+}
 
 local WOOD = Color3.fromRGB(176, 128, 84)
 local STONE = Color3.fromRGB(196, 190, 180)
