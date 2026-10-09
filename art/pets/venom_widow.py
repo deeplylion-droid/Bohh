@@ -4,8 +4,8 @@ Una vedova nera gigantesca, lucida come un giocattolo di vinile e grondante di v
 grande clessidra rossa luminosa, otto occhi verde tossico (i due principali sotto palpebre arrabbiate),
 cheliceri con zanne ricurve dalla punta d'osso che sbavano veleno, otto zampe lunghissime a segmenti con le
 articolazioni ben leggibili, spine e artigli d'osso. Posa d'attacco: le due paia anteriori alzate e protese in
-avanti, le posteriori piantate larghe. Tocco "toy horror": una cucitura sull'addome da cui trapela il veleno e
-una toppa cucita.
+avanti, le posteriori piantate larghe con le ginocchia alte sopra il corpo. Tocco "toy horror": una cucitura
+sull'addome da cui trapela il veleno (vene luminose che si allargano dalla ferita) e una toppa cucita.
 
 Tutti gli effetti verdi (gocce, colature, schizzi, pustole, vene, pozza) sono nell'unica parte "Venom" (Neon):
 il gioco ci attacca le particelle di gocciolamento e di nebbia tossica.
@@ -19,17 +19,17 @@ import numpy as np
 from scipy.spatial import cKDTree
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from lib.sdf import (SDF, Frame, bezier, capsule, ellipsoid, prism, project, round_cone, smin, sphere,  # noqa: E402
+from lib.sdf import (SDF, Frame, bezier, box, capsule, ellipsoid, prism, project, round_cone, smin, sphere,  # noqa: E402
                      tube, union)
 from lib.toy import Model  # noqa: E402
 
 # ============================================================ colori
 BLACK = (18, 14, 26)       # nero lucido (blu-viola scurissimo: il nero puro in gioco e' piatto)
-CHITIN = (48, 22, 64)      # viola-nero di articolazioni, cheliceri e filiere
+CHITIN = (48, 22, 64)      # viola-nero di articolazioni, zanne e filiere
 RED = (235, 22, 44)        # clessidra (Neon)
 VENOM = (124, 255, 36)     # verde acido (Neon)
-EYE_G = (176, 255, 60)     # occhi verde tossico (Neon)
-BONE = (242, 230, 200)     # punte di zanne, spine e artigli
+EYE_G = (150, 255, 46)     # occhi verde tossico (Neon)
+BONE = (242, 230, 200)     # punte di zanne, spine e artigli, filo delle cuciture
 SOCKET = (10, 6, 14)
 WHITE = (255, 255, 255)
 PATCH = (92, 46, 124)
@@ -115,12 +115,10 @@ def to_surface(sdf, p, iters=4):
     return p
 
 
-def lid_shape(radii, cut, slope=0.0, grow=0.016, k=0.012):
-    """Palpebra (coordinate locali del Frame): calotta dell'occhio ingrandito sopra z = cut + slope*x."""
-    a, b, c = radii
+def below_line(cut, slope=0.0):
+    """Semispazio sotto la retta z = cut + slope*x (coordinate locali del Frame): taglia il bordo alto degli occhi."""
     nrm = math.sqrt(1.0 + slope * slope)
-    above = SDF(lambda p: (cut + slope * p[:, 0] - p[:, 2]) / nrm, (-1, -1, -1), (1, 1, 1))
-    return ellipsoid((a + grow, b + grow, c + grow)).intersect(above, k=k)
+    return SDF(lambda p: (p[:, 2] - cut - slope * p[:, 0]) / nrm, (-1, -1, -1), (1, 1, 1))
 
 
 def spindle(a, b, ra, rm, rb, at=0.42):
@@ -130,54 +128,121 @@ def spindle(a, b, ra, rm, rb, at=0.42):
     return union(round_cone(tuple(a), tuple(mid), ra, rm), round_cone(tuple(mid), tuple(b), rm, rb))
 
 
-def flow(sdf, p0, step=0.03, n=60, min_tan=0.3):
+def spindle_r(t, ra, rm, rb, at=0.42):
+    return ra + (rm - ra) * t / at if t < at else rm + (rb - rm) * (t - at) / (1 - at)
+
+
+def flow(sdf, p0, step=0.03, n=70, min_tan=0.3):
     """Colatura: dal punto p0 scende lungo la superficie seguendo la gravita' finche' la parete e' ripida."""
     p = to_surface(sdf, p0)
     pts = [p.copy()]
-    for _ in range(n):
+    for i in range(n):
         nrm = normal_at(sdf, p)
         t = np.array([0.0, 0.0, -1.0]) + nrm * nrm[2]
         tl = float(np.linalg.norm(t))
         if tl < min_tan:
             break
-        p = to_surface(sdf, p + t / tl * step, iters=3)
+        side = np.cross(nrm, t / tl)
+        p = to_surface(sdf, p + (t / tl + side * 0.25 * math.sin(i * 0.9)) * step, iters=3)
         pts.append(p.copy())
     return pts
 
 
-def drip(sdf, p0, r0=0.024, r1=0.034, drop=0.06, hang=0.12, step=0.03, n=60, min_tan=0.3, sink=0.4):
-    """Colatura di veleno che scende sulla superficie e finisce con una goccia appesa."""
-    pts = flow(sdf, p0, step, n, min_tan)
-    if len(pts) < 2:
-        pts = [pts[0], pts[0] + np.array([0, 0, -0.02])]
+def drip(sdf, p0, r0=0.026, r1=0.04, drop=0.065, hang=0.13, sink=0.4, **kw):
+    """Colatura di veleno che scende sulla superficie, si gonfia e finisce con una goccia appesa."""
+    pts = flow(sdf, p0, **kw)
+    if len(pts) < 3:
+        pts = [pts[0], pts[0] + np.array([0, 0, -0.03]), pts[0] + np.array([0, 0, -0.06])]
     nrms = [normal_at(sdf, q) for q in pts]
-    m_ = len(pts)
-    radii = [r0 + (r1 - r0) * (i / max(m_ - 1, 1)) ** 1.5 for i in range(m_)]
-    path = [q + nn * r * (1 - 2 * sink) for q, nn, r in zip(pts, nrms, radii)]
-    end = path[-1]
-    c = end + np.array([0.0, 0.0, -hang]) + nrms[-1] * 0.01
-    shapes = [tube([tuple(q) for q in path], radii),
-              round_cone(tuple(end), tuple(c), radii[-1], drop * 0.8), sphere(drop, tuple(c - np.array([0, 0, drop * 0.25])))]
-    return union(*shapes, k=0.02)
+    n = len(pts)
+    radii = [r0 + (r1 - r0) * (i / (n - 1)) ** 1.5 for i in range(n)]
+    path = [q - nn * r * sink for q, nn, r in zip(pts, nrms, radii)]
+    end = pts[-1] + nrms[-1] * radii[-1] * 0.3
+    c = end + np.array([0.0, 0.0, -hang])
+    return [tube([tuple(q) for q in path], radii),
+            union(round_cone(tuple(end), tuple(c + np.array([0, 0, drop * 0.5])), radii[-1], drop * 0.7),
+                  sphere(drop, tuple(c)), k=0.03)]
 
 
 def hang_drop(top, length, r_top, r_drop):
     """Goccia appesa (filo che si gonfia in una lacrima) sotto il punto top."""
     top = np.asarray(top, float)
     c = top + np.array([0.0, 0.0, -length])
-    return union(round_cone(tuple(top), tuple(c + np.array([0, 0, r_drop * 0.6])), r_top, r_drop * 0.75),
+    return union(round_cone(tuple(top), tuple(c + np.array([0, 0, r_drop * 0.6])), r_top, r_drop * 0.7),
                  sphere(r_drop, tuple(c)), k=0.025)
 
 
-def orient_points(pts2d, frame, lift=0.0):
-    return [frame.point((x, -lift, z)) for x, z in pts2d]
+def walk(sdf, p0, heading, length, step=0.04, wiggle=0.09, bend=0.06):
+    """Cammina sulla superficie da p0 verso heading con svolte casuali (percorso di una vena)."""
+    p = to_surface(sdf, p0)
+    h = np.asarray(heading, float)
+    pts = [p.copy()]
+    for _ in range(max(int(length / step), 2)):
+        nrm = normal_at(sdf, p)
+        h = norm(h - nrm * float(h @ nrm))
+        ang = rng.normal() * wiggle + bend
+        h = norm(h * math.cos(ang) + np.cross(nrm, h) * math.sin(ang))
+        p = to_surface(sdf, p + h * step, iters=3)
+        pts.append(p.copy())
+    return pts
+
+
+def vein(sdf, p0, heading, length, r0, r1=0.013, branches=2, depth=1, sink=0.3):
+    """Vena luminosa ramificata che serpeggia sulla superficie (lista di tubi)."""
+    pts = walk(sdf, p0, heading, length, bend=float(rng.uniform(-0.07, 0.07)))
+    n = len(pts)
+    radii = [r0 + (r1 - r0) * (i / (n - 1)) ** 0.7 for i in range(n)]
+    nrms = [normal_at(sdf, q) for q in pts]
+    out = [tube([tuple(q - nn * r * sink) for q, nn, r in zip(pts, nrms, radii)], radii)]
+    if depth > 0:
+        for j in range(branches):
+            i = int(rng.integers(max(n // 4, 1), max(n * 3 // 4, n // 4 + 2)))
+            i = min(i, n - 2)
+            t = norm(np.subtract(pts[i + 1], pts[i - 1]))
+            side = np.cross(nrms[i], t) * (1 if j % 2 == 0 else -1)
+            out += vein(sdf, pts[i], t + side * 1.3, length * 0.42, radii[i] * 0.85, r1, branches=1, depth=depth - 1,
+                        sink=sink)
+    return out
+
+
+def x_stitch(sdf, c, tangent, size=0.085, r=0.02, lift=0.03):
+    """Punto a X (filo d'osso) a cavallo di una cucitura."""
+    nrm = normal_at(sdf, c)
+    t = norm(tangent - nrm * float(tangent @ nrm))
+    s = np.cross(nrm, t)
+    out = []
+    for e in (norm(s + 0.8 * t), norm(s - 0.8 * t)):
+        a = to_surface(sdf, c - e * size) + nrm * 0.004
+        b = to_surface(sdf, c + e * size) + nrm * 0.004
+        out.append(tube([tuple(a), tuple(c + nrm * lift), tuple(b)], r))
+    return out
+
+
+def dash_stitches(sdf, pts, n, dash, r, lift, closed=True):
+    """Trattini di cucitura (perpendicolari al bordo) lungo una polilinea sulla superficie."""
+    pts = np.asarray(pts, dtype=np.float64)
+    if closed:
+        pts = np.vstack([pts, pts[:1]])
+    seg = np.linalg.norm(np.diff(pts, axis=0), axis=1)
+    s = np.concatenate([[0.0], np.cumsum(seg)])
+    out = []
+    for t in np.linspace(0.0, s[-1], n, endpoint=not closed):
+        i = min(np.searchsorted(s, t, side="right") - 1, len(seg) - 1)
+        w = (t - s[i]) / max(seg[i], 1e-9)
+        p = pts[i] * (1 - w) + pts[i + 1] * w
+        tan = (pts[i + 1] - pts[i]) / max(seg[i], 1e-9)
+        nrm = normal_at(sdf, p)
+        d = norm(np.cross(nrm, tan))
+        c = p + nrm * lift
+        out.append(capsule(tuple(c - d * dash * 0.5), tuple(c + d * dash * 0.5), r))
+    return out
 
 
 # ============================================================ corpo: addome enorme + cefalotorace
 m = Model("VenomWidow", "pet")
 
-AB_C = np.array([0.0, 1.2, 1.2])
-AB_R = (1.08, 1.26, 1.0)
+AB_C = np.array([0.0, 1.5, 1.3])
+AB_R = (1.2, 1.36, 1.1)
 AB_PITCH = -6.0
 EGG = 0.09
 
@@ -193,9 +258,9 @@ def _egg(p):
 
 abdomen = ellipsoid(AB_R).warp(_egg, pad=0.12).rot(AB_PITCH, 0, 0).translate(AB_C)
 
-# cefalotorace basso e proteso, inclinato verso l'alto davanti (posa d'attacco)
-CT_PIV = (0.0, -0.5, 0.94)
-CT_PITCH = -18.0
+# cefalotorace impennato: la testa si alza e guarda avanti (posa di minaccia)
+CT_PIV = (0.0, -0.1, 0.9)
+CT_PITCH = -32.0
 _c, _s = math.cos(math.radians(CT_PITCH)), math.sin(math.radians(CT_PITCH))
 _R = np.array([[1, 0, 0], [0, _c, -_s], [0, _s, _c]])
 
@@ -204,67 +269,77 @@ def ct_point(q):
     return _R @ (np.asarray(q, float) - CT_PIV) + CT_PIV
 
 
-thorax = ellipsoid((0.62, 0.6, 0.34), (0, -0.46, 0.96)).rot(CT_PITCH, 0, 0, pivot=CT_PIV)
-HEAD_C0 = np.array([0.0, -1.0, 1.06])
-head_raw = union(ellipsoid((0.46, 0.44, 0.36), tuple(HEAD_C0)), ellipsoid((0.33, 0.25, 0.22), (0, -1.14, 1.27)), k=0.16)
+thorax = ellipsoid((0.62, 0.6, 0.34), (0, -0.5, 0.94)).rot(CT_PITCH, 0, 0, pivot=CT_PIV)
+HEAD_C0 = np.array([0.0, -1.02, 1.04])
+head_raw = union(ellipsoid((0.5, 0.47, 0.39), tuple(HEAD_C0)), ellipsoid((0.36, 0.27, 0.24), (0, -1.18, 1.27)), k=0.16)
 head = head_raw.rot(CT_PITCH, 0, 0, pivot=CT_PIV)
 HEAD_C = ct_point(HEAD_C0)
 ceph = union(thorax, head, k=0.3)
-pedicel = capsule((0, -0.06, 0.88), (0, 0.34, 1.0), 0.15)
-core = union(ceph, pedicel, k=0.1)
-core = union(core, abdomen, k=0.12)
+pedicel = capsule((0, -0.02, 0.86), (0, 0.42, 0.98), 0.15)
+body = union(abdomen, pedicel, k=0.12)
 
-# cheliceri: basi gonfie sotto gli occhi che curvano in avanti e in giu' (neri lucidi, fusi con la testa)
-CHEL = {sx: [np.array([sx * 0.15, -1.16, 0.92]), np.array([sx * 0.185, -1.36, 0.74]),
-             np.array([sx * 0.15, -1.44, 0.55])] for sx in (1, -1)}
-chel = [union(round_cone(tuple(c[0]), tuple(c[1]), 0.165, 0.145), round_cone(tuple(c[1]), tuple(c[2]), 0.145, 0.1), k=0.06)
-        for c in CHEL.values()]
-core = union(core, *chel, k=0.05)
+# cheliceri: basi corte e gonfie sotto gli occhi che puntano in giu' (nere lucide, fuse con la testa)
+CHEL = {sx: [np.array([sx * 0.15, -1.1, 1.42]), np.array([sx * 0.18, -1.27, 1.17])] for sx in (1, -1)}
+chel = {sx: union(sphere(0.17, tuple(c[0])), round_cone(tuple(c[0]), tuple(c[1]), 0.165, 0.135), k=0.05)
+        for sx, c in CHEL.items()}
+ceph = union(ceph, *chel.values(), k=0.05)
+
+# cucitura sul fianco destro dell'addome: il solco (qui) e il veleno che ne trapela (in "Venom")
+SEAM_F = Frame(abdomen, AB_C, (1.0, 0.1, 0.32))
+SEAM = [to_surface(abdomen, SEAM_F.point((x * 1.1, 0.0, z * 1.1))) for x, z in
+        ((0.16, 0.58), (0.06, 0.42), (0.1, 0.24), (0.0, 0.06), (0.05, -0.12), (-0.04, -0.3), (0.0, -0.48))]
+SEAM = [to_surface(abdomen, q) for q in resample(SEAM, 0.05)]
+body = body.subtract(tube([tuple(q) for q in SEAM], 0.044), k=0.014)
+m.add("Body", body, BLACK, reflectance=0.2, tris=9500, voxel=0.016)
 
 # ------------------------------------------------------------ occhi: 2 grandi + 6 piccoli raccolti sulla fronte
-EYES = [  # (direzione dal centro della testa, raggi, palpebra)
-    ((0.25, -1.0, 0.36), (0.13, 0.075, 0.13), True),      # principali (AME)
-    ((0.13, -0.6, 1.0), (0.068, 0.048, 0.068), False),    # mediani posteriori
-    ((0.52, -0.85, 0.6), (0.06, 0.045, 0.06), False),     # laterali anteriori
-    ((0.55, -0.45, 0.95), (0.052, 0.04, 0.052), False),   # laterali posteriori
+EYES = [  # (direzione dal centro della testa, raggi, principale?)
+    ((0.31, -1.0, 0.1), (0.15, 0.095, 0.128), True),      # principali (AME): a mandorla, inclinati
+    ((0.15, -0.85, 0.62), (0.06, 0.045, 0.06), False),    # mediani posteriori
+    ((0.62, -0.8, 0.12), (0.064, 0.048, 0.064), False),   # laterali anteriori
+    ((0.46, -0.7, 0.57), (0.05, 0.04, 0.05), False),      # laterali posteriori
 ]
-eye_glow, sockets, lids, shines = [], [], [], []
+eye_glow, sockets, shines = [], [], []
 for sx in (1, -1):
-    for d, R, has_lid in EYES:
-        f = Frame(head, HEAD_C, (sx * d[0], d[1], d[2]), sink=R[1] * 0.45)
-        eye_glow.append(f.place(ellipsoid(R)))
-        sockets.append(f.place(ellipsoid((R[0] * 1.3, R[1] * 0.85, R[2] * 1.3)), (0, 0.012, 0)))
-        if has_lid:
-            lids.append(f.place(lid_shape(R, cut=0.015, slope=-sx * 0.95, grow=0.022)))
-            shines.append(f.place(sphere(0.026), (-sx * 0.05, -R[1] * 0.9, -0.03)))
-            shines.append(f.place(sphere(0.012), (sx * 0.06, -R[1] * 0.8, -0.075)))
+    for d, R, main in EYES:
+        f = Frame(head, HEAD_C, (sx * d[0], d[1], d[2]), sink=R[1] * (0.25 if main else 0.4))
+        if main:
+            # occhio a mandorla con l'angolo interno in giu' e il bordo alto tagliato dritto: sguardo cattivo
+            # (nel Frame l'asse X locale punta verso il centro per l'occhio destro e verso l'esterno per il sinistro)
+            tilt, slope, cut = sx * 14.0, -sx * 0.6, 0.045
+            eye_glow.append(f.place(ellipsoid(R).rot(0, tilt, 0).intersect(below_line(cut, slope), k=0.01)))
+            sockets.append(f.place(ellipsoid((R[0] * 1.2, R[1] * 0.8, R[2] * 1.32)).rot(0, tilt, 0)
+                                   .intersect(below_line(cut + 0.03, slope), k=0.01), (0, 0.014, 0)))
+            shines.append(f.place(sphere(0.03), (0.03, -R[1] * 0.9, -0.012)))
+            shines.append(f.place(sphere(0.015), (-0.06, -R[1] * 0.76, -0.06)))
         else:
+            eye_glow.append(f.place(ellipsoid(R)))
+            sockets.append(f.place(ellipsoid((R[0] * 1.3, R[1] * 0.85, R[2] * 1.3)), (0, 0.012, 0)))
             shines.append(f.place(sphere(R[0] * 0.22), (R[0] * 0.3, -R[1] * 0.85, R[2] * 0.25)))
-core = union(core, *lids, k=0.02)
-m.add("Body", core, BLACK, reflectance=0.15, tris=9000, voxel=0.018)
+m.add("Head", ceph, BLACK, reflectance=0.2, tris=5000, voxel=0.012)
 
 # ============================================================ zampe
 # giunti (lato destro, x > 0; il sinistro e' speculare): J0 dentro il cefalotorace, J1 fine coxa/trocantere,
 # J2 ginocchio (fine femore), J3 fine patella, J4 fine tibia, J5 fine metatarso, J6 punta del tarso
 LEGS = {
-    # I: alzata in alto e protesa in avanti, artiglio a uncino
-    "I": ([(0.3, -0.92, 1.0), (0.5, -1.08, 1.2), (0.98, -1.3, 2.05), (1.12, -1.46, 2.22), (1.5, -2.08, 2.46),
-           (1.78, -2.72, 2.12), (1.86, -2.96, 1.8)], 1.0),
-    # II: alzata a meta', tesa in avanti e in fuori, punta sospesa
-    "II": ([(0.42, -0.72, 0.96), (0.64, -0.84, 1.14), (1.2, -1.04, 2.08), (1.38, -1.14, 2.2), (2.0, -1.6, 1.82),
-            (2.5, -2.06, 1.16), (2.62, -2.22, 0.86)], 0.96),
+    # I: alzata in alto sopra la testa e protesa in avanti, artiglio a uncino
+    "I": ([(0.3, -0.85, 1.42), (0.52, -1.0, 1.6), (1.02, -1.18, 2.22), (1.18, -1.35, 2.34), (1.58, -1.95, 2.42),
+           (1.86, -2.6, 2.1), (1.92, -2.84, 1.8)], 1.0),
+    # II: alzata, tesa in avanti e in fuori, punta sospesa
+    "II": ([(0.42, -0.66, 1.28), (0.66, -0.78, 1.42), (1.3, -0.98, 2.12), (1.48, -1.1, 2.2), (2.12, -1.56, 1.95),
+            (2.66, -2.02, 1.48), (2.82, -2.2, 1.24)], 0.96),
     # III e IV: piantate larghe a terra, ginocchia alte sopra il corpo
-    "III": ([(0.46, -0.5, 0.93), (0.68, -0.52, 1.1), (1.22, -0.6, 2.12), (1.4, -0.62, 2.2), (1.98, -0.58, 1.2),
-             (2.48, -0.48, 0.32), (2.64, -0.44, 0.016)], 0.9),
-    "IV": ([(0.4, -0.28, 0.91), (0.6, -0.18, 1.08), (1.12, 0.3, 2.1), (1.26, 0.44, 2.18), (1.78, 0.98, 1.22),
-            (2.22, 1.52, 0.32), (2.36, 1.68, 0.016)], 0.95),
+    "III": ([(0.46, -0.46, 1.14), (0.7, -0.48, 1.28), (1.32, -0.56, 2.14), (1.52, -0.58, 2.2), (2.14, -0.55, 1.22),
+             (2.68, -0.46, 0.32), (2.86, -0.42, 0.016)], 0.9),
+    "IV": ([(0.4, -0.26, 1.0), (0.62, -0.16, 1.12), (1.2, 0.3, 2.1), (1.36, 0.44, 2.15), (1.92, 1.0, 1.22),
+            (2.38, 1.56, 0.32), (2.52, 1.72, 0.016)], 0.95),
 }
-SEG_R = [(0.12, 0.12, 0.112), (0.112, 0.13, 0.1), (0.104, 0.116, 0.098), (0.094, 0.104, 0.08),
-         (0.078, 0.078, 0.064), (0.062, 0.055, 0.012)]
-KNUCKLE_R = [0.134, 0.124, 0.11, 0.09, 0.072]
+SEG_R = [(0.14, 0.14, 0.13), (0.13, 0.152, 0.116), (0.12, 0.134, 0.112), (0.108, 0.12, 0.092),
+         (0.09, 0.09, 0.074), (0.072, 0.064, 0.014)]
+KNUCKLE_R = [0.156, 0.144, 0.128, 0.104, 0.084]
 # spine: (segmento, posizione lungo il segmento, angolo attorno all'asse, lunghezza)
-SPIKES = [(1, 0.32, 70, 0.22), (1, 0.6, -60, 0.24), (1, 0.84, 75, 0.19), (3, 0.34, -55, 0.2), (3, 0.7, 50, 0.18),
-          (4, 0.5, -20, 0.15)]
+SPIKES = [(1, 0.28, 75, 0.28), (1, 0.55, -70, 0.32), (1, 0.8, 85, 0.26), (3, 0.28, -65, 0.27), (3, 0.62, 60, 0.24),
+          (4, 0.42, -30, 0.2), (4, 0.75, 40, 0.17)]
 
 
 def leg_joints(pts, sx):
@@ -273,11 +348,21 @@ def leg_joints(pts, sx):
     h = J[-1] - J[0]
     h[2] = 0.0
     h = norm(h)
-    lat = np.array([-h[1], h[0], 0.0])
-    return J, lat
+    return J, np.array([-h[1], h[0], 0.0])
 
 
-def build_leg(J, lat, sc, spikes=SPIKES):
+def seg_frame(J, lat, seg):
+    """Asse del segmento, lato dorsale e lato laterale."""
+    a, b = J[seg], J[seg + 1]
+    s = norm(b - a)
+    ll = norm(lat - s * float(lat @ s))
+    p1 = np.cross(ll, s)
+    if p1[2] < 0:
+        p1 = -p1
+    return a, b, s, p1, ll
+
+
+def build_leg(J, lat, sc):
     """Ritorna (pezzi neri, articolazioni [(centro, raggio)], pezzi d'osso)."""
     black, bone, knuck = [], [], []
     for i in range(6):
@@ -286,42 +371,49 @@ def build_leg(J, lat, sc, spikes=SPIKES):
         if i < 5:
             black.append(spindle(a, b, ra, rm, rb))
         else:  # tarso: nero fino al 60%, poi artiglio d'osso
-            c = a + (b - a) * 0.62
-            black.append(round_cone(tuple(a), tuple(c), ra, rm * 0.95))
-            bone.append(round_cone(tuple(a + (b - a) * 0.52), tuple(b), rm * 0.92, 0.008))
+            c = a + (b - a) * 0.6
+            black.append(round_cone(tuple(a), tuple(c), ra, rm * 0.9))
+            bone.append(round_cone(tuple(a + (b - a) * 0.5), tuple(b), rm * 1.04, 0.008))
     for i, r in enumerate(KNUCKLE_R):
         knuck.append((J[i + 1], r * sc))
-    for seg, t, psi, L in spikes:
-        a, b = J[seg], J[seg + 1]
-        s = norm(b - a)
-        ll = norm(lat - s * float(lat @ s))
-        p1 = np.cross(ll, s)
-        if p1[2] < 0:
-            p1 = -p1
+    for seg, t, psi, L in SPIKES:
+        a, b, s, p1, ll = seg_frame(J, lat, seg)
         d = norm(math.cos(math.radians(psi)) * p1 + math.sin(math.radians(psi)) * ll + 0.6 * s)
         base = a + (b - a) * t
-        r_leg = SEG_R[seg][1] * sc
+        r_leg = spindle_r(t, *SEG_R[seg]) * sc
         L = L * sc
-        p_in = base + d * r_leg * 0.4
-        p_mid = base + d * (r_leg + L * 0.55)
-        tip = base + d * (r_leg + L)
-        black.append(round_cone(tuple(p_in), tuple(p_mid), 0.046 * sc, 0.026))
-        bone.append(round_cone(tuple(base + d * (r_leg + L * 0.45)), tuple(tip), 0.029, 0.005))
+        black.append(round_cone(tuple(base + d * r_leg * 0.4), tuple(base + d * (r_leg + L * 0.52)), 0.058 * sc, 0.03))
+        bone.append(round_cone(tuple(base + d * (r_leg + L * 0.45)), tuple(base + d * (r_leg + L)), 0.042, 0.005))
     return black, knuck, bone
 
 
-legs_front, legs_back, knuckles, bone_bits, leg_axes = [], [], [], [], []
-for name, (pts, sc) in LEGS.items():
+def leg_vein(J, lat, sc, phase):
+    """Vena luminosa che si avvolge attorno al femore e si biforca verso il ginocchio."""
+    a, b, s, p1, ll = seg_frame(J, lat, 1)
+    out = []
+    for turn, t0, t1, ph in ((0.7, 0.08, 0.95, phase), (0.35, 0.55, 0.92, phase + 2.2)):
+        pts, radii = [], []
+        for t in np.linspace(t0, t1, 16):
+            ang = ph + 2 * math.pi * turn * (t - t0) + 0.35 * math.sin(11 * t)
+            r = spindle_r(t, *SEG_R[1]) * sc
+            pts.append(tuple(a + (b - a) * t + (p1 * math.cos(ang) + ll * math.sin(ang)) * r * 0.97))
+            radii.append(0.021 - 0.006 * (t - t0) / (t1 - t0))
+        out.append(tube(pts, radii))
+    return out
+
+
+legs_front, legs_back, knuckles, bone_bits, leg_veins = [], [], [], [], []
+for li, (name, (pts, sc)) in enumerate(LEGS.items()):
     for sx in (1, -1):
         J, lat = leg_joints(pts, sx)
         blk, kn, bn = build_leg(J, lat, sc)
         (legs_front if name in ("I", "II") else legs_back).extend(blk)
         knuckles.extend(kn)
         bone_bits.extend(bn)
-        leg_axes.append((name, sx, J, lat, sc))
+        leg_veins += leg_vein(J, lat, sc, phase=1.3 * li + (0.0 if sx > 0 else 2.0))
 
 # pedipalpi: piccole "braccia" ai lati dei cheliceri, sollevate
-PALP = [(0.27, -1.08, 0.9), (0.42, -1.32, 0.8), (0.46, -1.48, 0.98), (0.42, -1.66, 0.9), (0.38, -1.74, 0.74)]
+PALP = [(0.27, -1.0, 1.34), (0.42, -1.24, 1.18), (0.47, -1.44, 1.34), (0.44, -1.62, 1.24), (0.4, -1.7, 1.06)]
 PALP_R = [0.06, 0.056, 0.05, 0.044, 0.03, 0.01]
 for sx in (1, -1):
     P = [np.array([sx * x, y, z]) for x, y, z in PALP]
@@ -330,96 +422,145 @@ for sx in (1, -1):
             legs_front.append(spindle(P[i], P[i + 1], PALP_R[i], PALP_R[i] * 1.1, PALP_R[i + 1]))
         else:
             c = P[i] + (P[i + 1] - P[i]) * 0.55
-            legs_front.append(round_cone(tuple(P[i]), tuple(c), PALP_R[i], PALP_R[i] * 0.9))
-            bone_bits.append(round_cone(tuple(P[i] + (P[i + 1] - P[i]) * 0.45), tuple(P[i + 1]), PALP_R[i] * 0.85, 0.006))
+            legs_front.append(round_cone(tuple(P[i]), tuple(c), PALP_R[i], PALP_R[i] * 0.85))
+            bone_bits.append(round_cone(tuple(P[i] + (P[i + 1] - P[i]) * 0.45), tuple(P[i + 1]), PALP_R[i] * 1.02,
+                                        0.006))
     for q, r in zip(P[1:-1], (0.068, 0.06, 0.05)):
         knuckles.append((q, r))
 
-m.add("LegsFront", fast_union(legs_front, k=0.012), BLACK, reflectance=0.1, tris=9000, voxel=0.014)
-m.add("LegsBack", fast_union(legs_back, k=0.012), BLACK, reflectance=0.1, tris=7500, voxel=0.014)
 
-# ============================================================ zanne (viola-nero con la punta d'osso) e dentini
-chel_parts, fang_tips, fang_tip_pts, teeth = [], [], [], []
+# ============================================================ zanne a falce (viola-nero, punta d'osso) e dentini
+chitin, fang_tips, fang_tip_pts, fang_curves, bristles = [], [], [], [], []
 for sx, c in CHEL.items():
-    base = c[2] + np.array([0.0, -0.02, 0.03])
-    fang = bezier(tuple(base), (sx * 0.19, -1.6, 0.36), (sx * 0.12, -1.62, 0.2), (sx * 0.03, -1.5, 0.13), 16)
-    fr = [0.096 * (1 - i / 16) ** 0.8 + 0.008 for i in range(17)]
-    chel_parts.append(tube(fang[:11], fr[:11]))
-    chel_parts.append(sphere(0.112, tuple(base + np.array([0, 0, 0.02]))))   # snodo della zanna
-    fang_tips.append(tube(fang[9:], fr[9:]))
+    base = c[1] + np.array([0.0, -0.03, -0.04])
+    fang = bezier(tuple(base), (sx * 0.28, -1.5, 0.95), (sx * 0.21, -1.6, 0.7), (sx * 0.05, -1.5, 0.58), 18)
+    fr = [0.098 * (1 - i / 18) ** 0.75 + 0.007 for i in range(19)]
+    chitin.append(tube(fang[:12], fr[:12]))
+    chitin.append(sphere(0.118, tuple(base)))   # snodo della zanna
+    fang_tips.append(tube(fang[10:], [fr[i] + 0.008 * max(0.0, 1 - (i - 10) / 3) for i in range(10, 19)]))
     fang_tip_pts.append(np.array(fang[-1]))
-    # dentini sul bordo interno del chelicero
-    for t in (0.35, 0.6, 0.85):
-        q = c[1] + (c[2] - c[1]) * t
-        p0, nn = project(chel[0 if sx > 0 else 1], q, (-sx * 0.8, -0.6, -0.1))
-        teeth.append(round_cone(tuple(p0 - nn * 0.02), tuple(p0 + norm((-sx * 0.7, -0.5, -0.5)) * 0.09), 0.032, 0.005))
-chel_parts.append(spheres([q for q, _ in knuckles], [r for _, r in knuckles]))
+    fang_curves.append((fang, fr))
+    # setole nere sul davanti del chelicero
+    for (u, v), L in zip(((0.2, -0.4), (0.45, 0.35), (0.65, -0.2), (0.85, 0.3), (0.35, 0.95)), (0.13, 0.12, 0.12, 0.1, 0.11)):
+        q = c[0] + (c[1] - c[0]) * u
+        p0, nn = project(chel[sx], q, (sx * v, -1.0, -0.15))
+        bristles.append(round_cone(tuple(p0 - nn * 0.03), tuple(p0 + norm(nn + np.array([0, 0, -0.9])) * L), 0.034, 0.006))
+chitin.append(spheres([q for q, _ in knuckles], [r for _, r in knuckles]))
 # filiere in fondo all'addome
-SPIN_C = AB_C + np.array([0.0, 1.1, -0.42])
-chel_parts += [round_cone(tuple(AB_C + [dx, 0.95, -0.36]), tuple(AB_C + [dx * 1.4, 1.22, -0.5]), 0.07, 0.04)
-               for dx in (-0.08, 0.08)]
-m.add("Chitin", fast_union(chel_parts, k=0.01), CHITIN, reflectance=0.15, role="detail", tris=5000, voxel=0.014)
-m.add("Bone", fast_union(fang_tips + teeth + bone_bits), BONE, role="detail", tris=3000, voxel=0.012)
+SPIN, SPIN_N = project(abdomen, AB_C, (0.0, 0.8, -0.6))
+for dx, dz in ((-0.09, 0.03), (0.09, 0.03), (0.0, -0.06)):
+    q = SPIN + np.array([dx, 0.0, dz]) - SPIN_N * 0.06
+    chitin.append(round_cone(tuple(q), tuple(q + SPIN_N * 0.2 + np.array([dx * 0.6, 0, 0])), 0.075, 0.045))
+m.add("LegsFront", fast_union(legs_front + bristles, k=0.012), BLACK, reflectance=0.2, tris=8500, voxel=0.013)
+m.add("LegsBack", fast_union(legs_back, k=0.012), BLACK, reflectance=0.2, tris=7500, voxel=0.013)
+m.add("Chitin", fast_union(chitin, k=0.01), CHITIN, reflectance=0.15, role="detail", tris=4500, voxel=0.013)
 
-# ============================================================ clessidra rossa sul dorso dell'addome
-HG = Frame(abdomen, AB_C, (0.0, -0.42, 0.9))
-W, H, w0 = 0.36, 0.5, 0.075
-hg_poly = [(W, H), (-W, H), (-w0 * 1.6, H * 0.3), (-w0, 0.0), (-w0 * 1.6, -H * 0.3), (-W, -H), (W, -H),
-           (w0 * 1.6, -H * 0.3), (w0, 0.0), (w0 * 1.6, H * 0.3)]
-hg_region = HG.place(prism(hg_poly, -0.6, 0.6).offset(0.03).rot(90, 0, 0))
-m.add("Hourglass", paint(abdomen, hg_region, d=0.02, depth=0.05, k=0.006), RED, material="Neon", role="glow",
-      tris=1500, voxel=0.012)
+# punti a X sulla cucitura (filo d'osso)
+stitches = []
+seam_rs = resample(SEAM, 0.12)
+for i in range(1, len(seam_rs) - 1):
+    stitches += x_stitch(abdomen, seam_rs[i], np.subtract(seam_rs[i + 1], seam_rs[i - 1]), size=0.085, r=0.021)
+
+# ============================================================ toppa cucita (fianco sinistro, vista di fronte)
+PF = Frame(abdomen, AB_C, (-0.66, -0.36, 0.66))
+PW, PH = 0.22, 0.18
+patch_region = PF.place(box((PW, 0.7, PH), round=0.06).rot(0, 14, 0))
+m.add("Patch", paint(abdomen, patch_region, d=0.032, depth=0.04, k=0.006), PATCH, material="Fabric", role="detail",
+      tris=700, voxel=0.012)
+border = []
+for i in range(32):
+    tt = 2 * math.pi * i / 32
+    x, z = (PW - 0.045) * math.cos(tt), (PH - 0.045) * math.sin(tt)
+    sq = max(abs(math.cos(tt)), abs(math.sin(tt)))
+    x, z = x / sq ** 0.7, z / sq ** 0.7
+    ca, sa = math.cos(math.radians(-14)), math.sin(math.radians(-14))
+    border.append(to_surface(abdomen, PF.point((x * ca - z * sa, 0.0, x * sa + z * ca))))
+stitches += dash_stitches(abdomen, border, 12, 0.075, 0.019, lift=0.036)
+m.add("Bone", fast_union(fang_tips + bone_bits + stitches), BONE, role="detail", tris=3500, voxel=0.012)
+
+# ============================================================ clessidra rossa sul dorso dell'addome (+ macchioline)
+HG = Frame(abdomen, AB_C, (0.0, -0.5, 0.86))
+W, H, w0 = 0.38, 0.72, 0.06
+hg_poly = [(W, H), (-W, H), (-W * 0.55, H * 0.5), (-w0, 0.05), (-w0, -0.05), (-W * 0.55, -H * 0.5), (-W, -H), (W, -H),
+           (W * 0.55, -H * 0.5), (w0, -0.05), (w0, 0.05), (W * 0.55, H * 0.5)]
+hg_region = HG.place(prism(hg_poly, -0.7, 0.7).offset(0.03).rot(90, 0, 0))
+dots = []
+for d, r in (((0.0, 0.52, 0.86), 0.075), ((0.0, 0.8, 0.6), 0.064), ((0.0, 0.96, 0.28), 0.052)):
+    p, _ = project(abdomen, AB_C, d)
+    dots.append(sphere(r, tuple(p)))
+m.add("Hourglass", paint(abdomen, union(hg_region, *dots), d=0.02, depth=0.05, k=0.006), RED, material="Neon",
+      role="glow", tris=1300, voxel=0.012)
 
 # ============================================================ occhi
-m.add("EyeGlow", union(*eye_glow), EYE_G, material="Neon", role="glow", tris=1800, voxel=0.01)
-m.add("Sockets", union(*sockets), SOCKET, role="eye", tris=1000, voxel=0.01)
+m.add("EyeGlow", union(*eye_glow), EYE_G, material="Neon", role="glow", tris=1600, voxel=0.009)
+m.add("Sockets", union(*sockets), SOCKET, role="eye", tris=700, voxel=0.009)
 
 # ============================================================ veleno (unica parte "Venom")
-venom = []
-# gocce appese alle zanne e bava che pende fra le due punte
-for tp in fang_tip_pts:
-    venom.append(hang_drop(tp + np.array([0, -0.005, 0.01]), 0.13, 0.018, 0.045))
+venom = list(leg_veins)
+# fili lunghi appesi alle zanne, una goccia in caduta e bava che pende fra le due punte
+for tp, L in zip(fang_tip_pts, (0.22, 0.17)):
+    venom.append(hang_drop(tp + np.array([0, -0.004, 0.014]), L, 0.02, 0.052))
 a, b = fang_tip_pts
-sag = [a + (b - a) * t + np.array([0.0, -0.01, -0.12 * math.sin(math.pi * t)]) for t in np.linspace(0, 1, 9)]
-venom.append(tube([tuple(q) for q in sag], [0.016, 0.017, 0.019, 0.022, 0.024, 0.022, 0.019, 0.017, 0.016]))
-venom.append(hang_drop(sag[4], 0.09, 0.022, 0.04))
-# pozza a terra sotto le zanne con schizzi
-pz = (0.0, -1.46, 0.0)
-venom.append(union(ellipsoid((0.3, 0.22, 0.03), pz), ellipsoid((0.16, 0.14, 0.03), (0.22, -1.62, 0.0)),
-                   ellipsoid((0.14, 0.12, 0.03), (-0.2, -1.36, 0.0)), k=0.06))
-for ang, dist, r in ((20, 0.42, 0.03), (75, 0.36, 0.025), (140, 0.4, 0.03), (200, 0.45, 0.022), (260, 0.38, 0.028),
-                     (320, 0.43, 0.024)):
-    venom.append(ellipsoid((r * 1.4, r * 1.4, r * 0.6), (pz[0] + dist * math.cos(math.radians(ang)),
-                                                        pz[1] + dist * 0.8 * math.sin(math.radians(ang)), 0.0)))
-# colature che scendono lungo i fianchi dell'addome e finiscono in gocce appese
-for d in ((0.62, -0.1, 0.62), (0.85, 0.35, 0.4), (-0.7, 0.05, 0.55), (-0.6, 0.55, 0.62), (0.3, 0.85, 0.55),
-          (-0.25, 0.9, 0.45)):
+sag = [a + (b - a) * t + np.array([0.0, -0.012, -0.11 * math.sin(math.pi * t)]) for t in np.linspace(0, 1, 9)]
+venom.append(tube([tuple(q) for q in sag], [0.018, 0.019, 0.021, 0.024, 0.026, 0.024, 0.021, 0.019, 0.018]))
+venom.append(hang_drop(sag[4], 0.08, 0.024, 0.04))
+fall = np.array([a[0], a[1], 0.18])
+venom.append(union(sphere(0.04, tuple(fall)), round_cone(tuple(fall), tuple(fall + [0, 0, 0.08]), 0.038, 0.008), k=0.02))
+# veleno che cola lungo il dorso delle zanne (la punta d'osso resta scoperta)
+for fang, fr in fang_curves:
+    pts, radii = [], []
+    for i in range(2, 14):
+        t = norm(np.subtract(fang[i + 1], fang[i - 1]))
+        back = norm(np.array([0.0, 1.0, 0.3]) - t * float(t @ np.array([0.0, 1.0, 0.3])))
+        pts.append(tuple(np.asarray(fang[i]) + back * fr[i] * 0.85))
+        radii.append(0.026 if i < 12 else 0.03)
+    venom.append(tube(pts, radii))
+# pozza a terra sotto le zanne, con schizzi e una corona dove cade la goccia
+pz = np.array([0.0, -1.5, 0.0])
+venom.append(union(ellipsoid((0.34, 0.25, 0.028), tuple(pz)), ellipsoid((0.17, 0.15, 0.028), tuple(pz + [0.27, -0.12, 0])),
+                   ellipsoid((0.15, 0.12, 0.028), tuple(pz + [-0.25, 0.1, 0])),
+                   ellipsoid((0.1, 0.09, 0.028), tuple(pz + [-0.12, -0.25, 0])), k=0.08))
+for ang in range(0, 360, 30):
+    rr = 0.46 + 0.08 * math.sin(ang * 3.1)
+    q = pz + [rr * math.cos(math.radians(ang)), rr * 0.82 * math.sin(math.radians(ang)), 0.0]
+    venom.append(ellipsoid((0.034, 0.034, 0.02), tuple(q)))
+for q, r in (((-0.16, -1.42), 0.045), ((0.2, -1.64), 0.036), ((-0.3, -1.4), 0.028), ((0.1, -1.36), 0.03)):
+    venom.append(sphere(r, (q[0], q[1], 0.022)))   # bolle tossiche che affiorano dalla pozza
+crown_c = np.array([a[0], a[1], 0.0])
+for ang in range(0, 360, 45):
+    d = np.array([math.cos(math.radians(ang)), math.sin(math.radians(ang)), 0.0])
+    venom.append(round_cone(tuple(crown_c + d * 0.06), tuple(crown_c + d * 0.1 + [0, 0, 0.09]), 0.022, 0.012))
+    venom.append(sphere(0.02, tuple(crown_c + d * 0.11 + [0, 0, 0.11])))
+# veleno che trapela dalla cucitura e vene che si allargano dalla ferita
+venom.append(tube([tuple(q - normal_at(abdomen, q) * 0.012) for q in SEAM], 0.036))
+for i in (1, 5, 9, 13, 17):
+    if i >= len(SEAM) - 1:
+        continue
+    t = norm(np.subtract(SEAM[i + 1], SEAM[i - 1]))
+    side = np.cross(normal_at(abdomen, SEAM[i]), t) * (1 if i % 4 == 1 else -1)
+    venom += vein(abdomen, SEAM[i], side + t * rng.uniform(-0.4, 0.4), rng.uniform(0.4, 0.62), 0.032, branches=2)
+# vene sul fianco sinistro (visibili di fronte) e sul retro
+for d, h, L in (((-0.95, 0.3, 0.1), (0.2, 0.6, 0.8), 0.75), ((0.35, 0.95, 0.05), (0.5, 0.2, 0.8), 0.6)):
     p0, _ = project(abdomen, AB_C, d)
-    venom.append(drip(abdomen, p0, r0=0.022, r1=0.034, drop=0.055, hang=0.1))
+    venom += vein(abdomen, p0, h, L, 0.034, branches=2)
+# colature che scendono lungo i fianchi dell'addome e finiscono in gocce appese
+for d in ((0.62, -0.3, 0.72), (-0.6, -0.2, 0.75), (-0.62, 0.62, 0.5), (0.3, 0.9, 0.55), (0.12, -0.6, 0.8)):
+    p0, _ = project(abdomen, AB_C, d)
+    venom += drip(abdomen, p0, r0=0.03, r1=0.046, drop=0.075, hang=0.15)
 # pustole e bolle tossiche a grappoli
 pc, pr = [], []
-for d, n in (((0.9, 0.3, 0.1), 6), ((-0.85, 0.5, 0.2), 5), ((0.4, 0.95, 0.35), 5), ((-0.45, -0.5, 0.75), 4)):
+for d, n in (((0.86, 0.55, -0.1), 7), ((-0.88, 0.25, -0.15), 6), ((-0.4, 0.85, 0.55), 5), ((0.5, -0.5, 0.35), 4)):
     c0, _ = project(abdomen, AB_C, d)
     for i in range(n):
-        q = c0 + rng.normal(size=3) * 0.13
+        q = c0 + rng.normal(size=3) * 0.12
         p, nn = project(abdomen, AB_C, q - AB_C)
-        r = float(rng.uniform(0.035, 0.09)) if i else 0.1
-        pc.append(p - nn * r * 0.35)
+        r = float(rng.uniform(0.035, 0.085)) if i else 0.11
+        pc.append(p - nn * r * 0.3)
         pr.append(r)
 venom.append(spheres(pc, pr))
-# vene luminose sui femori
-for name, sx, J, lat, sc in leg_axes:
-    a, b = J[1], J[2]
-    s = norm(b - a)
-    up = norm(np.cross(norm(lat - s * float(lat @ s)), s))
-    if up[2] < 0:
-        up = -up
-    r = SEG_R[1][1] * sc
-    pts = [a + (b - a) * t + up * (r * 0.92) + norm(lat) * 0.02 * math.sin(t * 9) for t in np.linspace(0.12, 0.9, 10)]
-    venom.append(tube([tuple(q) for q in pts], 0.022))
-m.add("Venom", fast_union(venom), VENOM, material="Neon", role="glow", tris=12000, voxel=0.012)
+m.add("Venom", fast_union(venom), VENOM, material="Neon", role="glow", tris=15000, voxel=0.01)
 
-m.add("Shine", union(*shines), WHITE, role="shine", tris=400, voxel=0.008)
+m.add("Shine", union(*shines), WHITE, role="shine", tris=300, voxel=0.007)
 
 if __name__ == "__main__":
     m.build(views=tuple(os.environ.get("VIEWS", "3q,front").split(",")), res=int(os.environ.get("RES", 700)))
