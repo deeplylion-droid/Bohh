@@ -389,6 +389,29 @@ local function buildPlot(index: number, parent: Instance): Plot
 		shape = Enum.PartType.Cylinder,
 		parent = model,
 	})
+	-- basamento a gradoni: la torre sembra un monumento e non un cilindro piantato nel pendio
+	for _, tier in { { 1.5, 9, STONE }, { 3.0, 4.5, STONE_GATE } } do
+		local r, top = T.TowerRadius + tier[1], tier[2]
+		Build.Part({
+			name = "ThroneTier",
+			size = Vector3.new(top + towerDepth, r * 2, r * 2),
+			cframe = at(T.Tower) * CFrame.new(0, (top - towerDepth) / 2, 0) * CFrame.Angles(0, 0, math.rad(90)),
+			color = tier[3],
+			material = Enum.Material.Slate,
+			shape = Enum.PartType.Cylinder,
+			parent = tower,
+		})
+		Build.Part({
+			name = "ThroneTierCap",
+			size = Vector3.new(0.6, r * 2 + 0.6, r * 2 + 0.6),
+			cframe = at(T.Tower) * CFrame.new(0, top - 0.3, 0) * CFrame.Angles(0, 0, math.rad(90)),
+			color = theme.trim,
+			material = Enum.Material.SmoothPlastic,
+			shape = Enum.PartType.Cylinder,
+			collide = false,
+			parent = tower,
+		})
+	end
 	for _, band in { { T.TowerTop - 0.5, 0.9, 0.7, GOLD_TRIM }, { T.TowerTop - 4, 1.2, 0.5, theme.trim } } do
 		Build.Part({
 			name = "ThroneBand",

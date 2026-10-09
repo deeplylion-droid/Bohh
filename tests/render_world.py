@@ -207,6 +207,8 @@ def add_terrain(T):
 VIEWS = {
     # nome: (posizione camera Roblox, punto guardato Roblox, lunghezza focale)
     "summit": ((0, 430, 360), (0, 320, 20), 30),
+    # trono del lotto 5 (Pentadrago) visto dalla piazza
+    "throne": ((-14, 350, -38), (-58, 360, -160), 24),
     "plot": ((40, 352, 50), (88, 331, 104), 26),
     "trail": ((190, 340, 250), (20, 262, 320), 28),
     "crater": ((70, 210, 470), (70, 96, 630), 28),

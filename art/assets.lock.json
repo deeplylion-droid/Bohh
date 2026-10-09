@@ -332,6 +332,10 @@
    "asset": 110968255228648,
    "hash": "f7c44b9046ac79813e909e22e3f21f9aba9ace5d"
   },
+  "EggUltra": {
+   "asset": 87469821965185,
+   "hash": "cb3143bdf9fcd1acbe3167a219cb2cf2bc0a37e6"
+  },
   "EggUncommon": {
    "asset": 124179252034752,
    "hash": "cbe9cfd747bd6887d1a0c566ababb43c11b93d59"
@@ -459,6 +463,10 @@
   "Owlet": {
    "asset": 71876116607799,
    "hash": "a26fb22f0bcbbf4469a5e92156e43c9f4ba58f6b"
+  },
+  "PentaDragon": {
+   "asset": 99363066208503,
+   "hash": "49835ce7292beb4e4dd9ee7ca4b94870e1e0a79d"
   },
   "Phoenix": {
    "asset": 91152643182273,
