@@ -569,8 +569,11 @@ local function build()
 	end
 	for _, g in Obstacles.Goats do
 		local vis = buildGoat()
-		local head = vis.pieces[2] and vis.pieces[2].part or vis.pieces[1].part
-		local alert = C.UI.Kit.New("BillboardGui", { Size = UDim2.fromOffset(60, 60), StudsOffset = Vector3.new(0, 2.6, 0), AlwaysOnTop = true, MaxDistance = 120, LightInfluence = 0, Enabled = false, Adornee = head, Parent = vis.model })
+		-- il "!" sta sopra la testa: altezza presa dal riquadro del modello (ancora nell'origine)
+		local anchor = vis.pieces[1].part
+		local bbCf, bbSize = vis.model:GetBoundingBox()
+		local above = bbCf.Position.Y + bbSize.Y / 2 + 1.4 - anchor.Position.Y
+		local alert = C.UI.Kit.New("BillboardGui", { Size = UDim2.fromOffset(60, 60), StudsOffsetWorldSpace = Vector3.new(0, above, 0), AlwaysOnTop = true, MaxDistance = 120, LightInfluence = 0, Enabled = false, Adornee = anchor, Parent = vis.model })
 		C.UI.Kit.Text({ Text = "!", TextColor3 = Color3.fromRGB(255, 70, 60), Parent = alert })
 		local dust = emitter(vis.pieces[1].part, {
 			Texture = SMOKE,

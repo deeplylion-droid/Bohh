@@ -88,6 +88,34 @@ function Scenery.Summit(parent: Instance, assets)
 		egg.Parent = folder
 		CollectionService:AddTag(egg, "Spinner")
 	end
+	-- lampioni fra i cancelli dei lotti e panchine attorno al monumento (se i modelli ci sono)
+	for k = 0, 8 do
+		local a = math.rad(20 + 40 * k)
+		local dir = Vector3.new(math.sin(a), 0, math.cos(a))
+		local lamp = assets.Clone("Props", "LampPost")
+		if lamp then
+			lamp:ScaleTo(1.25)
+			lamp:PivotTo(CFrame.lookAt(c + dir * 92, c + dir * 91) + Vector3.new(0, 0.6, 0))
+			local light = Instance.new("PointLight")
+			light.Color = Color3.fromRGB(255, 214, 150)
+			light.Range = 22
+			light.Brightness = 1.2
+			light.Shadows = false
+			light.Parent = lamp.PrimaryPart or lamp:FindFirstChildWhichIsA("BasePart")
+			lamp.Parent = folder
+		end
+		local deg = (20 + 40 * k) % 360
+		local nearBoards = deg > 110 and deg < 250
+		if k < 8 and not nearBoards then
+			local bench = assets.Clone("Props", "Bench")
+			if bench then
+				bench:ScaleTo(1.2)
+				-- la panchina guarda il monumento
+				bench:PivotTo(CFrame.lookAt(c + dir * 72, c) + Vector3.new(0, 0.6, 0))
+				bench.Parent = folder
+			end
+		end
+	end
 	return folder
 end
 
@@ -189,31 +217,59 @@ end
 ---------------------------------------------------------------------------------------------
 -- Decorazioni sparse (alberi, rocce, fiori) per zona, lontano dal sentiero
 ---------------------------------------------------------------------------------------------
-local DECOR: { [string]: { { name: string, count: number, scale: { number }, edge: boolean? } } } = {
-	Summit = { { name = "PineSnowy", count = 40, scale = { 1.4, 2.2 } }, { name = "Rock2", count = 18, scale = { 1.2, 2.4 } } },
+local DECOR: { [string]: { { name: string, count: number, scale: { number }, edge: boolean?, light: { Color3 | number }? } } } = {
+	Summit = {
+		{ name = "PineSnowy", count = 46, scale = { 1.4, 2.2 } },
+		{ name = "SnowRock", count = 22, scale = { 1.0, 2.0 } },
+		{ name = "Rock2", count = 10, scale = { 1.2, 2.4 } },
+	},
 	Meadow = {
 		{ name = "PineTree", count = 30, scale = { 1.3, 2.0 } },
-		{ name = "Bush1", count = 24, scale = { 1.0, 1.5 } },
-		{ name = "Flowers1", count = 60, scale = { 1.4, 2.0 } },
-		{ name = "Flowers2", count = 60, scale = { 1.4, 2.0 } },
-		{ name = "Grass1", count = 120, scale = { 2.0, 3.0 } },
+		{ name = "Bush1", count = 26, scale = { 1.0, 1.5 } },
+		{ name = "Flowers1", count = 40, scale = { 1.4, 2.0 } },
+		{ name = "Flowers2", count = 40, scale = { 1.4, 2.0 } },
+		{ name = "Grass1", count = 90, scale = { 2.0, 3.0 } },
 		{ name = "Rock1", count = 26, scale = { 0.8, 1.6 }, edge = true },
 	},
 	Forest = {
-		{ name = "PineTree", count = 70, scale = { 1.8, 2.8 } },
+		{ name = "OakTree", count = 46, scale = { 1.2, 1.9 } },
+		{ name = "PineTree", count = 40, scale = { 1.8, 2.8 } },
 		{ name = "Bush1", count = 30, scale = { 1.2, 1.8 } },
-		{ name = "Grass1", count = 80, scale = { 2.0, 3.0 } },
-		{ name = "Rock3", count = 26, scale = { 0.8, 1.6 }, edge = true },
+		{ name = "Mushrooms", count = 40, scale = { 1.2, 2.0 }, edge = true },
+		{ name = "Fern", count = 60, scale = { 1.2, 2.0 } },
+		{ name = "FallenLog", count = 14, scale = { 1.0, 1.4 } },
+		{ name = "Grass1", count = 60, scale = { 2.0, 3.0 } },
+		{ name = "Rock3", count = 20, scale = { 0.8, 1.6 }, edge = true },
 	},
-	Canyon = { { name = "Rock2", count = 40, scale = { 1.0, 2.8 } }, { name = "Rock3", count = 30, scale = { 0.8, 1.6 }, edge = true } },
-	Crystal = { { name = "Rock1", count = 30, scale = { 1.0, 2.4 } }, { name = "Rock2", count = 24, scale = { 0.8, 1.4 }, edge = true } },
-	Crater = { { name = "Rock3", count = 30, scale = { 1.0, 2.6 } } },
+	Canyon = {
+		{ name = "Mesa", count = 16, scale = { 1.4, 2.6 } },
+		{ name = "Cactus", count = 30, scale = { 1.0, 1.6 } },
+		{ name = "DryBush", count = 50, scale = { 1.2, 2.0 }, edge = true },
+		{ name = "CanyonRock", count = 34, scale = { 1.0, 2.4 } },
+		{ name = "Rock3", count = 16, scale = { 0.8, 1.6 }, edge = true },
+	},
+	Crystal = {
+		{ name = "CrystalCluster1", count = 26, scale = { 1.0, 2.2 }, light = { Color3.fromRGB(190, 120, 255), 18 } },
+		{ name = "CrystalCluster2", count = 34, scale = { 0.9, 1.6 }, edge = true, light = { Color3.fromRGB(110, 230, 255), 14 } },
+		{ name = "GlowShroom", count = 40, scale = { 1.0, 1.8 }, edge = true },
+		{ name = "Rock1", count = 18, scale = { 1.0, 2.0 } },
+	},
+	Crater = {
+		{ name = "LavaRock", count = 34, scale = { 1.0, 2.4 }, light = { Color3.fromRGB(255, 120, 40), 16 } },
+		{ name = "DeadTree", count = 18, scale = { 1.0, 1.6 } },
+		{ name = "ObsidianSpikes", count = 26, scale = { 1.0, 2.0 } },
+		{ name = "Rock3", count = 14, scale = { 1.0, 2.6 } },
+	},
 }
+
+-- una luce ogni LIGHT_EVERY oggetti luminosi (le luci costano: poche ma ben distribuite)
+local LIGHT_EVERY = 3
+
+local SMALL = { Grass1 = true, Flowers1 = true, Flowers2 = true, Fern = true, Mushrooms = true, DryBush = true, GlowShroom = true }
 
 function Scenery.Decor(parent: Instance, assets, terrainHeight: (number, number) -> (number, string, string))
 	local folder = Build.Model("Decor", parent)
 	local rng = Random.new(7)
-	local half = MapLayout.PathWidth / 2
 	for zone, items in DECOR do
 		for _, item in items do
 			local template = assets.Clone("Props", item.name)
@@ -261,12 +317,23 @@ function Scenery.Decor(parent: Instance, assets, terrainHeight: (number, number)
 				local s = rng:NextNumber(item.scale[1], item.scale[2])
 				model:ScaleTo(s)
 				model:PivotTo(CFrame.new(x, h - 0.4, z) * CFrame.Angles(0, rng:NextNumber(0, math.pi * 2), 0))
+				if item.light and placed % LIGHT_EVERY == 0 then
+					local light = Instance.new("PointLight")
+					light.Color = item.light[1] :: Color3
+					light.Range = item.light[2] :: number
+					light.Brightness = 1.4
+					light.Shadows = false
+					light.Parent = model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart")
+				end
+				if SMALL[item.name] then
+					-- dettagli piccoli: il client li nasconde con la grafica leggera
+					CollectionService:AddTag(model, "SmallDecor")
+				end
 				model.Parent = folder
 				placed += 1
 			end
 		end
 	end
-	local _ = half
 	return folder
 end
 

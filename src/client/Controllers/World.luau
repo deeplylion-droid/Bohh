@@ -30,9 +30,28 @@ type PetAnim = {
 local pets: { [Model]: PetAnim } = {}
 local eggs: { [Model]: { base: CFrame, parts: { { part: BasePart, offset: CFrame } }, seed: number } } = {}
 local lowGfx = false
+local applySmallDecor: () -> ()
 
 function World.Init(controllers)
 	C = controllers
+end
+
+-- Grafica leggera: i dettagli piccoli dello scenario (erba, fiori, felci...) vengono tolti dal mondo
+local hiddenDecor: { [Instance]: Instance } = {}
+applySmallDecor = function()
+	if lowGfx then
+		for _, m in CollectionService:GetTagged("SmallDecor") do
+			if m.Parent then
+				hiddenDecor[m] = m.Parent
+				m.Parent = nil
+			end
+		end
+	else
+		for m, parent in hiddenDecor do
+			m.Parent = parent
+		end
+		table.clear(hiddenDecor)
+	end
 end
 
 ---------------------------------------------------------------------------------------------
@@ -168,16 +187,31 @@ local function incubatorBillboard(base: BasePart)
 	incubatorGuis[base] = { gui = gui, label = label, bar = bar, fill = fill }
 end
 
+local RING_IDLE = Color3.fromRGB(150, 140, 170)
+local RING_BUSY = Color3.fromRGB(255, 160, 60)
+local RING_READY = Color3.fromRGB(255, 230, 80)
+
 local function refreshIncubators()
 	local now = workspace:GetServerTimeNow()
 	local T = C.Lang.T
 	for base, g in incubatorGuis do
 		local rarity = base:GetAttribute("EggRarity")
 		local readyAt = base:GetAttribute("ReadyAt")
+		-- anello luminoso: spento se vuota, arancione mentre cova, giallo pulsante quando e' pronta
+		local ring = base:FindFirstChild("Ring")
+		if ring and ring:IsA("BasePart") then
+			if not rarity then
+				ring.Color = RING_IDLE
+			elseif readyAt and readyAt <= now then
+				ring.Color = RING_BUSY:Lerp(RING_READY, 0.5 + math.sin(now * 6) * 0.5)
+			else
+				ring.Color = RING_BUSY
+			end
+		end
 		if rarity and readyAt and base.Parent then
 			g.gui.Enabled = true
 			local r = Rarities.List[rarity]
-			local total = (r and r.hatch) or 60
+			local total = base:GetAttribute("Duration") or (r and r.hatch) or 60
 			local left = readyAt - now
 			if left <= 0 then
 				g.label.Text = T("Ready")
@@ -344,6 +378,7 @@ function World.Start()
 	task.delay(2, homeMarker)
 	C.State.Watch("Settings", function(settings)
 		lowGfx = settings and settings.LowGfx == true
+		applySmallDecor()
 	end)
 
 	local acc = 0

@@ -107,7 +107,14 @@ class Model:
             export_fbx(objs, out / f"{self.name}.fbx")
             (out / f"{self.name}.json").write_text(json.dumps(info, indent=1))
             bpy.ops.wm.save_as_mainfile(filepath=str(out / f"{self.name}.blend"))
-        if render:
+        if render and self.kind == "icon":
+            # icone dell'interfaccia: sfondo trasparente, niente ombra a terra, in art/out/images
+            from .render import render_objects
+            images = OUT / "images"
+            images.mkdir(parents=True, exist_ok=True)
+            render_objects(objs, images / f"Icon{self.name}.png", view=views[0] if views else "3q", res=res,
+                           ground=False)
+        elif render:
             from .render import render_objects
             for v in views:
                 render_objects(objs, out / f"{self.name}_{v}.png", view=v, res=res)

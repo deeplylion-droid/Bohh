@@ -59,6 +59,7 @@ local function refreshPrompts(player: Player, slot: string)
 	inc.stealPrompt.Enabled = entry ~= nil and not inc.base:GetAttribute("BeingStolen")
 	inc.base:SetAttribute("EggRarity", if entry then entry.Rarity else nil)
 	inc.base:SetAttribute("ReadyAt", if entry then entry.Start + entry.Duration else nil)
+	inc.base:SetAttribute("Duration", if entry then entry.Duration else nil)
 	inc.base:SetAttribute("Ready", ready)
 end
 
@@ -301,6 +302,7 @@ function HatchService.Start()
 			end
 			plot.incubators[i].base:SetAttribute("EggRarity", nil)
 			plot.incubators[i].base:SetAttribute("ReadyAt", nil)
+			plot.incubators[i].base:SetAttribute("Duration", nil)
 			plot.incubators[i].base:SetAttribute("Ready", false)
 		end
 		visuals[player] = nil
