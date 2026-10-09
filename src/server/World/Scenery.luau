@@ -18,11 +18,14 @@ local ROOF = Color3.fromRGB(226, 72, 54)
 function Scenery.Summit(parent: Instance, assets)
 	local folder = Build.Model("Summit", parent)
 	local c = MapLayout.SummitCenter
+	-- quota calpestabile di piazza e viale; le lastre sono spesse 4 stud, cosi' i bordi affondano
+	-- nella neve invece di galleggiare sul terreno
+	local top = c.Y + 0.8
 	-- pavimentazione circolare della piazza (si unisce ai cancelli dei lotti)
 	Build.Part({
 		name = "Plaza",
-		size = Vector3.new(1.2, 206, 206),
-		cframe = CFrame.new(c + Vector3.new(0, 0.2, 0)) * CFrame.Angles(0, 0, math.rad(90)),
+		size = Vector3.new(4, 206, 206),
+		cframe = CFrame.new(c.X, top - 2, c.Z) * CFrame.Angles(0, 0, math.rad(90)),
 		color = Color3.fromRGB(236, 222, 196),
 		material = Enum.Material.Slate,
 		shape = Enum.PartType.Cylinder,
@@ -38,21 +41,34 @@ function Scenery.Summit(parent: Instance, assets)
 		shape = Enum.PartType.Cylinder,
 		parent = folder,
 	})
-	-- viale verso la rampa del sentiero
+	-- viale verso la rampa del sentiero (un filo piu' basso della piazza dove si sovrappongono,
+	-- cosi' le due superfici non sfarfallano)
+	local avenueTop = top - 0.04
 	Build.Part({
 		name = "Avenue",
-		size = Vector3.new(40, 1.2, 64),
-		cframe = CFrame.new(c.X, c.Y + 0.2, 130),
+		size = Vector3.new(40, 4, 52),
+		cframe = CFrame.new(c.X, avenueTop - 2, 124),
 		color = Color3.fromRGB(236, 222, 196),
 		material = Enum.Material.Slate,
 		parent = folder,
 	})
-	-- arco d'ingresso al sentiero con il nome del gioco
+	-- discesa lastricata: dalla fine del viale (z=150) scende piu' ripida della rampa di terra
+	-- e ci si infila sotto verso z=161, cosi' non resta nessun gradino sospeso
+	local slope = math.atan(0.25)
+	Build.Part({
+		name = "AvenueRamp",
+		size = Vector3.new(40, 4, 28),
+		cframe = CFrame.new(c.X, avenueTop, 150) * CFrame.Angles(slope, 0, 0) * CFrame.new(0, -2, 14),
+		color = Color3.fromRGB(236, 222, 196),
+		material = Enum.Material.Slate,
+		parent = folder,
+	})
+	-- arco d'ingresso al sentiero con il nome del gioco (i pali affondano nella rampa di terra)
 	for _, sx in { -1, 1 } do
 		Build.Part({
 			name = "ArchPost",
-			size = Vector3.new(4, 26, 4),
-			cframe = CFrame.new(sx * 23, c.Y + 13, 158),
+			size = Vector3.new(4, 32, 4),
+			cframe = CFrame.new(sx * 23, c.Y + 10, 158),
 			color = WOOD,
 			material = Enum.Material.Wood,
 			parent = folder,

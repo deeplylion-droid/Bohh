@@ -291,11 +291,14 @@ end
 ---------------------------------------------------------------------------------------------
 local padGuis: { [BasePart]: TextLabel } = {}
 local function addPad(pad: BasePart)
+	-- sempre in primo piano: con la camera lontana l'etichetta (in pixel) diventa piu' alta della
+	-- sua distanza dal pavimento e il pavimento ne tagliava la meta' inferiore
 	local gui = Kit.New("BillboardGui", {
 		Name = "Bank",
 		Size = UDim2.fromOffset(130, 34),
-		StudsOffsetWorldSpace = Vector3.new(0, 2.2, 0),
+		StudsOffsetWorldSpace = Vector3.new(0, 2.6, 0),
 		MaxDistance = 45,
+		AlwaysOnTop = true,
 		LightInfluence = 0,
 		Adornee = pad,
 		Parent = pad,

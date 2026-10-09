@@ -212,6 +212,8 @@ VIEWS = {
     # i giganti dei lotti 1-5 visti dall'alto, dalla parte del sentiero
     "giants": ((60, 470, 330), (-20, 340, -30), 26),
     "junction": ((70, 372, 40), (22, 330, 110), 30),
+    # uscita dalla vetta: fine del viale e inizio della rampa del sentiero, vista dalla rampa
+    "exit": ((26, 334, 196), (0, 329, 150), 30),
     # per la miniatura: la vetta vista da ovest, con i giganti dei lotti 1-5 tutti in vista
     "promo": ((-240, 440, 105), (50, 352, -62), 23),
     "plot": ((40, 352, 50), (88, 331, 104), 26),

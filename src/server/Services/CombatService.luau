@@ -1,5 +1,6 @@
 -- Schiaffi con le mazze: fanno cadere a terra il bersaglio e gli fanno perdere cio' che trasporta.
 
+local Debris = game:GetService("Debris")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -134,6 +135,17 @@ function CombatService.Swing(player: Player)
 	local hrp = S.CharacterService.Root(player)
 	if not hrp then
 		return
+	end
+	-- animazione del colpo: lo script Animate del personaggio riproduce "toolslash" quando la mazza
+	-- impugnata riceve un StringValue "toolanim" = "Slash" (come le spade classiche); funziona con
+	-- tutti i tipi di giunti, e l'animazione si replica agli altri giocatori
+	local tool = player.Character and player.Character:FindFirstChild("Bat")
+	if tool and tool:IsA("Tool") then
+		local anim = Instance.new("StringValue")
+		anim.Name = "toolanim"
+		anim.Value = "Slash"
+		anim.Parent = tool
+		Debris:AddItem(anim, 1)
 	end
 	S.StateService.Effect(nil, "Swing", { userId = player.UserId })
 	local look = hrp.CFrame.LookVector

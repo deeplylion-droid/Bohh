@@ -1,6 +1,9 @@
--- Ragdoll comico: i giunti Motor6D vengono sostituiti da snodi sferici per qualche istante.
+-- Ragdoll comico: per qualche istante i giunti rigidi lasciano il posto a snodi sferici.
+-- Nei personaggi R15 attuali i giunti sono AnimationConstraint e ognuno ha gia' il suo snodo
+-- sferico attivo (<Nome>BallSocket): basta spegnere il giunto. Nei personaggi R6 sono Motor6D:
+-- si aggiungono snodi sferici spenti che si accendono al loro posto.
 -- Il server gestisce i giunti; il client proprietario mette l'umanoide nello stato Physics
--- e applica la spinta (vedi client/Controllers/RagdollController).
+-- e applica la spinta (vedi client/Controllers/Ragdoll).
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -51,15 +54,23 @@ local function setupRig(character: Model)
 end
 
 local function setRagdoll(character: Model, on: boolean)
-	for _, motor in character:GetDescendants() do
-		if motor:IsA("Motor6D") then
-			local socketName = motor:GetAttribute("RagSocket")
+	for _, joint in character:GetDescendants() do
+		if joint:IsA("Motor6D") then
+			local socketName = joint:GetAttribute("RagSocket")
 			if socketName then
-				local socket = motor.Parent and motor.Parent:FindFirstChild(socketName)
-				motor.Enabled = not on
+				local socket = joint.Parent and joint.Parent:FindFirstChild(socketName)
+				joint.Enabled = not on
 				if socket then
 					(socket :: BallSocketConstraint).Enabled = on
 				end
+			end
+		elseif joint:IsA("AnimationConstraint") and joint.Name ~= "Root" and joint.Name ~= "Neck" then
+			-- la radice tiene unito il corpo alla HumanoidRootPart; il collo resta rigido perche'
+			-- un collo staccato puo' far morire l'umanoide (RequiresNeck)
+			local socket = joint.Parent and joint.Parent:FindFirstChild(joint.Name .. "BallSocket")
+			if socket and socket:IsA("BallSocketConstraint") then
+				socket.Enabled = true
+				joint.Enabled = not on
 			end
 		end
 	end
@@ -80,6 +91,9 @@ local function setRagdoll(character: Model, on: boolean)
 		end
 	end
 end
+
+-- Scioglie (on = true) o ricompone i giunti di un personaggio (anche senza giocatore: test)
+RagdollService.SetRig = setRagdoll
 
 -- Mette a terra il giocatore per 'duration' secondi con una spinta 'velocity' (opzionale)
 function RagdollService.Ragdoll(player: Player, duration: number, velocity: Vector3?)

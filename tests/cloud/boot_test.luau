@@ -108,8 +108,9 @@ while s <= MapLayout.PathLength do
 			end
 		end
 		-- parti che sbarrano il passaggio ad altezza d'uomo
+		-- (la pavimentazione calpestabile appena sopra il sentiero, come il viale in vetta, non conta)
 		local low = workspace:Raycast(q + Vector3.new(0, 7, 0), Vector3.new(0, -9, 0), anyHit)
-		if low and low.Instance ~= workspace.Terrain and #blocked < 10 then
+		if low and low.Instance ~= workspace.Terrain and low.Position.Y > q.Y + 1.5 and #blocked < 10 then
 			local name = low.Instance:GetFullName()
 			if not string.find(name, "Nest") and not string.find(name, "Egg") and not string.find(name, "Shelter") then
 				table.insert(blocked, string.format("%d/%d:%s", s, lateral, name))
@@ -258,6 +259,72 @@ do
 		end
 	end
 	add("giants", table.concat(sizes, " "))
+end
+
+-- uscita dalla vetta: dal viale alla rampa del sentiero la superficie calpestabile non deve avere
+-- gradini (prima il viale finiva sospeso 3 stud sopra la rampa)
+do
+	local solid = RaycastParams.new()
+	solid.FilterType = Enum.RaycastFilterType.Exclude
+	solid.FilterDescendantsInstances = {}
+	solid.RespectCanCollide = true
+	local worst, at, gaps = 0, "", 0
+	for _, x in { -15, 0, 15 } do
+		local prev
+		for z = 120, 190 do
+			-- da sotto l'arco (trave e cartello sono piu' in alto)
+			local hit = workspace:Raycast(Vector3.new(x, 345, z), Vector3.new(0, -40, 0), solid)
+			if not hit then
+				gaps += 1
+			else
+				if prev and math.abs(hit.Position.Y - prev) > worst then
+					worst = math.abs(hit.Position.Y - prev)
+					at = string.format("x=%d,z=%d(%s)", x, z, hit.Instance.Name)
+				end
+				prev = hit.Position.Y
+			end
+		end
+	end
+	add("exit_max_step", string.format("%.2f", worst))
+	add("exit_max_step_at", at)
+	add("exit_gaps", gaps)
+end
+
+-- ragdoll su un personaggio R15 di prova (giunti AnimationConstraint): i giunti si spengono (gli
+-- snodi sferici tengono uniti gli arti), l'umanoide resta vivo e alla fine i giunti tornano rigidi.
+-- La fisica qui non gira (RunService:IsRunning() e' falso), quindi si controlla solo lo stato dei giunti.
+do
+	local okRig, rig = pcall(function()
+		return game:GetService("Players")
+			:CreateHumanoidModelFromDescription(Instance.new("HumanoidDescription"), Enum.HumanoidRigType.R15)
+	end)
+	if okRig and rig and S then
+		rig:PivotTo(CFrame.new(0, MapLayout.SummitY + 5, 60))
+		rig.Parent = workspace
+		local hum = rig:FindFirstChildOfClass("Humanoid") :: Humanoid
+		local function jointsOff(): (number, number)
+			local off, sockets = 0, 0
+			for _, d in rig:GetDescendants() do
+				if d:IsA("AnimationConstraint") and not d.Enabled then
+					off += 1
+					local socket = d.Parent and d.Parent:FindFirstChild(d.Name .. "BallSocket")
+					if socket and (socket :: BallSocketConstraint).Enabled then
+						sockets += 1
+					end
+				end
+			end
+			return off, sockets
+		end
+		S.RagdollService.SetRig(rig, true)
+		local off, sockets = jointsOff()
+		add("ragdoll_joints_off", string.format("%d/sockets%d", off, sockets))
+		add("ragdoll_alive", hum.Health > 0 and hum:GetState() ~= Enum.HumanoidStateType.Dead)
+		S.RagdollService.SetRig(rig, false)
+		add("ragdoll_recovered", (jointsOff()) == 0)
+		rig:Destroy()
+	else
+		add("ragdoll_rig", tostring(rig))
+	end
 end
 
 -- avvisi raccolti durante l'avvio
