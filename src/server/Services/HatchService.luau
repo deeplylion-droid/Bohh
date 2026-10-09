@@ -255,6 +255,24 @@ function HatchService.Skip(player: Player, maxRarity: string): boolean
 	return true
 end
 
+-- Porta a fine schiusa tutte le uova del giocatore (pannello admin, per le prove)
+function HatchService.FinishAll(player: Player): number
+	local data = S.DataService.Get(player)
+	if not data then
+		return 0
+	end
+	local n = 0
+	for slot, entry in data.Incubators do
+		if now() < entry.Start + entry.Duration then
+			entry.Start = now() - entry.Duration
+			S.StateService.Set(player, { "Incubators", slot }, entry)
+			refreshPrompts(player, slot)
+			n += 1
+		end
+	end
+	return n
+end
+
 -- Tempo rimasto di un'incubatrice (0 se pronta)
 function HatchService.Remaining(player: Player, slot: string): number?
 	local data = S.DataService.Get(player)

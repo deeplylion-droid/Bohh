@@ -83,6 +83,16 @@ function Panel.Build(parent: Instance, C)
 			send("Luck", { minutes = 30 })
 		end,
 	})
+	Kit.Button({
+		Text = "HATCH NOW ⏩",
+		Color = "Pink",
+		Size = UDim2.fromOffset(240, 56),
+		TextSize = 20,
+		Parent = grid,
+		OnClick = function()
+			send("HatchNow")
+		end,
+	})
 
 	-- uovo speciale: rarita' + zona
 	local rarityIndex, zoneIndex = 5, 5
@@ -90,7 +100,7 @@ function Panel.Build(parent: Instance, C)
 	local rarityBtn = Kit.Button({
 		Text = "",
 		Color = "Orange",
-		Size = UDim2.fromOffset(230, 54),
+		Size = UDim2.fromOffset(180, 54),
 		Position = UDim2.fromOffset(12, 11),
 		TextSize = 20,
 		Parent = eggRow,
@@ -98,20 +108,32 @@ function Panel.Build(parent: Instance, C)
 	local zoneBtn = Kit.Button({
 		Text = "",
 		Color = "Blue",
-		Size = UDim2.fromOffset(230, 54),
-		Position = UDim2.fromOffset(254, 11),
+		Size = UDim2.fromOffset(180, 54),
+		Position = UDim2.fromOffset(200, 11),
 		TextSize = 20,
 		Parent = eggRow,
 	})
+	-- l'uovo nella zona scelta (da andare a prendere) o direttamente in un'incubatrice del lotto
 	Kit.Button({
 		Text = "SPAWN 🥚",
 		Color = "Green",
-		Size = UDim2.fromOffset(200, 54),
-		Position = UDim2.new(1, -212, 0, 11),
+		Size = UDim2.fromOffset(180, 54),
+		Position = UDim2.fromOffset(388, 11),
 		TextSize = 22,
 		Parent = eggRow,
 		OnClick = function()
 			send("SpawnEgg", { rarity = Rarities.Order[rarityIndex], zone = Zones.Order[zoneIndex] })
+		end,
+	})
+	Kit.Button({
+		Text = "TO BASE 🏠",
+		Color = "Purple",
+		Size = UDim2.fromOffset(180, 54),
+		Position = UDim2.fromOffset(576, 11),
+		TextSize = 22,
+		Parent = eggRow,
+		OnClick = function()
+			send("EggToBase", { rarity = Rarities.Order[rarityIndex] })
 		end,
 	})
 	local function refreshEgg()

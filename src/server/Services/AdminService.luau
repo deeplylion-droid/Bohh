@@ -49,6 +49,16 @@ local ACTIONS = {
 	Avalanche = function()
 		S.AvalancheService.TriggerSoon(5)
 	end,
+	-- prove: un uovo della rarita' scelta direttamente in un'incubatrice del proprio lotto
+	EggToBase = function(player, args)
+		if type(args.rarity) == "string" and Rarities.List[args.rarity] then
+			S.HatchService.AddPending(player, args.rarity)
+		end
+	end,
+	-- prove: tutte le uova del proprio lotto pronte da schiudere
+	HatchNow = function(player)
+		S.HatchService.FinishAll(player)
+	end,
 	Coins = function(player, args)
 		local n = tonumber(args.amount)
 		if n and n > 0 and n <= 1e15 then
