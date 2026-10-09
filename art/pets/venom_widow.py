@@ -1,11 +1,12 @@
 """Vedova Velenosa (VenomWidow) - pet ULTRA, il pezzo forte del gioco.
 
 Una vedova nera gigantesca, lucida come un giocattolo di vinile e grondante di veleno: addome enorme con una
-grande clessidra rossa luminosa, otto occhi verde tossico (i due principali sotto palpebre arrabbiate),
-cheliceri con zanne ricurve dalla punta d'osso che sbavano veleno, otto zampe lunghissime a segmenti con le
-articolazioni ben leggibili, spine e artigli d'osso. Posa d'attacco: le due paia anteriori alzate e protese in
-avanti, le posteriori piantate larghe con le ginocchia alte sopra il corpo. Tocco "toy horror": una cucitura
-sull'addome da cui trapela il veleno (vene luminose che si allargano dalla ferita) e una toppa cucita.
+grande clessidra rossa luminosa, otto occhi verde tossico (i due principali a mandorla, con lo sguardo cattivo),
+cheliceri setolosi con zanne a falce dalla punta d'osso che sbavano veleno, otto zampe lunghissime a segmenti con
+le articolazioni viola ben leggibili, spine e artigli d'osso. Posa di minaccia: il cefalotorace impennato, le due
+paia anteriori alzate e protese in avanti, le posteriori piantate larghe con le ginocchia alte sopra il corpo.
+Tocco "toy horror": una cucitura sull'addome da cui trapela il veleno (vene luminose che si allargano dalla
+ferita) e una toppa cucita. I pedipalpi sono parti a se' (gruppi PalpR/PalpL) che il gioco fa fremere.
 
 Tutti gli effetti verdi (gocce, colature, schizzi, pustole, vene, pozza) sono nell'unica parte "Venom" (Neon):
 il gioco ci attacca le particelle di gocciolamento e di nebbia tossica.
@@ -19,14 +20,14 @@ import numpy as np
 from scipy.spatial import cKDTree
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from lib.sdf import (SDF, Frame, bezier, box, capsule, ellipsoid, prism, project, round_cone, smin, sphere,  # noqa: E402
-                     tube, union)
+from lib.sdf import (SDF, Frame, bezier, box, capsule, ellipsoid, prism, project, round_cone, smin,  # noqa: E402
+                     sphere, tube, union)
 from lib.toy import Model  # noqa: E402
 
 # ============================================================ colori
 BLACK = (18, 14, 26)       # nero lucido (blu-viola scurissimo: il nero puro in gioco e' piatto)
 CHITIN = (48, 22, 64)      # viola-nero di articolazioni, zanne e filiere
-RED = (235, 22, 44)        # clessidra (Neon)
+RED = (205, 10, 32)        # clessidra rosso sangue (Neon)
 VENOM = (124, 255, 36)     # verde acido (Neon)
 EYE_G = (150, 255, 46)     # occhi verde tossico (Neon)
 BONE = (242, 230, 200)     # punte di zanne, spine e artigli, filo delle cuciture
@@ -157,7 +158,8 @@ def drip(sdf, p0, r0=0.026, r1=0.04, drop=0.065, hang=0.13, sink=0.4, **kw):
     nrms = [normal_at(sdf, q) for q in pts]
     n = len(pts)
     ph = float(rng.uniform(0, 6.3))
-    radii = [(r0 + (r1 - r0) * (i / (n - 1)) ** 1.5) * (1 + 0.28 * max(0.0, math.sin(i * 0.8 + ph))) for i in range(n)]
+    radii = [(r0 + (r1 - r0) * (i / (n - 1)) ** 1.5) * (1 + 0.28 * max(0.0, math.sin(i * 0.8 + ph)))
+             for i in range(n)]
     path = [q - nn * r * sink for q, nn, r in zip(pts, nrms, radii)]
     end = pts[-1] + nrms[-1] * radii[-1] * 0.3
     c = end + np.array([0.0, 0.0, -hang])
@@ -242,6 +244,7 @@ def dash_stitches(sdf, pts, n, dash, r, lift, closed=True):
 
 # ============================================================ corpo: addome enorme + cefalotorace
 m = Model("VenomWidow", "pet")
+GROUND = SDF(lambda p: -p[:, 2], (-9, -9, 0), (9, 9, 9))   # niente sotto i piedi (z >= 0)
 
 AB_C = np.array([0.0, 1.5, 1.3])
 AB_R = (1.2, 1.36, 1.1)
@@ -336,16 +339,32 @@ LEGS = {
     "IV": ([(0.4, -0.26, 1.0), (0.62, -0.16, 1.12), (1.2, 0.3, 2.1), (1.36, 0.44, 2.15), (1.92, 1.0, 1.22),
             (2.38, 1.56, 0.32), (2.52, 1.72, 0.016)], 0.95),
 }
-SEG_R = [(0.14, 0.14, 0.13), (0.13, 0.152, 0.116), (0.12, 0.134, 0.112), (0.108, 0.12, 0.092),
-         (0.09, 0.09, 0.074), (0.072, 0.064, 0.014)]
-KNUCKLE_R = [0.156, 0.144, 0.128, 0.104, 0.084]
+SEG_R = [(0.15, 0.15, 0.14), (0.14, 0.166, 0.122), (0.128, 0.144, 0.116), (0.112, 0.126, 0.092),
+         (0.088, 0.088, 0.07), (0.068, 0.06, 0.014)]
+KNUCKLE_R = [0.166, 0.152, 0.134, 0.106, 0.082]
+# setole nere (senza punta d'osso) su tibia e metatarso: (segmento, posizione, angolo attorno all'asse, lunghezza)
+BRISTLES = [(3, 0.14, 20, 0.12), (3, 0.46, -100, 0.12), (3, 0.86, 120, 0.11), (4, 0.2, 100, 0.11),
+            (4, 0.6, -10, 0.1), (4, 0.9, -120, 0.09)]
 # spine: (segmento, posizione lungo il segmento, angolo attorno all'asse, lunghezza)
 SPIKES = [(1, 0.28, 75, 0.28), (1, 0.55, -70, 0.32), (1, 0.8, 85, 0.26), (3, 0.28, -65, 0.27), (3, 0.62, 60, 0.24),
           (4, 0.42, -30, 0.2), (4, 0.75, 40, 0.17)]
 
 
-def leg_joints(pts, sx):
+# piccola asimmetria (posa viva, non da manichino): spostamenti dei giunti J0..J6 per (zampa, lato)
+ASYM = {
+    ("I", -1): [(0, 0, 0), (0, 0, 0), (0.0, -0.06, 0.02), (0.0, -0.1, 0.02), (0.06, -0.22, 0.0), (0.08, -0.3, -0.04),
+                (0.08, -0.32, -0.1)],    # la sinistra si protende di piu', pronta a colpire
+    ("I", 1): [(0, 0, 0), (0, 0, 0), (0.04, 0.02, -0.04), (0.06, 0.02, -0.06), (0.1, 0.06, -0.1), (0.1, 0.08, -0.1),
+               (0.1, 0.08, -0.08)],      # la destra piu' bassa e aperta
+    ("II", -1): [(0, 0, 0), (0, 0, 0), (0.0, 0.0, 0.04), (0.0, 0.0, 0.04), (0.0, -0.06, 0.08), (0.0, -0.1, 0.1),
+                 (0.0, -0.1, 0.1)],
+}
+
+
+def leg_joints(pts, sx, name=None):
     J = [np.array(q, float) * np.array([sx, 1.0, 1.0]) for q in pts]
+    for j, off in enumerate(ASYM.get((name, sx), [])):
+        J[j] = J[j] + np.array([sx * off[0], off[1], off[2]])
     # direzione laterale: orizzontale, perpendicolare al piano della zampa
     h = J[-1] - J[0]
     h[2] = 0.0
@@ -386,6 +405,12 @@ def build_leg(J, lat, sc):
         L = L * sc
         black.append(round_cone(tuple(base + d * r_leg * 0.4), tuple(base + d * (r_leg + L * 0.52)), 0.058 * sc, 0.03))
         bone.append(round_cone(tuple(base + d * (r_leg + L * 0.45)), tuple(base + d * (r_leg + L)), 0.042, 0.005))
+    for seg, t, psi, L in BRISTLES:
+        a, b, s, p1, ll = seg_frame(J, lat, seg)
+        d = norm(math.cos(math.radians(psi)) * p1 + math.sin(math.radians(psi)) * ll + 1.4 * s)
+        base = a + (b - a) * t
+        r_leg = spindle_r(t, *SEG_R[seg]) * sc
+        black.append(round_cone(tuple(base + d * r_leg * 0.5), tuple(base + d * (r_leg + L * sc)), 0.034, 0.01))
     return black, knuck, bone
 
 
@@ -407,31 +432,25 @@ def leg_vein(J, lat, sc, phase):
 legs_front, legs_back, knuckles, bone_bits, leg_veins = [], [], [], [], []
 for li, (name, (pts, sc)) in enumerate(LEGS.items()):
     for sx in (1, -1):
-        J, lat = leg_joints(pts, sx)
+        J, lat = leg_joints(pts, sx, name)
         blk, kn, bn = build_leg(J, lat, sc)
         (legs_front if name in ("I", "II") else legs_back).extend(blk)
         knuckles.extend(kn)
         bone_bits.extend(bn)
         leg_veins += leg_vein(J, lat, sc, phase=1.3 * li + (0.0 if sx > 0 else 2.0))
 
-# pedipalpi: piccole "braccia" ai lati dei cheliceri, sollevate
+# pedipalpi: piccole "braccia" ai lati dei cheliceri, sollevate; parti a se' (nere) che il gioco fa fremere
 PALP = [(0.27, -1.0, 1.34), (0.42, -1.24, 1.18), (0.47, -1.44, 1.34), (0.44, -1.62, 1.24), (0.4, -1.7, 1.06)]
 PALP_R = [0.06, 0.056, 0.05, 0.044, 0.03, 0.01]
+palps = {}
 for sx in (1, -1):
     P = [np.array([sx * x, y, z]) for x, y, z in PALP]
-    for i in range(len(P) - 1):
-        if i < len(P) - 2:
-            legs_front.append(spindle(P[i], P[i + 1], PALP_R[i], PALP_R[i] * 1.1, PALP_R[i + 1]))
-        else:
-            c = P[i] + (P[i + 1] - P[i]) * 0.55
-            legs_front.append(round_cone(tuple(P[i]), tuple(c), PALP_R[i], PALP_R[i] * 0.85))
-            bone_bits.append(round_cone(tuple(P[i] + (P[i + 1] - P[i]) * 0.45), tuple(P[i + 1]), PALP_R[i] * 1.02,
-                                        0.006))
-    for q, r in zip(P[1:-1], (0.068, 0.06, 0.05)):
-        knuckles.append((q, r))
+    segs = [spindle(P[i], P[i + 1], PALP_R[i], PALP_R[i] * 1.1, PALP_R[i + 1]) for i in range(len(P) - 2)]
+    segs.append(round_cone(tuple(P[-2]), tuple(P[-1]), PALP_R[-3], 0.008))       # artiglio del palpo
+    segs += [sphere(r, tuple(q)) for q, r in zip(P[1:-1], (0.068, 0.062, 0.054))]  # nocche
+    palps[sx] = union(*segs, k=0.012)
 
-
-# ============================================================ zanne a falce (viola-nero, punta d'osso) e dentini
+# ============================================================ zanne a falce (viola-nero, punta d'osso) e setole
 chitin, fang_tips, fang_tip_pts, fang_curves, bristles = [], [], [], [], []
 for sx, c in CHEL.items():
     base = c[1] + np.array([0.0, -0.03, -0.04])
@@ -443,20 +462,27 @@ for sx, c in CHEL.items():
     fang_tip_pts.append(np.array(fang[-1]))
     fang_curves.append((fang, fr))
     # setole nere sul davanti del chelicero
-    for (u, v), L in zip(((0.2, -0.4), (0.45, 0.35), (0.65, -0.2), (0.85, 0.3), (0.35, 0.95)), (0.13, 0.12, 0.12, 0.1, 0.11)):
+    for (u, v), L in zip(((0.2, -0.4), (0.45, 0.35), (0.65, -0.2), (0.85, 0.3), (0.35, 0.95)),
+                         (0.13, 0.12, 0.12, 0.1, 0.11)):
         q = c[0] + (c[1] - c[0]) * u
         p0, nn = project(chel[sx], q, (sx * v, -1.0, -0.15))
-        bristles.append(round_cone(tuple(p0 - nn * 0.03), tuple(p0 + norm(nn + np.array([0, 0, -0.9])) * L), 0.034, 0.006))
+        tip = p0 + norm(nn + np.array([0, 0, -0.9])) * L
+        bristles.append(round_cone(tuple(p0 - nn * 0.03), tuple(tip), 0.034, 0.006))
 chitin.append(spheres([q for q, _ in knuckles], [r for _, r in knuckles]))
-# filiere in fondo all'addome
+# filiere in fondo all'addome e filo di seta che ancora la vedova a terra
 SPIN, SPIN_N = project(abdomen, AB_C, (0.0, 0.8, -0.6))
 for dx, dz in ((-0.09, 0.03), (0.09, 0.03), (0.0, -0.06)):
     q = SPIN + np.array([dx, 0.0, dz]) - SPIN_N * 0.06
     chitin.append(round_cone(tuple(q), tuple(q + SPIN_N * 0.2 + np.array([dx * 0.6, 0, 0])), 0.075, 0.045))
-m.add("LegsFront", fast_union(legs_front + bristles, k=0.012), BLACK, reflectance=0.2, tris=8500, voxel=0.0235)
-m.add("LegsBack", fast_union(legs_back, k=0.012), BLACK, reflectance=0.2, tris=7500, voxel=0.0255)
-silk = bezier(tuple(SPIN + SPIN_N * 0.12), tuple(SPIN + SPIN_N * 0.3 + [0, 0.05, -0.1]), (0.0, 2.92, 0.22), (0.0, 2.98, 0.0), 14)
-bone_bits.append(tube(silk, [0.03 - 0.0008 * i for i in range(15)]))    # filo di seta che la ancora a terra
+silk = bezier(tuple(SPIN + SPIN_N * 0.12), tuple(SPIN + SPIN_N * 0.3 + [0, 0.05, -0.1]), (0.0, 2.92, 0.22),
+              (0.0, 2.98, 0.0), 14)
+bone_bits.append(tube(silk, [0.03 - 0.0008 * i for i in range(15)]))
+
+m.add("LegsFront", fast_union(legs_front + bristles, k=0.012), BLACK, reflectance=0.2, tris=8200, voxel=0.0232)
+m.add("LegsBack", fast_union(legs_back, k=0.012), BLACK, reflectance=0.2, tris=7500, voxel=0.0258)
+for sx, nm in ((1, "PalpR"), (-1, "PalpL")):
+    m.add(nm, palps[sx], BLACK, reflectance=0.2, tris=500, voxel=0.017, group=nm,
+          pivot=(sx * PALP[0][0], PALP[0][1], PALP[0][2]))
 m.add("Chitin", fast_union(chitin, k=0.01), CHITIN, reflectance=0.15, role="detail", tris=4500, voxel=0.0275)
 
 # punti a X sulla cucitura (filo d'osso)
@@ -480,7 +506,8 @@ for i in range(32):
     ca, sa = math.cos(math.radians(-14)), math.sin(math.radians(-14))
     border.append(to_surface(abdomen, PF.point((x * ca - z * sa, 0.0, x * sa + z * ca))))
 stitches += dash_stitches(abdomen, border, 12, 0.075, 0.019, lift=0.036)
-m.add("Bone", fast_union(fang_tips + bone_bits + stitches), BONE, role="detail", tris=3200, voxel=0.02)
+m.add("Bone", fast_union(fang_tips + bone_bits + stitches).intersect(GROUND), BONE, role="detail", tris=3200,
+      voxel=0.0202)
 
 # ============================================================ clessidra rossa sul dorso dell'addome (+ macchioline)
 HG = Frame(abdomen, AB_C, (0.0, -0.5, 0.86))
@@ -506,7 +533,7 @@ for name, (pts, sc) in LEGS.items():
     if name not in ("I", "II"):
         continue
     for sx in (1, -1):
-        J, _ = leg_joints(pts, sx)
+        J, _ = leg_joints(pts, sx, name)
         for j, L, rd in ((2, 0.16, 0.05), (4, 0.11, 0.04)):
             top = J[j] - np.array([0.0, 0.0, KNUCKLE_R[j - 1] * sc * 0.8])
             venom.append(hang_drop(top, L, 0.032, rd))
@@ -518,7 +545,8 @@ sag = [a + (b - a) * t + np.array([0.0, -0.012, -0.11 * math.sin(math.pi * t)]) 
 venom.append(tube([tuple(q) for q in sag], [0.018, 0.019, 0.021, 0.024, 0.026, 0.024, 0.021, 0.019, 0.018]))
 venom.append(hang_drop(sag[4], 0.08, 0.024, 0.04))
 fall = np.array([a[0], a[1], 0.18])
-venom.append(union(sphere(0.04, tuple(fall)), round_cone(tuple(fall), tuple(fall + [0, 0, 0.08]), 0.038, 0.008), k=0.02))
+venom.append(union(sphere(0.04, tuple(fall)), round_cone(tuple(fall), tuple(fall + [0, 0, 0.08]), 0.038, 0.008),
+                   k=0.02))
 # veleno che cola lungo il dorso delle zanne (la punta d'osso resta scoperta)
 for fang, fr in fang_curves:
     pts, radii = [], []
@@ -530,13 +558,14 @@ for fang, fr in fang_curves:
     venom.append(tube(pts, radii))
 # pozza a terra sotto le zanne, con schizzi e una corona dove cade la goccia
 pz = np.array([0.0, -1.5, 0.0])
-venom.append(union(ellipsoid((0.34, 0.25, 0.028), tuple(pz)), ellipsoid((0.17, 0.15, 0.028), tuple(pz + [0.27, -0.12, 0])),
+venom.append(union(ellipsoid((0.34, 0.25, 0.028), tuple(pz)),
+                   ellipsoid((0.17, 0.15, 0.028), tuple(pz + [0.27, -0.12, 0])),
                    ellipsoid((0.15, 0.12, 0.028), tuple(pz + [-0.25, 0.1, 0])),
                    ellipsoid((0.1, 0.09, 0.028), tuple(pz + [-0.12, -0.25, 0])), k=0.08))
 for ang in range(0, 360, 30):
     rr = 0.46 + 0.08 * math.sin(ang * 3.1)
     q = pz + [rr * math.cos(math.radians(ang)), rr * 0.82 * math.sin(math.radians(ang)), 0.0]
-    venom.append(ellipsoid((0.034, 0.034, 0.02), tuple(q)))
+    venom.append(ellipsoid((0.044, 0.044, 0.03), tuple(q)))
 for q, r in (((-0.16, -1.42), 0.045), ((0.2, -1.64), 0.036), ((-0.3, -1.4), 0.028), ((0.1, -1.36), 0.03)):
     venom.append(sphere(r, (q[0], q[1], 0.022)))   # bolle tossiche che affiorano dalla pozza
 crown_c = np.array([a[0], a[1], 0.0])
@@ -571,7 +600,8 @@ for d, n in (((0.86, 0.55, -0.1), 7), ((-0.88, 0.25, -0.15), 6), ((-0.4, 0.85, 0
         pc.append(p - nn * r * 0.3)
         pr.append(r)
 venom.append(spheres(pc, pr))
-m.add("Venom", fast_union(venom), VENOM, material="Neon", role="glow", tris=14000, voxel=0.0143)
+m.add("Venom", fast_union(venom).intersect(GROUND), VENOM, material="Neon", role="glow", tris=13700,
+      voxel=0.0155)
 
 m.add("Shine", union(*shines), WHITE, role="shine", tris=300, voxel=0.009)
 
