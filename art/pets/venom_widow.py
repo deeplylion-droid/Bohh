@@ -132,10 +132,11 @@ def spindle_r(t, ra, rm, rb, at=0.42):
     return ra + (rm - ra) * t / at if t < at else rm + (rb - rm) * (t - at) / (1 - at)
 
 
-def flow(sdf, p0, step=0.03, n=70, min_tan=0.3):
+def flow(sdf, p0, step=0.03, n=70, min_tan=0.3, meander=0.45):
     """Colatura: dal punto p0 scende lungo la superficie seguendo la gravita' finche' la parete e' ripida."""
     p = to_surface(sdf, p0)
     pts = [p.copy()]
+    ph = float(rng.uniform(0, 6.3))
     for i in range(n):
         nrm = normal_at(sdf, p)
         t = np.array([0.0, 0.0, -1.0]) + nrm * nrm[2]
@@ -143,7 +144,7 @@ def flow(sdf, p0, step=0.03, n=70, min_tan=0.3):
         if tl < min_tan:
             break
         side = np.cross(nrm, t / tl)
-        p = to_surface(sdf, p + (t / tl + side * 0.25 * math.sin(i * 0.9)) * step, iters=3)
+        p = to_surface(sdf, p + (t / tl + side * meander * math.sin(i * 0.55 + ph)) * step, iters=3)
         pts.append(p.copy())
     return pts
 
@@ -155,7 +156,8 @@ def drip(sdf, p0, r0=0.026, r1=0.04, drop=0.065, hang=0.13, sink=0.4, **kw):
         pts = [pts[0], pts[0] + np.array([0, 0, -0.03]), pts[0] + np.array([0, 0, -0.06])]
     nrms = [normal_at(sdf, q) for q in pts]
     n = len(pts)
-    radii = [r0 + (r1 - r0) * (i / (n - 1)) ** 1.5 for i in range(n)]
+    ph = float(rng.uniform(0, 6.3))
+    radii = [(r0 + (r1 - r0) * (i / (n - 1)) ** 1.5) * (1 + 0.28 * max(0.0, math.sin(i * 0.8 + ph))) for i in range(n)]
     path = [q - nn * r * sink for q, nn, r in zip(pts, nrms, radii)]
     end = pts[-1] + nrms[-1] * radii[-1] * 0.3
     c = end + np.array([0.0, 0.0, -hang])
@@ -453,6 +455,8 @@ for dx, dz in ((-0.09, 0.03), (0.09, 0.03), (0.0, -0.06)):
     chitin.append(round_cone(tuple(q), tuple(q + SPIN_N * 0.2 + np.array([dx * 0.6, 0, 0])), 0.075, 0.045))
 m.add("LegsFront", fast_union(legs_front + bristles, k=0.012), BLACK, reflectance=0.2, tris=8500, voxel=0.0235)
 m.add("LegsBack", fast_union(legs_back, k=0.012), BLACK, reflectance=0.2, tris=7500, voxel=0.0255)
+silk = bezier(tuple(SPIN + SPIN_N * 0.12), tuple(SPIN + SPIN_N * 0.3 + [0, 0.05, -0.1]), (0.0, 2.92, 0.22), (0.0, 2.98, 0.0), 14)
+bone_bits.append(tube(silk, [0.03 - 0.0008 * i for i in range(15)]))    # filo di seta che la ancora a terra
 m.add("Chitin", fast_union(chitin, k=0.01), CHITIN, reflectance=0.15, role="detail", tris=4500, voxel=0.0275)
 
 # punti a X sulla cucitura (filo d'osso)
@@ -497,6 +501,15 @@ m.add("Sockets", union(*sockets), SOCKET, role="eye", tris=900, voxel=0.016)
 
 # ============================================================ veleno (unica parte "Venom")
 venom = list(leg_veins)
+# veleno che trasuda dalle articolazioni delle zampe alzate e pende in gocce
+for name, (pts, sc) in LEGS.items():
+    if name not in ("I", "II"):
+        continue
+    for sx in (1, -1):
+        J, _ = leg_joints(pts, sx)
+        for j, L, rd in ((2, 0.16, 0.05), (4, 0.11, 0.04)):
+            top = J[j] - np.array([0.0, 0.0, KNUCKLE_R[j - 1] * sc * 0.8])
+            venom.append(hang_drop(top, L, 0.032, rd))
 # fili lunghi appesi alle zanne, una goccia in caduta e bava che pende fra le due punte
 for tp, L in zip(fang_tip_pts, (0.22, 0.17)):
     venom.append(hang_drop(tp + np.array([0, -0.004, 0.014]), L, 0.02, 0.052))
@@ -560,7 +573,7 @@ for d, n in (((0.86, 0.55, -0.1), 7), ((-0.88, 0.25, -0.15), 6), ((-0.4, 0.85, 0
 venom.append(spheres(pc, pr))
 m.add("Venom", fast_union(venom), VENOM, material="Neon", role="glow", tris=14000, voxel=0.0143)
 
-m.add("Shine", union(*shines), WHITE, role="shine", tris=300, voxel=0.007)
+m.add("Shine", union(*shines), WHITE, role="shine", tris=300, voxel=0.009)
 
 if __name__ == "__main__":
     m.build(views=tuple(os.environ.get("VIEWS", "3q,front").split(",")), res=int(os.environ.get("RES", 700)))
