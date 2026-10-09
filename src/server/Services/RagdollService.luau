@@ -63,7 +63,9 @@ local function setRagdoll(character: Model, on: boolean)
 			end
 		end
 	end
-	for _, d in character:GetDescendants() do
+	-- solo le parti del corpo (figlie dirette del personaggio): i modelli portati sopra la testa
+	-- possono avere parti chiamate Head, Legs, Feet... che non devono diventare solide
+	for _, d in character:GetChildren() do
 		if
 			d:IsA("BasePart")
 			and (
