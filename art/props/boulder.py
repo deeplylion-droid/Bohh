@@ -15,7 +15,7 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from lib.sdf import SDF, project, tube, union  # noqa: E402
+from lib.sdf import SDF, smax, union  # noqa: E402
 from lib.toy import Model  # noqa: E402
 
 ROCK = (124, 116, 107)
@@ -52,8 +52,9 @@ def convex(normals, offsets, c=(0, 0, 0), cap: float | None = None, ext: float =
         q = (p - c) @ nrm.T - off
         m = q.max(axis=1)
         d = m + soft * np.log(np.exp((q - m[:, None]) / soft).sum(axis=1)) if soft > 0 else m
-        if cap is not None:  # sfera che smussa solo i vertici piu' estremi
-            d = np.maximum(d, np.sqrt(((p - c) ** 2).sum(axis=1)) - cap)
+        if cap is not None:  # sfera che smussa (dolcemente) solo i vertici piu' estremi
+            sph = np.sqrt(((p - c) ** 2).sum(axis=1)) - cap
+            d = smax(d, sph, max(soft, 1e-3) * 2) if soft > 0 else np.maximum(d, sph)
         return d
 
     return SDF(f, c - ext, c + ext)
@@ -63,7 +64,8 @@ def facet_ball(r: float, n: int, seed: int, c=(0, 0, 0), spread=(0.85, 1.0), jit
                soft: float = 0.03) -> SDF:
     rng = np.random.default_rng(seed)
     dirs = fib_dirs(n, jitter, rng)
-    return convex(dirs, r * rng.uniform(*spread, n), c, cap=r * cap, ext=r * cap + 0.05, soft=soft)
+    rc = r * cap if cap else None
+    return convex(dirs, r * rng.uniform(*spread, n), c, cap=rc, ext=r * (cap or 1.6) + 0.05, soft=soft)
 
 
 def shard(axis, tip: float, half_angle: float, seed: int, sides: int = 4) -> SDF:
@@ -82,7 +84,7 @@ def shard(axis, tip: float, half_angle: float, seed: int, sides: int = 4) -> SDF
         normals.append(n)
         offsets.append(float(n @ apex))
     a32 = a.astype(np.float32)
-    return convex(normals, offsets, (0, 0, 0), ext=tip + 0.1, soft=0.025).intersect(
+    return convex(normals, offsets, (0, 0, 0), ext=tip + 0.1, soft=0.08).intersect(
         SDF(lambda p: 0.35 - p @ a32, (-tip,) * 3, (tip,) * 3))
 
 
@@ -104,24 +106,27 @@ def crack(base: SDF, start, heading, steps: int, step: float, seed: int, zig: fl
 
 
 def boulder() -> Model:
-    # nota: il toolkit rimesha i pezzi con pochi triangoli a voxel ~0.1: la roccia nasce da un poliedro
-    # a spigoli appena smussati e viene decimata con decisione, cosi' restano grandi faccette piatte.
+    # nota: con pochi triangoli il toolkit rimesha la roccia a voxel ~0.1. Si parte da un poliedro
+    # irregolare a spigoli appena smussati (niente dettagli sottili) e lo si decima con decisione:
+    # la decimazione lo riporta a grandi faccette piatte con spigoli vivi.
     m = Model("Boulder", "prop", voxel=0.03)
-    core = facet_ball(1.0, 18, seed=4, spread=(0.86, 1.0), jitter=0.1, cap=1.25, soft=0.06)
-    # punte sporgenti (spigoli rotti): silhouette tagliente ma ancora "rotolabile"
-    shards = [shard((0.75, -0.55, 0.62), 1.2, 48, 1), shard((-0.85, 0.2, 0.5), 1.17, 50, 2),
-              shard((0.25, 0.95, -0.2), 1.18, 48, 3), shard((-0.3, -0.62, -0.75), 1.15, 50, 4)]
-    rock = union(core, *shards)
-    m.add("Rock", rock, ROCK, tris=700, smooth=False)
+    core = facet_ball(1.0, 16, seed=8, spread=(0.8, 1.0), jitter=0.16, cap=1.28, soft=0.1)
+    # un paio di blocchi spigolosi che sporgono (sagoma irregolare ma ancora "rotolabile")
+    chunks = [facet_ball(0.55, 8, seed=31, c=tuple(unit((0.85, -0.35, 0.45)) * 0.62), spread=(0.85, 1.0), jitter=0.3,
+                         cap=1.3, soft=0.08),
+              facet_ball(0.5, 8, seed=33, c=tuple(unit((-0.6, 0.55, -0.5)) * 0.66), spread=(0.85, 1.0), jitter=0.3,
+                         cap=1.3, soft=0.08)]
+    rock = union(core, *chunks)
+    m.add("Rock", rock, ROCK, tris=560, smooth=False)
 
     # macchie scure: vernice spessa che segue le faccette, ritagliata da piccoli poliedri (bordi dritti)
     regions = []
-    for k, (d, r) in enumerate((((0.55, -0.72, 0.4), 0.36), ((-0.8, -0.38, -0.36), 0.34), ((-0.1, 0.62, 0.8), 0.32),
-                                ((0.3, -0.25, -0.95), 0.34), ((0.95, 0.1, -0.2), 0.26))):
-        regions.append(facet_ball(r, 7, seed=60 + k, c=tuple(unit(d) * 0.98), spread=(0.75, 1.0), jitter=0.3, cap=1.3,
+    for k, (d, r) in enumerate((((0.4, -0.85, 0.3), 0.36), ((-0.8, -0.38, -0.36), 0.34), ((-0.1, 0.62, 0.8), 0.32),
+                                ((0.3, -0.25, -0.95), 0.34), ((0.95, 0.15, -0.2), 0.28))):
+        regions.append(facet_ball(r, 7, seed=60 + k, c=tuple(unit(d) * 0.98), spread=(0.75, 1.0), jitter=0.3, cap=None,
                                   soft=0.0))
-    paint = rock.offset(0.045).subtract(rock.offset(-0.12))
-    m.add("Patches", paint.intersect(union(*regions)), ROCK_DARK, role="detail", tris=420, smooth=False)
+    paint = rock.offset(0.05).subtract(rock.offset(-0.12))
+    m.add("Patches", paint.intersect(union(*regions)), ROCK_DARK, role="detail", tris=380, smooth=False)
     return m
 
 

@@ -219,9 +219,9 @@ m.add("Paws", union(fist, cup_hand, *feet), PAW, role="detail", tris=1500)
 
 # ghigno a dentoni (angolo destro piu' alto) e naso
 upper = [(-0.31, 1.91), (-0.2, 1.87), (-0.08, 1.858), (0.0, 1.86), (0.1, 1.862), (0.22, 1.895), (0.34, 1.98)]
-lower = [(-0.31, 1.91), (-0.22, 1.81), (-0.1, 1.745), (0.0, 1.735), (0.12, 1.75), (0.25, 1.82), (0.34, 1.98)]
-mouth, small_teeth = grin(head_u, upper, lower, y_back=-0.62, up_teeth=(-0.23, -0.15, 0.16, 0.25),
-                          tooth=(0.055, 0.024))
+lower = [(-0.31, 1.91), (-0.23, 1.79), (-0.11, 1.705), (0.0, 1.69), (0.12, 1.705), (0.25, 1.79), (0.34, 1.98)]
+mouth, small_teeth = grin(head_u, upper, lower, y_back=-0.62, up_teeth=(-0.24, -0.16, 0.17, 0.26),
+                          down_teeth=(-0.17, 0.19), tooth=(0.058, 0.025))
 lip = head_u.offset(0.034)
 buck = []
 for x in (-0.05, 0.05):
@@ -238,7 +238,7 @@ m.add("Pupils", tilt(union(eyes[1][1], eyes[-1][1])), EYE, role="eye", tris=500,
 m.add("Shine", tilt(union(eyes[1][2], eyes[-1][2])), WHITE, role="shine", tris=250, voxel=0.008)
 
 # sopracciglia spesse (una alzata, una abbassata) e pancia ricucita
-brows = union(surface_tube(head_u, [(-0.54, 2.6), (-0.38, 2.57), (-0.2, 2.5)], [0.035, 0.05, 0.04], inset=0.012),
+brows = union(surface_tube(head_u, [(-0.5, 2.6), (-0.36, 2.58), (-0.2, 2.52)], [0.035, 0.05, 0.04], inset=0.012),
               surface_tube(head_u, [(0.16, 2.6), (0.31, 2.72), (0.5, 2.66)], [0.04, 0.05, 0.035], inset=0.012))
 seam_pts = project_curve(core0.offset(0.022), [(x, -0.3, z) for x, z in
                                                [(0.08, 1.52), (0.02, 1.25), (0.07, 0.95), (0.02, 0.62)]],
@@ -248,7 +248,7 @@ seam = union(stitches(core0.offset(0.022), seam_pts, step=0.1, length=0.12, r=0.
 m.add("Thread", union(tilt(brows), seam), THREAD, role="detail", tris=1500, voxel=0.012)
 
 # stella alpina porta in avanti (modellata con fronte +Z locale)
-FLOWER_POS = (-0.92, -1.12, 1.6)
+FLOWER_POS = (-0.94, -1.14, 1.64)
 
 
 def cup(shape, k):
@@ -265,8 +265,8 @@ def petal(length, width, thick):
     return shape.warp(lambda p: p * [[1.0, 1.0, width / thick]])
 
 
-outer = cup(union(*[petal(0.38, 0.082, 0.03).rot(0, 0, i * 45) for i in range(8)], k=0.02), 0.65)
-inner = cup(union(*[petal(0.25, 0.064, 0.027).rot(0, 0, 22.5 + i * 45) for i in range(8)], k=0.02), 1.0)
+outer = cup(union(*[petal(0.42, 0.09, 0.032).rot(0, 0, i * 45) for i in range(8)], k=0.02), 0.6)
+inner = cup(union(*[petal(0.27, 0.07, 0.028).rot(0, 0, 22.5 + i * 45) for i in range(8)], k=0.02), 0.95)
 m.add("Petals", place_flower(union(outer, inner.translate((0, 0, 0.04)))), PETAL, role="detail", tris=1200,
       voxel=0.012)
 florets = [sphere(0.062, (0, 0, 0.105))] + [sphere(0.052, (0.082 * math.cos(a), 0.082 * math.sin(a), 0.082))

@@ -279,16 +279,18 @@ m.add("Lids", union(*lids), CRUST, role="skin", tris=500, voxel=0.012)
 brows = []
 for f, sx in zip(eye_frames, (1, -1)):
     # (x verso il naso, z): estremo interno basso, esterno alto -> sopracciglia a V da bullo
-    pts = [f.point((sx * xi, 0.0, z)) for xi, z in ((-0.21, 0.43), (-0.09, 0.39), (0.03, 0.33), (0.15, 0.26))]
-    pts = project_curve(core, [tuple(q) for q in pts], -f.normal, inset=0.0, start_back=0.4)
-    brows.append(tube(pts, [0.05, 0.062, 0.062, 0.048]))
+    pts = []
+    for xi, z in ((-0.2, 0.33), (-0.1, 0.32), (0.0, 0.29), (0.09, 0.25), (0.16, 0.2)):
+        q = f.point((sx * xi, -0.3, z))
+        pts.append(project(core, HEAD_C, q - np.array(HEAD_C))[0])
+    brows.append(tube(pts, [0.045, 0.058, 0.062, 0.058, 0.045]))
 m.add("Brows", union(*brows, k=0.02), BROW, role="detail", tris=500, voxel=0.012)
 
 # ghigno enorme da orecchio a orecchio, pieno di dentini aguzzi
-mouth_f = Frame(core, SNOUT_C, tuple(RH @ np.array([0.0, -1.0, -0.36], dtype=np.float32)))
-GA, GH, GC, GS = 0.52, 0.2, 0.16, 0.05
+mouth_f = Frame(core, SNOUT_C, tuple(RH @ np.array([0.0, -1.0, -0.28], dtype=np.float32)))
+GA, GH, GC, GS = 0.5, 0.27, 0.19, 0.06
 m.add("Mouth", grin_paint(core, mouth_f, GA, GH, GC, GS), MOUTH, role="detail", tris=500, voxel=0.011)
-teeth = grin_teeth(core, mouth_f, SNOUT_C, GA, GH, GC, GS, n_top=11, n_bot=8, L=0.085, r=0.026)
+teeth = grin_teeth(core, mouth_f, SNOUT_C, GA, GH, GC, GS, n_top=9, n_bot=7, L=0.11, r=0.034)
 claws = []
 for sx in (1, -1):
     for dx in (-0.15, 0.0, 0.15):
@@ -303,7 +305,7 @@ m.add("Teeth", union(teeth, *claws), TOOTH, role="detail", tris=1100, voxel=0.01
 
 # cucitura da peluche lungo la pancia (punti incrociati)
 seam = project_curve(core, [(0.0, -1.0, z) for z in np.linspace(1.48, 0.62, 10)], (0, -1, 0), inset=-0.012)
-m.add("Stitches", stitches(core, seam, 9, 0.13, 0.017), THREAD, role="detail", tris=500, voxel=0.01)
+m.add("Stitches", stitches(core, seam, 7, 0.15, 0.022), THREAD, role="detail", tris=500, voxel=0.01)
 
 if __name__ == "__main__":
     m.build(views=tuple(os.environ.get("VIEWS", "3q,front").split(",")), res=int(os.environ.get("RES", 700)))

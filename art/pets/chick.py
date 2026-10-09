@@ -64,20 +64,21 @@ def grin(xc, zc, half_w, curve, slope, thick, n_up, n_lo, tooth_w, y0, y1):
 
     xs = np.linspace(xc - half_w, xc + half_w, 25)
     upper = [(x, top(x)[0]) for x in xs]
-    lower = [(x, top(x)[0] - top(x)[1]) for x in xs[::-1]]
+    lower = [(x, top(x)[0] - top(x)[1]) for x in xs[-2:0:-1]]  # niente vertici doppi: prism() darebbe NaN
     mouth = face_prism(upper + lower, y0, y1, r=0.004)
+    step = 1.6 * half_w / n_up
     teeth = []
-    for i in range(n_up):
-        x = xc - 0.8 * half_w + (i + 0.5) * 1.6 * half_w / n_up
+    for i in range(n_up):  # n_up dispari e n_lo pari: i denti di sotto cadono fra quelli di sopra
+        x = xc + (i - (n_up - 1) / 2) * step
         z, th = top(x)
-        teeth.append(face_prism([(x - tooth_w / 2, z + 0.02), (x + tooth_w / 2, z + 0.02), (x, z - 0.62 * th)],
+        teeth.append(face_prism([(x - tooth_w / 2, z + 0.02), (x + tooth_w / 2, z + 0.02), (x, z - 0.6 * th)],
                                 y0, y1, r=0.004))
     for i in range(n_lo):
-        x = xc - 0.6 * half_w + (i + 0.5) * 1.2 * half_w / n_lo
+        x = xc + (i - (n_lo - 1) / 2) * step
         z, th = top(x)
-        teeth.append(face_prism([(x - tooth_w * 0.4, z - th - 0.02), (x + tooth_w * 0.4, z - th - 0.02),
-                                 (x, z - 0.45 * th)], y0, y1, r=0.004))
-    return mouth, union(*teeth).intersect(mouth.offset(0.002))
+        teeth.append(face_prism([(x - tooth_w * 0.42, z - th - 0.02), (x + tooth_w * 0.42, z - th - 0.02),
+                                 (x, z - 0.5 * th)], y0, y1, r=0.004))
+    return mouth, union(*teeth).intersect(mouth.offset(-0.009))
 
 
 def eyelid(frame, radii, z0, slope):
@@ -175,10 +176,11 @@ m.add("Beak", Frame(head, HEAD_C, (0, -1.0, -0.02), sink=0.07).place(beak), ORAN
       voxel=0.013)
 
 mouth, teeth = grin(0.03, 1.87, 0.34, 0.06, 0.05, 0.13, 7, 4, 0.05, -1.4, -0.4)
-belly_seam = seam(front_path(core.offset(0.02), [(0.0, z) for z in np.linspace(1.5, 0.62, 12)], -0.3))
+belly_seam = seam(front_path(core.offset(0.02), [(0.0, z) for z in np.linspace(1.5, 0.62, 12)], -0.3), inset=-0.005)
 m.add("Stitches", union(*brows, belly_seam), THREAD, role="detail", tris=1300, voxel=0.01)
 
-m.add("Eyes", union(*pupils, paint(core, mouth, t=0.014, depth=0.03)), EYE, role="eye", tris=1300, voxel=0.01)
+m.add("Eyes", union(*pupils), EYE, role="eye", tris=900, voxel=0.012)
+m.add("Mouth", paint(core, mouth, t=0.014, depth=0.03), MOUTH, role="eye", tris=600, voxel=0.008)
 shines = []
 for f, (hz, lz) in zip(eye_frames, ((0.03, -0.11), (-0.03, -0.12))):
     shines.append(f.place(sphere(0.042), (-0.05, -0.08, hz)))
