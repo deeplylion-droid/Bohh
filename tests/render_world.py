@@ -211,6 +211,9 @@ VIEWS = {
     "throne": ((-14, 350, -38), (-58, 360, -160), 24),
     # i giganti dei lotti 1-5 visti dall'alto, dalla parte del sentiero
     "giants": ((60, 470, 330), (-20, 340, -30), 26),
+    "junction": ((70, 372, 40), (22, 330, 110), 30),
+    # per la miniatura: la vetta vista da ovest, con i giganti dei lotti 1-5 tutti in vista
+    "promo": ((-240, 440, 105), (50, 352, -62), 23),
     "plot": ((40, 352, 50), (88, 331, 104), 26),
     # lotto 1 da vicino: piedistalli, pedane, incubatrici; e il cancello con le sue colonne
     "pads": ((62, 345, 66), (84, 331, 96), 30),
@@ -221,7 +224,8 @@ VIEWS = {
 }
 
 
-def render(view, res=(1280, 720)):
+def render(view, res=None):
+    res = res or (int(os.environ.get("WIDTH", 1280)), int(os.environ.get("HEIGHT", 720)))
     cam_pos, target, lens = VIEWS[view]
     scene = bpy.context.scene
     cam_data = bpy.data.cameras.new("cam")
@@ -246,7 +250,8 @@ def main():
     bpy.ops.wm.read_factory_settings(use_empty=True)
     setup_world(samples=int(os.environ.get("SAMPLES", 24)))
     scene = bpy.context.scene
-    scene.render.film_transparent = False
+    # TRANSPARENT=1: sfondo trasparente (per comporre un cielo nelle immagini promozionali)
+    scene.render.film_transparent = os.environ.get("TRANSPARENT") == "1"
     # niente luce di contorno (serve solo ai ritratti dei modelli)
     for o in list(scene.objects):
         if o.name.startswith("Rim"):

@@ -292,7 +292,7 @@ def thumb_hatch() -> str:
     body.append(f'<div class="ribbon" style="left:1250px;top:330px;font-size:46px;padding:8px 26px;background:#8a3dff;'
                 f'transform:rotate(7deg);z-index:11">SECRET</div>')
     body.append(f'<div class="ribbon" style="left:820px;top:330px;font-size:40px;padding:6px 22px;background:#ffb21f;'
-                f'transform:rotate(-3deg);z-index:11">32 PETS</div>')
+                f'transform:rotate(-3deg);z-index:11">37 PETS</div>')
     bg = "background: radial-gradient(circle at 50% 58%, #ffcf6b 0%, #ff7d4f 32%, #b8379f 62%, #3b1f7a 100%);"
     return page(W, H, "".join(body), bg)
 
@@ -363,12 +363,34 @@ def thumb_ultra() -> str:
     return page(W, H, "".join(body), bg)
 
 
+def thumb_summit() -> str:
+    """La vetta vera (render del mondo dal server, tests/render_world.py promo con TRANSPARENT=1):
+    gli 8 lotti e i giganti sui troni, con cielo e montagne dietro."""
+    W, H = 1920, 1080
+    world = ART / "out" / "world" / "promo.png"
+    far = [
+        (760, 7, 260, 400, "#b9c6ee", "#9eacdb", "#f4f7ff", "#d5ddf5"),
+        (820, 6, 200, 330, "#8f9bd2", "#7581bd", "#f8faff", "#ccd5f0"),
+    ]
+    body = [
+        f'<svg class="layer" width="{W}" height="{H}">{rays(960, 120, 24, "#ffffff", 0.10, 1500)}</svg>',
+        mountains_svg(W, H, far, seed=5).replace("<svg ", '<svg class="layer" '),
+        snow_dots(W, 560, 50, 3),
+        f'<img class="layer" src="{world.as_uri()}" style="width:{W}px;height:{H}px;z-index:5">',
+        title("RULE THE|SUMMIT!", 150, GOLD, 12, 14, "left:0;right:0;top:26px;transform:rotate(-2deg);z-index:12"),
+    ]
+    body.append(f'<div class="ribbon" style="right:120px;top:120px;font-size:46px;padding:8px 28px;background:#ff3a6a;'
+                f'transform:rotate(6deg);z-index:11">GIANTS ON YOUR BASE!</div>')
+    return page(W, H, "".join(body))
+
+
 PAGES = {
     "icon": (icon, 512, 512),
     "thumbnail_1": (thumb_title, 1920, 1080),
     "thumbnail_2": (thumb_hatch, 1920, 1080),
     "thumbnail_3": (thumb_steal, 1920, 1080),
     "thumbnail_4": (thumb_ultra, 1920, 1080),
+    "thumbnail_5": (thumb_summit, 1920, 1080),
 }
 
 
