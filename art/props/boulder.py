@@ -1,8 +1,9 @@
 """Masso rotolante (Boulder) - ostacolo che rotola giu' dai sentieri.
 
-Roccia grezza quasi sferica (raggio ~1) a faccette piatte, con bozzi sporgenti e qualche
-faccetta piu' scura. ORIGINE AL CENTRO DEL MASSO (la roccia scende anche sotto z = 0),
-cosi' il gioco puo' farlo rotolare attorno al suo centro.
+Roccia spigolosa e tagliente, quasi sferica (raggio ~1): grandi faccette piatte, qualche punta
+sporgente, crepe a zig-zag e macchie piu' scure, colori naturali da pietra.
+ORIGINE AL CENTRO DEL MASSO (la roccia scende anche sotto z = 0), cosi' il gioco puo' farlo
+rotolare attorno al suo centro.
 
 Uso: python props/boulder.py
 """
@@ -14,11 +15,11 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from lib.sdf import SDF, union  # noqa: E402
+from lib.sdf import SDF, project, tube, union  # noqa: E402
 from lib.toy import Model  # noqa: E402
 
-ROCK = (140, 126, 114)
-ROCK_DARK = (98, 87, 80)
+ROCK = (124, 116, 107)
+ROCK_DARK = (80, 74, 70)
 
 
 def fib_dirs(n: int, jitter: float, rng) -> np.ndarray:
@@ -31,63 +32,96 @@ def fib_dirs(n: int, jitter: float, rng) -> np.ndarray:
     return d / np.linalg.norm(d, axis=1, keepdims=True)
 
 
-class Facets:
-    """Poliedro convesso irregolare: intersezione di n semispazi attorno al centro c."""
+def unit(v) -> np.ndarray:
+    v = np.asarray(v, dtype=np.float64)
+    return v / np.linalg.norm(v)
 
-    def __init__(self, r: float, n: int, seed: int, c=(0, 0, 0), spread=(0.9, 1.0), jitter=0.12):
-        rng = np.random.default_rng(seed)
-        self.r = r
-        self.c = np.asarray(c, dtype=np.float32)
-        self.dirs = fib_dirs(n, jitter, rng).astype(np.float32)
-        self.dists = (r * rng.uniform(*spread, n)).astype(np.float32)
 
-    def planes(self, p):
-        return (p - self.c) @ self.dirs.T - self.dists
+def convex(normals, offsets, c=(0, 0, 0), cap: float | None = None, ext: float = 2.0, soft: float = 0.03) -> SDF:
+    """Poliedro convesso: intersezione dei semispazi n.(p - c) <= d.
 
-    def sdf(self) -> SDF:
-        e = self.r * 1.6
-        return SDF(lambda p: self.planes(p).max(axis=1), self.c - e, self.c + e)
+    soft: raggio dello smusso degli spigoli (massimo "morbido" log-sum-exp). Il toolkit rimesha i
+    pezzi grandi con voxel ~0.1: uno smusso di qualche centesimo evita spigoli seghettati e la
+    decimazione lo trasforma in una faccetta sottile (aspetto scolpito, a spigoli vivi).
+    """
+    nrm = np.asarray(normals, dtype=np.float32)
+    off = np.asarray(offsets, dtype=np.float32)
+    c = np.asarray(c, dtype=np.float32)
 
-    def nearest(self, d) -> int:
-        d = np.asarray(d, dtype=np.float32)
-        return int(np.argmax(self.dirs @ (d / np.linalg.norm(d))))
+    def f(p):
+        q = (p - c) @ nrm.T - off
+        m = q.max(axis=1)
+        d = m + soft * np.log(np.exp((q - m[:, None]) / soft).sum(axis=1)) if soft > 0 else m
+        if cap is not None:  # sfera che smussa solo i vertici piu' estremi
+            d = np.maximum(d, np.sqrt(((p - c) ** 2).sum(axis=1)) - cap)
+        return d
 
-    def raised_faces(self, sel, t: float) -> SDF:
-        """Solo le facce `sel`, sollevate di t (una "vernice" a faccette, bordi netti sugli spigoli)."""
-        mask = np.zeros(len(self.dists), dtype=bool)
-        mask[list(sel)] = True
+    return SDF(f, c - ext, c + ext)
 
-        def f(p):
-            q = self.planes(p)
-            inner = q.max(axis=1)
-            q2 = q.copy()
-            q2[:, mask] -= t
-            outer = q2.max(axis=1)
-            region = q[:, ~mask].max(axis=1) - q[:, mask].max(axis=1)
-            return np.maximum(np.maximum(outer, -inner - 0.02), region)
 
-        e = self.r * 1.6
-        return SDF(f, self.c - e, self.c + e)
+def facet_ball(r: float, n: int, seed: int, c=(0, 0, 0), spread=(0.85, 1.0), jitter=0.12, cap=1.22,
+               soft: float = 0.03) -> SDF:
+    rng = np.random.default_rng(seed)
+    dirs = fib_dirs(n, jitter, rng)
+    return convex(dirs, r * rng.uniform(*spread, n), c, cap=r * cap, ext=r * cap + 0.05, soft=soft)
+
+
+def shard(axis, tip: float, half_angle: float, seed: int, sides: int = 4) -> SDF:
+    """Punta piramidale irregolare lungo `axis`, con l'apice a distanza `tip` dal centro."""
+    rng = np.random.default_rng(seed)
+    a = unit(axis)
+    u = unit(np.cross(a, [0.3, 0.2, 1.0]))
+    v = np.cross(a, u)
+    apex = a * tip
+    normals, offsets = [], []
+    for k in range(sides):
+        ang = 2 * math.pi * k / sides + rng.uniform(-0.35, 0.35)
+        side = math.cos(ang) * u + math.sin(ang) * v
+        b = math.radians(90 - half_angle + rng.uniform(-8, 8))
+        n = unit(math.cos(b) * side + math.sin(b) * a)
+        normals.append(n)
+        offsets.append(float(n @ apex))
+    a32 = a.astype(np.float32)
+    return convex(normals, offsets, (0, 0, 0), ext=tip + 0.1, soft=0.025).intersect(
+        SDF(lambda p: 0.35 - p @ a32, (-tip,) * 3, (tip,) * 3))
+
+
+def crack(base: SDF, start, heading, steps: int, step: float, seed: int, zig: float = 0.55):
+    """Crepa a zig-zag che segue la superficie: lista di punti sulla superficie."""
+    rng = np.random.default_rng(seed)
+    p, n = project(base, (0, 0, 0), start)
+    h = unit(heading)
+    pts = [p]
+    for k in range(steps):
+        h = unit(h - n * (h @ n))
+        side = unit(np.cross(n, h))
+        turn = zig * (1 if k % 2 == 0 else -1) + rng.uniform(-0.2, 0.2)
+        d = unit(h + side * turn)
+        q = pts[-1] + d * step
+        p, n = project(base, (0, 0, 0), q)
+        pts.append(p)
+    return [tuple(float(x) for x in q) for q in pts]
 
 
 def boulder() -> Model:
-    m = Model("Boulder", "prop", voxel=0.022)
-    core = Facets(1.0, 34, seed=11, spread=(0.88, 1.0), jitter=0.1)
-    # bozzi: blocchi spigolosi che sporgono dalla sfera
-    rng = np.random.default_rng(5)
-    lumps = []
-    for k, d in enumerate(fib_dirs(4, 0.3, rng)):
-        r = float(rng.uniform(0.45, 0.55))
-        lumps.append(Facets(r, 9, seed=40 + k, c=tuple(d * (1.0 - r * 0.7)), spread=(0.85, 1.0), jitter=0.25).sdf())
-    rock = union(core.sdf(), *lumps)
-    m.add("Rock", rock, ROCK, tris=1080, smooth=False)
+    # nota: il toolkit rimesha i pezzi con pochi triangoli a voxel ~0.1: la roccia nasce da un poliedro
+    # a spigoli appena smussati e viene decimata con decisione, cosi' restano grandi faccette piatte.
+    m = Model("Boulder", "prop", voxel=0.03)
+    core = facet_ball(1.0, 18, seed=4, spread=(0.86, 1.0), jitter=0.1, cap=1.25, soft=0.06)
+    # punte sporgenti (spigoli rotti): silhouette tagliente ma ancora "rotolabile"
+    shards = [shard((0.75, -0.55, 0.62), 1.2, 48, 1), shard((-0.85, 0.2, 0.5), 1.17, 50, 2),
+              shard((0.25, 0.95, -0.2), 1.18, 48, 3), shard((-0.3, -0.62, -0.75), 1.15, 50, 4)]
+    rock = union(core, *shards)
+    m.add("Rock", rock, ROCK, tris=700, smooth=False)
 
-    # alcune faccette piu' scure, a gruppi, sui lati ben visibili
-    sel = set()
-    for d in ((0.6, -0.7, 0.35), (0.7, -0.6, 0.1), (-0.75, -0.45, -0.3), (-0.1, 0.6, 0.8), (0.2, -0.3, -0.95),
-              (-0.5, -0.8, 0.45)):
-        sel.add(core.nearest(d))
-    m.add("Patches", core.raised_faces(sel, 0.025), ROCK_DARK, role="detail", tris=380, smooth=False)
+    # macchie scure: vernice spessa che segue le faccette, ritagliata da piccoli poliedri (bordi dritti)
+    regions = []
+    for k, (d, r) in enumerate((((0.55, -0.72, 0.4), 0.36), ((-0.8, -0.38, -0.36), 0.34), ((-0.1, 0.62, 0.8), 0.32),
+                                ((0.3, -0.25, -0.95), 0.34), ((0.95, 0.1, -0.2), 0.26))):
+        regions.append(facet_ball(r, 7, seed=60 + k, c=tuple(unit(d) * 0.98), spread=(0.75, 1.0), jitter=0.3, cap=1.3,
+                                  soft=0.0))
+    paint = rock.offset(0.045).subtract(rock.offset(-0.12))
+    m.add("Patches", paint.intersect(union(*regions)), ROCK_DARK, role="detail", tris=420, smooth=False)
     return m
 
 
