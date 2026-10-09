@@ -26,15 +26,16 @@ function LeaderboardService.Init(services)
 end
 
 -- I valori molto grandi vengono salvati in forma compressa (logaritmica) per stare negli interi
+-- (log10(v + 1): lo zero resta zero)
 local function encode(v: number): number
-	if v < 1 then
+	if v <= 0 then
 		return 0
 	end
-	return math.floor(math.log10(v) * 1e6)
+	return math.floor(math.log10(v + 1) * 1e6)
 end
 
 local function decode(v: number): number
-	return 10 ^ (v / 1e6)
+	return math.max(0, 10 ^ (v / 1e6) - 1)
 end
 
 local function buildBoards()

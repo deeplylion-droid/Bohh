@@ -80,7 +80,10 @@ local function trapVisual(plot, slot: string, trapId: string?)
 	if not trapId then
 		return
 	end
-	local spot = plot.traps[tonumber(slot) :: number]
+	local spot = plot.traps[tonumber(slot) or 0]
+	if not spot then
+		return
+	end
 	local model = S.AssetService.Clone("Props", "Trap" .. trapId)
 	if not model then
 		model = Instance.new("Model")
@@ -105,7 +108,8 @@ local function trapVisual(plot, slot: string, trapId: string?)
 end
 
 local function buyTrap(player: Player, slot: any, trapId: any)
-	if type(slot) ~= "string" or type(trapId) ~= "string" then
+	-- lo slot e' una sola cifra ("1".."3"): niente "1.5", " 1", "01" che romperebbero le trappole
+	if type(slot) ~= "string" or not string.match(slot, "^%d$") or type(trapId) ~= "string" then
 		return
 	end
 	local def = Combat.Traps[trapId]
@@ -161,8 +165,13 @@ function DefenseService.Start()
 		plot.consolePrompt.Enabled = true
 		setBarrier(plot, false)
 		player:SetAttribute("BarrierReadyAt", 0)
-		for slot, trapId in data.Traps do
-			trapVisual(plot, slot, trapId)
+		for slot, trapId in table.clone(data.Traps) do
+			-- toglie le chiavi non valide (salvate prima del controllo stretto sugli slot)
+			if not string.match(slot, "^%d$") or not plot.traps[tonumber(slot) or 0] or not Combat.Traps[trapId] then
+				data.Traps[slot] = nil
+			else
+				trapVisual(plot, slot, trapId)
+			end
 		end
 	end)
 	S.PlotService.Released:Connect(function(_player, plot)
@@ -194,7 +203,10 @@ function DefenseService.Start()
 				local data = owner and S.DataService.Get(owner)
 				if data and next(data.Traps) then
 					for slot, trapId in data.Traps do
-						local spot = plot.traps[tonumber(slot) :: number]
+						local spot = plot.traps[tonumber(slot) or 0]
+						if not spot then
+							continue -- dato non valido (salvataggi vecchi): ignorato
+						end
 						for _, other in Players:GetPlayers() do
 							if other ~= owner then
 								local hrp = S.CharacterService.Root(other)

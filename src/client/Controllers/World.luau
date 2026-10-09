@@ -102,7 +102,11 @@ local function petBillboard(model: Model): BillboardGui
 		income.Text = if v then Format.Rate(v) else ""
 	end
 	if base then
-		base:GetAttributeChangedSignal("Income"):Connect(refreshIncome)
+		-- il collegamento muore con l'etichetta (nuovo pet o cambio lingua): niente accumuli
+		local conn = base:GetAttributeChangedSignal("Income"):Connect(refreshIncome)
+		gui.Destroying:Connect(function()
+			conn:Disconnect()
+		end)
 	end
 	refreshIncome()
 	return gui

@@ -184,7 +184,20 @@ function Notify.Start()
 			arrowTo(thief, 12)
 		end
 	end)
-	local _ = player
+	-- bentornato: monete guadagnate dai pet mentre si era via (attributo impostato all'ingresso)
+	local welcomed = false
+	local function welcome()
+		local amount = player:GetAttribute("OfflineEarned")
+		if welcomed or type(amount) ~= "number" or amount <= 0 then
+			return
+		end
+		welcomed = true
+		task.wait(3) -- dopo la schermata di caricamento
+		Notify.Announce(T("WelcomeBack") .. "  " .. T("OfflineEarned", { amount = amount }))
+		C.Audio.Play("CoinsBig")
+	end
+	player:GetAttributeChangedSignal("OfflineEarned"):Connect(welcome)
+	task.spawn(welcome)
 end
 
 return Notify

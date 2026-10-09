@@ -226,6 +226,8 @@ local function onVictimLeft(victim: Player)
 	for _, thief in Players:GetPlayers() do
 		for _, item in table.clone(S.CarryService.Items(thief)) do
 			if item.stolen and item.stolen.victim == victim then
+				-- la base torna libera per il prossimo proprietario del lotto
+				item.stolen.base:SetAttribute("BeingStolen", nil)
 				S.CarryService.Remove(thief, item)
 				item.model:Destroy()
 				S.StateService.Notify(thief, "StealOwnerLeft", nil, "Bad")

@@ -71,9 +71,14 @@ local function padTarget(plot: Model): Vector3?
 end
 
 local function nearestEgg(from: Vector3): Vector3?
+	-- solo le uova nei nidi (non quelle in mano ad altri giocatori)
+	local nests = workspace:FindFirstChild("Nests", true)
+	if not nests then
+		return nil
+	end
 	local best, bestD = nil, math.huge
 	for _, egg in CollectionService:GetTagged("Egg") do
-		if egg:IsA("Model") and egg:IsDescendantOf(workspace) then
+		if egg:IsA("Model") and egg:IsDescendantOf(nests) then
 			local p = egg:GetPivot().Position
 			local d = (p - from).Magnitude
 			if d < bestD then

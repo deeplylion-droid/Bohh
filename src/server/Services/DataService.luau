@@ -12,6 +12,8 @@ local DataService = {}
 
 DataService.Version = 1
 DataService.Loaded = Signal.new() -- (player, data)
+-- funzioni (player, data) eseguite (anche con attese) dopo il caricamento ma prima di Loaded
+DataService.PreLoad = {} :: { (Player, any) -> () }
 DataService.Releasing = Signal.new() -- (player, data) prima della chiusura della sessione
 
 local TEMPLATE = {
@@ -101,6 +103,16 @@ local function onPlayerAdded(player: Player)
 		return
 	end
 	profiles[player] = profile
+	-- preparazioni che devono essere pronte prima degli altri servizi (game pass posseduti...)
+	for _, fn in DataService.PreLoad do
+		local ok, err = pcall(fn, player, profile.Data)
+		if not ok then
+			warn(`[DataService] preparazione di {player.Name}: {err}`)
+		end
+	end
+	if player.Parent ~= Players then
+		return
+	end
 	resume(player)
 	DataService.Loaded:Fire(player, profile.Data)
 end

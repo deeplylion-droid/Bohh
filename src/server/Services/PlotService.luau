@@ -348,7 +348,9 @@ local function assign(player: Player)
 			return
 		end
 	end
+	-- tutti gli 8 lotti occupati (non dovrebbe succedere con server da 8 giocatori)
 	warn(`[PlotService] nessun lotto libero per {player.Name}`)
+	player:Kick("Server pieno: rientra per trovare un lotto libero. / Server full: rejoin to get a free base.")
 end
 
 local function release(player: Player)
@@ -361,13 +363,20 @@ local function release(player: Player)
 	table.clear(plot.occupants)
 	refreshSign(plot)
 	player:SetAttribute("PlotIndex", nil)
+	-- il prossimo proprietario trova incubatrici e piedistalli puliti (anche se c'era un furto in corso)
 	for _, inc in plot.incubators do
 		inc.prompt.Enabled = false
 		inc.stealPrompt.Enabled = false
+		inc.base:SetAttribute("BeingStolen", nil)
 	end
 	for _, ped in plot.pedestals do
 		ped.prompt.Enabled = false
 		ped.stealPrompt.Enabled = false
+		ped.base:SetAttribute("BeingStolen", nil)
+		ped.base:SetAttribute("PetUid", nil)
+		ped.base:SetAttribute("PetId", nil)
+		ped.base:SetAttribute("Income", nil)
+		ped.pad:SetAttribute("Bank", 0)
 	end
 end
 
@@ -376,12 +385,16 @@ function PlotService.Start()
 		assign(player)
 	end)
 	Players.PlayerRemoving:Connect(release)
-	Players.PlayerAdded:Connect(function(player)
+	local function watchCharacter(player: Player)
 		player.CharacterAdded:Connect(function(character)
 			local plot = PlotService.Get(player)
 			setCharacterGroup(character, if plot then `Owner{plot.index}` else "Default")
 		end)
-	end)
+	end
+	for _, player in Players:GetPlayers() do
+		watchCharacter(player)
+	end
+	Players.PlayerAdded:Connect(watchCharacter)
 	-- rilevamento ingressi nei lotti (allarme, consegna della refurtiva)
 	task.spawn(function()
 		while true do

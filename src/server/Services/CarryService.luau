@@ -30,6 +30,7 @@ export type Carried = {
 }
 
 local S
+local noRoomAt: { [Player]: number } = {}
 local carried: { [Player]: { Carried } } = {}
 local dropped: { [string]: { ball: BasePart, egg: EggInfo } } = {}
 local droppedFolder: Folder
@@ -380,7 +381,9 @@ local function tryDeliver(player: Player)
 				local data = S.DataService.Get(player)
 				data.Stats.Delivered += 1
 				S.TutorialService.Advance(player, "Delivered")
-			else
+			elseif os.clock() - (noRoomAt[player] or 0) > 6 then
+				-- un solo avviso ogni tanto (il controllo gira ogni secondo per ogni uovo)
+				noRoomAt[player] = os.clock()
 				S.StateService.Notify(player, "NoIncubator", nil, "Bad")
 			end
 		end
@@ -415,6 +418,7 @@ function CarryService.Start()
 	Players.PlayerRemoving:Connect(function(player)
 		CarryService.DropAll(player, "Left")
 		carried[player] = nil
+		noRoomAt[player] = nil
 	end)
 end
 

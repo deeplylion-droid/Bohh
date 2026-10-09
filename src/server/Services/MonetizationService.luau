@@ -9,11 +9,17 @@ local Products = require(ReplicatedStorage.Shared.Config.Products)
 
 local MonetizationService = {}
 
+local refreshPasses: (Player) -> ()
+
 local S
 local owned: { [Player]: { [string]: boolean } } = {}
 
 function MonetizationService.Init(services)
 	S = services
+	-- i game pass posseduti si conoscono prima che il lotto venga preparato
+	table.insert(S.DataService.PreLoad, function(player)
+		refreshPasses(player)
+	end)
 end
 
 function MonetizationService.HasPass(player: Player, key: string): boolean
@@ -41,7 +47,7 @@ function MonetizationService.AddLuck(player: Player, minutes: number)
 	player:SetAttribute("LuckUntil", base + minutes * 60)
 end
 
-local function refreshPasses(player: Player)
+refreshPasses = function(player: Player)
 	owned[player] = owned[player] or {}
 	for key, pass in Products.Passes do
 		if pass.id ~= 0 then
@@ -153,7 +159,6 @@ function MonetizationService.Start()
 		end
 	end)
 	S.DataService.Loaded:Connect(function(player, data)
-		refreshPasses(player)
 		player:SetAttribute("LuckUntil", data.LuckUntil or 0)
 		S.PetService.PublishIncome(player)
 	end)

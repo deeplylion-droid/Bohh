@@ -292,6 +292,8 @@ function PetService.Start()
 				end
 			end)
 			local lastTouch = 0
+			-- le parti costruite da Build hanno CanTouch spento: la pedana deve sentire i passi
+			ped.pad.CanTouch = true
 			ped.pad.Touched:Connect(function(hit)
 				local owner = plot.owner
 				if owner and hit.Parent == owner.Character and os.clock() - lastTouch > 0.3 then

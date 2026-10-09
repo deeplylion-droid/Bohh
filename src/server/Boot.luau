@@ -58,13 +58,19 @@ function Boot.Start(options: { test: boolean? }?)
 			S[name].Init(S)
 		end
 	end
+	-- DataService parte per ultimo: carica i profili e annuncia Loaded solo quando tutti gli altri
+	-- servizi sono gia' in ascolto (chi entra durante l'avvio non deve perdere lotto e personaggio)
 	for _, name in ORDER do
-		if S[name].Start then
+		if name ~= "DataService" and S[name].Start then
 			local ok, err = pcall(S[name].Start)
 			if not ok then
 				warn(`[Boot] Errore all'avvio di {name}: {err}`)
 			end
 		end
+	end
+	local ok, err = pcall(S.DataService.Start)
+	if not ok then
+		warn(`[Boot] Errore all'avvio di DataService: {err}`)
 	end
 	workspace:SetAttribute("ServerReady", true)
 	return S
