@@ -27,11 +27,24 @@ GROUND = -0.2
 
 # ------------------------------------------------------------------------------ modello
 
-def _predecimate(verts, faces, target):
-    """Semplifica in Blender una mesh troppo fitta (stessa decimazione 'collapse' di lib.toy)."""
+def _clean_mesh(verts, faces, target=None):
+    """Ripulisce la mesh del marching cubes e (se serve) la semplifica in Blender.
+
+    Il marching cubes lascia vertici doppi e triangoli di area nulla: bloccano la decimazione
+    'collapse' di Blender, che si ferma a ~1000-2000 triangoli qualunque sia il bersaglio.
+    """
+    import bmesh
     import bpy
     obj = _toy.make_object("_tmp", verts, faces)
-    _toy.decimate(obj, target)
+    bm = bmesh.new()
+    bm.from_mesh(obj.data)
+    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-6)
+    bmesh.ops.dissolve_degenerate(bm, dist=1e-6, edges=bm.edges)
+    bmesh.ops.triangulate(bm, faces=[fc for fc in bm.faces if len(fc.verts) > 3])
+    bm.to_mesh(obj.data)
+    bm.free()
+    if target and len(obj.data.polygons) > target:
+        _toy.decimate(obj, target)
     me = obj.data
     v = np.array([vx.co[:] for vx in me.vertices], dtype=np.float32)
     f = np.array([pl.vertices[:] for pl in me.polygons], dtype=np.int64)
@@ -45,8 +58,8 @@ class Prop(Model):
 
     lib.toy.Model rimesha piu' grossolano le parti che superano 8x i triangoli richiesti: con budget
     bassi gli spigoli vivi si arrotondano e i dettagli sottili (crepe, rametti, fili) spariscono.
-    Qui la mesh fine viene invece semplificata direttamente in Blender (le facce piane si riducono
-    a pochi triangoli senza perdere gli spigoli). L'uscita (FBX, JSON, render) e' identica.
+    Qui la mesh fine viene invece ripulita e semplificata direttamente in Blender (le facce piane
+    si riducono a pochi triangoli senza perdere gli spigoli). L'uscita (FBX, JSON, render) e' identica.
     """
 
     def __init__(self, name: str, voxel: float = 0.04, **kw):
@@ -59,8 +72,8 @@ class Prop(Model):
         def mesh(sdf, voxel):
             v, f, n = orig(sdf, voxel)
             part = parts.get(id(sdf))
-            if part is not None and len(f) > part.tris * 8:
-                v, f = _predecimate(v, f, part.tris * 2)
+            if part is not None:
+                v, f = _clean_mesh(v, f, part.tris * 2 if len(f) > part.tris * 8 else None)
                 n = None
             return v, f, n
 
@@ -187,13 +200,14 @@ _BOUND_DIRS /= np.linalg.norm(_BOUND_DIRS, axis=1, keepdims=True)
 
 
 def facet_blob(c, radii, n: int = 16, seed: int = 0, depth=(0.82, 1.0), rot=(0, 0, 0),
-               zmax: float = 1.0, top: float = 1.0) -> SDF:
+               zmax: float = 1.0, top: float = 1.0, bound: float = 1.0) -> SDF:
     """Blocco convesso a facce piatte inscritto in un ellissoide (sasso, scheggia, ciuffo low-poly).
 
     n facce casuali tagliano l'ellissoide a profondita' 'depth' (frazione del raggio): piu' e'
     bassa, piu' le facce sono grandi e irregolari. zmax < 1 esclude le facce quasi orizzontali in
     alto, cosi' le facce ripide convergono in una punta o in una cresta; top scala il piano di
-    chiusura superiore (top > 1 lascia libera la punta).
+    chiusura superiore (top > 1 lascia libera la punta). bound > 1 allontana i 26 piani di
+    contenimento: dove mancano facce casuali restano spigoli e punte vive.
     """
     rng = np.random.default_rng(seed)
     c = np.asarray(c, dtype=np.float64)
@@ -201,11 +215,73 @@ def facet_blob(c, radii, n: int = 16, seed: int = 0, depth=(0.82, 1.0), rot=(0, 
     dirs = sphere_dirs(n, rng)
     dirs = dirs[dirs[:, 2] <= zmax]
     off = np.linalg.norm(dirs @ A, axis=1) * rng.uniform(depth[0], depth[1], size=len(dirs))
-    boff = np.linalg.norm(_BOUND_DIRS @ A, axis=1)
+    boff = np.linalg.norm(_BOUND_DIRS @ A, axis=1) * bound
     boff = np.where(_BOUND_DIRS[:, 2] > 0.5, boff * top, boff)
     N = np.concatenate([dirs, _BOUND_DIRS])
     D = np.concatenate([off, boff]) + N @ c
     return convex(N, D)
+
+
+def cleaved_block(c, half, seed: int = 0, rot=(0, 0, 0), tilt: float = 10.0, taper: float = 0.15,
+                  chips: int = 6, chip=(0.2, 0.5), peak: float = 0.0, ridge: float = 0.0) -> SDF:
+    """Blocco di roccia 'spaccato': parallelepipedo con facce inclinate a caso (tilt, gradi), lati
+    che si stringono verso l'alto (taper), spigoli e vertici scheggiati (chips: tagli che
+    asportano una frazione 'chip' dello spigolo). peak > 0 sostituisce la faccia alta con una
+    piramide (punta alta peak); ridge > 0 con una cresta allungata su x."""
+    rng = np.random.default_rng(seed)
+    c = np.asarray(c, dtype=np.float64)
+    hx, hy, hz = half
+    M = euler(*rot).astype(np.float64)
+    N, D = [], []
+
+    def add(nl, off):
+        nl = _unit(nl)
+        nw = M @ nl
+        N.append(nw)
+        D.append(off + float(nw @ c))
+
+    def jit():
+        return rng.normal(size=3) * math.radians(tilt)
+
+    for ax, h in ((0, hx), (1, hy)):
+        for s in (1, -1):
+            nl = np.zeros(3)
+            nl[ax] = s
+            nl[2] = taper
+            nl = _unit(nl + jit())
+            # il piano passa a distanza h dal centro lungo l'asse
+            add(nl, h * nl[ax] * s * rng.uniform(0.9, 1.0))
+    add(_unit(np.array([0, 0, -1.0]) + jit() * 0.3), hz)
+    if peak > 0:
+        k = rng.integers(3, 5)
+        a0 = rng.uniform(0, 2 * math.pi)
+        apex = np.array([rng.uniform(-0.25, 0.25) * hx, rng.uniform(-0.25, 0.25) * hy, hz + peak])
+        for i in range(k):
+            a = a0 + 2 * math.pi * i / k + rng.uniform(-0.3, 0.3)
+            e = np.array([math.cos(a) * hx, math.sin(a) * hy, 0.0])
+            nl = _unit(np.array([math.cos(a) / hx, math.sin(a) / hy, 1.0 / (peak + hz * 0.6)]) + jit() * 0.5)
+            add(nl, float(nl @ apex))
+        add(np.array([0, 0, 1.0]), hz + peak)
+    elif ridge > 0:
+        for s in (1, -1):
+            nl = _unit(np.array([0.0, s / hy, 1.0 / ridge]) + jit() * 0.4)
+            add(nl, float(nl @ np.array([0, 0, hz + ridge])))
+        for s in (1, -1):
+            nl = _unit(np.array([s / hx, 0.0, 1.0 / (ridge + hz)]) + jit() * 0.4)
+            add(nl, float(nl @ np.array([0, 0, hz + ridge * 0.8])) + rng.uniform(-0.1, 0.1))
+        add(np.array([0, 0, 1.0]), hz + ridge)
+    else:
+        add(_unit(np.array([0, 0, 1.0]) + jit()), hz * rng.uniform(0.92, 1.0))
+    # scheggiature su vertici e spigoli
+    for _ in range(chips):
+        sg = rng.choice([-1.0, 1.0], size=3)
+        if rng.uniform() < 0.5:
+            sg[rng.integers(0, 3)] = 0.0  # spigolo invece di vertice
+        corner = np.array([hx, hy, hz + (ridge * 0.5 if sg[2] > 0 else 0.0)]) * sg
+        nl = _unit(sg / np.array([hx, hy, hz]) + rng.normal(size=3) * 0.35)
+        dist = float(nl @ corner)
+        add(nl, dist * (1 - rng.uniform(*chip) * 0.5))
+    return convex(np.array(N), np.array(D))
 
 
 def slab(poly, z0: float, z1: float, bevel: float = 0.0, tilt=(0, 0, 0), seed: int | None = None,
@@ -291,32 +367,82 @@ def wedge_crack(q, normal, along, depth: float, width: float, length: float) -> 
     return SDF(f, q - ext, q + ext)
 
 
-def surface_crack(rock: SDF, inside, direction, along, depth: float, width: float, length: float,
-                  zigzag: int = 0, seed: int = 0) -> SDF:
-    """Crepa sulla superficie di 'rock' nel punto colpito dal raggio inside->direction.
+def polyline_crack(points, normals, depth: float, width: float) -> SDF:
+    """Crepa a V lungo una spezzata di punti di superficie (con le normali uscenti).
 
-    Con zigzag > 0 la crepa e' una spezzata di piu' tratti (piu' naturale)."""
-    p, n = project(rock, inside, direction)
-    if not zigzag:
-        return wedge_crack(p, n, along, depth, width, length)
-    rng = np.random.default_rng(seed)
-    t = np.asarray(along, dtype=np.float64)
-    t = _unit(t - np.dot(t, n) * n)
-    b = np.cross(n, t)
-    seg = length / (zigzag + 1)
-    pts = [p - t * length * 0.5]
-    for i in range(zigzag + 1):
-        side = (1 if i % 2 == 0 else -1) * rng.uniform(0.25, 0.5)
-        pts.append(pts[-1] + _unit(t + b * side) * seg)
-    parts = []
-    for a, b2 in zip(pts[:-1], pts[1:]):
-        mid = (a + b2) / 2
-        try:
-            pm, nm = project(rock, np.asarray(inside, dtype=np.float64), mid - np.asarray(inside, dtype=np.float64))
-        except ValueError:
-            continue
-        parts.append(wedge_crack(pm, nm, b2 - a, depth, width, float(np.linalg.norm(b2 - a)) * 1.15))
+    Larga 2*width sul bordo e profonda 'depth' all'inizio, si assottiglia fino a chiudersi
+    all'ultimo punto: una linea scura continua, non una fila di tagli."""
+    pts = [np.asarray(p, dtype=np.float64) for p in points]
+    nrm = [_unit(n) for n in normals]
+    total = sum(float(np.linalg.norm(b - a)) for a, b in zip(pts[:-1], pts[1:]))
+    parts, run_len = [], 0.0
+    for i in range(len(pts) - 1):
+        a, b = pts[i], pts[i + 1]
+        ln = float(np.linalg.norm(b - a))
+        n = _unit(nrm[i] + nrm[i + 1])
+        t = _unit(b - a)
+        f0 = max(0.0, 1 - run_len / total)
+        f1 = max(0.0, 1 - (run_len + ln) / total)
+        run_len += ln
+        parts.append(_tapered_wedge(a, b, n, depth * (0.5 + 0.5 * f0), depth * (0.5 + 0.5 * f1),
+                                    width * f0 ** 0.6, max(width * f1 ** 0.6, 0.0)))
     return fast_union(*parts)
+
+
+def _tapered_wedge(a, b, n, d0, d1, w0, w1) -> SDF:
+    """Tratto di crepa da a a b: apertura e profondita' variano linearmente da (w0, d0) a (w1, d1)."""
+    t = _unit(b - a - np.dot(b - a, n) * n)
+    bn = np.cross(n, t)
+    ln = float(np.dot(b - a, t))
+    a32, n32, t32, b32 = (np.asarray(v, dtype=np.float32) for v in (a, n, t, bn))
+    pad = 0.04
+
+    def f(p):
+        v = p - a32
+        s = v @ t32
+        u = np.clip(s / max(ln, 1e-6), 0.0, 1.0)
+        w = w0 + (w1 - w0) * u
+        d = d0 + (d1 - d0) * u
+        y = v @ n32 + d  # quota sopra il fondo della crepa
+        x = np.abs(v @ b32)
+        k = w / np.maximum(d, 1e-4)
+        wedge = (x - k * y) / np.sqrt(1 + k * k)
+        ends = np.maximum(-s - pad, s - ln - pad)
+        return np.maximum(wedge, ends)
+
+    ext = max(d0, d1) + max(w0, w1) + pad
+    lo = np.minimum(a, b) - ext
+    hi = np.maximum(a, b) + ext
+    return SDF(f, lo, hi)
+
+
+def surface_crack(rock: SDF, inside, direction, along, depth: float, width: float, length: float,
+                  zigzag: int = 2, seed: int = 0, bend: float = 0.35) -> SDF:
+    """Crepa sulla superficie di 'rock': parte dal punto colpito dal raggio inside->direction e
+    procede lungo 'along' per 'length' con un andamento a zig-zag (zigzag = numero di svolte)."""
+    rng = np.random.default_rng(seed)
+    inside = np.asarray(inside, dtype=np.float64)
+    if rock(inside[None, :].astype(np.float32))[0] >= 0:
+        raise ValueError(f"surface_crack: il punto {inside.tolist()} non e' dentro la roccia")
+    p0, n0 = project(rock, inside, direction)
+    t = np.asarray(along, dtype=np.float64)
+    t = _unit(t - np.dot(t, n0) * n0)
+    b = np.cross(n0, t)
+    seg = length / (zigzag + 1)
+    pts, nrm = [p0], [n0]
+    cur = p0
+    for i in range(zigzag + 1):
+        side = (1 if i % 2 == 0 else -1) * rng.uniform(0.4, 1.0) * bend
+        target = cur + _unit(t + b * side) * seg
+        # riproietta sulla superficie partendo dall'interno
+        try:
+            pk, nk = project(rock, inside, target - inside)
+        except ValueError:
+            break
+        pts.append(pk)
+        nrm.append(nk)
+        cur = pk
+    return polyline_crack(pts, nrm, depth, width)
 
 
 # ------------------------------------------------------------------------------ piante

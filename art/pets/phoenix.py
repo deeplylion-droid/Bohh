@@ -211,7 +211,7 @@ body = ellipsoid((0.94, 0.88, 0.8), (0, 0.06, 0.9 + Z0))
 chest = ellipsoid((0.72, 0.5, 0.62), (0, -0.36, 1.0 + Z0))
 core = union(body, head, k=0.4)
 core = union(core, chest, k=0.25)
-m.add("Body", core, BODY, tris=4400, voxel=0.025)
+m.add("Body", core, BODY, tris=4300, voxel=0.025)
 
 # pancia dorata cucita come una toppa
 BELLY_C, BELLY_R = (0.0, 0.88 + Z0), (0.6, 0.52)
@@ -291,30 +291,39 @@ for sx, nm in ((1, "WingR"), (-1, "WingL")):
     tips = place_wing(wing_local.offset(0.018).intersect(tip_region_local), sx)
     m.add(nm + "Fire", tips, FLAME, material="Neon", role="glow", tris=400, voxel=0.016, group=nm, pivot=piv)
 
-# ------------------------------------------------------------------ faccia: occhi sornioni, sopracciglia, ghigno
-EA, EB, EC = 0.17, 0.1, 0.23
+# ------------------------------------------------------------------ faccia: sguardo compiaciuto (smug)
+# palpebre rilassate che scendono verso l'esterno, un sopracciglio alzato, sorrisetto chiuso con un dentino
+EA, EB, EC = 0.19, 0.11, 0.25
 frames = [Frame(head, HEAD_C, (0.42 * sx, -1.0, 0.07), sink=0.05) for sx in (1, -1)]
 eyes, lids, lashes, shines = [], [], [], []
 for f, sx in zip(frames, (1, -1)):
     eyes.append(f.place(ellipsoid((EA, EB, EC))))
-    cut = 0.0 if sx > 0 else 0.055  # un occhio piu' chiuso dell'altro
-    lid, lash = lid_parts(f, EA, EB, EC, cut, slope=-sx * 0.16)
+    cut = 0.13 if sx > 0 else 0.04  # l'occhio sotto il sopracciglio alzato e' piu' aperto
+    lid, lash = lid_parts(f, EA, EB, EC, cut, slope=-sx * 0.05)
     lids.append(lid)
     lashes.append(lash)
-    shines.append(f.place(sphere(0.042), (-0.06, -0.082, -0.07)))
-    shines.append(f.place(sphere(0.02), (0.06, -0.072, -0.15)))
+    shines.append(f.place(sphere(0.042), (-0.065, -0.088, -0.04)))
+    shines.append(f.place(sphere(0.02), (0.07, -0.08, -0.13)))
 m.add("Lids", union(*lids), BODY, role="skin", tris=600, voxel=0.012)
 
-# ghigno aguzzo sotto il becco (asimmetrico: un angolo piu' alto)
-MOUTH = dict(cx=0.02, cz=1.66 + Z0, w=0.36, depth=0.13, curve=0.1, tilt=0.06)
-mouth = core.offset(0.02).intersect(grin_sdf(**MOUTH, y_max=-0.3))
-m.add("Eyes", union(*eyes, *lashes, mouth), EYE, role="eye", tris=1200, voxel=0.011)
-teeth = grin_teeth(core.offset(0.02), HEAD_C[1], **MOUTH, n=9, length=0.07, r=0.027)
-m.add("Shine", union(*shines, *teeth), WHITE, role="shine", tris=700, voxel=0.009)
+MZ = 1.6 + Z0
+smirk = curve_on(core, [(x, HEAD_C[1], MZ + dz) for x, dz in
+                        ((-0.22, 0.02), (-0.1, -0.03), (0.05, -0.045), (0.18, -0.02), (0.28, 0.05), (0.34, 0.14))])
+smirk = resample(smirk, 0.03)
+nn = len(smirk)
+smirk_line = tube([tuple(q) for q in smirk], [0.017 + 0.019 * math.sin(math.pi * i / (nn - 1)) for i in range(nn)])
+dimple = tube([tuple(q) for q in curve_on(core, [(0.33, HEAD_C[1], MZ + 0.2), (0.385, HEAD_C[1], MZ + 0.15),
+                                                 (0.38, HEAD_C[1], MZ + 0.09)])], [0.012, 0.015, 0.011])
+m.add("Eyes", union(*eyes, *lashes, smirk_line, dimple), EYE, role="eye", tris=1100, voxel=0.011)
+fx = 0.17
+fang_base, fang_tip = curve_on(core, [(fx, HEAD_C[1], MZ - 0.03), (fx + 0.01, HEAD_C[1], MZ - 0.11)], lift=0.012)
+fang = round_cone(tuple(fang_base), tuple(fang_tip), 0.03, 0.005)
+m.add("Shine", union(*shines, fang), WHITE, role="shine", tris=500, voxel=0.009)
 
-brows = [brow(core, HEAD_C[1], [(0.12, 2.39 + Z0), (0.26, 2.5 + Z0), (0.42, 2.52 + Z0), (0.55, 2.45 + Z0)], r=0.05),
-         brow(core, HEAD_C[1], [(-0.12, 2.32 + Z0), (-0.27, 2.37 + Z0), (-0.43, 2.4 + Z0), (-0.56, 2.37 + Z0)], r=0.05)]
-m.add("Accents", union(*brows, fast_union(seam)), ACCENT, role="detail", tris=1300, voxel=0.011)
+EZ = 2.14 + Z0  # quota dei centri degli occhi
+brows = [brow(core, HEAD_C[1], [(0.1, EZ + 0.34), (0.24, EZ + 0.46), (0.4, EZ + 0.47), (0.55, EZ + 0.38)], r=0.05),
+         brow(core, HEAD_C[1], [(-0.12, EZ + 0.27), (-0.28, EZ + 0.3), (-0.44, EZ + 0.29), (-0.57, EZ + 0.24)], r=0.048)]
+m.add("Accents", union(*brows, fast_union(seam)), ACCENT, role="detail", tris=1200, voxel=0.011)
 
 # becco all'insu' (petto in fuori, mento alto) e zampe con dita tozze
 beak = union(ellipsoid((0.18, 0.18, 0.1), (0, -0.07, 0.05)), ellipsoid((0.12, 0.11, 0.065), (0, -0.04, -0.07)), k=0.04)

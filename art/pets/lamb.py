@@ -1,4 +1,4 @@
-"""Agnellino (Lamb) - pet Comune."""
+"""Agnellino (Lamb) - pet Comune. Carattere: bambola inquietante-tenera (occhi a bottone, sorriso cucito)."""
 import math
 import os
 import sys
@@ -7,19 +7,18 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from lib.sdf import (Frame, bezier, box, cylinder, ellipsoid, project, project_curve, sphere, stick, tube,  # noqa: E402
-                     union)
+from lib.sdf import (SDF, Frame, bezier, box, capsule, cylinder, ellipsoid, project, sphere, stick, torus,  # noqa: E402
+                     tube, union)
 from lib.toy import Model  # noqa: E402
 
-WOOL = (255, 246, 226)
-FACE = (104, 86, 82)
-HOOF = (62, 48, 48)
-EAR_IN = (255, 170, 184)
-NOSE = (255, 148, 170)
-EYE = (20, 14, 18)
-WHITE = (255, 255, 255)
-BLUSH = (255, 128, 150)
-MOUTH = (52, 36, 38)
+WOOL = (246, 238, 218)
+FACE = (78, 60, 72)
+HOOF = (38, 28, 38)
+EAR_IN = (214, 112, 138)
+BUTTON = (30, 28, 60)
+THREAD = (206, 34, 62)
+NOSE = (226, 120, 146)
+BLUSH = (232, 106, 136)
 
 m = Model("Lamb", "pet")
 
@@ -35,51 +34,107 @@ def fib_dirs(n):
     return out
 
 
-# ------------------------------------------------------------------ lana: tanti batuffoli fusi insieme
+def fast_union(shapes, pad=0.04):
+    """Unione semplice di molte forme piccole: ognuna e' valutata solo vicino al suo ingombro."""
+    los = [s.lo - pad for s in shapes]
+    his = [s.hi + pad for s in shapes]
+
+    def f(p):
+        d = np.ones(len(p), dtype=np.float32)
+        for s, lo, hi in zip(shapes, los, his):
+            msk = np.all((p >= lo) & (p <= hi), axis=1)
+            if msk.any():
+                d[msk] = np.minimum(d[msk], s(p[msk]))
+        return d
+
+    return SDF(f, np.min(los, axis=0), np.max(his, axis=0))
+
+
+def resample(path, step):
+    pts = np.array([p for p, _ in path])
+    nrm = np.array([n for _, n in path])
+    seg = np.linalg.norm(np.diff(pts, axis=0), axis=1)
+    s = np.concatenate([[0.0], np.cumsum(seg)])
+    out = []
+    for t in np.arange(0.0, s[-1] + 1e-9, step):
+        i = min(int(np.searchsorted(s, t, side="right")) - 1, len(seg) - 1)
+        f = (t - s[i]) / max(seg[i], 1e-9)
+        n = nrm[i] + (nrm[i + 1] - nrm[i]) * f
+        out.append((pts[i] + (pts[i + 1] - pts[i]) * f, n / np.linalg.norm(n)))
+    return out
+
+
+def seam(path, every=0.075, half=0.04, r=0.013, line_r=0.012, inset=0.0):
+    """Cucitura: linea + punti corti perpendicolari (come una cicatrice di peluche)."""
+    pts = resample(path, every)
+    out = [tube([p - n * inset for p, n in resample(path, 0.03)], line_r)]
+    for i, (p, n) in enumerate(pts):
+        t = pts[min(i + 1, len(pts) - 1)][0] - pts[max(i - 1, 0)][0]
+        side = np.cross(n, t / np.linalg.norm(t))
+        c = p - n * inset
+        out.append(capsule(c - side * half, c + side * half, r))
+    return fast_union(out)
+
+
+def button(r, t=0.05):
+    """Bottone a quattro fori (faccia verso -Y locale): disco con bordo rialzato + filo a X (a parte)."""
+    disc = cylinder((0, -0.02, 0), (0, -(t - 0.02), 0), r, round=0.02)
+    rim = torus(r - 0.022, 0.016).rot(90, 0, 0).translate((0, -t + 0.004, 0))
+    holes = union(*[cylinder((hx, 0.0, hz), (hx, -t - 0.05, hz), 0.017) for hx in (-0.032, 0.032)
+                    for hz in (-0.032, 0.032)])
+    thread = union(capsule((-0.032, -t - 0.002, -0.032), (0.032, -t - 0.002, 0.032), 0.014),
+                   capsule((-0.032, -t - 0.002, 0.032), (0.032, -t - 0.002, -0.032), 0.014))
+    return union(disc, rim).subtract(holes, k=0.006), thread
+
+
+# ------------------------------------------------------------------ lana arruffata: batuffoli irregolari
 BODY_C = np.array((0.0, 0.12, 0.98))
 BODY_R = np.array((0.82, 0.8, 0.62))
-rng = np.random.default_rng(3)
+rng = np.random.default_rng(11)
 puffs = [ellipsoid(BODY_R, BODY_C)]
-for d in fib_dirs(34):
+for d in fib_dirs(36):
     if d[2] < -0.55:
         continue  # sotto la pancia restano libere le zampe
-    c = BODY_C + BODY_R * np.array(d) * 0.86
-    puffs.append(sphere(0.27 + rng.uniform(-0.03, 0.03), c))
-# codina di lana
+    c = BODY_C + BODY_R * np.array(d) * rng.uniform(0.82, 0.93)
+    puffs.append(sphere(rng.uniform(0.23, 0.33), c))
+for d in fib_dirs(9)[:6]:  # ciocche spettinate che sporgono
+    c = BODY_C + BODY_R * np.array(d) * 1.12 + np.array((0, 0.05, 0.02))
+    puffs.append(sphere(rng.uniform(0.1, 0.13), c))
 puffs += [sphere(0.15, (0, 1.02, 1.12)), sphere(0.11, (0.1, 1.08, 1.22)), sphere(0.11, (-0.08, 1.1, 1.05))]
-wool = union(*puffs, k=0.08)
+wool = union(*puffs, k=0.07)
 
-# ciuffo di lana in testa: batuffoli appoggiati sulla calotta, con la frangetta sulla fronte
 HEAD_C = (0, -0.52, 1.86)
 head = ellipsoid((0.6, 0.52, 0.58), HEAD_C)
 tuft_puffs = []
-for pol, az, r in ([(0, 0, 0.18)] + [(32, a, 0.15) for a in range(0, 360, 60)]
-                   + [(52, -90, 0.14), (50, -60, 0.13), (50, -120, 0.13)]):
+for pol, az, r in ([(0, 0, 0.17), (14, 120, 0.15), (22, -40, 0.14)] + [(34, a + rng.uniform(-15, 15), rng.uniform(0.12, 0.16))
+                                                                       for a in range(0, 360, 60)]
+                   + [(50, -90, 0.14), (50, -55, 0.12), (52, -125, 0.13)]):
     pr, ar = math.radians(pol), math.radians(az)
     p, n = project(head, HEAD_C, (math.sin(pr) * math.cos(ar), math.sin(pr) * math.sin(ar), math.cos(pr)))
-    tuft_puffs.append(sphere(r, p - n * 0.035))
+    tuft_puffs.append(sphere(r, p - n * 0.03))
+p, n = project(head, HEAD_C, (0.2, 0.1, 1.0))
+tuft_puffs += [sphere(0.1, p + n * 0.1), sphere(0.08, p + n * 0.19 + np.array((0.04, 0.0, 0.0)))]  # ciuffo ritto
 tuft = union(*tuft_puffs, k=0.06)
-m.add("Wool", union(wool, tuft), WOOL, role="skin", tris=6200, voxel=0.025)
+m.add("Wool", union(wool, tuft), WOOL, material="Fabric", role="skin", tris=6000, voxel=0.025)
 
 # ------------------------------------------------------------------ testa scura
 snout = ellipsoid((0.4, 0.3, 0.28), (0, -0.86, 1.62))
 face = union(head, snout, k=0.15)
-m.add("Head", face, FACE, role="detail", tris=2600)
+m.add("Head", face, FACE, role="detail", tris=2300)
 
-# orecchie morbide che sporgono di lato (animabili)
 ear_local = ellipsoid((0.28, 0.08, 0.13), (0.22, 0, 0))
 ear_in_local = ear_local.offset(0.014).intersect(ellipsoid((0.19, 0.1, 0.075), (0.27, -0.07, 0)))
 
 
 def place_ear(shape, sx):
-    s = shape.rot(0, 25, 0).rot(0, 0, -15).translate((0.42, -0.52, 2.05))
+    s = shape.rot(0, 32 if sx > 0 else 22, 0).rot(0, 0, -15).translate((0.42, -0.52, 2.05))
     return s if sx > 0 else s.mirrored()
 
 
 for sx, nm in ((1, "EarR"), (-1, "EarL")):
     pivot = (sx * 0.5, -0.52, 2.05)
-    m.add(nm, place_ear(ear_local, sx), FACE, role="detail", tris=700, voxel=0.015, group=nm, pivot=pivot)
-    m.add(nm + "In", place_ear(ear_in_local, sx), EAR_IN, role="detail", tris=400, voxel=0.012, group=nm,
+    m.add(nm, place_ear(ear_local, sx), FACE, role="detail", tris=600, voxel=0.015, group=nm, pivot=pivot)
+    m.add(nm + "In", place_ear(ear_in_local, sx), EAR_IN, role="detail", tris=350, voxel=0.012, group=nm,
           pivot=pivot)
 
 # ------------------------------------------------------------------ zampe con zoccoli
@@ -88,36 +143,34 @@ for x, y in ((0.34, -0.3), (-0.34, -0.3), (0.36, 0.52), (-0.36, 0.52)):
     # nota: cylinder(round=) allunga il cilindro di 'round' a ogni estremita'
     legs.append(cylinder((x, y, 0.16), (x, y, 0.62), 0.16, round=0.06))
     hoof = cylinder((x, y, 0.05), (x, y, 0.12), 0.175, round=0.05)
-    hoof = hoof.subtract(box((0.012, 0.08, 0.1), (x, y - 0.17, 0.06)), k=0.01)  # unghia divisa
-    hooves.append(hoof)
-m.add("Legs", union(*legs), FACE, role="detail", tris=1300)
-m.add("Hooves", union(*hooves), HOOF, role="detail", tris=900, voxel=0.015)
+    hooves.append(hoof.subtract(box((0.012, 0.08, 0.1), (x, y - 0.17, 0.06)), k=0.01))  # unghia divisa
+m.add("Legs", union(*legs), FACE, role="detail", tris=1100)
+m.add("Hooves", union(*hooves), HOOF, role="detail", tris=800, voxel=0.015)
 
-# ------------------------------------------------------------------ faccia
-eye_shape = ellipsoid((0.14, 0.085, 0.18))
-eye_frames = [Frame(head, HEAD_C, (0.42 * sx, -1.0, 0.16), sink=0.045) for sx in (1, -1)]
-m.add("Eyes", union(*[f.place(eye_shape) for f in eye_frames]), EYE, role="eye", tris=900, voxel=0.013)
-shines = []
-for f in eye_frames:
-    shines.append(f.place(sphere(0.056), (-0.048, -0.07, 0.07)))
-    shines.append(f.place(sphere(0.029), (0.054, -0.066, -0.08)))
-m.add("Shine", union(*shines), WHITE, role="shine", tris=450, voxel=0.01)
+# ------------------------------------------------------------------ occhi a bottone cuciti (uno piu' grande e storto)
+buttons, threads = [], []
+for sx, r, spin in ((1, 0.125, 18), (-1, 0.108, -8)):
+    disc, x_thread = button(r)
+    f = Frame(head, HEAD_C, (0.42 * sx, -1.0, 0.16), sink=0.02)
+    buttons.append(f.place(disc.rot(0, spin, 0)))
+    threads.append(f.place(x_thread.rot(0, spin, 0)))
+m.add("Eyes", union(*buttons), BUTTON, role="eye", tris=1000, voxel=0.01, reflectance=0.1)
 
-blush = ellipsoid((0.12, 0.035, 0.075))
-m.add("Blush", union(*[stick(blush, face, HEAD_C, (0.62 * sx, -0.85, -0.3), sink=0.015) for sx in (1, -1)]),
-      BLUSH, role="detail", tris=400, voxel=0.013)
+# sorriso cucito, un po' storto
+smile_pts = bezier((-0.27, 0, 1.6), (-0.12, 0, 1.47), (0.12, 0, 1.47), (0.29, 0, 1.63), 14)
+smile_path = [project(face, (p[0], -0.7, p[2]), (0, -1, 0)) for p in smile_pts]
+m.add("Thread", union(*threads, seam(smile_path, every=0.07, half=0.038)), THREAD, role="detail", tris=1300,
+      voxel=0.009)
 
-# nasino rosa e sorriso
 nose = union(ellipsoid((0.085, 0.05, 0.05), (0, 0, 0.012)), ellipsoid((0.04, 0.04, 0.04), (0, -0.004, -0.03)), k=0.035)
-nose_f = Frame(face, (0, -0.8, 1.62), (0, -1.0, 0.45), sink=0.025)
-smile = project_curve(face, bezier((-0.12, -1.0, 1.56), (-0.06, -1.0, 1.5), (0.06, -1.0, 1.5), (0.12, -1.0, 1.56), 12),
-                      (0, -1, 0), inset=0.008)
-mid = project_curve(face, [(0, -1.0, 1.6), (0, -1.0, 1.53)], (0, -1, 0), inset=0.008)
-m.add("Nose", nose_f.place(nose), NOSE, role="detail", tris=400, voxel=0.011)
-m.add("Mouth", union(tube(smile, 0.02), tube(mid, 0.018)), MOUTH, role="detail", tris=400, voxel=0.01)
+m.add("Nose", Frame(face, (0, -0.8, 1.62), (0, -1.0, 0.45), sink=0.025).place(nose), NOSE, role="detail", tris=400,
+      voxel=0.011)
+blush = ellipsoid((0.1, 0.03, 0.1))
+m.add("Blush", union(*[stick(blush, face, HEAD_C, (0.66 * sx, -0.85, -0.3), sink=0.012) for sx in (1, -1)]),
+      BLUSH, role="detail", tris=400, voxel=0.012)
 
 # zampe piu' corte e tozze: abbassa tutto tranne zampe e zoccoli; poi scala globale a ~3 unita' di altezza
-DROP, S = 0.08, 1.12
+DROP, S = 0.08, 1.1
 for _p in m.parts:
     if _p.name not in ("Legs", "Hooves"):
         _p.sdf = _p.sdf.translate((0, 0, -DROP))

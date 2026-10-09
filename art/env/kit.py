@@ -13,106 +13,103 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from lib.sdf import (SDF, bezier, capsule, cylinder, ellipsoid, sphere, torus,  # noqa: E402
                      tube, union)
-from common import (GROUND, Prop, ceiling, facet_blob, fast_union, ground, noisy, run,  # noqa: E402
-                    star_tier, surface_crack)
+from common import (GROUND, Prop, ceiling, cleaved_block, facet_blob, fast_union, ground, noisy,  # noqa: E402
+                    run, star_tier, surface_crack)
 
 # ------------------------------------------------------------------------------ rocce
 
 # colori naturali poco saturi: ardesia grigio-blu, grigio caldo, grigio-bruno
-ROCK_COLORS = {1: (116, 124, 138), 2: (132, 128, 122), 3: (124, 112, 98)}
-PEBBLE_COLORS = {1: (92, 98, 110), 2: (104, 100, 96), 3: (98, 88, 78)}
+ROCK_COLORS = {1: (114, 120, 130), 2: (130, 127, 121), 3: (122, 111, 98)}
+PEBBLE_COLORS = {1: (94, 99, 108), 2: (106, 103, 98), 3: (100, 90, 80)}
 
 
 def rock_body(i: int) -> SDF:
-    """Massi spigolosi: blocchi convessi a facce piatte uniti, con punte e crepe."""
-    if i == 1:  # masso largo con una cresta appuntita su un lato
-        main = facet_blob((0, 0, 0.75), (2.0, 1.35, 1.2), n=15, seed=11, depth=(0.78, 1.0), rot=(0, 0, 12))
-        peak = facet_blob((0.75, 0.15, 1.35), (1.05, 0.9, 1.5), n=11, seed=12, zmax=0.55, top=1.5, rot=(0, -12, 30))
-        side = facet_blob((-1.45, -0.35, 0.45), (0.8, 0.75, 0.75), n=10, seed=13, rot=(0, 15, -20))
-        body = union(main, peak, side)
-        cracks = [((0.2, 0, 1.0), (0.3, -1, 0.35), (0.2, 0.1, 1), 0.9),
-                  ((-0.6, 0, 0.8), (-0.6, -1, 0.5), (1, 0, -0.4), 0.8)]
-    elif i == 2:  # dente alto e appuntito con un blocco ai piedi
-        main = facet_blob((0, 0, 1.15), (1.35, 1.2, 1.75), n=14, seed=21, zmax=0.6, top=1.4, depth=(0.8, 1.0), rot=(0, 8, 20))
-        foot = facet_blob((0.9, -0.5, 0.4), (0.95, 0.85, 0.65), n=10, seed=22, rot=(0, -10, 40))
-        back = facet_blob((-0.75, 0.55, 0.6), (0.9, 0.8, 0.95), n=10, seed=23, zmax=0.7, rot=(0, 12, -15))
-        body = union(main, foot, back)
-        cracks = [((0, 0, 1.4), (0.4, -1, 0.1), (0.15, 0, 1), 1.1),
-                  ((0.2, 0, 0.9), (1, 0.2, 0.3), (0.2, 0.3, 1), 0.7)]
-    else:  # masso spaccato: due meta' separate da una fessura, sommita' scheggiata
-        a = facet_blob((-0.55, 0, 0.8), (1.25, 1.35, 1.15), n=13, seed=31, depth=(0.8, 1.0), rot=(0, 0, 5))
-        b = facet_blob((0.75, 0.1, 0.7), (1.1, 1.25, 1.05), n=13, seed=32, depth=(0.8, 1.0), rot=(0, 0, -8))
-        split = facet_blob((0.12, 0, 1.1), (0.09, 2.0, 1.6), n=6, seed=33, rot=(0, -8, 4))
-        body = union(a, b).subtract(split)
-        cracks = [((-0.6, 0, 0.9), (-0.3, -1, 0.3), (0.3, 0, 1), 0.9),
-                  ((0.8, 0, 0.8), (0.5, -1, 0.6), (1, 0, 0.2), 0.7)]
+    """Massi spigolosi: blocchi 'spaccati' a facce piatte uniti, con punte, scheggiature e crepe."""
+    if i == 1:  # masso largo a cresta con una lastra appuntita appoggiata e un blocco basso
+        a = cleaved_block((-0.2, 0, 0.75), (1.55, 1.1, 0.95), seed=101, rot=(0, 0, 10), ridge=0.45, chips=7)
+        b = cleaved_block((1.25, 0.25, 1.0), (0.45, 0.9, 1.25), seed=102, rot=(0, -24, 25), peak=0.7, chips=5)
+        c = cleaved_block((-1.55, -0.45, 0.35), (0.7, 0.6, 0.45), seed=103, rot=(0, 12, -30), chips=4)
+        body = union(a, b, c)
+        cracks = [((-0.2, 0, 0.9), (0.1, -1, 0.6), (0.25, 0, -1), 1.5, 3), ((-0.6, 0, 1.0), (-0.3, -0.2, 1), (1, -0.3, 0), 1.2, 4)]
+    elif i == 2:  # dente alto e appuntito con un blocco ai piedi e uno dietro
+        a = cleaved_block((0, 0, 1.0), (0.95, 0.85, 1.2), seed=201, rot=(0, 6, 30), peak=1.5, taper=0.25, chips=7)
+        b = cleaved_block((0.95, -0.55, 0.28), (0.62, 0.5, 0.45), seed=202, rot=(0, 10, -20), chips=4)
+        c = cleaved_block((-0.75, 0.6, 0.55), (0.75, 0.65, 0.7), seed=203, rot=(0, -8, 60), ridge=0.35, chips=4)
+        body = union(a, b, c)
+        cracks = [((0, 0, 1.6), (0.3, -1, 0.4), (0, 0, -1), 1.8, 4), ((0.1, 0, 1.2), (1, 0.1, 0.2), (0.2, 0.3, -1), 1.1, 5)]
+    else:  # masso basso spaccato dall'alto, con una scheggia caduta
+        a = cleaved_block((0, 0, 0.7), (1.75, 1.3, 0.9), seed=301, rot=(0, 0, -8), ridge=0.4, chips=8)
+        c = cleaved_block((1.55, -0.85, 0.22), (0.5, 0.42, 0.32), seed=302, rot=(0, 18, 40), chips=4)
+        body = union(a, c)
+        cracks = [((0.15, 0, 1.0), (0.05, 0.05, 1), (0.15, -1, 0), 2.6, 6), ((0.6, 0, 0.6), (0.4, -1, 0.1), (0.1, 0, -1), 1.0, 7)]
     body = body.intersect(ground())
-    for inside, d, along, ln in cracks:
-        body = body.subtract(surface_crack(body, inside, d, along, depth=0.22, width=0.07, length=ln, zigzag=2, seed=len(cracks)))
+    for k, (inside, d, along, ln, s) in enumerate(cracks):
+        deep = 0.5 if (i == 3 and k == 0) else 0.25
+        wide = 0.1 if (i == 3 and k == 0) else 0.06
+        body = body.subtract(surface_crack(body, inside, d, along, depth=deep, width=wide, length=ln, zigzag=3, seed=s))
     return body
+
+
+def rubble(body: SDF, seed: int, n: int, rmin: float, rmax: float, size=(0.22, 0.36), arc=(0.0, 2 * math.pi)) -> SDF:
+    """Schegge piatte e angolose mezze interrate ai piedi di una roccia (non la compenetrano)."""
+    rng = np.random.default_rng(seed)
+    chips = []
+    for k in range(n):
+        a = rng.uniform(*arc)
+        r = rng.uniform(rmin, rmax)
+        s = rng.uniform(*size)
+        chips.append(cleaved_block((r * math.cos(a), r * math.sin(a), 0.0), (s, s * rng.uniform(0.55, 0.85), s * 0.45),
+                                   seed=seed + k, rot=(rng.uniform(-20, 20), rng.uniform(-20, 20), rng.uniform(0, 180)),
+                                   ridge=s * 0.3, chips=3))
+    return union(*chips).intersect(ground()).subtract(body.offset(0.03))
 
 
 def rock(i: int) -> Prop:
     m = Prop(f"Rock{i}", voxel=0.025)
     body = rock_body(i)
     m.add("Rock", body, ROCK_COLORS[i], tris=520, smooth=False)
-    # schegge ai piedi del masso (tono piu' scuro)
-    rng = np.random.default_rng(140 + i)
-    chips = []
-    for k in range(3):
-        a = rng.uniform(0, 2 * math.pi)
-        r = rng.uniform(1.6, 2.1)
-        c = (r * math.cos(a), r * math.sin(a) * 0.8, 0.0)
-        chips.append(facet_blob(c, (rng.uniform(0.22, 0.36), rng.uniform(0.18, 0.3), rng.uniform(0.16, 0.26)), n=8,
-                                seed=150 + 10 * i + k, rot=(0, 0, rng.uniform(0, 180))))
-    pebbles = union(*chips).intersect(ground()).subtract(body.offset(0.02))
-    m.add("Chips", pebbles, PEBBLE_COLORS[i], role="detail", tris=160, smooth=False)
+    arc = {1: (3.6, 5.6), 2: (4.0, 6.2), 3: (3.4, 5.0)}[i]
+    m.add("Chips", rubble(body, 140 + 10 * i, 3, 1.7, 2.2, arc=arc), PEBBLE_COLORS[i], role="detail", tris=140, smooth=False)
     return m
 
 
 def rock_spire() -> Prop:
     """Pinnacolo di roccia alto e frastagliato (~7) per pareti e bordi del sentiero."""
-    m = Prop("RockSpire", voxel=0.035)
-    base = facet_blob((0, 0, 0.7), (2.0, 1.7, 1.25), n=15, seed=501, depth=(0.78, 1.0), rot=(0, 0, 15))
-    mid = facet_blob((0.15, 0.05, 2.7), (1.3, 1.1, 2.2), n=13, seed=502, zmax=0.65, depth=(0.8, 1.0), rot=(0, 5, 35))
-    top = facet_blob((0.35, 0.1, 5.0), (0.85, 0.75, 2.1), n=11, seed=503, zmax=0.45, top=1.6, rot=(0, 7, 70))
-    spur = facet_blob((-0.95, 0.35, 2.4), (0.6, 0.55, 1.6), n=10, seed=504, zmax=0.45, top=1.6, rot=(0, -16, 10))
-    ledge = facet_blob((1.05, -0.55, 1.45), (0.75, 0.6, 0.55), n=9, seed=505, rot=(0, 10, -25))
-    body = union(base, mid, top, spur, ledge).intersect(ground())
-    for inside, d, along, ln, s in [((0.2, 0, 3.2), (0.3, -1, 0), (0.1, 0, 1), 1.8, 1),
-                                    ((0.3, 0, 5.0), (1, -0.4, 0), (0, 0.2, 1), 1.2, 2),
-                                    ((0, 0, 1.0), (-0.6, -1, 0.2), (1, 0, 0.3), 1.2, 3)]:
-        body = body.subtract(surface_crack(body, inside, d, along, depth=0.28, width=0.09, length=ln, zigzag=2, seed=s))
-    m.add("Rock", body, (112, 118, 130), tris=1150, smooth=False)
-    rng = np.random.default_rng(510)
-    chips = []
-    for k in range(4):
-        a = rng.uniform(0, 2 * math.pi)
-        r = rng.uniform(1.9, 2.4)
-        chips.append(facet_blob((r * math.cos(a), r * math.sin(a), 0.0), (rng.uniform(0.28, 0.45), rng.uniform(0.22, 0.35),
-                                rng.uniform(0.2, 0.32)), n=8, seed=520 + k, rot=(0, 0, rng.uniform(0, 180))))
-    m.add("Chips", union(*chips).intersect(ground()).subtract(body.offset(0.02)), (92, 96, 106), role="detail", tris=200, smooth=False)
+    m = Prop("RockSpire", voxel=0.03)
+    column = cleaved_block((0.05, 0, 2.2), (1.2, 1.0, 2.4), seed=501, rot=(0, 4, 30), taper=0.3, peak=1.9, chips=8)
+    twin = cleaved_block((-0.85, 0.45, 1.6), (0.7, 0.62, 1.6), seed=502, rot=(0, -12, 10), taper=0.25, peak=1.1, chips=5)
+    shard = cleaved_block((0.95, 0.35, 2.6), (0.45, 0.35, 0.9), seed=503, rot=(0, 22, 55), peak=0.7, chips=4)
+    ledge = cleaved_block((0.9, -0.6, 1.2), (0.7, 0.55, 0.45), seed=504, rot=(0, 10, -25), ridge=0.2, chips=4)
+    base1 = cleaved_block((0.4, -0.3, 0.3), (1.6, 1.2, 0.55), seed=505, rot=(0, 0, 15), ridge=0.25, chips=7)
+    base2 = cleaved_block((-1.2, -0.4, 0.25), (0.8, 0.7, 0.5), seed=506, rot=(0, 8, -35), ridge=0.3, chips=4)
+    body = union(column, twin, shard, ledge, base1, base2).intersect(ground())
+    for inside, d, along, ln, s in [((0.05, 0, 3.0), (0.2, -1, 0.1), (0.05, 0, -1), 2.2, 11),
+                                    ((0.05, 0, 3.9), (1, -0.4, 0.3), (0, 0.2, -1), 1.3, 12),
+                                    ((0.4, -0.3, 0.4), (-0.2, -1, 0.3), (1, 0, -0.3), 1.4, 13)]:
+        body = body.subtract(surface_crack(body, inside, d, along, depth=0.3, width=0.08, length=ln, zigzag=3, seed=s))
+    m.add("Rock", body, (110, 116, 126), tris=1150, smooth=False)
+    m.add("Chips", rubble(body, 510, 4, 1.9, 2.4, (0.28, 0.42), arc=(3.3, 6.0)), (92, 96, 104), role="detail", tris=180, smooth=False)
     return m
 
 
 def rock_shards() -> Prop:
     """Gruppo di 3-4 lame di roccia appuntite e inclinate (~3)."""
-    m = Prop("RockShards", voxel=0.025)
-    blades = [  # centro, raggi (largo, sottile, alto), rotazione
-        ((0.0, 0.1, 1.3), (0.62, 0.28, 1.65), (8, -6, 15)),
-        ((0.75, -0.35, 0.95), (0.5, 0.24, 1.25), (-10, 24, 60)),
-        ((-0.7, -0.15, 0.85), (0.48, 0.22, 1.1), (6, -26, -35)),
-        ((0.2, 0.75, 0.75), (0.45, 0.22, 0.95), (-22, 8, 100)),
+    m = Prop("RockShards", voxel=0.022)
+    blades = [  # centro, mezze misure (largo, sottile, alto), punta, rotazione
+        ((0.0, 0.1, 1.05), (0.55, 0.2, 1.1), 0.9, (8, -5, 15)),
+        ((0.75, -0.35, 0.75), (0.45, 0.17, 0.85), 0.7, (-10, 22, 60)),
+        ((-0.7, -0.15, 0.65), (0.42, 0.16, 0.75), 0.65, (6, -24, -35)),
+        ((0.15, 0.75, 0.55), (0.4, 0.16, 0.6), 0.55, (-20, 8, 100)),
     ]
-    shards = [facet_blob(c, r, n=10, seed=600 + k, zmax=0.35, top=1.7, depth=(0.85, 1.0), rot=rot)
-              for k, (c, r, rot) in enumerate(blades)]
+    shards = [cleaved_block(c, h, seed=600 + k, rot=rot, peak=pk, taper=0.1, tilt=6, chips=4)
+              for k, (c, h, pk, rot) in enumerate(blades)]
     body = union(*shards).intersect(ground())
-    for inside, d, along, ln, s in [((0, 0.1, 1.4), (0.2, -1, 0), (0, 0, 1), 1.0, 1),
-                                    ((0.8, -0.35, 0.9), (0.6, -1, 0), (0.3, 0, 1), 0.7, 2)]:
-        body = body.subtract(surface_crack(body, inside, d, along, depth=0.12, width=0.05, length=ln, zigzag=1, seed=s))
+    for inside, d, along, ln, s in [((0, 0.1, 1.3), (0.2, -1, 0), (0, 0, -1), 1.2, 21),
+                                    ((0.75, -0.35, 0.9), (0.6, -1, 0), (0.3, 0, -1), 0.8, 22)]:
+        body = body.subtract(surface_crack(body, inside, d, along, depth=0.1, width=0.045, length=ln, zigzag=2, seed=s))
     m.add("Rock", body, (110, 116, 128), tris=620, smooth=False)
-    base = facet_blob((0.05, 0.1, -0.05), (1.25, 1.05, 0.35), n=12, seed=640, rot=(0, 0, 20)).intersect(ground())
-    m.add("Base", base.subtract(body.offset(0.01)), (94, 98, 108), role="detail", tris=180, smooth=False)
+    base = cleaved_block((0.05, 0.1, -0.05), (1.15, 0.95, 0.3), seed=640, rot=(0, 0, 20), chips=6).intersect(ground())
+    m.add("Base", base.subtract(body.offset(0.01)), (94, 98, 108), role="detail", tris=160, smooth=False)
     return m
 
 

@@ -179,11 +179,11 @@ H_EGG = (0.9, 0.62, 1.0)
 arms = union(tube([(-0.68, -0.3, 1.55), (-0.98, -0.62, 1.3), (-0.88, -0.95, 1.13)], [0.17, 0.15, 0.12]),
              tube([(0.7, -0.25, 1.55), (1.0, 0.16, 1.25), (0.92, 0.56, 1.02)], [0.17, 0.15, 0.12]))
 
-# occhi: destro socchiuso e furbo, sinistro spalancato sotto il sopracciglio alzato
+# occhi: destro socchiuso e scettico, sinistro spalancato sotto il sopracciglio alzato (aria sfacciata, non arrabbiata)
 EYE_W = (0.15, 0.085, 0.185)
 frames = {sx: Frame(head_u, HEAD_C, (0.42 * sx, -1.0, 0.17), sink=0.045) for sx in (1, -1)}
 eyes = {1: eye_set(frames[1], EYE_W, (0.072, 0.04, 0.094), look=(-0.035, 0.0)),
-        -1: eye_set(frames[-1], EYE_W, (0.072, 0.04, 0.094), look=(-0.035, -0.045), lid=(0.02, 0.32))}
+        -1: eye_set(frames[-1], EYE_W, (0.072, 0.04, 0.094), look=(-0.035, -0.045), lid=(0.035, -0.08))}
 lids = tilt(eyes[-1][3])
 
 core = union(core0, arms, k=0.06)
@@ -238,8 +238,8 @@ m.add("Pupils", tilt(union(eyes[1][1], eyes[-1][1])), EYE, role="eye", tris=500,
 m.add("Shine", tilt(union(eyes[1][2], eyes[-1][2])), WHITE, role="shine", tris=250, voxel=0.008)
 
 # sopracciglia spesse (una alzata, una abbassata) e pancia ricucita
-brows = union(surface_tube(head_u, [(-0.5, 2.6), (-0.36, 2.58), (-0.2, 2.52)], [0.035, 0.05, 0.04], inset=0.012),
-              surface_tube(head_u, [(0.16, 2.6), (0.31, 2.72), (0.5, 2.66)], [0.04, 0.05, 0.035], inset=0.012))
+brows = union(surface_tube(head_u, [(-0.5, 2.55), (-0.35, 2.585), (-0.19, 2.585)], [0.035, 0.05, 0.04], inset=0.012),
+              surface_tube(head_u, [(0.14, 2.6), (0.3, 2.68), (0.47, 2.63)], [0.04, 0.052, 0.036], inset=0.012))
 seam_pts = project_curve(core0.offset(0.022), [(x, -0.3, z) for x, z in
                                                [(0.08, 1.52), (0.02, 1.25), (0.07, 0.95), (0.02, 0.62)]],
                          (0, -1, 0))

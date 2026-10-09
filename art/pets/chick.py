@@ -16,7 +16,7 @@ YELLOW_DARK = (242, 140, 14)
 CREAM = (255, 232, 150)
 ORANGE = (255, 100, 18)
 EYE = (24, 14, 32)
-MOUTH = (44, 10, 40)
+MOUTH = (58, 10, 44)
 THREAD = (84, 36, 112)
 WHITE = (255, 255, 255)
 
@@ -162,11 +162,11 @@ EYE_R = (0.15, 0.09, 0.2)
 eye_frames = [Frame(head, HEAD_C, (0.42 * sx, -1.0, 0.16), sink=0.05) for sx in (1, -1)]
 pupils = [f.place(ellipsoid(EYE_R)) for f in eye_frames]
 # occhio sinistro (x>0) aperto sotto il sopracciglio alzato, destro socchiuso e furbo
-lids = union(eyelid(eye_frames[0], EYE_R, 0.11, 0.0), eyelid(eye_frames[1], EYE_R, 0.0, 0.32))
+lids = union(eyelid(eye_frames[0], EYE_R, 0.11, 0.0), eyelid(eye_frames[1], EYE_R, 0.02, 0.12))
 m.add("Lids", lids, YELLOW, role="skin", tris=700, voxel=0.012)
 
 brows = []
-for p0, p1, p2 in (((0.15, 2.5), (0.3, 2.62), (0.5, 2.56)), ((-0.12, 2.41), (-0.3, 2.47), (-0.5, 2.52))):
+for p0, p1, p2 in (((0.15, 2.5), (0.3, 2.63), (0.5, 2.57)), ((-0.13, 2.44), (-0.3, 2.47), (-0.5, 2.46))):
     pts = bezier((p0[0], 0, p0[1]), (p1[0], 0, p1[1]), (p1[0], 0, p1[1]), (p2[0], 0, p2[1]), 8)
     path = front_path(core, [(p[0], p[2]) for p in pts], -0.4)
     brows.append(tube([p - n * 0.01 for p, n in path], list(np.linspace(0.05, 0.03, len(path)))))

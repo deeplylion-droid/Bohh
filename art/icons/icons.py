@@ -8,7 +8,8 @@ Variabili d'ambiente: RES (512), SAMPLES (48), VIEW ("x,y,z" forza la direzione 
 OUTDIR (cartella alternativa al posto di art/out, per le prove).
 
 Uscita: art/out/images/Icon<Nome>.png, sfondo trasparente, oggetto inquadrato sulla sua sagoma.
-Stile: giocattolo in vinile lucido come pet e uova; forme grosse e semplici, 2-6 colori per icona.
+Stile: giocattolo in vinile lucido come pet e uova; forme grosse e semplici, 2-6 colori per icona,
+stessa camera e stessa luce per tutto il set.
 """
 from __future__ import annotations
 
@@ -22,44 +23,54 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from lib import toy  # noqa: E402
-from lib.sdf import (SDF, Frame, _len, bezier, box, capped_cone, capsule, crystal, cylinder, egg,  # noqa: E402
-                     ellipsoid, octahedron, prism, project, project_curve, round_cone, sphere, star_points,
-                     stick, torus, tube, union)
+from lib.sdf import (SDF, Frame, _len, bezier, box, capped_cone, capsule, cylinder, egg, ellipsoid,  # noqa: E402
+                     halfspace_z, octahedron, prism, project, project_curve, round_cone, smax, sphere,
+                     star_points, stick, torus, tube, union)
 from lib.toy import Model  # noqa: E402
 
 # direzione della camera comune a tutto il set (spazio Blender, il modello guarda verso -Y):
 # leggermente da destra e dall'alto, quasi frontale (le facce piatte restano leggibili)
 DEFAULT_VIEW = (0.35, -1.0, 0.45)
 FILL = 0.92  # frazione del riquadro occupata dal lato maggiore della sagoma
+GLOSS = 0.15  # vernice trasparente leggera su tutto (vinile lucido); l'oro ne ha di piu'
 
 # ---------------------------------------------------------------------- palette
-GOLD = (255, 190, 32)
-GOLD_DARK = (238, 140, 18)
-GOLD_LIGHT = (255, 226, 92)
+GOLD = (255, 194, 30)
+GOLD_DEEP = (240, 150, 16)
+GOLD_LIGHT = (255, 230, 110)
+EMBLEM = (255, 240, 150)
 WHITE = (255, 255, 255)
 CREAM = (255, 244, 220)
 EYE = (36, 24, 40)
+MOUTH = (120, 44, 60)
 BLUSH = (255, 116, 150)
 RED = (238, 46, 58)
-RED_DARK = (170, 20, 40)
+RED_DARK = (176, 22, 44)
 GREEN = (84, 214, 72)
 GREEN_DARK = (34, 150, 58)
-GREEN_LIGHT = (170, 246, 120)
+GREEN_LIGHT = (176, 248, 120)
 BLUE = (60, 156, 255)
-BLUE_DARK = (34, 92, 214)
+BLUE_DARK = (30, 84, 200)
+SKY = (120, 200, 255)
 PINK = (255, 104, 178)
-PINK_DARK = (214, 50, 132)
+PINK_LIGHT = (255, 150, 206)
 PURPLE = (150, 84, 246)
-PURPLE_DARK = (88, 40, 176)
+LAVENDER = (182, 152, 255)
 ORANGE = (255, 138, 28)
-ORANGE_DARK = (226, 88, 16)
-BROWN = (170, 104, 56)
-BROWN_DARK = (116, 66, 38)
-GREY = (172, 182, 198)
-GREY_DARK = (98, 106, 124)
-SILVER = (214, 222, 234)
+ORANGE_LIGHT = (255, 206, 110)
+YELLOW = (255, 220, 54)
+WOOD = (204, 126, 64)
+WOOD_LIGHT = (240, 184, 118)
+WOOD_DARK = (150, 86, 44)
+TAN = (226, 164, 98)
+SILVER = (214, 222, 236)
+GREY = (158, 172, 196)
+GREY_DARK = (84, 92, 120)
+SLATE = (74, 80, 108)
 SPOT = (196, 146, 98)
 SPOT_LIGHT = (226, 186, 140)
+SKIN = (255, 204, 84)
+INK = (52, 30, 44)
 
 
 # ---------------------------------------------------------------------- inquadratura e render
@@ -136,10 +147,77 @@ def _patch_render():
 
 
 # ---------------------------------------------------------------------- forme di base
+def add(m: Model, name: str, sdf: SDF, color, tris: int = 8000, gloss: float = GLOSS, role: str = "detail", **kw):
+    kw.setdefault("reflectance", gloss)
+    return m.add(name, sdf, color, tris=tris, role=role, **kw)
+
+
+def tf(shape: SDF, pos=(0, 0, 0), rx=0.0, ry=0.0, rz=0.0) -> SDF:
+    """Ruota (XYZ, gradi) attorno all'origine e poi sposta."""
+    return shape.rot(rx, ry, rz).translate(pos)
+
+
+def cyl(a, b, r: float, round: float = 0.0) -> SDF:
+    """Cilindro che va esattamente da a a b (lib.cylinder con round lo allunga di round per parte)."""
+    a, b = np.asarray(a, dtype=np.float64), np.asarray(b, dtype=np.float64)
+    if round > 0:
+        d = (b - a) / np.linalg.norm(b - a)
+        a, b = a + d * round, b - d * round
+    return cylinder(tuple(a), tuple(b), r, round=round)
+
+
+def ccone(a, b, ra: float, rb: float, round: float = 0.0) -> SDF:
+    """Tronco di cono esattamente da a a b (come cyl)."""
+    a, b = np.asarray(a, dtype=np.float64), np.asarray(b, dtype=np.float64)
+    if round > 0:
+        d = (b - a) / np.linalg.norm(b - a)
+        a, b = a + d * round, b - d * round
+    return capped_cone(tuple(a), tuple(b), ra, rb, round=round)
+
+
 def plate(poly, t: float, r: float | None = None) -> SDF:
     """Lastra con contorno poligonale nel piano XZ (x a destra, y del poligono = Z), spessore t lungo Y."""
     r = min(t * 0.45, 0.2) if r is None else r
     return prism(poly, -t / 2, t / 2, round=r).rot(90, 0, 0)
+
+
+def front(poly, depth: float = 1.0) -> SDF:
+    """Regione: poligono (piano XZ) estruso solo davanti (y da -depth a 0), per le vernici sulla faccia."""
+    return prism(poly, 0.0, depth).rot(90, 0, 0)
+
+
+def paint(base: SDF, region: SDF, t: float = 0.025, depth: float = 0.06) -> SDF:
+    """Strato sottile di vernice che segue la superficie di base dentro la regione."""
+    return base.offset(t).intersect(region).subtract(base.offset(-depth))
+
+
+def fast_union(shapes, pad: float = 0.05) -> SDF:
+    """Unione di molte forme piccole: ognuna e' valutata solo vicino al suo ingombro."""
+    los = [np.asarray(s.lo) - pad for s in shapes]
+    his = [np.asarray(s.hi) + pad for s in shapes]
+
+    def f(p):
+        d = np.ones(len(p), dtype=np.float32)
+        for s, lo, hi in zip(shapes, los, his):
+            msk = np.all((p >= lo) & (p <= hi), axis=1)
+            if msk.any():
+                d[msk] = np.minimum(d[msk], s(p[msk]))
+        return d
+
+    return SDF(f, np.min(los, axis=0), np.max(his, axis=0))
+
+
+def squash(shape: SDF, sx: float = 1.0, sy: float = 1.0, sz: float = 1.0, pad: float = 0.1) -> SDF:
+    """Scala non uniforme attorno all'origine (distanza approssimata)."""
+    k = np.array([1 / sx, 1 / sy, 1 / sz], dtype=np.float32)
+    s = shape.warp(lambda p: p * k, pad=0.0)
+    lo = shape.lo * np.array([sx, sy, sz])
+    hi = shape.hi * np.array([sx, sy, sz])
+    return SDF(s.f, np.minimum(lo, hi) - pad, np.maximum(lo, hi) + pad)
+
+
+def above(z: float) -> SDF:
+    return halfspace_z(z, above=True, lo=(-50, -50, -50), hi=(50, 50, 50))
 
 
 def egg_outline(rad: float, h: float, taper: float = 0.2, n: int = 32):
@@ -152,10 +230,69 @@ def egg_outline(rad: float, h: float, taper: float = 0.2, n: int = 32):
     return pts + [(-x, y) for x, y in reversed(pts[1:-1])]
 
 
+def rrect(w: float, h: float, r: float, n: int = 6):
+    """Rettangolo arrotondato (semilati w, h, raggio r) come poligono 2D."""
+    pts = []
+    for cx, cy, a0 in ((w - r, h - r, 0), (-w + r, h - r, 90), (-w + r, -h + r, 180), (w - r, -h + r, 270)):
+        for i in range(n + 1):
+            a = math.radians(a0 + 90 * i / n)
+            pts.append((cx + r * math.cos(a), cy + r * math.sin(a)))
+    return pts
+
+
+def heart_poly(s: float, n: int = 48):
+    """Cuore con la punta in (0, 0) e i lobi verso +y (altezza ~1.8 s)."""
+    pts = []
+    for i in range(n):
+        t = 2 * math.pi * i / n
+        x = 16 * math.sin(t) ** 3
+        y = 13 * math.cos(t) - 5 * math.cos(2 * t) - 2 * math.cos(3 * t) - math.cos(4 * t)
+        pts.append((x * s / 16, (y + 17) * s / 16))
+    return pts
+
+
+def gear_poly(n: int, r_out: float, r_root: float, tip: float = 0.4, base: float = 0.62, arc: int = 5):
+    step = 2 * math.pi / n
+    pts = []
+    for i in range(n):
+        c = i * step
+        for a, rr in ((c - step * base / 2, r_root), (c - step * tip / 2, r_out), (c + step * tip / 2, r_out),
+                      (c + step * base / 2, r_root)):
+            pts.append((rr * math.cos(a), rr * math.sin(a)))
+        a0, a1 = c + step * base / 2, c + step - step * base / 2
+        for j in range(1, arc):
+            a = a0 + (a1 - a0) * j / arc
+            pts.append((r_root * math.cos(a), r_root * math.sin(a)))
+    return pts
+
+
+def shield_poly(w: float = 1.0, top: float = 0.95, bottom: float = -1.3, n: int = 12):
+    right = [(0.0, top + 0.1), (w * 0.5, top + 0.07), (w * 0.86, top), (w, top - 0.1)]
+    curve = bezier((w, top - 0.22, 0), (w, -0.35 * w, 0), (w * 0.62, bottom + 0.42 * w, 0), (0, bottom, 0), n)
+    right += [(x, y) for x, y, _ in curve]
+    return right + [(-x, y) for x, y in reversed(right[1:-1])]
+
+
+BOLT = [(0.12, 0.62), (-0.36, -0.06), (-0.04, -0.06), (-0.2, -0.62), (0.36, 0.1), (0.04, 0.1)]
+
+
 def sparkle(size: float, t: float | None = None) -> SDF:
     """Stellina a quattro punte rivolta verso -Y."""
-    t = size * 0.24 if t is None else t
+    t = size * 0.26 if t is None else t
     return plate(star_points(4, size, size * 0.3, rot_deg=90), t, r=t * 0.45)
+
+
+def puffy_star(r_out: float, r_in: float, t: float) -> SDF:
+    """Stella a cinque punte bombata (piu' sottile sulle punte), rivolta verso -Y."""
+    base = plate(star_points(5, r_out, r_in, rot_deg=90), t, r=t * 0.3)
+    return base.intersect(ellipsoid((r_out * 1.3, t * 0.5, r_out * 1.3)), k=0.06)
+
+
+def star_with_face(r_out: float, r_in: float, t: float):
+    """Stella bombata e stella interna piu' chiara dipinta sul davanti (effetto smusso)."""
+    s = puffy_star(r_out, r_in, t)
+    inner = paint(s, front(star_points(5, r_out * 0.66, r_in * 0.66, rot_deg=90)), t=0.035 * r_out, depth=0.08)
+    return s, inner
 
 
 def reeds(r: float, h: float, n: int, depth: float = 0.035, width: float = 0.028) -> SDF:
@@ -175,31 +312,112 @@ def reeds(r: float, h: float, n: int, depth: float = 0.035, width: float = 0.028
     return SDF(f, (-e, -h, -e), (e, h, e))
 
 
-def coin(r: float = 1.0, t: float = 0.36, emblem: bool = True, rim: float = 0.16, recess: float = 0.05,
+def coin(r: float = 1.0, t: float = 0.36, emblem: bool = True, rim: float = 0.16, recess: float = 0.08,
          grooves: int = 0):
     """Moneta con asse lungo Y (faccia verso -Y). Ritorna (corpo, emblema a uovo o None)."""
     h = t / 2
-    body = cylinder((0, -h, 0), (0, h, 0), r, round=min(0.1 * r, h * 0.6))
-    inner = r - rim
-    cut = union(cylinder((0, -h - 0.3, 0), (0, -h + recess, 0), inner),
-                cylinder((0, h - recess, 0), (0, h + 0.3, 0), inner))
+    body = cyl((0, -h, 0), (0, h, 0), r, round=min(0.1 * r, h * 0.6))
+    inner = r - rim * r
+    cut = union(cyl((0, -h - 0.3, 0), (0, -h + recess * r, 0), inner),
+                cyl((0, h - recess * r, 0), (0, h + 0.3, 0), inner))
     body = body.subtract(cut, k=0.03 * r)
     if grooves:
         body = body.subtract(reeds(r, h - 0.06 * r, grooves, depth=0.03 * r, width=0.024 * r), k=0.012 * r)
     emb = None
     if emblem:
         e = plate(egg_outline(inner * 0.5, inner * 1.32), 0.11 * r, r=0.05 * r)
-        emb = e.translate((0, -h + recess - 0.035 * r, 0))
+        emb = e.translate((0, -h + recess * r - 0.035 * r, 0))
     return body, emb
 
 
-def placed(shape: SDF, pos=(0, 0, 0), rx=0.0, ry=0.0, rz=0.0) -> SDF:
-    return shape.rot(rx, ry, rz).translate(pos)
+def small_coin(r: float, t: float) -> SDF:
+    """Moneta semplice per i mucchi (bordo rialzato, niente emblema)."""
+    h = t / 2
+    body = cyl((0, -h, 0), (0, h, 0), r, round=h * 0.7)
+    cut = union(cyl((0, -h - 0.2, 0), (0, -h + 0.025, 0), r * 0.74),
+                cyl((0, h - 0.025, 0), (0, h + 0.2, 0), r * 0.74))
+    return body.subtract(cut, k=0.02)
+
+
+def surface_spots(base: SDF, center, n: int, rmin: float, rmax: float, seed: int, placed=None,
+                  zmin: float = -0.8, zmax: float = 0.95, back: float = 0.35) -> SDF:
+    """Macchie tonde sulla superficie, preferendo il lato verso la camera (-Y)."""
+    rng = np.random.default_rng(seed)
+    placed = [] if placed is None else placed
+    out = []
+    tries = 0
+    while len(out) < n and tries < 600:
+        tries += 1
+        v = rng.normal(size=3)
+        v /= np.linalg.norm(v)
+        if not (zmin <= v[2] <= zmax) or v[1] > back:
+            continue
+        p, _ = project(base, center, v)
+        r = float(rng.uniform(rmin, rmax))
+        if all(np.linalg.norm(p - q) > (r + rq) * 1.25 for q, rq in placed):
+            placed.append((p, r))
+            out.append(sphere(r, p))
+    return union(*out)
+
+
+def spotted_egg(rad: float, h: float, seed: int = 3, n1: int = 6, n2: int = 7):
+    """Uovo comune color crema a macchie, centrato nell'origine: (guscio, macchie scure, macchie chiare)."""
+    s = egg(rad, h, taper=0.2)
+    c = (0, 0, h * 0.45)
+    placed = []
+    big = surface_spots(s, c, n1, rad * 0.17, rad * 0.27, seed, placed)
+    small = surface_spots(s, c, n2, rad * 0.08, rad * 0.13, seed + 11, placed)
+    off = (0, 0, -h * 0.45)
+    t, dp = 0.018 * rad, 0.06 * rad
+    return s.translate(off), paint(s, big, t, dp).translate(off), paint(s, small, t, dp).translate(off)
+
+
+def face(head: SDF, center, fwd=(0, -1, 0), s: float = 1.0, dx: float = 0.42, dz: float = 0.06,
+         mouth_z: float = -0.3, mouth_w: float = 0.17, blush_dx: float = 0.7, blush_z: float = -0.28):
+    """Faccina da pet (occhi lucidi con due riflessi, guance, sorriso) appoggiata sulla testa."""
+    f = np.asarray(fwd, dtype=np.float64)
+    f /= np.linalg.norm(f)
+    up = np.array([0.0, 0.0, 1.0])
+    r = np.cross(up, f)
+    r /= np.linalg.norm(r)
+    u = np.cross(f, r)
+    c = np.asarray(center, dtype=np.float64)
+    eye_shape = ellipsoid((0.15 * s, 0.09 * s, 0.2 * s))
+    frames = [Frame(head, c, tuple(f + r * sx * dx + u * dz), sink=0.05 * s) for sx in (1, -1)]
+    eyes = union(*[fr.place(eye_shape) for fr in frames])
+    shine = union(*[fr.place(sphere(0.06 * s), (-0.05 * s, -0.075 * s, 0.075 * s)) for fr in frames],
+                  *[fr.place(sphere(0.032 * s), (0.055 * s, -0.07 * s, -0.085 * s)) for fr in frames])
+    bl = ellipsoid((0.17 * s, 0.04 * s, 0.1 * s))
+    blush = union(*[stick(bl, head, c, tuple(f + r * sx * blush_dx + u * blush_z), sink=0.02 * s) for sx in (1, -1)])
+    pts = bezier((-mouth_w, 0, mouth_z), (-mouth_w * 0.45, 0, mouth_z - 0.12), (mouth_w * 0.45, 0, mouth_z - 0.12),
+                 (mouth_w, 0, mouth_z), 12)
+    world = [tuple(c + (r * x + u * z) * s) for x, _, z in pts]
+    mouth = tube(project_curve(head, world, tuple(f), inset=0.012 * s, start_back=0.0), 0.036 * s)
+    return {"eyes": eyes, "shine": shine, "blush": blush, "mouth": mouth}
+
+
+def gem(size: float) -> SDF:
+    """Gemma sfaccettata (ottaedro schiacciato) con la faccia verso -Y: da usare con smooth=False."""
+    g = octahedron(1.0).warp(lambda p: p / np.array([0.85, 0.55, 1.05], dtype=np.float32), pad=0.6)
+    return SDF(g.f, (-1, -1, -1.1), (1, 1, 1.1)).scale(size)
+
+
+def glyph_strokes(polys, r: float, y: float = 0.0) -> SDF:
+    return union(*[tube([(x, y, z) for x, z in pl], r) for pl in polys])
+
+
+def x2_polys(x0: float = 0.0):
+    """Tratti di "x2" (x minuscola + 2), base a z=0, altezza ~1."""
+    x = [[(x0 - 0.42 - 0.2, 0.0), (x0 - 0.42 + 0.2, 0.52)], [(x0 - 0.42 - 0.2, 0.52), (x0 - 0.42 + 0.2, 0.0)]]
+    arc = [(x0 + 0.3 + 0.26 * math.cos(math.radians(a)), 0.7 + 0.26 * math.sin(math.radians(a)))
+           for a in np.linspace(165, -38, 14)]
+    two = [arc + [(x0 + 0.3 - 0.3, 0.0), (x0 + 0.3 + 0.3, 0.0)]]
+    return x + two
 
 
 # ---------------------------------------------------------------------- registro icone
 ICONS: dict[str, tuple] = {}
-TESTS = {"MatTest"}  # prove di materiale, non fanno parte del set
+TESTS: set[str] = set()  # prove, non fanno parte del set
 
 
 def icon(view=None, voxel=0.02):
@@ -209,25 +427,759 @@ def icon(view=None, voxel=0.02):
     return deco
 
 
+# ====================================================================== menu
 @icon()
-def Coin(m: Model):
-    body, emb = coin(1.0, 0.4, grooves=44)
-    rot = dict(rz=-12)
-    m.add("Coin", placed(body, **rot), GOLD, material="Foil", tris=9000)
-    m.add("Emblem", placed(emb, **rot), GOLD_LIGHT, material="Foil", role="detail", tris=3000, voxel=0.012)
+def Shop(m):
+    """Bancarella con tenda a strisce, smerlata, e moneta-insegna."""
+    W, n = 1.32, 7
+    w = 2 * W / n
+    counter = box((1.08, 0.52, 0.44), (0, 0, 0.44), round=0.1)
+    counter = counter.subtract(union(*[box((0.02, 0.1, 0.34), (x, -0.52, 0.42)) for x in (-0.54, 0.0, 0.54)]), k=0.02)
+    add(m, "Counter", counter, WOOD, tris=6000, role="skin")
+    top = box((1.2, 0.62, 0.075), (0, 0, 0.94), round=0.05)
+    posts = union(*[cyl((sx * 1.05, sy, 0.95), (sx * 1.05, sy, 2.1), 0.075) for sx in (1, -1) for sy in (-0.44, 0.44)])
+    add(m, "Top", union(top, posts), WOOD_LIGHT, tris=4000)
+    roof = box((W, 0.68, 0.055), round=0.045).rot(17, 0, 0).translate((0, -0.08, 2.19))
+    val = [(-W, 0.05), (W, 0.05)]
+    for k in reversed(range(n)):
+        xc = -W + (k + 0.5) * w
+        for i in range(8 + (1 if k == 0 else 0)):
+            a = -math.pi * i / 8
+            val.append((xc + (w / 2) * math.cos(a), -0.16 + (w / 2) * math.sin(a)))
+    valance = plate(val, 0.1, r=0.04).translate((0, -0.735, 1.97))
+    awning = union(roof, valance, k=0.02)
+    white = union(*[box((w / 2, 3.0, 3.0), (-W + (k + 0.5) * w, 0, 2.0)) for k in range(1, n, 2)])
+    add(m, "Awning", awning, RED, tris=7000)
+    add(m, "Stripes", paint(awning, white, t=0.016, depth=0.03), WHITE, tris=6000, voxel=0.014)
+    body, emb = coin(0.46, 0.17)
+    add(m, "Coin", tf(body, (0, -0.05, 2.62)), GOLD, tris=4000, gloss=0.3, voxel=0.015)
+    add(m, "Emblem", tf(emb, (0, -0.05, 2.62)), EMBLEM, tris=1200, gloss=0.3, voxel=0.01)
+    # uova in vendita sul bancone, di tre colori
+    for i, (pos, ry, col) in enumerate((((-0.58, -0.2, 0.97), -8, PINK_LIGHT), ((0.0, -0.24, 0.97), 0, GREEN_LIGHT),
+                                        ((0.58, -0.2, 0.97), 8, SKY))):
+        add(m, f"Egg{i}", tf(egg(0.22, 0.58), pos, ry=ry), col, tris=1500, voxel=0.014)
 
 
 @icon()
-def MatTest(m: Model):
-    """Prova materiali per l'oro (non fa parte del set)."""
-    variants = (("SmoothPlastic", 0.3, 0, "SmoothPlastic"), ("SmoothPlastic", 0.3, -12, "SmoothPlastic"),
-                ("Foil", 0.0, 0, "SmoothPlastic"), ("SmoothPlastic", 0.0, 10, "SmoothPlastic"))
-    for i, (mat, refl, rz, emat) in enumerate(variants):
-        body, emb = coin(1.0, 0.4, grooves=44)
-        x = (i - 1.5) * 2.3
-        m.add(f"Coin{i}", placed(body, (x, 0, 0), rz=rz), (255, 198, 30), material=mat, reflectance=refl, tris=6000)
-        m.add(f"Emb{i}", placed(emb, (x, 0, 0), rz=rz), (255, 240, 150), material=emat, reflectance=refl,
-              role="detail", tris=2000, voxel=0.012)
+def Upgrades(m):
+    """Grande freccia verde con stelline."""
+    poly = [(-1.0, 0.12), (0.0, 1.2), (1.0, 0.12), (0.44, 0.12), (0.44, -1.15), (-0.44, -1.15), (-0.44, 0.12)]
+    inner = [(-0.74, 0.24), (0.0, 1.0), (0.74, 0.24), (0.28, 0.24), (0.28, -0.98), (-0.28, -0.98), (-0.28, 0.24)]
+    arrow = plate(poly, 0.56, r=0.16)
+    add(m, "Arrow", arrow, GREEN_DARK, tris=8000, role="skin")
+    add(m, "Face", paint(arrow, front(inner), t=0.035, depth=0.08), GREEN, tris=5000, voxel=0.015)
+    sp = union(tf(sparkle(0.36), (0.98, -0.1, 0.98)), tf(sparkle(0.25), (-0.98, -0.1, 0.66)),
+               tf(sparkle(0.18), (0.88, -0.1, -0.62)))
+    add(m, "Sparkles", sp, YELLOW, tris=3000, voxel=0.014)
+
+
+@icon()
+def Index(m):
+    """Libro aperto con un'impronta di zampa."""
+    W, D = 1.12, 0.82
+
+    def bend(p):
+        q = p.copy()
+        ax = np.minimum(np.abs(p[:, 0]) / W, 1.0)
+        q[:, 2] = p[:, 2] - 0.26 * (1 - (1 - ax) ** 2)
+        return q
+
+    pages = union(box((W / 2, D, 0.11), (W / 2 + 0.025, 0, 0.11), round=0.07),
+                  box((W / 2, D, 0.11), (-W / 2 - 0.025, 0, 0.11), round=0.07)).warp(bend, pad=0.3)
+    cover = union(box((W / 2 + 0.08, D + 0.09, 0.05), (W / 2 + 0.03, 0, -0.03), round=0.04),
+                  box((W / 2 + 0.08, D + 0.09, 0.05), (-W / 2 - 0.03, 0, -0.03), round=0.04)).warp(bend, pad=0.3)
+
+    def surf(x):
+        return 0.22 + 0.26 * (1 - (1 - min(abs(x) / W, 1.0)) ** 2)
+
+    lines = [tube([(x, y, surf(x)) for x in np.linspace(-0.26, -0.92, 8)], 0.04) for y in (0.42, 0.18, -0.06, -0.3)]
+    toes = [(0.36, 0.13), (0.5, 0.25), (0.67, 0.25), (0.81, 0.13)]
+    paw = union(ellipsoid((0.22, 0.18, 0.8), (0.585, -0.15, 0.4)),
+                *[ellipsoid((0.085, 0.1, 0.8), (x, y, 0.4)) for x, y in toes])
+    tilt = dict(rx=38, rz=-6)
+    add(m, "Cover", tf(cover, **tilt), BLUE, tris=6000, role="skin")
+    add(m, "Pages", tf(pages, **tilt), CREAM, tris=8000)
+    add(m, "Lines", tf(paint(pages, union(*lines), t=0.012, depth=0.04), **tilt), (184, 196, 222), tris=2500,
+        voxel=0.012)
+    add(m, "Paw", tf(paint(pages, paw, t=0.03, depth=0.05), **tilt), WOOD_DARK, tris=3000, voxel=0.012)
+
+
+@icon()
+def Gifts(m):
+    """Pacco regalo rosa con nastro e fiocco gialli."""
+    body = box((0.9, 0.8, 0.66), (0, 0, 0.66), round=0.12)
+    lid = box((1.0, 0.9, 0.2), (0, 0, 1.42), round=0.1)
+    band = union(box((0.17, 3, 3)), box((3, 0.17, 3)))
+    add(m, "Box", body, PINK, tris=6000, role="skin")
+    add(m, "Lid", lid, PINK_LIGHT, tris=5000)
+    loop = squash(torus(0.3, 0.09).rot(90, 0, 0), sx=1.3)
+    loops = union(tf(loop, (0.38, 0, 1.86), ry=-32), tf(loop, (-0.38, 0, 1.86), ry=32))
+    knot = ellipsoid((0.17, 0.15, 0.15), (0, -0.02, 1.7))
+    ribbon = union(paint(body, band, t=0.03, depth=0.06), paint(lid, band, t=0.03, depth=0.06))
+    add(m, "Ribbon", ribbon, YELLOW, tris=5000, voxel=0.015)
+    add(m, "Bow", union(loops, knot, k=0.06), YELLOW, tris=5000, voxel=0.015)
+
+
+@icon()
+def Codes(m):
+    """Biglietto arancione con stella e linea tratteggiata."""
+    w, h = 1.25, 0.74
+    body = plate(rrect(w, h, 0.2), 0.32, r=0.11)
+    notches = union(cyl((w, -1, 0), (w, 1, 0), 0.25), cyl((-w, -1, 0), (-w, 1, 0), 0.25))
+    holes = union(*[sphere(0.055, (0.5, -0.17, z)) for z in np.linspace(-0.52, 0.52, 6)])
+    body = body.subtract(notches, k=0.05).subtract(holes, k=0.02)
+    frame_ = front(rrect(w - 0.1, h - 0.1, 0.13)).subtract(front(rrect(w - 0.17, h - 0.17, 0.08), 2.0).translate((0, 0.5, 0)))
+    frame_ = frame_.subtract(notches.offset(0.08))
+    deco = union(paint(body, frame_, t=0.03, depth=0.07),
+                 paint(body, front([(x - 0.3, z) for x, z in star_points(5, 0.42, 0.19)]), t=0.035, depth=0.07))
+    tilt = dict(ry=-14, rz=-8)
+    add(m, "Ticket", tf(body, **tilt), ORANGE, tris=7000, role="skin")
+    add(m, "Deco", tf(deco, **tilt), ORANGE_LIGHT, tris=5000, voxel=0.013)
+
+
+@icon()
+def Settings(m):
+    """Ingranaggio grigio."""
+    g = plate(gear_poly(8, 1.2, 0.92), 0.46, r=0.12)
+    g = g.subtract(cyl((0, -1, 0), (0, 1, 0), 0.3), k=0.05)
+    add(m, "Gear", tf(g, rz=-8), GREY, tris=9000, role="skin")
+    hub = torus(0.47, 0.075).rot(90, 0, 0).translate((0, -0.23, 0))
+    add(m, "Hub", tf(hub, rz=-8), GREY_DARK, tris=2500, voxel=0.014)
+
+
+# ====================================================================== valuta e oggetti
+@icon()
+def Coin(m):
+    """Moneta d'oro spessa con l'uovo in rilievo."""
+    body, emb = coin(1.0, 0.5, grooves=48)
+    add(m, "Coin", tf(body, rz=6), GOLD, tris=14000, gloss=0.3, role="skin")
+    add(m, "Emblem", tf(emb, rz=6), EMBLEM, tris=3000, gloss=0.3, voxel=0.012)
+
+
+@icon()
+def Egg(m):
+    """Uovo comune color crema a macchie."""
+    shell, s1, s2 = spotted_egg(1.0, 2.7)
+    t = dict(ry=8)
+    add(m, "Shell", tf(shell, **t), CREAM, tris=12000, role="skin")
+    add(m, "Spots", tf(s1, **t), SPOT, tris=4000, voxel=0.014)
+    add(m, "Spots2", tf(s2, **t), SPOT_LIGHT, tris=3000, voxel=0.014)
+
+
+@icon()
+def Lock(m):
+    """Lucchetto d'oro con arco d'argento."""
+    body = box((0.92, 0.44, 0.72), (0, 0, 0), round=0.26)
+    R, z0, z1 = 0.56, 0.3, 1.02
+    arc = [(-R * math.cos(a), 0, z1 + R * math.sin(a)) for a in np.linspace(0, math.pi, 21)]
+    shackle = tube([(-R, 0, z0)] + arc + [(R, 0, z0)], 0.17)
+    plate_ = cyl((0, -0.4, 0.02), (0, -0.5, 0.02), 0.36, round=0.04)
+    hole = union(cyl((0, -0.47, 0.1), (0, -0.545, 0.1), 0.13, round=0.02),
+                 plate([(-0.055, 0.1), (0.055, 0.1), (0.1, -0.25), (-0.1, -0.25)], 0.075, r=0.02).translate((0, -0.507, 0)))
+    add(m, "Body", body, GOLD, tris=8000, gloss=0.3, role="skin")
+    add(m, "Shackle", shackle, SILVER, tris=6000, gloss=0.35)
+    add(m, "Plate", plate_, GOLD_LIGHT, tris=2500, gloss=0.3, voxel=0.014)
+    add(m, "Keyhole", hole, INK, tris=1500, voxel=0.01)
+
+
+@icon()
+def Trap(m):
+    """Tagliola aperta come una bocca: due ganasce dentate alzate, piatto rosso, molle corte ai lati."""
+    R = 1.0
+    jaws, teeth = [], []
+    angles = np.linspace(0.18, math.pi - 0.18, 8)
+    for side, ang, aa in ((1, 52, angles), (-1, -52, (angles[:-1] + angles[1:]) / 2)):  # denti sfalsati
+        arc = [(R * math.cos(a), side * R * math.sin(a), 0.0) for a in np.linspace(0, math.pi, 25)]
+        jaws.append(tube(arc, 0.1).rot(ang, 0, 0))
+        tt = [round_cone((R * math.cos(a), side * R * math.sin(a), 0.04),
+                         ((R - 0.08) * math.cos(a), side * (R - 0.08) * math.sin(a), 0.46), 0.1, 0.016) for a in aa]
+        teeth.append(union(*tt).rot(ang, 0, 0))
+    metal = union(*jaws, *teeth)
+    plate_ = cyl((0, 0, -0.1), (0, 0, 0.0), 0.62, round=0.04)
+    pan = cyl((0, 0, -0.02), (0, 0, 0.1), 0.4, round=0.05)
+    springs = [box((R + 0.05, 0.1, 0.05), (0, 0, -0.06), round=0.04)]
+    for sx in (1, -1):
+        springs += [torus(0.16, 0.055).rot(0, 90, 0).translate((sx * (R + 0.1 + 0.11 * i), 0, 0)) for i in range(3)]
+        springs.append(capsule((sx * (R + 0.3), 0, 0), (sx * (R + 0.52), 0, 0.0), 0.075))
+    tilt = dict(rx=16, rz=-10)
+    add(m, "Jaws", tf(metal, **tilt), SILVER, tris=10000, gloss=0.35, role="skin")
+    add(m, "Pan", tf(pan, **tilt), RED, tris=3000)
+    add(m, "Springs", tf(union(plate_, *springs), **tilt), GREY_DARK, tris=6000, voxel=0.015)
+
+
+@icon()
+def Bat(m):
+    """Martello di gomma rossa (manico di legno)."""
+    head = cyl((-1.05, 0, 0), (1.05, 0, 0), 0.62, round=0.26)
+    rings = union(*[torus(0.6, 0.075).rot(0, 90, 0).translate((sx * 0.66, 0, 0)) for sx in (1, -1)])
+    handle = cyl((0, 0, -0.5), (0, 0, -2.25), 0.15, round=0.07)
+    grip = cyl((0, 0, -1.6), (0, 0, -2.42), 0.2, round=0.11)
+    t = dict(ry=32)
+    add(m, "Head", tf(head, **t), RED, tris=8000, role="skin")
+    add(m, "Bands", tf(rings, **t), WHITE, tris=4000, voxel=0.015)
+    add(m, "Handle", tf(handle, **t), WOOD_LIGHT, tris=3000)
+    add(m, "Grip", tf(grip, **t), RED_DARK, tris=3000)
+
+
+@icon()
+def Slap(m):
+    """Mano aperta da cartone con linee di movimento."""
+    palm = union(box((0.5, 0.2, 0.5), round=0.2), ellipsoid((0.56, 0.24, 0.54), (0, 0.02, -0.04)), k=0.1)
+    fingers = []
+    for x, L, a, r in ((-0.39, 0.72, -13, 0.135), (-0.13, 0.9, -4, 0.15), (0.13, 0.86, 4, 0.15), (0.38, 0.68, 13, 0.14)):
+        e = (x + L * math.sin(math.radians(a)), -0.02, 0.3 + L * math.cos(math.radians(a)))
+        fingers.append(capsule((x, 0, 0.3), e, r))
+    thumb = capsule((0.42, -0.04, -0.12), (0.92, -0.12, 0.3), 0.16)
+    wrist = cyl((0, 0, -0.3), (0, 0, -0.95), 0.33, round=0.1)
+    hand = union(palm, *fingers, thumb, wrist, k=0.08)
+    cuff = cyl((0, 0, -0.74), (0, 0, -1.2), 0.42, round=0.12)
+    t = dict(ry=16)
+    add(m, "Hand", tf(hand, **t), SKIN, tris=9000, role="skin")
+    add(m, "Cuff", tf(cuff, **t), WHITE, tris=3000)
+    lines = [tube([(-0.95, -0.05, z), (-0.95 - L, -0.05, z - 0.1)], [0.08, 0.035])
+             for z, L in ((0.8, 0.7), (0.32, 0.95), (-0.16, 0.66))]
+    add(m, "Lines", union(*lines), (206, 236, 255), tris=2500, voxel=0.015)
+
+
+@icon()
+def Star(m):
+    """Stella d'oro bombata."""
+    s, inner = star_with_face(1.2, 0.56, 0.74)
+    t = dict(rz=8)
+    add(m, "Star", tf(s, **t), GOLD, tris=9000, gloss=0.3, role="skin")
+    add(m, "Inner", tf(inner, **t), GOLD_LIGHT, tris=5000, gloss=0.3, voxel=0.014)
+
+
+# ====================================================================== potenziamenti
+@icon()
+def Speed(m):
+    """Scarpa da corsa alata con un fulmine sul fianco."""
+    def toe_up(p):
+        q = p.copy()
+        q[:, 2] -= 0.3 * np.clip((p[:, 0] - 0.55) / 0.7, 0, 1) ** 2
+        return q
+
+    sole = box((1.22, 0.47, 0.13), (0.05, 0, 0.13), round=0.12).warp(toe_up, pad=0.35)
+    upper = union(ellipsoid((0.78, 0.44, 0.42), (0.42, 0, 0.36)), box((0.52, 0.44, 0.55), (-0.62, 0, 0.62), round=0.34), k=0.35)
+    tongue = box((0.15, 0.28, 0.3), (-0.22, 0, 1.0), round=0.14).rot(0, -22, 0, pivot=(-0.22, 0, 0.82))
+    upper = union(upper, tongue, k=0.08)
+    collar = torus(0.33, 0.09).rot(0, 8, 0).translate((-0.64, 0, 1.15))
+    hole = ellipsoid((0.27, 0.27, 0.06), (-0.64, 0, 1.17))
+    laces = []
+    for x in (0.12, -0.08):
+        p, n = project(upper, (x, 0, 0.3), (0.3, 0, 1.0))
+        c = p - n * 0.02
+        laces.append(capsule((c[0], -0.3, c[2]), (c[0], 0.3, c[2]), 0.06))
+    toe = paint(upper, sphere(0.48, (1.12, 0, 0.3)), t=0.025)
+    bolt = paint(upper, front([(x * 0.62 - 0.22, z * 0.62 + 0.55) for x, z in BOLT]), t=0.03, depth=0.06)
+    feathers = [ellipsoid((L / 2, 0.06, 0.13)).translate((-L / 2, 0, 0)).rot(0, a, 0)
+                for L, a in ((0.82, 18), (0.74, 40), (0.62, 62), (0.48, 84))]
+    wing = union(*feathers, k=0.05).translate((-0.72, -0.47, 0.82))
+    add(m, "Upper", upper, RED, tris=9000, role="skin")
+    add(m, "Sole", union(sole, collar, *laces), WHITE, tris=7000)
+    add(m, "Toe", toe, WHITE, tris=3000, voxel=0.015)
+    add(m, "Hole", hole, INK, tris=800, voxel=0.015)
+    add(m, "Bolt", bolt, YELLOW, tris=2500, voxel=0.012)
+    add(m, "Wing", wing, WHITE, tris=4000, voxel=0.015)
+
+
+@icon()
+def Strength(m):
+    """Braccio che esce da una manica e mostra il bicipite, con polsino rosso."""
+    sh, el, wr = (-1.2, 0.0, -0.55), (0.42, 0.0, -0.58), (0.58, 0.0, 0.36)
+    upper = round_cone(sh, el, 0.35, 0.33)
+    bicep = ellipsoid((0.5, 0.4, 0.42), (-0.24, -0.02, -0.22))
+    fore = round_cone(el, wr, 0.37, 0.27)
+    fist = box((0.36, 0.32, 0.34), (0.6, 0, 0.76), round=0.24)
+    ridges = [capsule((0.36, -0.27, z), (0.84, -0.27, z), 0.08) for z in (0.6, 0.76, 0.92)]
+    thumb = capsule((0.32, -0.24, 0.62), (0.64, -0.33, 0.52), 0.11)
+    arm = union(upper, bicep, fore, fist, k=0.12)
+    arm = union(arm, *ridges, thumb, k=0.04)
+    sleeve = ccone((-1.36, 0, -0.55), (-0.84, 0, -0.55), 0.5, 0.47, round=0.13)
+    hem = torus(0.47, 0.07).rot(0, 90, 0).translate((-0.86, 0, -0.55))
+    band = torus(0.31, 0.1).rot(0, 10, 0).translate((0.56, 0, 0.32))
+    add(m, "Arm", arm, SKIN, tris=10000, role="skin")
+    add(m, "Sleeve", union(sleeve, hem, k=0.03), BLUE, tris=4000)
+    add(m, "Band", band, RED, tris=3000, voxel=0.015)
+    sp = union(tf(sparkle(0.32), (-0.42, -0.5, 0.42)), tf(sparkle(0.18), (0.05, -0.5, 0.2)))
+    add(m, "Sparkles", sp, WHITE, tris=2000, voxel=0.012)
+
+
+@icon()
+def Backpack(m):
+    """Zainetto verde con tasca, patta e fibbia dorata."""
+    body = union(box((0.82, 0.48, 0.8), (0, 0, 0.8), round=0.4), ellipsoid((0.82, 0.48, 0.5), (0, 0, 1.45)), k=0.25)
+    pocket = box((0.6, 0.2, 0.4), (0, -0.47, 0.56), round=0.18)
+    flap = paint(body, ellipsoid((0.98, 0.9, 0.72), (0, 0.0, 2.02)), t=0.03, depth=0.07)
+    strap = box((0.11, 0.05, 0.26), (0, -0.505, 1.24), round=0.04)
+    handle = tube(bezier((-0.28, 0, 1.86), (-0.25, 0, 2.2), (0.25, 0, 2.2), (0.28, 0, 1.86), 12), 0.075)
+    sides = union(*[box((0.14, 0.3, 0.3), (sx * 0.84, 0, 0.55), round=0.12) for sx in (1, -1)])
+    zipper = union(tube([(-0.44, -0.672, 0.88), (0.44, -0.672, 0.88)], 0.03), capsule((0.26, -0.7, 0.86), (0.28, -0.72, 0.72), 0.045))
+    add(m, "Body", body, GREEN, tris=9000, role="skin")
+    add(m, "Details", union(pocket, flap, strap, handle, sides), GREEN_DARK, tris=8000)
+    add(m, "Buckle", box((0.16, 0.06, 0.11), (0, -0.55, 1.06), round=0.04), GOLD, tris=1500, gloss=0.3, voxel=0.012)
+    add(m, "Zipper", zipper, WHITE, tris=1500, voxel=0.012)
+
+
+@icon()
+def Incubator(m):
+    """Uovo in un nido che brilla di calore, sopra una piastra con anello luminoso, e onde di calore."""
+    base = cyl((0, 0, 0), (0, 0, 0.44), 1.12, round=0.16)
+    glow_band = torus(1.115, 0.065, (0, 0, 0.22))
+    nest = torus(0.74, 0.3, (0, 0, 0.7))
+    bowl = cyl((0, 0, 0.42), (0, 0, 0.66), 0.8, round=0.08)  # fondo del nido, rovente
+    twigs = []
+    for i in range(11):
+        th0 = 2 * math.pi * i / 11 + 0.2
+        pts = []
+        for j in range(8):
+            th, ph = th0 + j * 0.1, -1.2 + j * 0.38
+            rr = 0.74 + 0.31 * math.cos(ph)
+            pts.append((rr * math.cos(th), rr * math.sin(th), 0.7 + 0.31 * math.sin(ph)))
+        twigs.append(tube(pts, 0.042))
+    shell, s1, s2 = spotted_egg(0.62, 1.62, seed=8, n1=5, n2=5)
+    pos = (0, 0, 0.5 + 1.62 * 0.45)
+    waves = []
+    for sx in (1, -1):
+        zs = np.linspace(1.05, 1.8, 14)
+        pts = [(sx * (1.02 + 0.09 * math.sin(2 * math.pi * (z - 1.05) / 0.6)), -0.2, z) for z in zs]
+        waves.append(tube(pts, list(np.linspace(0.08, 0.045, 14))))
+    add(m, "Base", base, SLATE, tris=5000, role="skin")
+    add(m, "Glow", union(glow_band, bowl), ORANGE, material="Neon", role="glow", tris=4000, voxel=0.015)
+    add(m, "Nest", nest, WOOD, tris=6000)
+    add(m, "Twigs", fast_union(twigs), WOOD_DARK, tris=5000, voxel=0.014)
+    add(m, "Shell", tf(shell, pos), CREAM, tris=7000)
+    add(m, "Spots", tf(s1, pos), SPOT, tris=2500, voxel=0.013)
+    add(m, "Spots2", tf(s2, pos), SPOT_LIGHT, tris=2000, voxel=0.013)
+    add(m, "Heat", union(*waves), (255, 176, 70), tris=2500, voxel=0.015)
+
+
+@icon()
+def HatchSpeed(m):
+    """Cronometro azzurro con un uovo davanti."""
+    body = cyl((0, -0.26, 0), (0, 0.26, 0), 1.0, round=0.2)
+    dial = paint(body, cyl((0, -1, 0), (0, 0, 0), 0.76), t=0.03, depth=0.06)
+    ticks = union(*[capsule((0.52 * math.cos(a), -0.3, 0.52 * math.sin(a)), (0.64 * math.cos(a), -0.3, 0.64 * math.sin(a)), 0.05)
+                    for a in (0, math.pi / 2, math.pi)])
+    hand = union(capsule((0, -0.31, 0), (0.3, -0.31, 0.42), 0.065), sphere(0.1, (0, -0.31, 0)))
+    crown = union(cyl((0, 0, 0.95), (0, 0, 1.2), 0.13), cyl((0, 0, 1.18), (0, 0, 1.38), 0.28, round=0.08))
+    a = math.radians(45)
+    side = union(cyl((0.92 * math.cos(a), 0, 0.92 * math.sin(a)), (1.08 * math.cos(a), 0, 1.08 * math.sin(a)), 0.1),
+                 sphere(0.13, (1.12 * math.cos(a), 0, 1.12 * math.sin(a))))
+    shell, s1, s2 = spotted_egg(0.5, 1.34, seed=4, n1=5, n2=4)
+    ep = dict(pos=(-0.78, -0.56, -0.45), ry=-10)
+    add(m, "Body", body, BLUE, tris=8000, role="skin")
+    add(m, "Dial", dial, WHITE, tris=4000, voxel=0.014)
+    add(m, "Ticks", union(ticks, hand), INK, tris=2000, voxel=0.012)
+    add(m, "Crown", union(crown, side), SILVER, tris=3000, gloss=0.35, voxel=0.015)
+    add(m, "Shell", tf(shell, **ep), CREAM, tris=6000)
+    add(m, "Spots", tf(s1, **ep), SPOT, tris=2000, voxel=0.012)
+    add(m, "Spots2", tf(s2, **ep), SPOT_LIGHT, tris=1500, voxel=0.012)
+
+
+@icon()
+def Pedestal(m):
+    """Piedistallo tondo con stella d'oro e bordi dorati."""
+    base = cyl((0, 0, 0), (0, 0, 0.3), 1.1, round=0.1)
+    flutes = union(*[capsule((0.66 * math.cos(a), 0.66 * math.sin(a), 0.5), (0.66 * math.cos(a), 0.66 * math.sin(a), 1.0), 0.07)
+                     for a in np.linspace(0, 2 * math.pi, 12, endpoint=False)])
+    column = cyl((0, 0, 0.25), (0, 0, 1.25), 0.62).subtract(flutes, k=0.03)
+    top = cyl((0, 0, 1.2), (0, 0, 1.46), 1.0, round=0.1)
+    ped = union(base, column, top, k=0.06)
+    rims = union(torus(1.09, 0.06, (0, 0, 0.15)), torus(0.99, 0.06, (0, 0, 1.33)))
+    s, inner = star_with_face(0.82, 0.38, 0.5)
+    sp = dict(pos=(0, 0, 2.34), rz=10)
+    add(m, "Pedestal", ped, LAVENDER, tris=8000, role="skin")
+    add(m, "Rims", rims, GOLD, tris=4000, gloss=0.3, voxel=0.015)
+    add(m, "Star", tf(s, **sp), GOLD, tris=6000, gloss=0.3)
+    add(m, "StarInner", tf(inner, **sp), GOLD_LIGHT, tris=3500, gloss=0.3, voxel=0.013)
+    sparks = union(tf(sparkle(0.24), (0.98, -0.3, 2.8)), tf(sparkle(0.17), (-0.95, -0.3, 2.18)))
+    add(m, "Sparkles", sparks, WHITE, tris=2000, voxel=0.012)
+
+
+@icon()
+def Barrier(m):
+    """Scudo laser rosso luminoso in una cornice scura."""
+    frame_ = plate(shield_poly(), 0.46, r=0.14)
+    panel_poly = shield_poly(0.76, 0.72, -0.98)
+    frame_ = frame_.subtract(plate(panel_poly, 0.4).translate((0, -0.3, 0)), k=0.03)
+    panel = plate(panel_poly, 0.3, r=0.06).translate((0, -0.06, 0))
+    clip = plate(shield_poly(0.66, 0.62, -0.84), 2.0, r=0.0)
+    lasers = union(*[capsule((-1, -0.215, z), (1, -0.215, z), 0.05) for z in (0.36, 0.0, -0.36)]).intersect(clip)
+    rivets = union(*[sphere(0.07, (x, -0.22, z)) for x, z in ((-0.86, 0.86), (0.86, 0.86), (0, -1.12))])
+    add(m, "Frame", frame_, SLATE, tris=8000, role="skin")
+    add(m, "Panel", panel, (255, 40, 64), material="Neon", role="glow", tris=4000)
+    add(m, "Lasers", lasers, (255, 200, 210), material="Neon", role="glow", tris=2500, voxel=0.012)
+    add(m, "Rivets", rivets, SILVER, tris=1200, gloss=0.35, voxel=0.012)
+
+
+# ====================================================================== pass e prodotti del negozio
+@icon()
+def VIP(m):
+    """Corona d'oro a cinque punte con gemme e velluto rosso."""
+    Ro, Ri, zl, zh, k, fl = 0.98, 0.84, 0.62, 1.32, 5, 0.12
+    th0 = -math.pi / 2
+
+    def crown_f(p):
+        rho = np.sqrt(p[:, 0] ** 2 + p[:, 1] ** 2)
+        th = np.arctan2(p[:, 1], p[:, 0])
+        u = (th - th0) * k / (2 * np.pi)
+        fr = np.abs(u - np.round(u))
+        ztop = zl + (zh - zl) * np.clip(1 - 2 * fr, 0, 1) ** 1.3
+        z = p[:, 2]
+        d = smax(rho - (Ro + fl * z), (Ri + fl * z) - rho, 0.04)
+        d = smax(d, z - ztop, 0.07)
+        return smax(d, -z, 0.04)
+
+    crown = SDF(crown_f, (-1.3, -1.3, -0.05), (1.3, 1.3, 1.45))
+    rm = (Ro + Ri) / 2 + fl * zh
+    balls = union(*[sphere(0.13, (rm * math.cos(th0 + 2 * math.pi * i / k), rm * math.sin(th0 + 2 * math.pi * i / k), zh + 0.06))
+                    for i in range(k)])
+    bead = torus(Ro + 0.01, 0.06, (0, 0, 0.07))
+    velvet = ellipsoid((0.86, 0.86, 0.74), (0, 0, 0.42))
+    gold = union(crown, balls, bead, sphere(0.12, (0, 0, 1.18)))
+    gems_r, gems_b = [], []
+    for a, sz, lst in ((-90, 0.25, gems_r), (-90 + 50, 0.17, gems_b), (-90 - 50, 0.17, gems_b)):
+        d = np.array([math.cos(math.radians(a)), math.sin(math.radians(a)), 0.0])
+        # il raggio parte dentro la parete (il centro della corona e' vuoto)
+        fr = Frame(crown, tuple(d * ((Ro + Ri) / 2 + fl * 0.32) + np.array([0, 0, 0.32])), tuple(d), sink=0.05)
+        lst.append(fr.place(gem(sz)))
+    t = dict(rx=10)
+    add(m, "Crown", tf(gold, **t), GOLD, tris=12000, gloss=0.3, role="skin")
+    add(m, "Velvet", tf(velvet, **t), RED_DARK, tris=4000, gloss=0.05)
+    add(m, "Ruby", tf(union(*gems_r), **t), (255, 40, 80), tris=600, gloss=0.5, voxel=0.012, smooth=False)
+    add(m, "Sapphires", tf(union(*gems_b), **t), (70, 150, 255), tris=900, gloss=0.5, voxel=0.012, smooth=False)
+
+
+@icon()
+def DoubleCoins(m):
+    """Due monete con un grande "x2" in rilievo."""
+    for i, (pos, rz, rx) in enumerate((((-0.45, 0.35, 0.5), 18, 6), ((0.25, -0.05, 0.05), -14, 0))):
+        body, emb = coin(0.82, 0.32)
+        add(m, f"Coin{i}", tf(body, pos, rx=rx, rz=rz), GOLD, tris=7000, gloss=0.3, role="skin" if i == 0 else "detail")
+        add(m, f"Emblem{i}", tf(emb, pos, rx=rx, rz=rz), EMBLEM, tris=2000, gloss=0.3, voxel=0.012)
+    polys = x2_polys()
+    txt = dict(pos=(0.62, -0.62, -0.95), rz=8)
+    # bordo scuro: tratti piu' grossi e arretrati, il davanti dei tratti chiari resta sporgente
+    fill = squash(glyph_strokes(polys, 0.13), sx=1.05, sz=1.05)
+    back = squash(glyph_strokes(polys, 0.21, y=0.13), sx=1.05, sz=1.05)
+    add(m, "Text", tf(fill, **txt), (120, 240, 80), tris=6000, voxel=0.013)
+    add(m, "TextBack", tf(back, **txt), (22, 108, 46), tris=6000, voxel=0.013)
+
+
+@icon()
+def SkipHatch(m):
+    """Uovo con una crepa e la doppia freccia "avanti veloce"."""
+    shell, s1, s2 = spotted_egg(0.82, 2.2, seed=5, n1=5, n2=5)
+    crack2d = [(-0.8, 0.28), (-0.55, 0.42), (-0.35, 0.22), (-0.12, 0.44), (0.08, 0.22), (0.3, 0.42), (0.52, 0.24), (0.8, 0.36)]
+    crack = tube(project_curve(shell, [(x, 0.0, z) for x, z in crack2d], (0, -1, 0), inset=0.015, start_back=0.0), 0.045)
+    ep = dict(pos=(-0.45, 0.3, 0.12), ry=-10)
+    add(m, "Shell", tf(shell, **ep), CREAM, tris=8000, role="skin")
+    add(m, "Spots", tf(s1, **ep), SPOT, tris=2500, voxel=0.013)
+    add(m, "Spots2", tf(s2, **ep), SPOT_LIGHT, tris=2000, voxel=0.013)
+    add(m, "Crack", tf(crack, **ep), WOOD_DARK, tris=2000, voxel=0.012)
+    tri = [(-0.36, 0.5), (0.44, 0.0), (-0.36, -0.5)]
+    arrows = union(*[plate([(x + dx, z) for x, z in tri], 0.34, r=0.13) for dx in (0.0, 0.56)])
+    back = arrows.offset(0.07).translate((0, 0.09, 0))
+    ap = dict(pos=(0.32, -0.62, -0.62), rz=-6)
+    add(m, "Arrows", tf(arrows, **ap), (70, 190, 255), tris=5000)
+    add(m, "ArrowsBack", tf(back, **ap), BLUE_DARK, tris=5000)
+
+
+@icon()
+def Luck(m):
+    """Quadrifoglio con cuori bombati."""
+    s = 0.62
+    leaves, inner = [], []
+    for phi in (45, 135, 225, 315):
+        th = 90 - phi
+        d = np.array([math.cos(math.radians(phi)), 0, math.sin(math.radians(phi))])
+        leaf = plate(heart_poly(s), 0.3, r=0.12).rot(0, th, 0)
+        leaf = leaf.intersect(ellipsoid((0.8, 0.17, 0.8), tuple(d * 0.62)), k=0.05)
+        leaves.append(leaf)
+        hp = [(x, y + 0.42 * s) for x, y in heart_poly(s * 0.5)]
+        inner.append(prism(hp, 0.0, 1.0).rot(90, 0, 0).rot(0, th, 0))
+    clover = union(*leaves, k=0.04)
+    stem = tube(bezier((0.0, 0.07, -0.15), (0.02, 0.07, -0.85), (0.25, 0.07, -1.25), (0.62, 0.05, -1.45), 12),
+                [0.11 - 0.003 * i for i in range(13)])
+    t = dict(rz=-10)
+    add(m, "Leaves", tf(clover, **t), GREEN, tris=10000, role="skin")
+    add(m, "Inner", tf(paint(clover, union(*inner), t=0.03, depth=0.06), **t), GREEN_LIGHT, tris=4000, voxel=0.013)
+    add(m, "Stem", tf(union(stem, sphere(0.13, (0, -0.02, 0))), **t), GREEN_DARK, tris=3000, voxel=0.015)
+    sp = union(tf(sparkle(0.28), (1.0, -0.2, 1.0)), tf(sparkle(0.18), (-1.05, -0.2, -0.8)))
+    add(m, "Sparkles", sp, YELLOW, tris=2000, voxel=0.012)
+
+
+@icon()
+def CoinsSmall(m):
+    """Sacchetto di monete legato, con moneta sul davanti."""
+    bulb = ellipsoid((0.98, 0.86, 0.84), (0, 0, 0.84))
+    neck = round_cone((0, 0, 1.3), (0, 0, 1.7), 0.42, 0.3)
+
+    def wavy(p):
+        q = p.copy()
+        th = np.arctan2(p[:, 1], p[:, 0])
+        f = 1.0 / (1.0 + 0.1 * np.sin(7 * th) * np.clip((p[:, 2] - 1.72) / 0.3, 0, 1))
+        q[:, 0] *= f
+        q[:, 1] *= f
+        return q
+
+    ruffle = ccone((0, 0, 1.64), (0, 0, 2.05), 0.3, 0.62, round=0.07).warp(wavy, pad=0.12)
+    pouch = union(union(bulb, neck, k=0.3), ruffle, k=0.06)
+    pouch = pouch.subtract(ellipsoid((0.5, 0.5, 0.2), (0, 0, 2.08)), k=0.05)
+    tie = torus(0.37, 0.09, (0, 0, 1.6))
+    fr = Frame(bulb, (0, 0, 0.84), (0.12, -1.0, -0.02), sink=0.03)
+    cb, ce = coin(0.46, 0.14)
+    coins, embs = [fr.place(cb)], [fr.place(ce)]
+    for pos, rx, rz in (((0.15, 0.0, 2.1), -25, 28), ((-0.2, 0.12, 2.04), 15, -32)):
+        b, e = coin(0.34, 0.12)
+        coins.append(tf(b, pos, rx=rx, rz=rz))
+        embs.append(tf(e, pos, rx=rx, rz=rz))
+    for pos, rx, rz in (((0.92, -0.42, 0.06), 90, 0), ((-0.95, -0.35, 0.3), 10, 30)):
+        b, e = coin(0.34, 0.12)
+        coins.append(tf(b, pos, rx=rx, rz=rz))
+        embs.append(tf(e, pos, rx=rx, rz=rz))
+    add(m, "Pouch", pouch, TAN, tris=10000, role="skin")
+    add(m, "Tie", tie, RED, tris=3000, voxel=0.015)
+    add(m, "Coins", union(*coins), GOLD, tris=8000, gloss=0.3, voxel=0.014)
+    add(m, "Emblems", union(*embs), EMBLEM, tris=3000, gloss=0.3, voxel=0.01)
+
+
+@icon()
+def CoinsMedium(m):
+    """Forziere aperto pieno di monete."""
+    W, D, H = 1.1, 0.7, 0.58
+    body = box((W, D, H), (0, 0, H), round=0.1)
+    bands = union(*[box((0.12, D + 0.035, H + 0.02), (sx * 0.7, 0, H), round=0.05) for sx in (1, -1)],
+                  box((W + 0.035, D + 0.035, 0.07), (0, 0, 2 * H - 0.06), round=0.04),
+                  box((W + 0.035, D + 0.035, 0.07), (0, 0, 0.07), round=0.04))
+    lockp = box((0.19, 0.05, 0.22), (0, -D - 0.03, 2 * H - 0.3), round=0.05)
+    keyhole = union(cyl((0, -D - 0.07, 2 * H - 0.25), (0, -D - 0.1, 2 * H - 0.25), 0.055),
+                    box((0.025, 0.02, 0.07), (0, -D - 0.085, 2 * H - 0.33), round=0.01))
+    hinge = (0, D, 2 * H)
+    shell = cyl((-W, 0, 0), (W, 0, 0), D, round=0.08).subtract(cyl((-W + 0.09, 0, 0), (W - 0.09, 0, 0), D - 0.09))
+    lid = shell.intersect(above(0.0)).translate((0, 0, 2 * H)).rot(-104, 0, 0, pivot=hinge)
+    lid_bands = union(*[cyl((sx * 0.7 - 0.12, 0, 0), (sx * 0.7 + 0.12, 0, 0), D + 0.035, round=0.03) for sx in (1, -1)])
+    lid_bands = lid_bands.subtract(cyl((-W, 0, 0), (W, 0, 0), D - 0.05)).intersect(above(0.0))
+    lid_bands = lid_bands.translate((0, 0, 2 * H)).rot(-104, 0, 0, pivot=hinge)
+    heap = ellipsoid((1.0, 0.62, 0.44), (0, -0.02, 2 * H - 0.04))
+    rng = np.random.default_rng(7)
+    coins = []
+    for _ in range(26):
+        v = rng.normal(size=3)
+        v[2] = abs(v[2]) * 1.6 + 0.4
+        v[1] = -abs(v[1]) - 0.2
+        v /= np.linalg.norm(v)
+        fr = Frame(heap, (0, -0.02, 2 * H - 0.04), tuple(v), sink=0.03)
+        coins.append(fr.place(small_coin(0.24, 0.09).rot(float(rng.uniform(-30, 30)), 0, float(rng.uniform(-30, 30)))))
+    spill = [tf(small_coin(0.26, 0.08), (0.78, -0.98, 0.04), rx=90), tf(small_coin(0.26, 0.08), (-0.55, -1.0, 0.28), rx=12, rz=25)]
+    gems_ = union(tf(gem(0.17), (-0.35, -0.42, 1.52), rx=-30, rz=15), tf(gem(0.15), (0.48, -0.36, 1.5), rx=-30, rz=-20))
+    add(m, "Chest", body, WOOD, tris=6000, role="skin")
+    add(m, "Lid", lid, WOOD, tris=6000)
+    add(m, "Bands", union(bands, lockp, lid_bands), GOLD, tris=8000, gloss=0.3)
+    add(m, "Keyhole", keyhole, INK, tris=800, voxel=0.01)
+    add(m, "Heap", heap, GOLD_DEEP, tris=4000, gloss=0.3)
+    add(m, "Coins", fast_union(coins + spill), GOLD, tris=10000, gloss=0.3, voxel=0.013)
+    add(m, "Gems", gems_, (255, 46, 96), tris=600, gloss=0.5, voxel=0.012, smooth=False)
+
+
+@icon()
+def CoinsLarge(m):
+    """Montagna di monete con pile ai lati e un grande luccichio."""
+    mound = ellipsoid((1.5, 1.05, 1.18), (0, 0, -0.05)).intersect(above(0.0))
+    rng = np.random.default_rng(11)
+    coins = []
+    tries = 0
+    pts = []
+    while len(coins) < 60 and tries < 2000:
+        tries += 1
+        v = rng.normal(size=3)
+        v[2] = abs(v[2]) + 0.12
+        v /= np.linalg.norm(v)
+        if v[1] > 0.45:
+            continue
+        p, _ = project(mound, (0, 0, 0.1), tuple(v))
+        if any(np.linalg.norm(p - q) < 0.24 for q in pts):
+            continue
+        pts.append(p)
+        fr = Frame(mound, (0, 0, 0.1), tuple(v), sink=0.02)
+        c = small_coin(0.27, 0.1).rot(float(rng.uniform(-35, 35)), 0, float(rng.uniform(-35, 35)))
+        coins.append(fr.place(c))
+    for (x, y), nstack in (((-1.25, -0.6), 5), ((1.3, -0.5), 3)):
+        for i in range(nstack):
+            coins.append(tf(small_coin(0.3, 0.1), (x + rng.uniform(-0.03, 0.03), y + rng.uniform(-0.03, 0.03), 0.06 + i * 0.105), rx=90))
+    big, emb = coin(0.5, 0.16)
+    bp = dict(pos=(0.25, -1.12, 0.5), rz=12, rx=-8)
+    gems_ = union(tf(gem(0.17), (-0.55, -0.72, 0.92), rx=-35, rz=20), tf(gem(0.15), (0.6, -0.66, 1.0), rx=-35, rz=-15))
+    add(m, "Mound", mound, GOLD_DEEP, tris=5000, gloss=0.3, role="skin")
+    add(m, "Coins", fast_union(coins), GOLD, tris=16000, gloss=0.3, voxel=0.014)
+    add(m, "BigCoin", tf(big, **bp), GOLD, tris=4000, gloss=0.3, voxel=0.014)
+    add(m, "Emblem", tf(emb, **bp), EMBLEM, tris=1500, gloss=0.3, voxel=0.01)
+    add(m, "Gems", gems_, (70, 150, 255), tris=600, gloss=0.5, voxel=0.012, smooth=False)
+    sp = union(tf(sparkle(0.46), (1.1, -0.8, 1.32)), tf(sparkle(0.26), (-0.95, -0.8, 1.2)))
+    add(m, "Sparkles", sp, WHITE, tris=2500, voxel=0.012)
+
+
+# ====================================================================== eventi
+@icon()
+def Meteor(m):
+    """Meteora viola con coda di fiamme."""
+    rng = np.random.default_rng(2)
+    bumps = []
+    for _ in range(6):
+        v = rng.normal(size=3)
+        v /= np.linalg.norm(v)
+        bumps.append(sphere(0.32, tuple(v * 0.6)))
+    rock = union(sphere(0.78), *bumps, k=0.25)
+    craters, rims = [], []
+    for v, r in (((-0.45, -1.0, 0.3), 0.22), ((0.3, -1.0, -0.25), 0.17), ((-0.15, -1.0, -0.55), 0.13), ((0.45, -1.0, 0.45), 0.12)):
+        p, n = project(rock, (0, 0, 0), v)
+        craters.append(sphere(r, tuple(p + n * r * 0.45)))
+        rims.append(sphere(r * 1.35, tuple(p)))
+    rock_c = rock.subtract(union(*craters), k=0.06)
+    c0 = np.array([0.0, 0.25, 0.0])
+    ends = [(np.array([2.05, 1.2, 1.75]), 0.95, 0.06), (np.array([2.15, 1.1, 0.9]), 0.62, 0.05), (np.array([1.15, 1.1, 2.15]), 0.62, 0.05)]
+
+    def flame(scale, shift):
+        parts = [round_cone(tuple(c0 + shift), tuple(c0 + shift + (e - c0) * scale), r0 * scale, r1) for e, r0, r1 in ends]
+        return union(*parts, k=0.35)
+
+    def flicker(p):
+        q = p.copy()
+        s = p[:, 0] + p[:, 2]
+        q[:, 0] += 0.06 * np.sin(s * 5.0)
+        q[:, 2] -= 0.06 * np.sin(s * 5.0 + 1.0)
+        return q
+
+    outer = flame(1.0, np.zeros(3)).warp(flicker, pad=0.1)
+    inner = flame(0.72, np.array([0.05, -0.2, 0.05])).warp(flicker, pad=0.1)
+    embers = union(*[sphere(r, p) for p, r in (((2.1, 0.5, 2.0), 0.09), ((2.45, 0.5, 1.45), 0.07), ((1.55, 0.5, 2.4), 0.06))])
+    add(m, "Rock", rock_c, (118, 70, 206), tris=8000, role="skin")
+    add(m, "Craters", paint(rock_c, union(*rims), t=0.015, depth=0.05), (78, 40, 150), tris=3000, voxel=0.013)
+    add(m, "Flame", union(outer, embers), (206, 92, 255), material="Neon", role="glow", tris=7000)
+    add(m, "Core", inner, (255, 196, 250), material="Neon", role="glow", tris=5000)
+
+
+@icon()
+def GoldenHour(m):
+    """Sole d'oro sorridente."""
+    head = ellipsoid((1.0, 0.66, 1.0))
+    rays = []
+    for i in range(12):
+        a = math.radians(90 + i * 30)
+        L = 1.66 if i % 2 == 0 else 1.4
+        d = np.array([math.cos(a), 0, math.sin(a)])
+        rays.append(round_cone(tuple(d * 0.82), tuple(d * L), 0.25 if i % 2 == 0 else 0.2, 0.075))
+    rays = squash(union(*rays), sy=0.55)
+    fc = face(head, (0, 0, 0), s=1.12, dx=0.36, dz=0.1, mouth_z=-0.26, mouth_w=0.2, blush_dx=0.62, blush_z=-0.2)
+    add(m, "Sun", head, GOLD, tris=8000, gloss=0.3, role="skin")
+    add(m, "Rays", rays, ORANGE, tris=8000, gloss=0.3)
+    add(m, "Eyes", fc["eyes"], EYE, role="eye", tris=1500, voxel=0.012)
+    add(m, "Shine", fc["shine"], WHITE, role="shine", tris=800, voxel=0.01)
+    add(m, "Blush", fc["blush"], (255, 110, 110), tris=800, voxel=0.012)
+    add(m, "Mouth", fc["mouth"], MOUTH, tris=1000, voxel=0.01)
+
+
+@icon()
+def Avalanche(m):
+    """Montagna innevata e grande palla di neve che rotola."""
+    def ridges(p):
+        q = p.copy()
+        th = np.arctan2(p[:, 1], p[:, 0])
+        f = 1.0 / (1.0 + 0.07 * np.sin(6 * th + 1.7 * p[:, 2]))
+        q[:, 0] *= f
+        q[:, 1] *= f
+        return q
+
+    peak1 = round_cone((-0.35, 0.3, -0.3), (-0.3, 0.3, 1.95), 1.35, 0.14)
+    peak2 = round_cone((0.95, 0.65, -0.3), (0.85, 0.65, 1.15), 0.95, 0.12)
+    mountain = union(peak1, peak2, k=0.25).warp(ridges, pad=0.15).intersect(above(0.0))
+
+    def snowline(p):
+        th = np.arctan2(p[:, 1] - 0.3, p[:, 0] + 0.3)
+        return (1.12 + 0.1 * np.sin(7 * th)) - p[:, 2]
+
+    snow = paint(mountain, SDF(snowline, (-3, -3, 0.8), (3, 3, 3)), t=0.035, depth=0.08)
+    rng = np.random.default_rng(4)
+    ball_c = np.array([0.95, -0.85, 0.72])
+    lumps = []
+    for _ in range(7):
+        v = rng.normal(size=3)
+        v /= np.linalg.norm(v)
+        lumps.append(sphere(0.24, tuple(ball_c + v * 0.56)))
+    ball = union(sphere(0.72, tuple(ball_c)), *lumps, k=0.18)
+    trail = union(*[sphere(r, p) for p, r in (((0.25, -0.62, 0.95), 0.36), ((-0.22, -0.4, 1.18), 0.28),
+                                               ((-0.55, -0.22, 1.36), 0.21), ((-0.1, -0.72, 0.62), 0.22))], k=0.12)
+    add(m, "Mountain", mountain, (124, 138, 184), tris=9000, role="skin")
+    add(m, "Snow", snow, (250, 252, 255), tris=6000, voxel=0.015)
+    add(m, "Ball", ball, (236, 246, 255), tris=7000)
+    add(m, "Trail", trail, (214, 232, 255), tris=4000)
+
+
+@icon()
+def Alarm(m):
+    """Sirena rossa con raggi di luce."""
+    base = cyl((0, 0, 0), (0, 0, 0.34), 1.0, round=0.12)
+    collar = torus(0.8, 0.075, (0, 0, 0.36))
+    dome = union(cyl((0, 0, 0.3), (0, 0, 0.92), 0.74), sphere(0.74, (0, 0, 0.92)))
+    bulb = sphere(0.38, (0, -0.05, 0.86))
+    rays = []
+    for sx in (1, -1):
+        for a in (5, 38, 70):
+            d = np.array([sx * math.cos(math.radians(a)), 0, math.sin(math.radians(a))])
+            c = np.array([0, -0.1, 0.92])
+            rays.append(capsule(tuple(c + d * 1.05), tuple(c + d * 1.48), 0.085))
+    add(m, "Base", base, SLATE, tris=4000, role="skin")
+    add(m, "Collar", collar, SILVER, tris=2500, gloss=0.35, voxel=0.015)
+    add(m, "Dome", dome, RED, material="Glass", tris=7000, gloss=0.3)
+    add(m, "Bulb", bulb, (255, 214, 140), material="Neon", role="glow", tris=2000)
+    add(m, "Rays", union(*rays), YELLOW, tris=3000, voxel=0.015)
+
+
+@icon()
+def Thief(m):
+    """Mascherina da ladro con occhi furbi e lacci."""
+    c = 0.3
+    lobes = union(ellipsoid((0.62, 0.14, 0.42), (0.5, 0, 0)), ellipsoid((0.62, 0.14, 0.42), (-0.5, 0, 0)),
+                  ellipsoid((0.34, 0.14, 0.24), (0, 0, 0.12)), k=0.2)
+    holes = union(ellipsoid((0.25, 0.5, 0.19), (0.5, 0, 0.03)), ellipsoid((0.25, 0.5, 0.19), (-0.5, 0, 0.03)))
+    mask = lobes.subtract(holes, k=0.04)
+
+    def bend(p):
+        q = p.copy()
+        q[:, 1] = p[:, 1] - c * p[:, 0] ** 2
+        return q
+
+    mask = mask.warp(bend, pad=0.45)
+    eyes = union(*[ellipsoid((0.23, 0.12, 0.18), (sx * 0.5, c * 0.25 + 0.1, 0.03)) for sx in (1, -1)])
+    pupils = union(*[sphere(0.1, (sx * 0.5 - 0.09, c * 0.25 + 0.0, 0.0)) for sx in (1, -1)])
+    tails = [tube(bezier((1.02, 0.36, 0.05), (1.35, 0.42, 0.25), (1.5, 0.48, -0.15), (1.85, 0.5, -0.05), 12), [0.11 - 0.003 * i for i in range(13)]),
+             tube(bezier((1.02, 0.36, 0.0), (1.3, 0.42, -0.25), (1.45, 0.48, -0.5), (1.72, 0.5, -0.62), 12), [0.1 - 0.003 * i for i in range(13)])]
+    knot = sphere(0.14, (1.02, 0.34, 0.03))
+    ties = squash(union(*tails, knot, k=0.05), sy=0.6)
+    add(m, "Mask", mask, (58, 48, 92), tris=8000, gloss=0.3, role="skin")
+    add(m, "Ties", ties, (58, 48, 92), tris=4000, gloss=0.3, voxel=0.015)
+    add(m, "Eyes", eyes, WHITE, tris=2000, voxel=0.013)
+    add(m, "Pupils", pupils, EYE, role="eye", tris=1200, voxel=0.012)
+
+
+@icon()
+def Friends(m):
+    """Due testoline tonde e sorridenti vicine."""
+    ca, cb = (-0.72, 0.32, 0.1), (0.66, -0.2, -0.05)
+    a = sphere(0.86, ca)
+    b = sphere(0.96, cb)
+    fa = face(a, ca, fwd=(0.12, -1, 0.02), s=0.95)
+    fb = face(b, cb, fwd=(-0.06, -1, 0.0), s=1.05)
+    tuft = tube(bezier((-0.72, 0.32, 0.9), (-0.72, 0.25, 1.32), (-0.42, 0.3, 1.38), (-0.4, 0.38, 1.18), 10),
+                [0.13, 0.12, 0.11, 0.1, 0.09, 0.08, 0.075, 0.07, 0.065, 0.06, 0.055])
+    ears = union(*[sphere(0.24, (0.66 + sx * 0.6, -0.12, 0.72)) for sx in (1, -1)])
+    add(m, "HeadA", union(a, tuft, k=0.08), SKY, tris=7000, role="skin")
+    add(m, "HeadB", union(b, ears, k=0.1), YELLOW, tris=7000)
+    add(m, "Eyes", union(fa["eyes"], fb["eyes"]), EYE, role="eye", tris=2000, voxel=0.012)
+    add(m, "Shine", union(fa["shine"], fb["shine"]), WHITE, role="shine", tris=1000, voxel=0.01)
+    add(m, "Blush", union(fa["blush"], fb["blush"]), BLUSH, tris=1000, voxel=0.012)
+    add(m, "Mouth", union(fa["mouth"], fb["mouth"]), MOUTH, tris=1200, voxel=0.01)
 
 
 # ---------------------------------------------------------------------- esecuzione
