@@ -212,6 +212,9 @@ VIEWS = {
     # i giganti dei lotti 1-5 visti dall'alto, dalla parte del sentiero
     "giants": ((60, 470, 330), (-20, 340, -30), 26),
     "plot": ((40, 352, 50), (88, 331, 104), 26),
+    # lotto 1 da vicino: piedistalli, pedane, incubatrici; e il cancello con le sue colonne
+    "pads": ((62, 345, 66), (84, 331, 96), 30),
+    "gate": ((52, 343, 58), (83, 341, 99), 34),
     "trail": ((190, 340, 250), (20, 262, 320), 28),
     "crater": ((70, 210, 470), (70, 96, 630), 28),
     "mountain": ((-260, 420, 1250), (0, 210, 320), 34),
