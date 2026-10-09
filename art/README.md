@@ -66,9 +66,11 @@ punte, crepe), colori naturali e meno saturi; alberi e piante stilizzati ma cred
 - Primitive: `sphere`, `ellipsoid`, `box(round=)`, `capsule`, `round_cone`, `capped_cone`,
   `cylinder`, `torus`, `egg`, `prism` (poligono estruso), `octahedron`, `tube(punti, raggi)`,
   `bezier(p0, p1, p2, p3, n)`, `revolve`.
+- Nota: `cylinder(..., round=r)` arrotonda i bordi allungando il cilindro di `r` a ogni estremita'.
 - Operazioni: `union(..., k=)` (unione morbida), `a.subtract(b, k=)`, `a.intersect(b)`,
   `.translate`, `.rot(rx, ry, rz)`, `.scale`, `.offset(d)` (gonfia/sgonfia),
   `.shell(t)`, `.mirrored()` (copia speculare su x), `.symmetric()`, `.warp(fn)`.
-- Disegni sulla superficie: `core.offset(0.02).intersect(regione)` crea una "vernice" (pancia,
-  macchie, strisce) che segue la forma; `Frame(base, origine, direzione, sink)` e `stick(...)`
+- Disegni sulla superficie: `core.offset(0.02).subtract(core.offset(-0.06)).intersect(regione)`
+  crea una "vernice" (pancia, macchie, strisce) che segue la forma (il guscio sottile evita grandi
+  superfici interne nascoste che sprecano triangoli e rovinano la decimazione); `Frame(base, origine, direzione, sink)` e `stick(...)`
   appoggiano una forma sulla superficie; `project_curve` proietta una curva sulla superficie.

@@ -1,9 +1,13 @@
 {
  "images": {},
  "models": {
+  "Bunny": {
+   "asset": 108172631570660,
+   "hash": "bf4a8c508616c2b2e84fa765fc1c42eaab4c1776"
+  },
   "Chick": {
    "asset": 87872955844098,
-   "hash": "2b113b549ad2198bff47bb08e386e97f59fd344f"
+   "hash": "af172f34a1a51e7731b14a3531ac2ae95c22cbd9"
   },
   "EggCommon": {
    "asset": 118447612830356,
@@ -37,9 +41,33 @@
    "asset": 124179252034752,
    "hash": "cbe9cfd747bd6887d1a0c566ababb43c11b93d59"
   },
+  "Fawn": {
+   "asset": 135402707078067,
+   "hash": "2c1df76cb9563c7fed465ba233bedec79390c59b"
+  },
+  "FoxKit": {
+   "asset": 116069774612624,
+   "hash": "5c3ff5ea021ae4ab1e5e41045672f56c9e40ccc1"
+  },
+  "Hedgehog": {
+   "asset": 123103805396472,
+   "hash": "7aef6c72ab5c8478aa3d5f70cb808b16f35cc8f1"
+  },
+  "Lamb": {
+   "asset": 110152343940847,
+   "hash": "241f77f02657a06d854af024b3f8ea51d14ae467"
+  },
   "LavaDragon": {
    "asset": 95954678416787,
    "hash": "389e0f182e85a78fdbf4d2f2dae5e2f15845cbb3"
+  },
+  "Owlet": {
+   "asset": 71876116607799,
+   "hash": "a26fb22f0bcbbf4469a5e92156e43c9f4ba58f6b"
+  },
+  "Piglet": {
+   "asset": 130611433935922,
+   "hash": "12ccb915dafc5f8320ea4872fe13fcf2d1f5eca4"
   },
   "PinguinoPanettone": {
    "asset": 125750564024260,

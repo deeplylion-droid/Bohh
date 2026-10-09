@@ -69,6 +69,7 @@ class Model:
             # evita decimazioni estreme (deformano la forma): rimesha piu' grossolano
             while len(faces) > part.tris * 8 and voxel < 2.0:
                 voxel *= math.sqrt(len(faces) / (part.tris * 5))
+                print(f"[toy] {part.name}: mesh troppo densa per {part.tris} tris, voxel portato a {voxel:.4f}")
                 verts, faces, _ = mesh_sdf(part.sdf, voxel)
             obj = make_object(part.name, verts, faces)
             decimate(obj, part.tris)

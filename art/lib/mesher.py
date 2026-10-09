@@ -40,6 +40,8 @@ def mesh_sdf(sdf: SDF, voxel: float = 0.03, min_component_faces: int = 40):
     """Ritorna (vertici Nx3, facce Mx3, normali Nx3) della superficie zero dell'SDF."""
     pad = voxel * 3
     vol, lo = sample_grid(sdf, voxel, pad)
+    if np.isnan(vol).any():
+        raise ValueError("Il campo SDF contiene NaN (forma degenere, es. poligono con vertici ripetuti)")
     if vol.min() >= 0 or vol.max() <= 0:
         raise ValueError("La forma e' vuota o riempie tutta la griglia")
     verts, faces, _normals, _ = measure.marching_cubes(vol, level=0.0, spacing=(voxel, voxel, voxel))
@@ -70,6 +72,9 @@ def _drop_small_components(verts, faces, min_faces):
     face_label = labels[faces[:, 0]]
     counts = np.bincount(face_label, minlength=ncomp)
     keep_comp = counts >= min_faces
+    dropped = int((~keep_comp).sum())
+    if dropped:
+        print(f"[mesher] scartati {dropped} pezzi con meno di {min_faces} facce (dettagli troppo fini per il voxel?)")
     keep_faces = keep_comp[face_label]
     faces = faces[keep_faces]
     used = np.unique(faces)

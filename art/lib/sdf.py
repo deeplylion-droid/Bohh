@@ -318,6 +318,9 @@ def egg(radius: float, height: float, taper: float = 0.22, c: Vec = (0, 0, 0)) -
 def prism(poly: Sequence[Vec], z0: float, z1: float, round: float = 0.0) -> SDF:
     """Prisma con base poligonale 2D (in XY, ordine qualsiasi) tra z0 e z1."""
     pts = np.asarray(poly, dtype=np.float32)
+    # toglie i vertici consecutivi coincidenti (un lato lungo zero darebbe NaN)
+    keep = [i for i in range(len(pts)) if np.linalg.norm(pts[i] - pts[i - 1]) > 1e-7]
+    pts = pts[keep]
     n = len(pts)
 
     def d2(px, py):
@@ -420,6 +423,10 @@ def project(sdf: SDF, origin: Vec, direction: Vec, max_dist: float = 10.0):
     ts = np.linspace(0.0, max_dist, 2000)
     pts = (o[None, :] + ts[:, None] * d[None, :]).astype(np.float32)
     vals = sdf(pts)
+    if vals[0] > 0:
+        import warnings
+        warnings.warn(f"project(): il punto di partenza {tuple(np.round(o, 3))} e' fuori dalla forma: "
+                      "il dettaglio restera' sospeso", stacklevel=2)
     idx = np.nonzero(vals > 0)[0]
     if len(idx) == 0:
         raise ValueError("Nessuna superficie lungo il raggio")
