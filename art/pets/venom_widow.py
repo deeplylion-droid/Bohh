@@ -289,8 +289,8 @@ SEAM_F = Frame(abdomen, AB_C, (1.0, 0.1, 0.32))
 SEAM = [to_surface(abdomen, SEAM_F.point((x * 1.1, 0.0, z * 1.1))) for x, z in
         ((0.16, 0.58), (0.06, 0.42), (0.1, 0.24), (0.0, 0.06), (0.05, -0.12), (-0.04, -0.3), (0.0, -0.48))]
 SEAM = [to_surface(abdomen, q) for q in resample(SEAM, 0.05)]
-body = body.subtract(tube([tuple(q) for q in SEAM], 0.044), k=0.014)
-m.add("Body", body, BLACK, reflectance=0.2, tris=9500, voxel=0.016)
+body = body.subtract(tube([tuple(q) for q in SEAM], 0.056), k=0.016)
+m.add("Body", body, BLACK, reflectance=0.2, tris=11000, voxel=0.027)
 
 # ------------------------------------------------------------ occhi: 2 grandi + 6 piccoli raccolti sulla fronte
 EYES = [  # (direzione dal centro della testa, raggi, principale?)
@@ -316,7 +316,7 @@ for sx in (1, -1):
             eye_glow.append(f.place(ellipsoid(R)))
             sockets.append(f.place(ellipsoid((R[0] * 1.3, R[1] * 0.85, R[2] * 1.3)), (0, 0.012, 0)))
             shines.append(f.place(sphere(R[0] * 0.22), (R[0] * 0.3, -R[1] * 0.85, R[2] * 0.25)))
-m.add("Head", ceph, BLACK, reflectance=0.2, tris=5000, voxel=0.012)
+m.add("Head", ceph, BLACK, reflectance=0.2, tris=5000, voxel=0.021)
 
 # ============================================================ zampe
 # giunti (lato destro, x > 0; il sinistro e' speculare): J0 dentro il cefalotorace, J1 fine coxa/trocantere,
@@ -397,7 +397,7 @@ def leg_vein(J, lat, sc, phase):
             ang = ph + 2 * math.pi * turn * (t - t0) + 0.35 * math.sin(11 * t)
             r = spindle_r(t, *SEG_R[1]) * sc
             pts.append(tuple(a + (b - a) * t + (p1 * math.cos(ang) + ll * math.sin(ang)) * r * 0.97))
-            radii.append(0.021 - 0.006 * (t - t0) / (t1 - t0))
+            radii.append(0.025 - 0.006 * (t - t0) / (t1 - t0))
         out.append(tube(pts, radii))
     return out
 
@@ -451,9 +451,9 @@ SPIN, SPIN_N = project(abdomen, AB_C, (0.0, 0.8, -0.6))
 for dx, dz in ((-0.09, 0.03), (0.09, 0.03), (0.0, -0.06)):
     q = SPIN + np.array([dx, 0.0, dz]) - SPIN_N * 0.06
     chitin.append(round_cone(tuple(q), tuple(q + SPIN_N * 0.2 + np.array([dx * 0.6, 0, 0])), 0.075, 0.045))
-m.add("LegsFront", fast_union(legs_front + bristles, k=0.012), BLACK, reflectance=0.2, tris=8500, voxel=0.013)
-m.add("LegsBack", fast_union(legs_back, k=0.012), BLACK, reflectance=0.2, tris=7500, voxel=0.013)
-m.add("Chitin", fast_union(chitin, k=0.01), CHITIN, reflectance=0.15, role="detail", tris=4500, voxel=0.013)
+m.add("LegsFront", fast_union(legs_front + bristles, k=0.012), BLACK, reflectance=0.2, tris=8500, voxel=0.0235)
+m.add("LegsBack", fast_union(legs_back, k=0.012), BLACK, reflectance=0.2, tris=7500, voxel=0.0255)
+m.add("Chitin", fast_union(chitin, k=0.01), CHITIN, reflectance=0.15, role="detail", tris=4500, voxel=0.0275)
 
 # punti a X sulla cucitura (filo d'osso)
 stitches = []
@@ -466,7 +466,7 @@ PF = Frame(abdomen, AB_C, (-0.66, -0.36, 0.66))
 PW, PH = 0.22, 0.18
 patch_region = PF.place(box((PW, 0.7, PH), round=0.06).rot(0, 14, 0))
 m.add("Patch", paint(abdomen, patch_region, d=0.032, depth=0.04, k=0.006), PATCH, material="Fabric", role="detail",
-      tris=700, voxel=0.012)
+      tris=600, voxel=0.017)
 border = []
 for i in range(32):
     tt = 2 * math.pi * i / 32
@@ -476,7 +476,7 @@ for i in range(32):
     ca, sa = math.cos(math.radians(-14)), math.sin(math.radians(-14))
     border.append(to_surface(abdomen, PF.point((x * ca - z * sa, 0.0, x * sa + z * ca))))
 stitches += dash_stitches(abdomen, border, 12, 0.075, 0.019, lift=0.036)
-m.add("Bone", fast_union(fang_tips + bone_bits + stitches), BONE, role="detail", tris=3500, voxel=0.012)
+m.add("Bone", fast_union(fang_tips + bone_bits + stitches), BONE, role="detail", tris=3200, voxel=0.02)
 
 # ============================================================ clessidra rossa sul dorso dell'addome (+ macchioline)
 HG = Frame(abdomen, AB_C, (0.0, -0.5, 0.86))
@@ -489,11 +489,11 @@ for d, r in (((0.0, 0.52, 0.86), 0.075), ((0.0, 0.8, 0.6), 0.064), ((0.0, 0.96, 
     p, _ = project(abdomen, AB_C, d)
     dots.append(sphere(r, tuple(p)))
 m.add("Hourglass", paint(abdomen, union(hg_region, *dots), d=0.02, depth=0.05, k=0.006), RED, material="Neon",
-      role="glow", tris=1300, voxel=0.012)
+      role="glow", tris=1800, voxel=0.021)
 
 # ============================================================ occhi
-m.add("EyeGlow", union(*eye_glow), EYE_G, material="Neon", role="glow", tris=1600, voxel=0.009)
-m.add("Sockets", union(*sockets), SOCKET, role="eye", tris=700, voxel=0.009)
+m.add("EyeGlow", union(*eye_glow), EYE_G, material="Neon", role="glow", tris=1500, voxel=0.0115)
+m.add("Sockets", union(*sockets), SOCKET, role="eye", tris=900, voxel=0.016)
 
 # ============================================================ veleno (unica parte "Venom")
 venom = list(leg_veins)
@@ -532,7 +532,7 @@ for ang in range(0, 360, 45):
     venom.append(round_cone(tuple(crown_c + d * 0.06), tuple(crown_c + d * 0.1 + [0, 0, 0.09]), 0.022, 0.012))
     venom.append(sphere(0.02, tuple(crown_c + d * 0.11 + [0, 0, 0.11])))
 # veleno che trapela dalla cucitura e vene che si allargano dalla ferita
-venom.append(tube([tuple(q - normal_at(abdomen, q) * 0.012) for q in SEAM], 0.036))
+venom.append(tube([tuple(q - normal_at(abdomen, q) * 0.014) for q in SEAM], 0.046))
 for i in (1, 5, 9, 13, 17):
     if i >= len(SEAM) - 1:
         continue
@@ -558,7 +558,7 @@ for d, n in (((0.86, 0.55, -0.1), 7), ((-0.88, 0.25, -0.15), 6), ((-0.4, 0.85, 0
         pc.append(p - nn * r * 0.3)
         pr.append(r)
 venom.append(spheres(pc, pr))
-m.add("Venom", fast_union(venom), VENOM, material="Neon", role="glow", tris=15000, voxel=0.01)
+m.add("Venom", fast_union(venom), VENOM, material="Neon", role="glow", tris=14000, voxel=0.0143)
 
 m.add("Shine", union(*shines), WHITE, role="shine", tris=300, voxel=0.007)
 

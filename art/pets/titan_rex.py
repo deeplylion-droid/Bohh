@@ -425,11 +425,11 @@ cran = ellipsoid((0.46, 0.44, 0.36), (0, -0.30, 0.13))
 temporal = [ellipsoid((0.21, 0.27, 0.15), (sx * 0.19, -0.22, 0.33)) for sx in (1, -1)]
 crest = capsule((0, 0.0, 0.36), (0, -0.50, 0.40), 0.05)
 jowls = [ellipsoid((0.22, 0.30, 0.26), (sx * 0.35, -0.36, -0.07)) for sx in (1, -1)]
-snout = loft(-0.40, -1.52, 0.37, 0.245, 0.30, 0.17, 0.07, -0.055, r=0.07, rc=0.09, tp=0.44)
+snout = loft(-0.40, -1.52, 0.37, 0.245, 0.30, 0.17, 0.07, -0.055, r=0.07, rc=0.05, tp=0.54)
 brows = [capsule((sx * 0.08, -0.93, 0.33), (sx * 0.42, -0.64, 0.39), 0.10) for sx in (1, -1)]
 lower_lids = [capsule((sx * 0.17, -0.90, 0.12), (sx * 0.42, -0.66, 0.13), 0.042) for sx in (1, -1)]
-nasal = [capsule((sx * 0.08, -1.40, 0.15), (sx * 0.10, -1.0, 0.26), 0.04) for sx in (1, -1)]
-nost_bumps = [ellipsoid((0.06, 0.075, 0.05), (sx * 0.14, -1.45, 0.085)) for sx in (1, -1)]
+nasal = [capsule((sx * 0.07, -1.42, 0.14), (sx * 0.09, -0.98, 0.27), 0.05) for sx in (1, -1)]
+nost_bumps = [ellipsoid((0.05, 0.07, 0.035), (sx * 0.14, -1.46, 0.085)) for sx in (1, -1)]
 rugs = [ellipsoid((0.055, 0.06, 0.04), (0.03 * ((i % 2) * 2 - 1), y, 0.25 + 0.2 * (y + 1.0)))
         for i, y in enumerate((-1.06, -1.16, -1.26))]
 upper = union(cran, *temporal, *jowls, k=0.16)
@@ -561,6 +561,14 @@ for sx, L in LEGS.items():
     leg_parts.append(round_cone(ankle + (ball - ankle) * 0.4, dw, 0.08, 0.06))
     DEWS.append((dw, norm(dw - (ankle + (ball - ankle) * 0.4)) + np.array([0, 0, -0.3])))
 legs = union(*leg_parts, k=0.08)
+# solco fra i muscoli davanti e dietro della coscia (gambe piu' definite e potenti)
+creases = []
+for sx, L in LEGS.items():
+    hip, knee = np.array(L["hip"]), np.array(L["knee"])
+    q, _ = project_many(legs, [hip + (knee - hip) * t for t in np.linspace(0.12, 0.82, 8)],
+                        [norm((sx, 0.3, 0.05))] * 8)
+    creases.append(tube([tuple(x) for x in q], [0.02, 0.032, 0.04, 0.042, 0.042, 0.038, 0.03, 0.018]))
+legs = legs.subtract(union(*creases), k=0.035)
 
 # braccine corte alzate, due dita
 ARMS, arm_parts = [], []
@@ -724,8 +732,13 @@ for side in (1, -1):
     for s, a0 in ((0.12, 62), (0.27, 70)):
         pts = wrap_curves(upper, CH, s, a0, a0 + 48, side, lean=-0.25, n=8)
         stripes.append(H(stripe_tube(pts, 0.06, both=True)))
+    # mandibola: strisce che scendono dal bordo dei denti verso il mento
+    JL = polyline([(0, -0.15, -0.44), (0, -1.25, -0.40)])
+    for s in (0.32, 0.56, 0.8):
+        pts = wrap_curves(lower_closed, JL, s, 58, 128, side, lean=-0.12, n=9)
+        stripes.append(H(JW(stripe_tube(pts, 0.055, both=True))))
 stripes_paint = paint(core, fast_union(stripes), out=0.018, inn=0.05)
-m.add("Stripes", stripes_paint, STRIPE, role="detail", tris=7800, voxel=0.025)
+m.add("Stripes", stripes_paint, STRIPE, role="detail", tris=7800, voxel=0.0258)
 
 tail_stripes = []
 for side in (1, -1):
@@ -749,20 +762,11 @@ for s in sp_s:
 sp_p, sp_n = project_many(core0, sp_o, sp_d)
 for j, (p, nr, t) in enumerate(zip(sp_p, sp_n, sp_t)):
     f = j / (len(sp_s) - 1)
-    h = 0.15 + 0.25 * math.sin(math.pi * min(f * 1.25 + 0.05, 1.0))
+    h = (0.15 + 0.27 * math.sin(math.pi * min(f * 1.25 + 0.05, 1.0))) * (1.0 if j % 2 == 0 else 0.74)
+    if j == 5:  # spina spezzata in battaglia
+        spikes.append(place(blade(0.3 + 0.5 * h, h * 0.5, 0.09, curl=0.05, sweep=0.1), p - nr * 0.02, t, nr))
+        continue
     spikes.append(place(blade(0.22 + 0.5 * h, h, 0.085), p - nr * 0.02, t, nr))
-# due file di scudi ai lati delle spine
-sc_o, sc_d = [], []
-for s in np.linspace(0.45, L_SP - 0.1, 12):
-    c, t = poly_at(P_SP, s)
-    u = norm(np.array([0, 0, 1.0]) - t * t[2])
-    v = np.cross(t, u)
-    for side in (1, -1):
-        sc_o.append(c)
-        sc_d.append(u * math.cos(math.radians(21)) + side * v * math.sin(math.radians(21)))
-sc_p, sc_n = project_many(core0, sc_o, sc_d)
-for p, nr in zip(sc_p, sc_n):
-    spikes.append(ell(p - nr * 0.015, (0.075, 0.05, 0.045), axis=nr, side=(0, 1, 0)))
 # corna sopra gli occhi e dietro, spuntoni sulle guance
 horns_l = []
 for sx in (1, -1):

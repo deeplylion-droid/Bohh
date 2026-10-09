@@ -542,7 +542,8 @@ def body_f(p):
 
 body = SDF(lambda p: np.maximum(body_f(p), -p[:, 2]), core0.lo, core0.hi)  # piante piatte a z = 0
 
-# tre parti color pelle (stessa superficie, tagli sovrapposti): corpo, testa (piu' dettaglio) e coda ricucita
+# tre parti color pelle (stessa superficie, tagli sovrapposti): corpo, testa (piu' dettaglio) e coda ricucita.
+# La testa si chiama "HeadSkin" e non "Head": il ragdoll del gioco tocca le parti "Head" dentro il personaggio.
 HEAD_CUT = 0.3  # piano dietro il cranio (coordinata y locale della testa), limitato a un box attorno alla testa
 
 
@@ -557,7 +558,7 @@ tail_cut = halfspace(lambda p: (Y_CUT - 0.015) - p[:, 1])
 m.add("Body", body.intersect(body_cut), SKIN, tris=15000, voxel=0.0232 * VX)
 HEAD_LO = np.minimum.reduce([head_up_w.lo, jaw_w.lo, throat_w.lo]) - 0.1
 HEAD_HI = np.maximum.reduce([head_up_w.hi, jaw_w.hi, throat_w.hi]) + 0.1
-m.add("Head", SDF(body.intersect(head_cut).f, HEAD_LO, HEAD_HI), SKIN, role="skin", tris=7000, voxel=0.0198 * VX)
+m.add("HeadSkin", SDF(body.intersect(head_cut).f, HEAD_LO, HEAD_HI), SKIN, role="skin", tris=7000, voxel=0.0198 * VX)
 m.add("Tail", body.intersect(tail_cut), SKIN, role="skin", tris=5500, voxel=0.0159 * VX)
 
 # fuoco nelle crepe: linea continua nel solco + i bordi delle scaglie vicine che si accendono
