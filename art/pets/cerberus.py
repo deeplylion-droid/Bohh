@@ -8,10 +8,12 @@ rosso sangue) ringhia a muso basso verso chi guarda, quella alla sua sinistra ul
 gola piena di fuoco, quella alla sua destra digrigna i denti con la testa inclinata. Ogni testa ha
 zanne lunghe, file di denti aguzzi, orecchie a punta e occhi gialli incandescenti con la pupilla a
 fessura sotto sopracciglia aggrottate. Su teste e colli brucia una criniera di fiamme (parte Neon
-"Flames": il gioco ci attacca il fuoco); crepe di lava incandescente su spalle, fianchi e cosce,
-spuntoni rosso sangue lungo la schiena e la coda, tre collari di ferro chiodati.
-Tocco "toy horror": dal collare di sinistra pende una catena spezzata e il petto e' ricucito con una
-cucitura a punti incrociati da cui filtra la lava.
+"Flames": il gioco ci attacca il fuoco), che divampa anche sul garrese e in punta alla coda; crepe di
+lava incandescente (parte Neon "LavaCracks") su petto, spalle, fianchi, cosce e zampe, spuntoni rosso
+sangue lungo la schiena e la coda, tre collari di ferro con spuntoni enormi.
+Tocco "toy horror": dal collare di sinistra pende una catena spezzata, il petto e' ricucito con una
+cucitura a punti incrociati da cui filtra la lava e la capobranco ha una cicatrice ricucita che brucia
+sopra l'occhio sinistro.
 """
 import math
 import os

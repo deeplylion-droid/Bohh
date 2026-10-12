@@ -1,15 +1,17 @@
 """Lupo Ombra (ShadowWolf) - pet PRIMORDIALE (fra Segreto e Ultra), zona Foresta.
 
-Un enorme metalupo nero-viola acquattato e pronto a balzare: zampe anteriori larghe piantate a terra
-con gli artigli fuori, spalle alte con le scapole sporgenti, posteriori raccolti come molle, testa bassa
-e protesa che ringhia. Muso arricciato pieno di pieghe, labbro alzato su gengive rosso sangue, zanne
-lunghissime da metalupo e file di denti aguzzi; orecchie appiattite all'indietro, sopracciglia pesanti
-e occhi viola socchiusi che brillano. Dal collo e dalle spalle sale una folta criniera di fumo scuro che
-brucia di viola (parte Neon "Shadow": il gioco ci aggancia il fumo nero); anche la punta della coda,
-alzata e arricciata in avanti per stare nell'ingombro, si sfalda in fumo. Collare di cuoio rosso sangue
-con borchie a punta e un anello da cui penzola una catena spezzata.
-Tocco "toy horror": una chiave di carica da giocattolo piantata nella schiena e una cicatrice ricucita a
-grandi punti incrociati sul muso.
+Un enorme metalupo nero-viola acquattato e pronto a balzare: zampe anteriori larghe e massicce piantate
+a terra con gli artigli fuori, spalle alte con le scapole sporgenti, posteriori raccolti come molle, testa
+grossa, bassa e protesa che ringhia. Muso lungo arricciato pieno di pieghe, labbro alzato su gengive rosso
+sangue, zanne lunghissime da metalupo e file di denti aguzzi; orecchie a punta tirate all'indietro,
+sopracciglia pesanti e occhi viola a fessura che brillano. Dal collo e dalle spalle sale una folta criniera
+di fumo scuro che brucia di viola (parte Neon "Shadow": il gioco ci aggancia il fumo nero) e continua lungo
+la schiena; graffi di battaglia sulla spalla e sull'anca bruciano dello stesso viola. La coda folta e'
+alzata e arricciata in avanti per stare nell'ingombro, scodinzola (gruppo "Tail") e in punta si sfalda in
+fumo. Collare di cuoio rosso sangue con borchie d'acciaio a punta e un anello da cui penzola una catena
+spezzata.
+Tocco "toy horror": una grossa chiave di carica d'ottone piantata nella schiena e una lunga cucitura a
+punti incrociati sul fianco destro.
 """
 import math
 import os
@@ -312,10 +314,10 @@ def wisp(base, d, L, r0, curl, wiggle=0.0, n=7, r1=0.012, phase=0.0):
 
 # ============================================================ colori
 FUR = (50, 37, 70)          # pelo nero-viola
-UNDER = (110, 96, 138)      # muso, gola, petto e pancia grigio-viola
+UNDER = (110, 96, 138)      # labbra, mento e orecchie interne grigio-viola
 RUFF = (31, 23, 46)         # ciuffi irti piu' scuri (guance, gomiti, schiena)
 SMOKE = (110, 40, 222)      # fumo viola profondo (Neon)
-EYE_GLOW = (226, 168, 255)  # occhi lilla accesi
+EYE_GLOW = (212, 128, 255)  # occhi viola accesi
 BONE = (236, 228, 208)      # artigli
 TOOTH = (250, 247, 238)
 GUM = (158, 20, 38)         # gengive rosso sangue e lingua
@@ -375,10 +377,10 @@ def eye_place(shape, sx, offset=(0.0, 0.0, 0.0)):
     return shape.translate(offset).rotate(look_matrix(EYE_D[sx])).translate(EYE_C[sx])
 
 
-EA, EB, EC = 0.1, 0.046, 0.06
+EA, EB, EC = 0.108, 0.048, 0.064
 sockets = union(*[eye_place(ellipsoid((0.118, 0.075, 0.082)), sx, (0, 0.028, 0)) for sx in (1, -1)])
 upper = upper.subtract(sockets, k=0.035)
-LID_CUT, LID_SLOPE = 0.012, 0.6
+LID_CUT, LID_SLOPE = 0.02, 0.6
 lids = []
 for sx in (1, -1):
     A, B, C = EA + 0.024, EB + 0.028, EC + 0.026
@@ -612,15 +614,13 @@ for s in (0.1, 0.45, 0.8):
         p, nr = surf(core0, c, c + np.array([math.sin(ar), 0.1, math.cos(ar)]))
         smoke.append(wisp(p - nr * 0.05, norm(nr * 0.8 + np.array([0.0, 0.25, 0.9])), 0.5 * rng.uniform(0.9, 1.1), 0.11,
                           np.array([sx * 0.45, 0.3, -0.1]), wiggle=0.14, phase=rng.uniform(0, 3)))
-# la criniera continua lungo la schiena, sempre piu' bassa, fino alla chiave
-for j, y in enumerate((0.1,)):
-    for a in (-30, 30):
-        c = np.array([0.0, y, 1.4])
-        ar = math.radians(a)
-        p, nr = surf(core0, c, c + np.array([math.sin(ar), 0.0, math.cos(ar)]))
-        smoke.append(wisp(p - nr * 0.05, norm(nr * 0.4 + np.array([0.0, 0.35, 1.0])), (0.45 if j == 0 else 0.34)
-                          * rng.uniform(0.9, 1.1), 0.1, np.array([math.sin(ar) * 0.3, 0.45, -0.2]), wiggle=0.14,
-                          phase=rng.uniform(0, 3)))
+# la criniera continua un poco lungo la schiena, piu' bassa (la chiave resta libera dietro)
+for a in (-30, 30):
+    c = np.array([0.0, 0.1, 1.4])
+    ar = math.radians(a)
+    p, nr = surf(core0, c, c + np.array([math.sin(ar), 0.0, math.cos(ar)]))
+    smoke.append(wisp(p - nr * 0.05, norm(nr * 0.4 + np.array([0.0, 0.35, 1.0])), 0.45 * rng.uniform(0.9, 1.1), 0.1,
+                      np.array([math.sin(ar) * 0.3, 0.45, -0.2]), wiggle=0.14, phase=rng.uniform(0, 3)))
 # fumo che sale anche dalle scapole
 for sx in (1, -1):
     for dy, dz in ((0.0, 0.0), (0.18, -0.08)):
@@ -660,7 +660,7 @@ for sx in (1, -1):
     tilt = sx * 20
     eyes.append(H(eye_place(ellipsoid((EA, EB, EC)).rot(0, tilt, 0), sx, (0, 0.032, 0))))
     pupils.append(H(eye_place(ellipsoid((0.017, 0.02, 0.046)).rot(0, tilt * 0.5, 0), sx, (sx * 0.006, -0.012, -0.006))))
-m.add("EyeGlow", fast_union(eyes), EYE_GLOW, material="Neon", role="glow", tris=260, voxel=0.0162)
+m.add("EyeGlow", fast_union(eyes), EYE_GLOW, material="Neon", role="glow", tris=260, voxel=0.0174)
 m.add("ScarGlow", fast_union(scar_glow), SMOKE, material="Neon", role="glow", tris=260, voxel=0.0212)
 maw = paint(core, H(cavity).offset(0.022), out=0.012, inn=0.06)
 m.add("Maw", maw, MAW, role="eye", tris=420, voxel=0.0403)

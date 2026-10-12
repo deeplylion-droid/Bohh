@@ -288,6 +288,10 @@
    "asset": 93354568282480,
    "hash": "80063147df60a201573f71caaf92929e565d7cb2"
   },
+  "Cerberus": {
+   "asset": 81796738879041,
+   "hash": "f717f42a5695641a5137ea1fff82b46708438fb0"
+  },
   "Chick": {
    "asset": 87872955844098,
    "hash": "af172f34a1a51e7731b14a3531ac2ae95c22cbd9"
@@ -439,6 +443,10 @@
   "InfernoKomodo": {
    "asset": 120884698561421,
    "hash": "e994b1ab5c3ac3472a42d81012878d1db7efb4ee"
+  },
+  "InfernoMinotaur": {
+   "asset": 127141047188746,
+   "hash": "d5ff36a8ac1c1d28789d20f8ecbec88534f3be8f"
   },
   "IronScorpion": {
    "asset": 117368103807583,

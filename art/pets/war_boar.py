@@ -505,7 +505,7 @@ core = union(core, legs, k=0.12)
 core = union(core, tail, k=0.07)
 core = fast_union(fringe, k=0.04, base=core)
 core = shrink(core.intersect(halfspace_z(0.0, above=True)))
-m.add("Body", core, FUR, tris=4500, voxel=0.028 * VX)
+m.add("Body", core, FUR, tris=4500, voxel=0.049 * VX)
 
 # disco del grugno, contorno scuro degli occhi e interno delle orecchie (quasi nero)
 disc_face = paint(head_solid, cylinder((0, -1.10, -0.01), (0, -1.4, -0.01), 0.19), out=0.016, inn=0.045)
@@ -513,13 +513,13 @@ rims = union(*[eye_place(ellipsoid((EA + 0.055, 0.3, EC + 0.05)), sx, (0, EYE_SI
     eye_place(ellipsoid((EA - 0.01, 0.4, EC - 0.01)), sx, (0, EYE_SINK, 0))) for sx in (1, -1)])
 eye_rims = paint(head_solid, rims, out=0.016, inn=0.045)
 ear_in = paint(union(*EARS), union(*INNER), out=0.014, inn=0.035)
-m.add("Snout", H(union(disc_face, eye_rims, ear_in)), SNOUT, role="detail", tris=600, voxel=0.016 * VX)
+m.add("Snout", H(union(disc_face, eye_rims, ear_in)), SNOUT, role="detail", tris=600, voxel=0.04 * VX)
 
 # ============================================================ bocca, denti, zanne
-m.add("Mouth", H(maw_l), MAW, role="eye", tris=340, voxel=0.018 * VX)
+m.add("Mouth", H(maw_l), MAW, role="eye", tris=340, voxel=0.046 * VX)
 tongue = union(ellipsoid((0.15, 0.3, 0.07), (0, -0.52, -0.25)), ellipsoid((0.12, 0.16, 0.06), (0, -0.82, -0.23)),
                k=0.08).subtract(capsule((0, -0.3, -0.17), (0, -0.95, -0.15), 0.02), k=0.02)
-m.add("Tongue", H(JW(tongue)), TONGUE, role="detail", tris=200, voxel=0.016 * VX)
+m.add("Tongue", H(JW(tongue)), TONGUE, role="detail", tris=200, voxel=0.038 * VX)
 
 teeth = []
 UP_T = [(-1.0, 0.08), (-0.80, 0.12), (-0.72, 0.09), (-0.63, 0.12), (-0.54, 0.08), (-0.45, 0.07)]
@@ -537,7 +537,7 @@ for sx in (1, -1):
         b = np.array([e[0] - sx * 0.03, y, z - 0.04])
         L = L * (1 + rng.normal(0, 0.1))
         teeth.append(JW(horn(b, (sx * 0.1, 0.12, 1.0), L + 0.04, 0.03 + 0.1 * L, n=4, r1=0.005, power=1.2)))
-m.add("Teeth", H(fast_union(teeth)), BONE, role="shine", tris=700, voxel=0.012 * VX)
+m.add("Teeth", H(fast_union(teeth)), BONE, role="shine", tris=700, voxel=0.025 * VX)
 
 # zanne enormi da facocero: escono di lato dalla mandibola, salgono e si piegano a mezzaluna verso l'interno
 tusks, tusk_bands = [], []
@@ -551,7 +551,7 @@ for sx in (1, -1):
     rr = R0 + (0.016 - R0) * tt ** 1.1
     tusk_bands.append(chain_link(c_, np.cross(tan, (0, 1, 0)), tan, 0.0, rr + 0.012, 0.034))
 TUSK_BANDS = H(union(*tusk_bands))
-m.add("Tusks", H(fast_union(tusks)), BONE, role="detail", tris=700, voxel=0.014 * VX)
+m.add("Tusks", H(fast_union(tusks)), BONE, role="detail", tris=700, voxel=0.031 * VX)
 
 # ============================================================ setole: cresta irta dalla fronte alla groppa
 SPINE = [hp((0, -0.52, 0.46)), hp((0, -0.30, 0.56)), hp((0, -0.05, 0.52)), np.array((0, -0.6, 2.36 + LIFT)),
@@ -590,7 +590,7 @@ while s < SP_LEN - 0.02:
 tip = np.array(TAIL_PTS[-1])
 for d in ((0.5, -0.2, 0.6), (-0.5, -0.1, 0.6), (0.1, 0.45, 0.8), (0.0, -0.5, 0.7), (0.3, 0.3, 0.9)):
     bristles.append(horn(tip - np.array([0, 0, 0.04]), d, 0.26, 0.05, n=3, r1=0.01))
-m.add("Mane", fast_union(bristles), BRISTLE, role="detail", tris=1250, voxel=0.016 * VX)
+m.add("Mane", fast_union(bristles), BRISTLE, role="detail", tris=1250, voxel=0.036 * VX)
 
 # ============================================================ corazza di ferro: spallacci e piastre sulla schiena
 plates, rivets, spikes = [], [], []
@@ -660,9 +660,9 @@ for sx, y in ((1, 0.62), (-1, 0.2)):
     cut = union(capsule(tuple(q + nn * 0.055 + t1 * 0.06), tuple(q + nn * 0.055 - t1 * 0.06), 0.015),
                 capsule(tuple(q + nn * 0.055 + t2 * 0.06), tuple(q + nn * 0.055 - t2 * 0.06), 0.015))
     spikes.append(head_s.subtract(cut, k=0.005))
-m.add("Armor", fast_union(plates), IRON, material="Metal", role="detail", tris=2000, voxel=0.022 * VX)
-m.add("Rivets", fast_union(rivets + [TUSK_BANDS]), STEEL, material="Metal", role="detail", tris=750, voxel=0.016 * VX)
-m.add("Spikes", fast_union(spikes), STEEL, material="Metal", role="detail", tris=650, voxel=0.014 * VX)
+m.add("Armor", fast_union(plates), IRON, material="Metal", role="detail", tris=2000, voxel=0.041 * VX)
+m.add("Rivets", fast_union(rivets + [TUSK_BANDS]), STEEL, material="Metal", role="detail", tris=750, voxel=0.03 * VX)
+m.add("Spikes", fast_union(spikes), STEEL, material="Metal", role="detail", tris=650, voxel=0.037 * VX)
 
 # ============================================================ zoccoli fessi
 hooves = []
@@ -688,18 +688,18 @@ for key, L in LEGS.items():
         dw = fl + back * 0.11 + np.array([sx * 0.07, 0, -0.04])
         hooves.append(horn(dw, back * 0.6 + np.array([0, 0, -0.8]), 0.09, 0.04, n=3, r1=0.012))
 m.add("Hooves", fast_union(hooves).intersect(halfspace_z(0.0, above=True)), HOOF, role="detail", tris=900,
-      voxel=0.015 * VX)
+      voxel=0.0365 * VX)
 
 # ============================================================ occhi rossi incandescenti
 eyes = []
 for sx in (1, -1):
     eyes.append(eye_place(ellipsoid((EA, EB, EC)).rot(0, sx * 14, 0), sx, (0, EYE_SINK, 0)))
-m.add("EyeGlow", H(union(*eyes)), EYE_RED, material="Neon", role="glow", tris=300, voxel=0.011 * VX)
+m.add("EyeGlow", H(union(*eyes)), EYE_RED, material="Neon", role="glow", tris=300, voxel=0.021 * VX)
 
 # ============================================================ rabbia: narici + graffi del grugno (Neon "Rage")
 nost_glow = union(*[ellipsoid((0.034, 0.03, 0.05), (c[0], c[1] + 0.035, c[2])) for c in NOST])
 m.add("Rage", H(union(nost_glow, fast_union(scar_fill))), RAGE, material="Neon", role="glow", tris=450,
-      voxel=0.011 * VX)
+      voxel=0.017 * VX)
 
 # ============================================================ vene di rabbia che pulsano sotto la corazza
 
@@ -733,7 +733,7 @@ VEINS = [
     ((0.0, 0.62, 1.6), (-0.62, 0.74, 1.96), (-0.2, 0.3, -1.0)),       # coscia -x
 ]
 veins = [vein(core, o, p0, d0) for o, p0, d0 in VEINS]
-m.add("Veins", fast_union(veins), RAGE, material="Neon", role="glow", tris=520, voxel=0.012 * VX)
+m.add("Veins", fast_union(veins), RAGE, material="Neon", role="glow", tris=520, voxel=0.0178 * VX)
 
 # ============================================================ toy horror: toppa cucita sul fianco + cicatrice ricucita
 PC, PN = surf(core, (0.2, 0.30, 1.58), (1.0, 0.34, 1.5))
@@ -742,7 +742,7 @@ PW, PH = 0.25, 0.2
 PATCH_ROT = rot_matrix((0, 1, 0), 12)
 patch_reg = box((PW, 0.4, PH), round=0.05).rotate(PATCH_ROT).rotate(PM).translate(PC)
 m.add("Patch", paint(core, patch_reg, out=0.03, inn=0.03), PATCH, material="Fabric", role="detail", tris=300,
-      voxel=0.016 * VX)
+      voxel=0.034 * VX)
 thread = []
 patch_surf = core.offset(0.03)
 border = []
@@ -754,28 +754,27 @@ for i in range(28):
     border.append(on_surface(patch_surf, PM @ (PATCH_ROT @ np.array([x, 0.0, z])) + PC, 0.0, 4))
 border = resample(border + [border[0]], 0.135)
 for i in range(len(border) - 1):
-    thread += x_stitch(patch_surf, border[i], border[i + 1] - border[i - 1], size=0.095, r=0.022, lift=-0.01)
+    thread += x_stitch(patch_surf, border[i], border[i + 1] - border[i - 1], size=0.1, r=0.027, lift=-0.012)
 # cicatrice ricucita sopra l'occhio destro (-x): taglia l'arcata dall'alto in basso
 scar = [hp((-0.30 + 0.02 * t, -0.42 - 0.3 * t, 0.62 - 0.5 * t)) for t in np.linspace(0, 1, 7)]
 scar = [on_surface(core, p, 0.0, 6) for p in scar]
-thread += [tube([tuple(p) for p in scar], 0.017)]
+thread += [tube([tuple(p) for p in scar], 0.02)]
 cs = resample(scar, 0.09)
 for i in range(1, len(cs) - 1):
-    thread += x_stitch(core, cs[i], cs[i + 1] - cs[i - 1], size=0.09, r=0.02, lift=-0.006)
+    thread += x_stitch(core, cs[i], cs[i + 1] - cs[i - 1], size=0.095, r=0.025, lift=-0.008)
 # cucitura lunga sulla coscia (+x): la pelle e' stata ricucita dopo una battaglia
 seam = [on_surface(core, np.array((0.9, 0.5 + 0.28 * t, 1.62 - 0.62 * t)), 0.0, 6) for t in np.linspace(0, 1, 7)]
-thread += [tube([tuple(p) for p in seam], 0.017)]
+thread += [tube([tuple(p) for p in seam], 0.02)]
 ss = resample(seam, 0.1)
 for i in range(1, len(ss) - 1):
-    thread += x_stitch(core, ss[i], ss[i + 1] - ss[i - 1], size=0.095, r=0.021, lift=-0.006)
-m.add("Thread", fast_union(thread), THREAD, role="detail", tris=700, voxel=0.011 * VX)
+    thread += x_stitch(core, ss[i], ss[i + 1] - ss[i - 1], size=0.1, r=0.026, lift=-0.008)
+m.add("Thread", fast_union(thread), THREAD, role="detail", tris=800, voxel=0.0218 * VX)
 
 # ============================================================ cavigliera con la catena spezzata (zampa post. sx)
 LHL = [np.array(p) for p in LEGS["HL"]["pts"]]
 ax = norm(LHL[3] - LHL[2])
 cc = LHL[2] * 0.45 + LHL[3] * 0.55
-cuff = cylinder(tuple(cc - ax * 0.07), tuple(cc + ax * 0.07), 0.225, round=0.022)
-cuff = cuff.subtract(cylinder(tuple(cc - ax * 0.3), tuple(cc + ax * 0.3), 0.16))
+cuff = chain_link(cc, np.cross(ax, (1, 0, 0)), ax, 0.0, 0.185, 0.055)   # cavigliera di ferro
 iron = [cuff]
 hook = cc + np.array([0.2, 0.08, -0.04])
 links = [(hook + np.array([0.0, 0.02, -0.06]), (0, 0.2, 1), (0, 1, 0)),
@@ -787,7 +786,7 @@ lc = np.array([hook[0] + 0.05, hook[1] + 0.36, 0.05])
 broken = chain_link(lc, (0.2, 1, 0), (0, 0, 1), 0.045, 0.06, 0.031)
 iron.append(broken.subtract(sphere(0.05, tuple(lc + norm((0.2, 1, 0)) * 0.1))))
 m.add("Chain", fast_union(iron).intersect(halfspace_z(0.0, above=True)), CHAIN, material="Metal", role="detail",
-      tris=550, voxel=0.012 * VX)
+      tris=550, voxel=0.024 * VX)
 
 # solco di terra sollevato dallo zoccolo che raspa: zolle sfaccettate dietro lo zoccolo
 clods = [ellipsoid((0.24, 0.2, 0.08), (0.72, -0.72, 0.0)).rot(0, 0, 20, pivot=(0.72, -0.72, 0.0))]
@@ -798,7 +797,7 @@ for (x, y, z, s) in ((0.72, -0.72, 0.05, 0.13), (0.58, -0.66, 0.0, 0.1), (0.86, 
     c_ = (x, y, z + s * 0.42)
     clods.append(octahedron(s, c_).rot(*rot, pivot=c_))
 m.add("Dirt", fast_union(clods).intersect(halfspace_z(0.0, above=True)), DIRT, role="detail", tris=300,
-      voxel=0.011 * VX, smooth=False)
+      voxel=0.025 * VX, smooth=False)
 
 if __name__ == "__main__":
     only = [s for s in os.environ.get("ONLY", "").split(",") if s]

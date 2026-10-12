@@ -1,15 +1,16 @@
 """Orso Berserker (BerserkBear) - pet PRIMORDIALE (fra Segreto e Ultra), zona Foresta.
 
-Un orso gigantesco ritto sulle zampe posteriori che ruggisce a fauci spalancate: testa protesa in
-avanti, muso arricciato pieno di pieghe, file di denti aguzzi con zanne enormi su gengive scoperte,
-sopracciglia pesanti e aggrottate, occhi rossi che bruciano di rabbia. Le braccia sono alzate ai lati
-della testa con le zampe aperte (cuscinetti in vista) e artigli lunghissimi e uncinati; gobba e spalle
-enormi, pelo irto sul collo, sulle guance e sui gomiti. Pittura di guerra rosso sangue a strisce sul
-muso, sulle spalle, sugli avambracci e sulle cosce; tre graffi profondi sul petto e una cicatrice
-sull'occhio brillano di rabbia (parte Neon "Rage": il gioco ci attacca le braci). Al collo una collana
-di grosse zanne legate a un laccio di cuoio con perline rosse.
-Tocco "toy horror": un orecchio strappato e ricucito storto con grandi punti a croce, da cui esce un
-ciuffo di imbottitura, e una toppa verde bosco cucita sulla coscia.
+Un orso gigantesco ritto sulle zampe posteriori, a gambe larghe, che ruggisce a fauci spalancate: testa
+protesa in avanti, muso arricciato pieno di pieghe, file di denti aguzzi con zanne enormi su gengive
+scoperte, sopracciglia pesanti e aggrottate, occhi rossi a fessura che bruciano di rabbia. Posa d'attacco:
+la zampa destra alzata in alto pronta a colpire, la sinistra protesa in avanti, palmi nocciola verso chi
+guarda e artigli lunghissimi uncinati in avanti. Gobba e spalle enormi con pelo irto piu' scuro sul collo,
+sulla gobba, sui gomiti, sulle guance e fra le orecchie. Pittura di guerra rosso sangue a strisce sulle
+guance, sulla fronte, sugli avambracci e sulle cosce; tre graffi profondi sul petto (con le vene che se ne
+diramano) e una cicatrice sull'occhio brillano di rabbia (parte Neon "Rage": il gioco ci attacca le braci).
+Al collo una collana di grosse zanne legate a un laccio di cuoio con perline rosse.
+Tocco "toy horror": l'orecchio destro e' stato strappato e ricucito storto con grandi punti a croce, e
+dallo strappo esce l'imbottitura; una toppa verde bosco e' cucita sulla coscia sinistra.
 """
 import math
 import os
@@ -466,7 +467,7 @@ for sx, L in LEGS.items():
         ell(mix(knee, ankle, 0.3) + np.array([0, 0.10, 0.0]), (0.26, 0.26, 0.31), axis=ankle - knee),        # polpaccio
         ellipsoid((0.34, 0.48, 0.20), tuple(foot)),
     ]
-    for i, dx in enumerate((-0.22, -0.11, 0.0, 0.11, 0.22)):
+    for dx in (-0.22, -0.11, 0.0, 0.11, 0.22):
         tp = foot + np.array([dx, -0.42 + 0.9 * dx * dx, -0.02])
         leg_parts.append(sphere(0.096, tuple(tp)))
         TOES.append(tp)
@@ -479,7 +480,6 @@ ARMS, PAWS, arm_parts, CLAW_ROOTS = {}, {}, [], []
 for sx in (1, -1):
     sh, el, wr = (np.array(q) for q in ARM_POSE[sx])
     ARMS[sx] = (sh, el, wr)
-
     arm_parts += [
         ellipsoid((0.38, 0.38, 0.38), tuple(sh + np.array([sx * 0.08, 0.0, 0.08]))),           # deltoide
         round_cone(sh, el, 0.33, 0.27),
@@ -494,7 +494,7 @@ for sx in (1, -1):
     P = wr + U * 0.16
     PAWS[sx] = (P, U, F, S)
     arm_parts.append(ell(P, (0.28, 0.17, 0.25), axis=U, side=S))
-    for k, a in enumerate((-56.0, -28.0, 0.0, 28.0, 56.0)):
+    for a in (-56.0, -28.0, 0.0, 28.0, 56.0):
         ar = math.radians(a)
         dk = U * math.cos(ar) + S * math.sin(ar)
         ln = 0.31 if abs(a) < 40 else 0.27
@@ -552,7 +552,6 @@ for sx, (sh, el, wr) in ARMS.items():
     tg = [el + np.array([sx * 0.3, 0.3, -0.35]), el + np.array([sx * 0.0, 0.45, -0.3]),
           mix(el, wr, 0.4) + np.array([sx * 0.35, 0.35, 0.0]), mix(el, wr, 0.45) + np.array([-sx * 0.1, 0.45, 0.0])]
     fur += tufts(core0, mix(el, wr, 0.15), tg, (sx * 0.25, 0.3, -1.0), 0.34, 0.12)
-# (niente ciuffi alle caviglie: i piedi restano puliti)
 fur += [H(c) for c in crown]
 
 # ============================================================ cicatrici di artigli (solchi che brillano)
@@ -626,7 +625,6 @@ shaggy = fast_union(fur).subtract(core0.offset(-0.035))        # la radice dei c
 m.add("ShaggyFur", shaggy.intersect(halfspace_z(0.004, above=True)), SHAGGY, role="detail", tris=1900, voxel=0.0395)
 
 
-
 # ============================================================ muso nocciola, orecchie interne, cuscinetti
 muzzle_reg = union(
     ellipsoid((0.30, 0.42, 0.26), (0, -0.82, 0.0)),            # muso
@@ -670,7 +668,6 @@ war = paint(core, fast_union(paint_l), out=0.018, inn=0.06)
 origins, dirs = [], []
 for t in np.linspace(-1, 1, 25):
     z = 2.12 + 0.36 * t * t
-
     o = np.array((0.4 * t, -0.25, z))
     origins.append(o)
     dirs.append(np.array((0.8 * t, -1.0, 0.05)))
@@ -685,7 +682,6 @@ for j, (di, Lf) in enumerate(((-6, 0.2), (-4, 0.25), (-2, 0.3), (0, 0.35), (2, 0
     d = norm(np.array([0, 0, -1.0]) + nn * 0.5)
     fangs.append(horn(p + nn * 0.012 + np.array([0, 0, -0.02]), d, Lf * 1.25, 0.078 if di == 0 else 0.068,
                       curl=tuple(nn * 0.3), n=5, r1=0.007, power=1.2))
-
     cord.append(sphere(0.05, tuple(p + nn * 0.01)))                        # nodo attorno alla radice
     if j < 6:
         beads.append(sphere(0.042, tuple(cord_c[i + 1])))
@@ -725,7 +721,6 @@ def tooth_row(jaw_sdf, path, z_in, down, teeth_spec, back_lean=0.25, out_lean=0.
 UP_T = [(0.05, 0.07, 0.03), (0.2, 0.09, 0.034), (0.36, 0.1, 0.036), (0.56, 0.33, 0.068), (0.74, 0.08, 0.03),
         (0.87, 0.075, 0.028), (0.98, 0.07, 0.026)]
 LO_T = [(0.06, 0.07, 0.03), (0.24, 0.09, 0.033), (0.42, 0.09, 0.034), (0.62, 0.25, 0.06), (0.8, 0.07, 0.027),
-
         (0.96, 0.065, 0.025)]
 teeth_all, gums_all = [], []
 for sx in (1, -1):
@@ -826,7 +821,6 @@ pts = resample(outline, 0.027)
 for i in range(0, len(pts) - 2, 4):
     stitches.append(capsule(tuple(pts[i]), tuple(pts[i + 2]), 0.018))
 m.add("Stitches", fast_union(stitches), THREAD, role="detail", tris=400, voxel=0.017)
-
 
 
 if __name__ == "__main__":

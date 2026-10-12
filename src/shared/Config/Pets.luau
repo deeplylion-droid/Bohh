@@ -95,7 +95,7 @@ Pets.List = {
 	primal("CrystalGolem", "Crystal", 6500, 60, 9.5),
 	primal("FrostWyvern", "Crystal", 9000, 40, 9.5),
 	primal("Cerberus", "Crater", 110000, 60, 9),
-	primal("InfernoMinotaur", "Crater", 160000, 40, 10),
+	primal("InfernoMinotaur", "Crater", 160000, 40, 11), -- l'ascia alzata conta nell'altezza
 	-- Ultra: creature colossali, 10 volte piu' grandi degli altri pet
 	pet("InfernoKomodo", "Ultra", 250000, 30, 22),
 	pet("VenomWidow", "Ultra", 300000, 25, 24),

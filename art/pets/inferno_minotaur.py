@@ -3,11 +3,12 @@
 Il guardiano del cratere: un minotauro enorme e muscoloso, in piedi su gambe da toro con gli zoccoli
 spaccati, che alza sopra la testa con tutte e due le mani una gigantesca ascia bipenne di ferro dal
 filo incandescente (l'ascia e' dritta in alto, pronta a calare). Pelle rosso-bruna solcata da vene di
-lava che brillano su petto, addominali, braccia e cosce; criniera ispida nera su collo e spalle,
-ciuffi di pelo sopra gli zoccoli e in fondo alla coda. Testa di toro furiosa: corna d'avorio
-gigantesche con le punte in fiamme (parte Neon "Flames": il gioco ci attacca il fuoco), occhi di
-brace sotto la fronte aggrottata, narici dilatate che sbuffano fuoco, ringhio a fauci aperte con
-zanne aguzze e un grosso anello di ferro al naso. Bracciali di ferro chiodati, cintura di cuoio
+lava che brillano su petto, addominali, braccia, cosce e collo; pelo ispido nero sulla nuca, sul collo
+e sulla schiena (con ciocche che pendono), sugli stinchi fino agli zoccoli e in fondo alla coda.
+Testa di toro furiosa, girata e inclinata verso chi guarda: corna d'avorio gigantesche con le punte
+in fiamme (parte Neon "Flames": il gioco ci attacca il fuoco), occhi di brace sotto la fronte
+aggrottata, narici dilatate, ringhio a fauci aperte con zanne aguzze e un grosso anello di ferro al
+naso. Spallaccio di ferro con tre spuntoni sulla spalla destra, bracciali chiodati, cintura di cuoio
 borchiata e perizoma rosso sangue sfrangiato. Le vene di lava e il filo dell'ascia sono la parte Neon
 "Rage" (braci che salgono dal corpo).
 Tocco "toy horror": una grossa toppa di stoffa cucita a punti incrociati sulla spalla sinistra e un
