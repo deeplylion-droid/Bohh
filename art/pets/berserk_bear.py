@@ -322,7 +322,7 @@ def cross_stitch(sdf, c, along, size, r, sink=0.3):
 
 # ============================================================ colori
 FUR = (96, 56, 34)          # pelo marrone scuro
-MANE = (50, 30, 24)         # criniera irta quasi nera (collo, gobba, gomiti, guance, sopracciglia)
+SHAGGY = (68, 39, 26)       # pelo irto piu' scuro (collo, gobba, gomiti, guance, testa)
 MUZZLE = (188, 138, 90)     # muso, orecchie interne e cuscinetti color nocciola
 WARPAINT = (198, 16, 26)    # pittura di guerra rosso sangue
 RAGE = (255, 40, 18)        # neon rosso-arancio
@@ -447,15 +447,9 @@ EAR_CUP = ellipsoid((0.115, 0.06, 0.105), (0, -0.065, 0.015))
 # orecchio sinistro (x < 0) normale
 EAR_L = ear_shape().rot(0, -22, 18).translate((-0.33, 0.06, 0.46))
 EAR_CUP_L = EAR_CUP.rot(0, -22, 18).translate((-0.33, 0.06, 0.46))
-# corona di ciuffi irti fra le orecchie e sopracciglia a ciuffi (parte "Mane")
-crown = [horn((x, y, 0.40), (x * 1.2, 0.45, 1.0), 0.22, 0.08, curl=(0, 0.3, -0.1), n=4, r1=0.012)
+# ciuffi irti fra le orecchie, piegati all'indietro (parte "ShaggyFur")
+crown = [horn((x, y, 0.40), (x * 1.2, 0.8, 0.8), 0.24, 0.085, curl=(0, 0.35, -0.2), n=4, r1=0.012)
          for x, y in ((0.0, -0.1), (0.12, 0.04), (-0.12, 0.04))]
-
-for sx in (1, -1):
-    for t, L_ in ((0.45, 0.19), (0.9, 0.25)):
-        q = on_surface(upper, mix((sx * 0.07, -0.48, 0.30), (sx * 0.34, -0.29, 0.38), t), 0.0, 4)
-        crown.append(horn(q - grad(upper, q) * 0.03, (sx * 0.55, 0.7, 0.55), L_, 0.065, curl=(sx * 0.1, 0.25, -0.1),
-                          n=4, r1=0.01))
 head_solid = union(head_solid, EAR_L, k=0.05)
 
 # ============================================================ corpo (spazio Blender)
@@ -518,7 +512,7 @@ for sx in (1, -1):
         dk = U * math.cos(ar) + S * math.sin(ar)
         ln = 0.31 if abs(a) < 40 else 0.27
         b0 = P + dk * 0.12
-        b1 = P + dk * ln - F * 0.06
+        b1 = P + dk * ln + F * 0.06                          # dita piegate in avanti, verso chi guarda
         arm_parts.append(round_cone(b0, b1, 0.10, 0.088))
         CLAW_ROOTS.append((b1, dk, F, abs(a) < 40))
 arms = union(*arm_parts, k=0.07)
@@ -558,7 +552,7 @@ for ring, (dz, n_r, L, r0) in enumerate(((0.12, 6, 0.4, 0.14), (-0.14, 5, 0.36, 
         a = math.radians(68 + 112 * (i + 0.5 * ring) / (n_r - 1 + ring))
         for sgn in ((1, -1) if a < math.radians(179) else (1,)):
             tg.append(NC + np.array([sgn * math.sin(a), -math.cos(a), dz]))
-    fur += tufts(core0, NC, tg, (0, 0.4, -1.0), L, r0)
+    fur += tufts(core0, NC, tg, (0, 0.4, -1.0), L, r0, lean=0.7)
 # gobba: ciuffi che puntano all'indietro e in alto
 tg = [np.array((x, 1.0, 2.65 + z)) for x, z in ((0.0, 0.25), (0.3, 0.1), (-0.3, 0.1), (0.15, -0.2), (-0.15, -0.2))]
 fur += tufts(core0, (0, 0.1, 2.4), tg, (0, 1.0, 0.5), 0.32, 0.12)
@@ -596,6 +590,24 @@ for i in range(2):
     scar_glow.append(f)
 core = core0.subtract(fast_union(scar_cut), k=0.02)
 
+
+def vein(base, origin, p0, d0, n=6, step=0.06, turn=0.45, r0=0.026):
+    """Vena di rabbia: linea serpeggiante sulla superficie che si assottiglia."""
+    pts, d = [np.asarray(p0, float)], norm(d0)
+    for _ in range(n):
+        d = norm(d + rng.normal(0, turn, 3) * 0.5)
+        pts.append(pts[-1] + d * step)
+    q, nr = curve_on(base, origin, pts)
+    q = [p + nn * 0.004 for p, nn in zip(q, nr)]
+    return tube([tuple(p) for p in q], [max(r0 * (1 - j / len(q)) ** 0.8, 0.012) for j in range(len(q))])
+
+
+# vene incandescenti che partono dai graffi del petto
+scar_glow += [vein(core, (0.0, -0.1, 1.7), p0, d0) for p0, d0 in (
+    ((0.62, -0.42, 2.02), (0.4, 0.3, 0.8)), ((0.40, -0.55, 2.06), (0.0, 0.0, 1.0)), ((0.04, -0.62, 1.22), (-0.3, 0, -1)),
+    ((-0.12, -0.6, 1.24), (-0.8, 0.1, -0.4)), ((0.3, -0.6, 1.62), (1.0, 0.2, -0.2)))]
+
+
 # ============================================================ orecchio destro strappato e ricucito storto
 R0_EAR = euler(0, 22, -18)
 T0_EAR = np.array([0.33, 0.06, 0.46])
@@ -623,8 +635,8 @@ body = union(core, H(ear_r))
 HEAD_ZONE = H(ellipsoid((0.86, 1.02, 0.92), (0.0, -0.30, -0.02)))
 m.add("Body", body.subtract(HEAD_ZONE.offset(-0.03)), FUR, tris=3500, voxel=0.051)
 m.add("Head", body.intersect(HEAD_ZONE.offset(0.03)), FUR, tris=2600, voxel=0.037)
-mane = fast_union(fur).subtract(core0.offset(-0.035))          # la radice dei ciuffi dentro il corpo non serve
-m.add("Mane", mane.intersect(halfspace_z(0.004, above=True)), MANE, role="detail", tris=1900, voxel=0.041)
+shaggy = fast_union(fur).subtract(core0.offset(-0.035))        # la radice dei ciuffi dentro il corpo non serve
+m.add("ShaggyFur", shaggy.intersect(halfspace_z(0.004, above=True)), SHAGGY, role="detail", tris=1900, voxel=0.0395)
 
 
 
@@ -635,11 +647,12 @@ muzzle_reg = union(
     k=0.04).subtract(cavity.offset(0.05))                        # non dentro la bocca
 
 cups = union(EAR_CUP_L.offset(0.03), EAR_CUP_R.offset(0.03))
-pads = [ell(P - F * 0.15 - U * 0.02, (0.2, 0.12, 0.17), axis=U, side=S) for P, U, F, S in PAWS.values()]
+pads = [ell(P + F * 0.15 - U * 0.02, (0.2, 0.12, 0.17), axis=U, side=S) for P, U, F, S in PAWS.values()]
+pads += [sphere(0.07, tuple(b1 + F * 0.07)) for b1, dk, F, big in CLAW_ROOTS]      # polpastrelli
 muzzle = union(paint(core, H(muzzle_reg), out=0.018, inn=0.06),
                paint(body, H(cups), out=0.016, inn=0.05),
                paint(core, fast_union(pads), out=0.018, inn=0.06))
-m.add("Muzzle", muzzle, MUZZLE, role="detail", tris=900, voxel=0.036)
+m.add("Muzzle", muzzle, MUZZLE, role="detail", tris=900, voxel=0.0378)
 
 # ============================================================ pittura di guerra rosso sangue
 paint_l = []
@@ -757,15 +770,17 @@ for sx in (1, -1):
     tilt = sx * 16
     eyes.append(H(eye_place(ellipsoid((EA, EB, EC)).rot(0, tilt, 0), sx, (0, 0.035, 0))))
     pupils.append(H(eye_place(ellipsoid((0.02, 0.022, 0.056)).rot(0, tilt * 0.5, 0), sx, (sx * 0.008, -0.016, -0.006))))
-m.add("Maw", union(maw, nose, fast_union(pupils)), MAW, role="eye", tris=650, voxel=0.037)
-m.add("Rage", fast_union(eyes + scar_glow), RAGE, material="Neon", role="glow", tris=650, voxel=0.022)
+m.add("Maw", maw, MAW, role="eye", tris=480, voxel=0.04)
+m.add("Nose", union(nose, fast_union(pupils)), MAW, role="eye", tris=320, voxel=0.017)
+
+m.add("Rage", fast_union(eyes + scar_glow), RAGE, material="Neon", role="glow", tris=700, voxel=0.0235)
 
 # ============================================================ artigli enormi (mani e piedi) e zanne della collana
 claws = []
 for b1, dk, F, big in CLAW_ROOTS:
     L = 0.5 if big else 0.42
-    d = norm(dk * 0.9 - F * 0.35)
-    claws.append(horn(b1 + dk * 0.03, d, L, 0.08 if big else 0.07, curl=tuple(-F * 0.75 - dk * 0.3), n=7,
+    d = norm(dk * 0.9 + F * 0.35)
+    claws.append(horn(b1 + dk * 0.03, d, L, 0.08 if big else 0.07, curl=tuple(F * 0.75 - dk * 0.3), n=7,
                       r1=0.007, power=1.15))
 for tp in TOES:
     claws.append(horn(tp + np.array([0, -0.06, 0.02]), (0, -1.0, -0.2), 0.22, 0.055, curl=(0, 0, -0.5), n=4,

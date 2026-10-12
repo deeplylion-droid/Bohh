@@ -1,14 +1,15 @@
 """Cinghiale da Guerra (WarBoar) - pet Primordiale.
 
 Un cinghiale mastodontico lanciato alla carica: testa bassa, garrese enorme e muscoloso, una zampa
-anteriore che raspa il terreno e solleva zolle di terra. Corazza di piastre di ferro rivettate su
-spalle e schiena (spallacci a lame sovrapposte con spuntoni d'acciaio), cresta irta di setole nere
-lungo tutta la spina dorsale, enormi zanne d'osso ricurve che salgono ai lati del muso, ghigno con
-il labbro arricciato e file di denti aguzzi, grugno sfregiato da tre graffi che ardono. Occhi rossi
-incandescenti sotto arcate aggrottate; dalle narici sbuffa il vapore della rabbia (parte Neon "Rage":
-il gioco ci attacca braci e fumo, insieme ai graffi del grugno). Tocco "toy horror": una toppa
-cucita sul fianco, una cicatrice ricucita sulla guancia, viti a vista sulla corazza e una cavigliera
-con la catena spezzata.
+anteriore alzata che raspa il terreno sopra un mucchietto di zolle appena sollevate. Corazza di ferro
+rivettata: spallacci a tre lame sovrapposte con spuntoni d'acciaio, due piastre sulla schiena e viti a
+vista con il taglio a croce. Cresta irta di setole nere dalla fronte alla groppa, coda dritta come un
+facocero alla carica, enormi zanne d'osso a mezzaluna cerchiate d'acciaio, fauci aperte con file di denti
+aguzzi, grugno sfregiato da tre graffi che ardono. Occhi rossi incandescenti cerchiati di nero sotto
+arcate aggrottate; dalle narici sbuffa il vapore della rabbia (parte Neon "Rage": il gioco ci attacca
+braci e fumo, insieme ai graffi del grugno) e vene di rabbia pulsano dove finisce la corazza.
+Tocco "toy horror": una toppa cucita sul fianco, una cicatrice ricucita sull'arcata, una lunga cucitura
+sulla coscia e una cavigliera con la catena spezzata.
 """
 import math
 import os
@@ -19,7 +20,7 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from lib.sdf import (SDF, box, capsule, cylinder, ellipsoid, euler, halfspace_z, look_matrix, octahedron,  # noqa: E402
-                     rot_matrix, round_cone, smax, smin, sphere, tube, union)
+                     rot_matrix, round_cone, smin, sphere, tube, union)
 from lib.toy import Model  # noqa: E402
 
 VX = float(os.environ.get("VX", "1"))  # bozza: VX=1.5 usa voxel piu' grossi per iterare in fretta
@@ -29,11 +30,6 @@ VX = float(os.environ.get("VX", "1"))  # bozza: VX=1.5 usa voxel piu' grossi per
 def norm(v):
     v = np.asarray(v, dtype=np.float64)
     return v / np.linalg.norm(v)
-
-
-def smoothstep(a, b, x):
-    t = np.clip((x - a) / (b - a), 0.0, 1.0)
-    return t * t * (3.0 - 2.0 * t)
 
 
 def grad(sdf, p, eps=1e-3):
@@ -247,25 +243,6 @@ def chain_link(c, axis, normal, half_len, R, r):
     return SDF(f, c - e, c + e)
 
 
-def stitch_row(sdf, pts, dash=0.075, gap=0.05, r=0.017, cross=False, cross_len=0.11, sink=0.35, closed=False):
-    """Cucitura sulla superficie: trattini lungo la linea, oppure punti trasversali (cross=True)."""
-    pts = list(pts) + ([pts[0]] if closed else [])
-    pts = resample(pts, (dash + gap) * (0.8 if cross else 1.0))
-    out = []
-    for i in range(len(pts) if cross else len(pts) - 1):
-        if cross:
-            p = pts[i]
-            t = norm(pts[min(i + 1, len(pts) - 1)] - pts[max(i - 1, 0)])
-            side = norm(np.cross(t, grad(sdf, p)))
-            a = on_surface(sdf, p - side * cross_len / 2, -r * sink, 3)
-            b = on_surface(sdf, p + side * cross_len / 2, -r * sink, 3)
-        else:
-            a = on_surface(sdf, pts[i], -r * sink, 2)
-            b = on_surface(sdf, pts[i] + (pts[i + 1] - pts[i]) * dash / (dash + gap), -r * sink, 2)
-        out.append(capsule(tuple(a), tuple(b), r))
-    return out
-
-
 def x_stitch(sdf, c, t, size=0.08, r=0.018, lift=0.0):
     """Punto a X centrato in c (t = direzione della cucitura)."""
     n = grad(sdf, c)
@@ -305,18 +282,19 @@ THREAD = (240, 226, 192)
 CHAIN = (126, 118, 112)
 RAGE = (255, 52, 18)
 EYE_RED = (255, 30, 22)
+TONGUE = (178, 50, 62)
 DIRT = (92, 64, 44)
 
 m = Model("WarBoar", "pet", voxel=0.03 * VX)
 rng = np.random.default_rng(7)
 
-# ============================================================ testa (spazio locale: origine sulla nuca, grugno verso -Y)
+# ============================================================ testa (locale: origine sulla nuca, grugno verso -Y)
 LIFT = 0.1                         # corpo piu' alto: zampe piu' lunghe e potenti
-HEAD_POS = np.array([0.0, -0.84, 1.62 + LIFT])
+HEAD_POS = np.array([0.0, -0.84, 1.52 + LIFT])
 HS = 1.2
-R_HEAD = euler(25.0, 0.0, 8.0)     # testa bassa da carica, girata appena verso chi guarda (3/4)
+R_HEAD = euler(16.0, 0.0, 8.0)     # testa bassa da carica, girata appena verso chi guarda (3/4)
 HINGE = np.array([0.0, -0.24, -0.16])
-JAW = 20.0
+JAW = 30.0
 R_JAW = euler(JAW, 0.0, 0.0)
 
 
@@ -341,14 +319,14 @@ def lip_z(y):
     return np.interp(y, [-1.5, -1.06, -0.96, -0.87, -0.66, 0.2], [-0.27, -0.25, -0.12, -0.10, -0.17, -0.16])
 
 
-cran = ellipsoid((0.46, 0.42, 0.40), (0, -0.18, 0.12))
-crown = ellipsoid((0.40, 0.30, 0.22), (0, -0.34, 0.34))
+cran = ellipsoid((0.47, 0.42, 0.35), (0, -0.18, 0.10))
+crown = ellipsoid((0.43, 0.30, 0.16), (0, -0.36, 0.32))
 shelf = ellipsoid((0.44, 0.20, 0.17), (0, -0.52, 0.30))
 jowls = [ellipsoid((0.25, 0.30, 0.24), (sx * 0.28, -0.40, -0.12)) for sx in (1, -1)]
 snout = loft(-0.45, -1.10, 0.28, 0.19, 0.25, 0.18, 0.06, -0.03, r=0.09, rc=0.03, tp=0.3)
 disc = cylinder((0, -1.06, -0.01), (0, -1.13, -0.01), 0.19, round=0.032)
 flares = [ellipsoid((0.10, 0.16, 0.10), (sx * 0.19, -0.88, -0.13)) for sx in (1, -1)]
-brows = [capsule((sx * 0.04, -0.72, 0.30), (sx * 0.46, -0.50, 0.48), 0.10) for sx in (1, -1)]
+brows = [capsule((sx * 0.04, -0.74, 0.28), (sx * 0.47, -0.50, 0.47), 0.11) for sx in (1, -1)]
 # ciuffi di pelo ispido sulle guance, all'indietro: testa piu' selvaggia e spigolosa
 tufts = []
 for sx in (1, -1):
@@ -366,7 +344,7 @@ head0 = union(head0, *tufts, k=0.04)
 head0 = shrink(union(head0, jaw, chin, k=0.1))
 
 # occhi sotto le arcate, sporgenti, che guardano dritti verso chi carica
-EYE_D = {sx: norm((sx * 0.46, -0.76, 0.46)) for sx in (1, -1)}
+EYE_D = {sx: norm((sx * 0.46, -0.8, 0.3)) for sx in (1, -1)}
 EYE_C = {}
 for sx in (1, -1):
     o = np.array((sx * 0.12, -0.46, 0.17))
@@ -475,8 +453,8 @@ LEGS = {
     "FR": dict(pts=[(-0.54, -0.44, 1.55), (-0.60, -0.56, 0.9), (-0.62, -0.66, 0.33), (-0.62, -0.70, 0.21)],
                r=[0.36, 0.23, 0.165, 0.155], hoof=((-0.62, -0.77, 0.125), (0, -1, 0), (0, 0, 1))),
     # anteriore sinistra (+x): raspa il terreno, zoccolo trascinato indietro con la punta che scava
-    "FL": dict(pts=[(0.54, -0.40, 1.55), (0.67, -0.82, 0.98), (0.70, -0.62, 0.56), (0.70, -0.56, 0.47)],
-               r=[0.36, 0.23, 0.165, 0.155], hoof=((0.70, -0.52, 0.40), (0, -0.81, -0.59), (0, -0.59, 0.81))),
+    "FL": dict(pts=[(0.54, -0.40, 1.55), (0.68, -1.0, 1.14), (0.71, -0.92, 0.74), (0.71, -0.88, 0.66)],
+               r=[0.34, 0.215, 0.16, 0.15], hoof=((0.71, -0.85, 0.57), (0, -0.85, -0.53), (0, -0.53, 0.85))),
     # posteriori: prosciutti enormi, garretti che spingono
     "HL": dict(pts=[(0.42, 0.74, 1.60), (0.53, 0.46, 1.04), (0.57, 0.92, 0.6), (0.58, 0.86, 0.27),
                     (0.58, 0.84, 0.21)],
@@ -494,6 +472,9 @@ for key, L in LEGS.items():
     if key[0] == "H":   # prosciutto
         leg_parts.append(ell(a * 0.55 + b * 0.45 + np.array([sx * 0.05, 0.08, 0.0]), (0.37, 0.40, 0.52), axis=b - a))
         tuft_d = norm(np.array([sx * 0.3, 1.0, -0.5]))
+    elif key == "FL":   # zampa alzata: avambraccio piu' asciutto, si vede la piega del ginocchio
+        leg_parts.append(ell(a * 0.55 + b * 0.45 + np.array([sx * 0.04, 0.0, 0.02]), (0.26, 0.27, 0.36), axis=b - a))
+        tuft_d = norm(np.array([sx * 0.3, 1.0, 0.2]))
     else:               # spalla e avambraccio muscolosi
         leg_parts.append(ell(a * 0.5 + b * 0.5 + np.array([sx * 0.05, -0.04, 0.0]), (0.29, 0.30, 0.42), axis=b - a))
         tuft_d = norm(np.array([sx * 0.3, 1.0, -0.2]))
@@ -524,7 +505,7 @@ core = union(core, legs, k=0.12)
 core = union(core, tail, k=0.07)
 core = fast_union(fringe, k=0.04, base=core)
 core = shrink(core.intersect(halfspace_z(0.0, above=True)))
-m.add("Body", core, FUR, tris=4700, voxel=0.028 * VX)
+m.add("Body", core, FUR, tris=4500, voxel=0.028 * VX)
 
 # disco del grugno, contorno scuro degli occhi e interno delle orecchie (quasi nero)
 disc_face = paint(head_solid, cylinder((0, -1.10, -0.01), (0, -1.4, -0.01), 0.19), out=0.016, inn=0.045)
@@ -535,7 +516,10 @@ ear_in = paint(union(*EARS), union(*INNER), out=0.014, inn=0.035)
 m.add("Snout", H(union(disc_face, eye_rims, ear_in)), SNOUT, role="detail", tris=600, voxel=0.016 * VX)
 
 # ============================================================ bocca, denti, zanne
-m.add("Mouth", H(maw_l), MAW, role="eye", tris=320, voxel=0.018 * VX)
+m.add("Mouth", H(maw_l), MAW, role="eye", tris=340, voxel=0.018 * VX)
+tongue = union(ellipsoid((0.15, 0.3, 0.07), (0, -0.52, -0.25)), ellipsoid((0.12, 0.16, 0.06), (0, -0.82, -0.23)),
+               k=0.08).subtract(capsule((0, -0.3, -0.17), (0, -0.95, -0.15), 0.02), k=0.02)
+m.add("Tongue", H(JW(tongue)), TONGUE, role="detail", tris=200, voxel=0.016 * VX)
 
 teeth = []
 UP_T = [(-1.0, 0.08), (-0.80, 0.12), (-0.72, 0.09), (-0.63, 0.12), (-0.54, 0.08), (-0.45, 0.07)]
@@ -553,7 +537,7 @@ for sx in (1, -1):
         b = np.array([e[0] - sx * 0.03, y, z - 0.04])
         L = L * (1 + rng.normal(0, 0.1))
         teeth.append(JW(horn(b, (sx * 0.1, 0.12, 1.0), L + 0.04, 0.03 + 0.1 * L, n=4, r1=0.005, power=1.2)))
-m.add("Teeth", H(fast_union(teeth)), BONE, role="shine", tris=600, voxel=0.012 * VX)
+m.add("Teeth", H(fast_union(teeth)), BONE, role="shine", tris=700, voxel=0.012 * VX)
 
 # zanne enormi da facocero: escono di lato dalla mandibola, salgono e si piegano a mezzaluna verso l'interno
 tusks, tusk_bands = [], []
@@ -606,9 +590,9 @@ while s < SP_LEN - 0.02:
 tip = np.array(TAIL_PTS[-1])
 for d in ((0.5, -0.2, 0.6), (-0.5, -0.1, 0.6), (0.1, 0.45, 0.8), (0.0, -0.5, 0.7), (0.3, 0.3, 0.9)):
     bristles.append(horn(tip - np.array([0, 0, 0.04]), d, 0.26, 0.05, n=3, r1=0.01))
-m.add("Mane", fast_union(bristles), BRISTLE, role="detail", tris=1350, voxel=0.016 * VX)
+m.add("Mane", fast_union(bristles), BRISTLE, role="detail", tris=1250, voxel=0.016 * VX)
 
-# ============================================================ corazza di ferro: spallacci a due lame e piastre sulla schiena
+# ============================================================ corazza di ferro: spallacci e piastre sulla schiena
 plates, rivets, spikes = [], [], []
 BANDS = [(0.0, 0.36), (0.42, 0.80)]
 for i, (y0, y1) in enumerate(BANDS):
@@ -694,10 +678,19 @@ for key, L in LEGS.items():
     pts = [np.array(p) for p in L["pts"]]
     fl = pts[-2]
     back = -norm(fwd)
+    # ciuffo scuro di pelo ispido sopra lo zoccolo
+    axl = norm(pts[-2] - pts[-1])
+    hub = pts[-1] + axl * 0.08
+    hooves.append(round_cone(tuple(c), tuple(hub + axl * 0.06), 0.15, 0.165))
+    s1 = norm(np.cross(axl, (0, 1, 0)) if abs(axl[1]) < 0.9 else np.cross(axl, (1, 0, 0)))
+    s2 = np.cross(axl, s1)
+    for a in np.linspace(0, 2 * math.pi, 8, endpoint=False):
+        rd = s1 * math.cos(a) + s2 * math.sin(a)
+        hooves.append(horn(hub + axl * 0.1 + rd * 0.12, rd * 0.55 - axl * 0.85, 0.15, 0.05, n=3, r1=0.01))
     for sx in (1, -1):
         dw = fl + back * 0.11 + np.array([sx * 0.07, 0, -0.04])
         hooves.append(horn(dw, back * 0.6 + np.array([0, 0, -0.8]), 0.09, 0.04, n=3, r1=0.012))
-m.add("Hooves", fast_union(hooves).intersect(halfspace_z(0.0, above=True)), HOOF, role="detail", tris=650,
+m.add("Hooves", fast_union(hooves).intersect(halfspace_z(0.0, above=True)), HOOF, role="detail", tris=900,
       voxel=0.015 * VX)
 
 # ============================================================ occhi rossi incandescenti
@@ -710,6 +703,40 @@ m.add("EyeGlow", H(union(*eyes)), EYE_RED, material="Neon", role="glow", tris=30
 nost_glow = union(*[ellipsoid((0.034, 0.03, 0.05), (c[0], c[1] + 0.035, c[2])) for c in NOST])
 m.add("Rage", H(union(nost_glow, fast_union(scar_fill))), RAGE, material="Neon", role="glow", tris=450,
       voxel=0.011 * VX)
+
+# ============================================================ vene di rabbia che pulsano sotto la corazza
+
+
+def vein_pts(p0, d0, n, step, turn):
+    pts, d = [np.asarray(p0, float)], norm(d0)
+    for j in range(n):
+        d = norm(d + rng.normal(0, turn, 3) * 0.5 + (0.35 if j % 2 else -0.35) * np.cross(d, (0, 0, 1)))
+        pts.append(pts[-1] + d * step)
+    return pts
+
+
+def vein(base, origin, p0, d0, n=8, step=0.06, turn=0.5, r0=0.027):
+    """Vena incandescente: linea serpeggiante sulla superficie che si assottiglia, con un ramo."""
+    out = []
+    main = vein_pts(p0, d0, n, step, turn)
+    br = vein_pts(main[n // 2], norm(np.asarray(d0) + rng.normal(0, 0.8, 3)), n // 2, step * 0.9, turn)
+    for pts, rr in ((main, r0), (br, r0 * 0.7)):
+        q, nr = project_many(base, [origin] * len(pts), [p - np.asarray(origin, float) for p in pts])
+        q = [p + nn * 0.003 for p, nn in zip(q, nr)]
+        out.append(tube([tuple(p) for p in q], [max(rr * (1 - j / len(q)) ** 0.7, 0.009) for j in range(len(q))]))
+    return union(*out)
+
+
+VEINS = [
+    ((0.0, -0.75, 1.75), (0.66, -0.86, 1.92), (0.1, -0.9, -0.4)),     # collo +x, dal bordo dello spallaccio
+    ((0.0, -0.75, 1.75), (0.72, -0.62, 1.42), (0.1, -0.3, -1.0)),     # braccio +x
+    ((0.0, -0.75, 1.75), (-0.66, -0.86, 1.92), (-0.1, -0.9, -0.4)),   # collo -x
+    ((0.0, 0.62, 1.6), (0.62, 0.74, 1.96), (0.2, 0.3, -1.0)),         # coscia +x
+    ((0.0, 0.62, 1.6), (0.56, 0.36, 1.86), (0.2, -0.2, -1.0)),        # fianco +x
+    ((0.0, 0.62, 1.6), (-0.62, 0.74, 1.96), (-0.2, 0.3, -1.0)),       # coscia -x
+]
+veins = [vein(core, o, p0, d0) for o, p0, d0 in VEINS]
+m.add("Veins", fast_union(veins), RAGE, material="Neon", role="glow", tris=520, voxel=0.012 * VX)
 
 # ============================================================ toy horror: toppa cucita sul fianco + cicatrice ricucita
 PC, PN = surf(core, (0.2, 0.30, 1.58), (1.0, 0.34, 1.5))
@@ -738,9 +765,15 @@ thread += [tube([tuple(p) for p in scar], 0.013)]
 cs = resample(scar, 0.075)
 for i in range(1, len(cs) - 1):
     thread += x_stitch(core, cs[i], cs[i + 1] - cs[i - 1], size=0.08, r=0.015, lift=-0.004)
-m.add("Thread", fast_union(thread), THREAD, role="detail", tris=560, voxel=0.011 * VX)
+# cucitura lunga sulla coscia (+x): la pelle e' stata ricucita dopo una battaglia
+seam = [on_surface(core, np.array((0.9, 0.5 + 0.28 * t, 1.62 - 0.62 * t)), 0.0, 6) for t in np.linspace(0, 1, 7)]
+thread += [tube([tuple(p) for p in seam], 0.013)]
+ss = resample(seam, 0.085)
+for i in range(1, len(ss) - 1):
+    thread += x_stitch(core, ss[i], ss[i + 1] - ss[i - 1], size=0.085, r=0.016, lift=-0.004)
+m.add("Thread", fast_union(thread), THREAD, role="detail", tris=700, voxel=0.011 * VX)
 
-# ============================================================ cavigliera con la catena spezzata (zampa posteriore sinistra)
+# ============================================================ cavigliera con la catena spezzata (zampa post. sx)
 LHL = [np.array(p) for p in LEGS["HL"]["pts"]]
 ax = norm(LHL[3] - LHL[2])
 cc = LHL[2] * 0.45 + LHL[3] * 0.55
@@ -764,14 +797,14 @@ m.add("Chain", fast_union(iron).intersect(halfspace_z(0.0, above=True)), CHAIN, 
       tris=550, voxel=0.012 * VX)
 
 # solco di terra sollevato dallo zoccolo che raspa: zolle sfaccettate dietro lo zoccolo
-clods = []
-for (x, y, z, s) in ((0.70, -0.40, 0.0, 0.10), (0.60, -0.34, 0.0, 0.08), (0.80, -0.32, 0.0, 0.075),
-                     (0.70, -0.26, 0.0, 0.085), (0.63, -0.18, 0.0, 0.06), (0.79, -0.17, 0.0, 0.06),
-                     (0.70, -0.08, 0.0, 0.05), (0.72, -0.12, 0.17, 0.045), (0.66, 0.0, 0.26, 0.035)):
+clods = [ellipsoid((0.24, 0.2, 0.08), (0.72, -0.72, 0.0)).rot(0, 0, 20, pivot=(0.72, -0.72, 0.0))]
+for (x, y, z, s) in ((0.72, -0.72, 0.05, 0.13), (0.58, -0.66, 0.0, 0.1), (0.86, -0.68, 0.0, 0.1),
+                     (0.68, -0.56, 0.0, 0.095), (0.82, -0.84, 0.0, 0.08), (0.61, -0.84, 0.0, 0.075),
+                     (0.80, -0.54, 0.0, 0.07), (0.74, -0.44, 0.16, 0.06), (0.67, -0.36, 0.3, 0.045)):
     rot = rng.uniform(0, 70, 3)
     c_ = (x, y, z + s * 0.42)
     clods.append(octahedron(s, c_).rot(*rot, pivot=c_))
-m.add("Dirt", fast_union(clods).intersect(halfspace_z(0.0, above=True)), DIRT, role="detail", tris=220,
+m.add("Dirt", fast_union(clods).intersect(halfspace_z(0.0, above=True)), DIRT, role="detail", tris=300,
       voxel=0.011 * VX, smooth=False)
 
 if __name__ == "__main__":

@@ -1,6 +1,17 @@
-"""Scorpione d'Acciaio (IronScorpion) - pet Primordiale.
+"""Scorpione d'Acciaio (IronScorpion) - pet Primordiale (zona Canyon).
 
-(bozza: la descrizione definitiva arriva alla fine)
+Uno scorpione del deserto gigantesco, corazzato come un giocattolo a molla di latta: placche segmentate color sabbia
+embricate come tegole, crestate e bordate di ruggine e fissate da grossi rivetti d'oro. Posa di minaccia: le due chele
+enormi alzate e spalancate verso chi guarda (dita ruggine con la punta nera e denti d'osso), mandibole uncinate e
+seghettate, due grandi occhi a mandorla verde veleno sotto sopracciglia nere a V e tre occhietti per lato, corna
+ricurve dietro gli occhi e spine lungo i fianchi. La coda corazzata si inarca alta sopra il dorso (piegata un po' a
+sinistra): fra un segmento e l'altro brilla il veleno e in cima il bulbo luminoso, chiuso in una gabbia d'oro, finisce
+in un pungiglione nero dalla punta d'osso che gocciola veleno verde.
+Tocco "toy horror": una grande chiave a molla d'oro piantata di sbieco nel dorso, come un giocattolo caricato che ha
+preso vita; rivetti d'oro dappertutto, come viti di un giocattolo di latta.
+
+Il veleno che gocciola (bulbo e gocce) e' nell'unica parte "Venom" (Neon): il gioco ci attacca le particelle verdi.
+Le fessure luminose fra i segmenti della coda sono una parte Neon a se' ("VenomJoints"), senza particelle.
 """
 import math
 import os
@@ -16,8 +27,6 @@ from lib.sdf import (SDF, bezier, box, capsule, cylinder, ellipsoid, round_cone,
                      torus, tube, union)
 from lib.toy import Model  # noqa: E402
 
-DRAFT = os.environ.get("DRAFT", "") == "1"
-VX = 1.5 if DRAFT else 1.0  # bozza: voxel piu' grossi per iterare in fretta
 T0 = time.time()
 
 
@@ -168,7 +177,7 @@ def extrude_y(d2, half, rnd=0.02):
 
 
 # ============================================================ modello
-m = Model("IronScorpion", "pet", voxel=0.024 * VX)
+m = Model("IronScorpion", "pet", voxel=0.03)
 GROUND = halfspace(lambda p: -p[:, 2], (-9, -9, 0), (9, 9, 9))   # niente sotto il terreno
 
 # ------------------------------------------------------------ corpo: prosoma (testa-torace) + mesosoma (7 placche)
@@ -220,9 +229,10 @@ def plate_top(y, x=0.0, lift=0.0):
 trim = []
 for i in range(len(YB) - 1):
     y0, y1 = YB[i] + GAP + 0.03, YB[i + 1] - GAP - 0.01
-    a, na = plate_top(y0)
-    b, nb = plate_top(y1)
-    trim.append(capsule(tuple(a - na * 0.025), tuple(b + nb * 0.02), 0.05))
+    if i > 0:                    # la prima placca resta liscia: vista di fronte la cresta sembrerebbe un naso
+        a, na = plate_top(y0)
+        b, nb = plate_top(y1)
+        trim.append(capsule(tuple(a - na * 0.025), tuple(b + nb * 0.02), 0.05))
     for sx in (1, -1):
         q, n = proj(body, (sx * 0.3, y1 - 0.03, 0.9), (sx, 0.0, 0.32))
         d = norm(n + np.array([0.0, 0.55, 0.25]))
@@ -257,7 +267,8 @@ for i, (L, w, h) in enumerate(zip(TAIL_L, TAIL_W, TAIL_H)):
     M = SEG_M[i]
     y0 = 0.07 if i else -0.1          # fra i segmenti resta una fessura da cui brilla il veleno
     seg = box((w, (L - y0) / 2, h), (0, (L + y0) / 2, 0), round=0.17)
-    keels = union(*[capsule((sx * w * 0.5, 0.1, h * 0.92), (sx * w * 0.5, L - 0.08, h * 0.96), 0.055) for sx in (1, -1)])
+    keels = union(*[capsule((sx * w * 0.5, 0.1, h * 0.92), (sx * w * 0.5, L - 0.08, h * 0.96), 0.055)
+                    for sx in (1, -1)])
     seg = union(seg, keels, k=0.04)
     cut = L - RIM_T
     tail_armor.append(place(seg.intersect(halfspace(lambda p, c=cut: p[:, 1] - c)), M, P[i]))
@@ -294,7 +305,9 @@ for alpha in (-62.0, 0.0, 62.0, 180.0):
 collar = torus(0.24, 0.055).rot(90, 0, 0).translate((0, 0.04, 0))
 cage = place(union(*cage, collar, k=0.02), M6, P[5])
 sting_pts = bezier((0, 0.62, -0.02), (0, 0.86, -0.05), (0, 1.0, -0.22), (0, 0.96, -0.46), 12)
-sting = place(tube(sting_pts, [0.12 * (1 - i / 12) ** 0.9 + 0.01 for i in range(13)]), M6, P[5])
+sting_r = [0.12 * (1 - i / 12) ** 0.9 + 0.01 for i in range(13)]
+sting = place(tube(sting_pts[:10], sting_r[:10]), M6, P[5])
+sting_tip = place(tube(sting_pts[8:], [r + 0.005 for r in sting_r[8:]]), M6, P[5])     # punta d'osso
 STING_TIP = P[5] + M6 @ np.array(sting_pts[-1], dtype=np.float32)
 log("coda pronta")
 
@@ -314,7 +327,7 @@ bow = SDF(extrude_y(lambda u, v: bow_2d(u, v - BOW_Z, 0.25, 0.23, 0.1, 0.12), 0.
 key = place(union(key_local, bow, k=0.03), KEY_M, KEY_BASE - KEY_N * 0.02)
 log("chiave pronta")
 
-# ------------------------------------------------------------ chele (pedipalpi) enormi, alzate e aperte verso chi guarda
+# ------------------------------------------------------------ chele (pedipalpi) enormi, alzate e aperte
 PALP_J = [(0.24, -1.0, 0.86), (0.56, -1.08, 0.95), (1.0, -0.96, 1.18), (1.1, -1.18, 1.42)]
 HAND_R = (0.27, 0.44, 0.35)     # (spessore, lunghezza, larghezza) nel sistema della mano
 palp_armor, palp_caps, fingers, finger_tips, finger_teeth, hand_keels, palp_rivets = [], [], [], [], [], [], []
@@ -333,7 +346,8 @@ for sx in (1, -1):
     palp_armor.append(hand_w)
     hand_keels.append(place(union(capsule((0, 0.16, 0.34), (0, 0.66, 0.3), 0.06),
                                   capsule((0, 0.16, -0.34), (0, 0.66, -0.3), 0.06),
-                                  *[round_cone((0, v, 0.33), (0, v + 0.1, 0.47), 0.05, 0.01) for v in (0.2, 0.38, 0.56)]),
+                                  *[round_cone((0, v, 0.33), (0, v + 0.1, 0.47), 0.05, 0.01)
+                                    for v in (0.2, 0.38, 0.56)]),
                             M, J[3]))
     for a_, b_, t_ in ((J[1], J[2], 0.5), (J[2], J[3], 0.45)):
         q = a_ + (b_ - a_) * t_
@@ -380,7 +394,7 @@ for sx in (1, -1):
     for j in (2, 4, 6):
         q = np.array(hook[j])
         tdir = norm(np.array([-sx, -0.25, 0.1]))
-        mand_teeth.append(round_cone(tuple(q + tdir * 0.035), tuple(q + tdir * 0.115), 0.03, 0.005))
+        mand_teeth.append(round_cone(tuple(q + tdir * 0.035), tuple(q + tdir * 0.14), 0.036, 0.006))
 log("mandibole pronte")
 
 # ------------------------------------------------------------ zampe: 4 paia robuste, ginocchia nere, artigli d'osso
@@ -395,7 +409,8 @@ for sx in (1, -1):
     for li, pts in enumerate(LEGS):
         J = [np.array([sx * x, y, z]) for x, y, z in pts]
         c = J[3] + (J[4] - J[3]) * 0.5
-        leg_segs.append(union(round_cone(tuple(J[0]), tuple(J[1]), 0.12, 0.115), spindle(J[1], J[2], 0.11, 0.125, 0.098),
+        leg_segs.append(union(round_cone(tuple(J[0]), tuple(J[1]), 0.12, 0.115),
+                              spindle(J[1], J[2], 0.11, 0.125, 0.098),
                               spindle(J[2], J[3], 0.098, 0.105, 0.08), round_cone(tuple(J[3]), tuple(c), 0.078, 0.062)))
         leg_bone.append(round_cone(tuple(c), tuple(J[4]), 0.062, 0.014))
         leg_joints_c += [J[1], J[2], J[3]]
@@ -468,7 +483,8 @@ venom = [bulb, sphere(0.046, tuple(STING_TIP + np.array([0, 0, -0.01]))),
 BULB_LOW = P[5] + M6 @ np.array([0.0, BULB_C[1], -BULB_R[2] * 0.97], dtype=np.float32)
 venom.append(hang_drop(BULB_LOW + np.array([0, 0, 0.02]), 0.13, 0.026, 0.048))
 fall = STING_TIP + np.array([0.0, 0.0, -0.56])
-venom.append(union(sphere(0.052, tuple(fall)), round_cone(tuple(fall), tuple(fall + [0, 0, 0.1]), 0.048, 0.009), k=0.02))
+venom.append(union(sphere(0.052, tuple(fall)), round_cone(tuple(fall), tuple(fall + [0, 0, 0.1]), 0.048, 0.009),
+                   k=0.02))
 
 # ------------------------------------------------------------ parti
 m.add("Armor", fast_union([body, car, fast_union(tail_armor), fast_union(palp_armor)]), SAND, tris=5500,
@@ -478,7 +494,8 @@ m.add("Legs", outside(leg_caps)(legs_all), RUST, role="detail", tris=1400, voxel
 m.add("PincerFingers", fast_union(fingers), RUST, role="detail", tris=900, voxel=0.034)
 chitin = [inside(leg_caps)(legs_all), *palp_caps, *finger_tips, sting, *mand, *brows]
 m.add("Chitin", fast_union(chitin), BLACK, role="detail", tris=1100, voxel=0.052)
-m.add("BoneTips", fast_union(finger_teeth + mand_teeth + leg_bone).intersect(GROUND), BONE, role="detail", tris=850,
+m.add("BoneTips", fast_union(finger_teeth + mand_teeth + leg_bone + [sting_tip]).intersect(GROUND), BONE, role="detail",
+      tris=850,
       voxel=0.03)
 m.add("Rivets", union(spheres([c for c, _ in rivets], [r for _, r in rivets]), cage), GOLD, material="Metal",
       role="detail", tris=800, voxel=0.035)

@@ -29,16 +29,6 @@ def norm(v):
     return v / np.linalg.norm(v)
 
 
-def grad(sdf, p, eps=1e-3):
-    p = np.asarray(p, dtype=np.float64)
-    g = np.zeros(3)
-    for ax in range(3):
-        e = np.zeros(3)
-        e[ax] = eps
-        g[ax] = sdf((p + e)[None, :].astype(np.float32))[0] - sdf((p - e)[None, :].astype(np.float32))[0]
-    return g / max(np.linalg.norm(g), 1e-9)
-
-
 def fast_union(shapes, k=0.0, base=None, margin=0.06):
     """Unione di tante forme, ognuna valutata solo vicino al proprio ingombro."""
     shapes = list(shapes)
@@ -278,7 +268,7 @@ gem = core_local(diamond3(0.15, 0.23, 0.19).translate((0, 0, 0.07)))
 body = fast_union(torso_rocks + leg_rocks + arm_rocks).subtract(core_cut).intersect(halfspace_z(0.0))
 m.add("Body", body, STONE, tris=3700, voxel=0.053, smooth=False)
 fists = fast_union(fist_rocks)
-m.add("Fists", fists, STONE, role="skin", tris=2400, voxel=0.036, smooth=False)
+m.add("Fists", fists, STONE, role="skin", tris=2400, voxel=0.0335, smooth=False)
 
 
 # ============================================================ testa incassata fra le spalle (coordinate locali)
@@ -309,7 +299,7 @@ for sx in (1, -1):
 EYE_R = (0.1, 0.042, 0.038)
 sockets = union(*[ellipsoid((0.124, 0.075, 0.068)).rot(0, -sx * 22, 0).translate(EYE_C[sx]) for sx in (1, -1)])
 head_l = head_l.subtract(union(mouth_slot, sockets))
-m.add("Head", H(head_l), STONE, role="skin", tris=2600, voxel=0.0305, smooth=False)
+m.add("Head", H(head_l), STONE, role="skin", tris=2600, voxel=0.0281, smooth=False)
 
 # ============================================================ cristalli (viola / azzurri, alcune punte luminose)
 groups = {"V": [], "C": [], "GV": [], "GC": []}
@@ -339,17 +329,21 @@ for d, L, r, col, g in [((0.25, 1.0, 0.25), 0.42, 0.1, "C", True), ((-0.3, 1.0, 
 body_arms = fast_union(arm_rocks)
 for sx in (1, -1):
     DC = ARM[sx]["DC"]
-    for d, L, r, col, g in [((sx * 0.35, 0.05, 1.0), 1.0, 0.18, "V", True), ((sx * 0.55, -0.25, 0.8), 0.56, 0.12, "C", True),
-                            ((0.0, 0.5, 1.0), 0.7, 0.13, "C", False), ((sx * 0.5, 0.55, 0.55), 0.45, 0.1, "V", False),
-                            ((-sx * 0.15, -0.3, 1.0), 0.38, 0.08, "V", False)]:
+    big = 1.12 if sx < 0 else 1.0   # spalle diverse: il gruppo di sinistra e' piu' grande (sagoma meno simmetrica)
+    cl = [((sx * 0.35, 0.05, 1.0), 1.0 * big, 0.18, "V", True), ((sx * 0.55, -0.25, 0.8), 0.56, 0.12, "C", True),
+          ((0.0, 0.5, 1.0), 0.7 * big, 0.13, "C", False), ((sx * 0.5, 0.55, 0.55), 0.45, 0.1, "V", False),
+          ((-sx * 0.15, -0.3, 1.0), 0.38, 0.08, "V", False)]
+    if sx < 0:
+        cl.append(((sx * 0.2, 0.25, 1.0), 0.5, 0.1, "C", True))
+    for d, L, r, col, g in cl:
         add_crystal(body_arms, DC, d, L, r, col, g, spin=L * 60 + sx * 20)
 for d, L, r, col, g in [((0, 0.45, 1.0), 0.62, 0.12, "V", True), ((0.5, 0.35, 0.85), 0.45, 0.09, "C", False),
                         ((-0.5, 0.35, 0.85), 0.42, 0.09, "V", False)]:   # corona di cristalli sulla nuca
     add_crystal(cran, (0, 0.12, 0.1), d, L, r, col, g, spin=30, sink=0.08, xf=H)
 
-m.add("CrystalsViolet", fast_union(groups["V"]), VIOLET, material="Glass", role="detail", tris=950, voxel=0.048,
+m.add("CrystalsViolet", fast_union(groups["V"]), VIOLET, material="Glass", role="detail", tris=950, voxel=0.0469,
       smooth=False)
-m.add("CrystalsCyan", fast_union(groups["C"]), CYAN, material="Glass", role="detail", tris=750, voxel=0.048,
+m.add("CrystalsCyan", fast_union(groups["C"]), CYAN, material="Glass", role="detail", tris=750, voxel=0.0469,
       smooth=False)
 
 # ============================================================ giunti da action figure (blu notte) e viti a croce
@@ -384,8 +378,8 @@ screws.append(core_local(tube([(0.21 * math.cos(math.radians(90 + 60 * i)), 0.29
                                for i in range(7)], 0.034)))
 for u, v in ((0.27, 0.19), (-0.27, 0.19), (0.27, -0.19), (-0.27, -0.19)):
     screws.append(screw(CORE_P + CORE_M @ np.array([u, v, 0.06], dtype=np.float32), CORE_N, r=0.058, spin=15))
-m.add("Joints", fast_union(joints), JOINT, role="detail", tris=800, voxel=0.05)
-m.add("Screws", fast_union(screws), METAL, material="Metal", role="detail", tris=1200, voxel=0.024)
+m.add("Joints", fast_union(joints), JOINT, role="detail", tris=800, voxel=0.0529)
+m.add("Screws", fast_union(screws), METAL, material="Metal", role="detail", tris=1200, voxel=0.0214)
 
 # ============================================================ ghiaccio: artigli dei piedi, spuntoni degli avambracci, denti
 ice, teeth = [], []
@@ -398,20 +392,20 @@ for sx in (1, -1):
         p, n = surf(body_arms, o, (sx * 0.45, 0.35, 1.0))
         dd = norm(n + np.array([0, 0.35, 0.7]))
         ice.append(orient(crystal(L, 0.085, tip=0.5, sides=5), p - dd * 0.09, dd, spin=t * 90))
-m.add("IceSpikes", fast_union(ice), ICE, role="detail", tris=500, voxel=0.03, smooth=False)
+m.add("IceSpikes", fast_union(ice), ICE, role="detail", tris=500, voxel=0.0277, smooth=False)
 
 for x, L, r in ((-0.24, 0.24, 0.055), (-0.135, 0.11, 0.036), (-0.045, 0.13, 0.036), (0.05, 0.11, 0.036),
                 (0.145, 0.13, 0.036), (0.245, 0.25, 0.055)):
     teeth.append(orient(crystal(L, r, tip=0.55, sides=4), (x, -0.45, -0.26), (x * 0.5, -0.25, 1.0), spin=45))
 for x, L in ((-0.15, 0.1), (-0.05, 0.08), (0.06, 0.085), (0.16, 0.1)):
     teeth.append(orient(crystal(L, 0.034, tip=0.55, sides=4), (x, -0.37, -0.165), (0, -0.1, -1.0), spin=45))
-m.add("Teeth", H(fast_union(teeth)), ICE, role="shine", tris=550, voxel=0.018, smooth=False)
+m.add("Teeth", H(fast_union(teeth)), ICE, role="shine", tris=550, voxel=0.0162, smooth=False)
 
 # ============================================================ bocca e orbite scure
 maw = [ellipsoid((0.21, 0.08, 0.052), (0, -0.34, -0.205))]
 for sx in (1, -1):
     maw.append(ellipsoid((0.126, 0.03, 0.066)).rot(0, -sx * 22, 0).translate(EYE_C[sx] + np.array([0, 0.045, 0.0])))
-m.add("Maw", H(union(*maw)), MAW, role="eye", tris=250, voxel=0.026)
+m.add("Maw", H(union(*maw)), MAW, role="eye", tris=250, voxel=0.0243)
 
 # ============================================================ luce viola: nucleo, crepe, punte viola (Aura)
 aura = [gem] + groups["GV"]
@@ -443,7 +437,7 @@ scar = [((-0.05, 0.05, 0.25), (-0.06, -0.3, 0.42)), ((-0.12, 0.0, 0.2), (-0.16, 
         ((-0.2, 0.0, 0.1), (-0.27, -0.5, 0.13)), ((-0.24, -0.05, -0.05), (-0.34, -0.5, -0.06)),
         ((-0.22, -0.05, -0.15), (-0.33, -0.5, -0.2))]
 aura.append(H(crack(head_l, scar, r0=0.026, r1=0.014)))
-m.add("Aura", fast_union(aura), AURA, material="Neon", role="glow", tris=1250, voxel=0.028)
+m.add("Aura", fast_union(aura), AURA, material="Neon", role="glow", tris=1250, voxel=0.0271)
 
 # ============================================================ luce azzurra: occhi, punte azzurre, schegge dell'urto fra i pugni
 glow_c = list(groups["GC"])
@@ -454,7 +448,7 @@ for ang, L, w in ((80, 0.4, 0.07), (35, 0.3, 0.06), (-5, 0.26, 0.06), (-45, 0.3,
     t = math.radians(ang)   # ventaglio di schegge che schizzano in avanti dal punto d'urto
     d = norm((0.0, -math.cos(t), math.sin(t)))
     glow_c.append(orient(diamond3(w, w * 0.8, L * 0.5).rot(0, 0, 45), IMPACT + d * (0.1 + L * 0.5), d))
-m.add("CrystalGlow", fast_union(glow_c), CYAN_GLOW, material="Neon", role="glow", tris=600, voxel=0.023, smooth=False)
+m.add("CrystalGlow", fast_union(glow_c), CYAN_GLOW, material="Neon", role="glow", tris=600, voxel=0.0226, smooth=False)
 
 if __name__ == "__main__":
     m.build(views=tuple(os.environ.get("VIEWS", "3q,front").split(",")), res=int(os.environ.get("RES", 700)))
