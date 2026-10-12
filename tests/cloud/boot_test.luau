@@ -514,6 +514,25 @@ do
 	add("wheel_segments", string.format("%d jackpot %.1f%%", #Plaza.Wheel.Segments, 100 * jackpot / total))
 end
 
+-- Primordiali: due mostri per ogni zona del sentiero, ognuno con il suo tempo di schiusa
+do
+	local Pets = require(ReplicatedStorage.Shared.Config.Pets)
+	local Rarities = require(ReplicatedStorage.Shared.Config.Rarities)
+	local Zones = require(ReplicatedStorage.Shared.Config.Zones)
+	local byZone = {}
+	for _, def in Pets.ByRarity.Primal or {} do
+		byZone[def.zone or "?"] = (byZone[def.zone or "?"] or 0) + 1
+	end
+	local out = {}
+	for _, z in Zones.Order do
+		if z ~= "Den" then
+			local hatch = Rarities.List.Primal.hatchByZone and Rarities.List.Primal.hatchByZone[z]
+			table.insert(out, string.format("%s:%d/%ss", z, byZone[z] or 0, tostring(hatch)))
+		end
+	end
+	add("primal_zones", table.concat(out, " "))
+end
+
 -- avvisi raccolti durante l'avvio
 add("warnings", #warnings)
 for i = 1, math.min(#warnings, 25) do
