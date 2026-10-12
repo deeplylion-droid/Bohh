@@ -51,10 +51,20 @@ function KingService.Current(): Player?
 	return king
 end
 
+-- Accredita le monete maturate (ogni pochi secondi: una transazione al secondo sarebbe troppo)
+local function pay(p: Player)
+	local whole = math.floor(owed[p] or 0)
+	if whole >= 1 then
+		owed[p] -= whole
+		S.DataService.AddCoins(p, whole, "King")
+	end
+end
+
 local function setKing(p: Player?)
 	if king and king ~= p then
 		king:SetAttribute("King", nil)
 		king:SetAttribute("KingIdle", nil)
+		pay(king)
 	end
 	king = p
 	kingSince = os.clock()
@@ -66,7 +76,7 @@ local function setKing(p: Player?)
 	end
 end
 
-local paidAt = 0
+local secondAt, paidAt = 0, 0
 local function tick()
 	local onTop = {}
 	for _, p in Players:GetPlayers() do
@@ -104,17 +114,16 @@ local function tick()
 	if not idle then
 		owed[k] = (owed[k] or 0) + KingService.Rate(k) * TICK
 	end
-	-- una volta al secondo: accredito, missioni, annuncio del nuovo re
-	if os.clock() - paidAt >= 1 then
-		paidAt = os.clock()
+	-- una volta al secondo: missioni e annuncio del nuovo re; ogni 3 secondi l'accredito
+	if os.clock() - secondAt >= 1 then
+		secondAt = os.clock()
 		local rate = KingService.Rate(k)
 		if k:GetAttribute("KingRate") ~= rate then
 			k:SetAttribute("KingRate", rate)
 		end
-		local whole = math.floor(owed[k] or 0)
-		if whole >= 1 then
-			owed[k] -= whole
-			S.DataService.AddCoins(k, whole, "King")
+		if os.clock() - paidAt >= 3 then
+			paidAt = os.clock()
+			pay(k)
 		end
 		if not idle then
 			S.QuestService.Add(k, "King", 1)
@@ -130,11 +139,11 @@ end
 function KingService.Start()
 	workspace:SetAttribute("KingUserId", 0)
 	Players.PlayerRemoving:Connect(function(player)
+		if king == player then
+			setKing(nil) -- accredita anche le ultime monete
+		end
 		owed[player] = nil
 		still[player] = nil
-		if king == player then
-			setKing(nil)
-		end
 	end)
 	task.spawn(function()
 		while true do
