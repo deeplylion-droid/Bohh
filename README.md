@@ -14,7 +14,14 @@ su per farle schiudere e guadagnano monete con i pet. Si possono rubare uova e p
 3. Si comprano potenziamenti (velocità, forza, zaino, incubatrici, schiusa rapida, lotto più grande, barriera).
 4. Si scende dalla vetta: Prati → Bosco → Canyon → Grotte di Cristallo → Cratere Vulcanico →
    Tana dei Mostri.
-   Più si scende, più le uova sono rare (9 rarità, 37 pet). Le uova rare pesano e rallentano.
+   Più si scende, più le uova sono rare (10 rarità, 47 pet). Le uova rare pesano e rallentano.
+   Le uova **Primordiali** (tra Segreto e Ultra) compaiono in tutte le zone, anche nei Prati: ogni
+   zona ha i suoi due mostri Primordiali (Cinghiale da Guerra e Ariete Furioso nei Prati, Orso
+   Berserker e Lupo Ombra nel Bosco, Scorpione d'Acciaio e Cobra Reale nel Canyon, Golem di
+   Cristallo e Viverna di Ghiaccio nelle Grotte, Cerbero e Minotauro Infernale nel Cratere), di
+   taglia intermedia fra i pet normali e i giganti Ultra. Più profonda la zona, più lunga la
+   schiusa (da 30 secondi nei Prati a 25 minuti nel Cratere). Il primo uovo di ogni nuovo
+   giocatore è un Primordiale dei Prati.
    In fondo al cratere un portale a forma di bocca di mostro apre un tunnel nel vulcano a sud: la
    **Tana dei Mostri** (si sblocca una volta per 25M monete). Nella grotta, fra le statue dei
    giganti e i geyser di fuoco, sull'altare c'è **sempre un uovo Ultra** (8 secondi dopo che
@@ -30,6 +37,22 @@ su per farle schiudere e guadagnano monete con i pet. Si possono rubare uova e p
 6. Furti: tenendo premuto per 2 secondi si ruba un uovo o un pet da un lotto altrui. Il ladro
    rallenta, ha la scritta "LADRO!" e se viene colpito con la mazza perde la refurtiva.
    Difese: barriera laser, allarme e trappole (buccia di banana, melma, tagliola).
+
+La piazza della vetta (dove si rinasce) ha tre attrazioni:
+
+- **Ruota della fortuna** (sul palco a destra dello spawn, o dal pulsante RUOTA): un giro gratis
+  ogni 4 ore, giri extra con le missioni o con i Robux (1 giro 29 R$, 5 giri 119 R$). Premi:
+  monete (minuti del proprio guadagno), fortuna x2, uova buone o ottime per la zona più profonda
+  raggiunta e il jackpot, un uovo Primordiale. Quando qualcuno gira, la ruota della piazza gira
+  per tutti.
+- **Missioni** (bacheca a sinistra dello spawn, o dal pulsante MISSIONI): 3 giornaliere (nuove a
+  mezzanotte UTC) e 3 settimanali (nuove il lunedì), estratte per ogni giocatore: consegnare o
+  schiudere uova, rubare, dare schiaffi, raccogliere le monete, fare il re della collina, girare
+  la ruota, raccogliere uova Primordiali. Riscattarle tutte dà un giro della ruota (giornaliere)
+  o un uovo Primordiale (settimanali).
+- **Re della collina**: si sale sul monumento al centro della piazza; chi resta da solo in cima
+  guadagna ogni secondo metà del proprio guadagno (minimo 25 $), con la corona sopra la testa.
+  Se in cima ci sono più giocatori la cima è contesa: bisogna buttarli giù a schiaffi.
 
 Eventi automatici (pioggia di meteore, ora d'oro, super valanga), classifiche, album dei pet con
 premi, regali giornalieri e a tempo, bonus amici e codici (`LAUNCH`, `EGGS`, `MOUNTAIN`).
