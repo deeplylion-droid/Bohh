@@ -156,19 +156,6 @@ def shrink(s, step=0.05, pad=0.03):
     return SDF(s.f, a - step - pad, b + step + pad)
 
 
-def resample(points, step):
-    pts = np.asarray(points, dtype=np.float64)
-    seg = np.linalg.norm(np.diff(pts, axis=0), axis=1)
-    cum = np.concatenate([[0.0], np.cumsum(seg)])
-    n = max(int(round(cum[-1] / step)), 1)
-    out = []
-    for s in np.linspace(0.0, cum[-1], n + 1):
-        i = int(min(np.searchsorted(cum, s, side="right") - 1, len(seg) - 1))
-        t = (s - cum[i]) / max(seg[i], 1e-9)
-        out.append(pts[i] * (1 - t) + pts[i + 1] * t)
-    return out
-
-
 def orient(axis, side=(1.0, 0.0, 0.0)):
     """Matrice che porta l'asse Z locale su 'axis' (e X locale il piu' possibile verso 'side')."""
     a = norm(axis)
@@ -317,7 +304,6 @@ from lib.mesher import mesh_sdf  # noqa: E402
 WOOL = (58, 60, 70)          # lana carbone da nube temporalesca
 WOOL_LIGHT = (138, 144, 158)  # cime dei batuffoli, piu' chiare (nuvoloni illuminati dall'alto)
 HIDE = (112, 74, 52)         # muso e zampe: bruno terroso
-MUZZLE = (170, 140, 112)     # punta del muso piu' chiara
 OBSIDIAN = (30, 25, 34)      # corna di ossidiana
 LAVA = (255, 116, 20)        # lava nelle crepe (Neon "Flames")
 EYE_GLOW = (255, 206, 48)    # occhi gialli incandescenti
@@ -451,8 +437,8 @@ def horn_path(sx, n=72):
         t = i / n
         a = a0 + (a1 - a0) * t
         R = 0.44 * math.exp(-0.72 * t)
-        pts.append((sx * (0.14 + 0.44 * t ** 0.85), 0.10 + R * math.sin(a), -0.14 + R * math.cos(a)))
-        rads.append(0.038 + 0.165 * (1 - t) ** 0.85)
+        pts.append((sx * (0.17 + 0.42 * t ** 0.85), 0.10 + R * math.sin(a), -0.14 + R * math.cos(a)))
+        rads.append(0.038 + 0.155 * (1 - t) ** 0.85)
     return pts, rads
 
 
@@ -461,7 +447,7 @@ HORNS = {sx: Sweep(*horn_path(sx)) for sx in (1, -1)}
 
 def ridge_mod_for(Ls):
     def mod(s):
-        return 1.0 + 0.1 * np.cos(2 * np.pi * s / HORN_P) * smoothstep(0.03 * Ls, 0.15 * Ls, s)
+        return 1.0 + 0.1 * np.cos(2 * np.pi * s / HORN_P) * (0.62 + 0.38 * smoothstep(0.0, 0.16 * Ls, s))
     return mod
 
 
@@ -483,7 +469,7 @@ for sx, sw in HORNS.items():
     horn_black.append(black.subtract(groove, k=0.01))
     # nucleo di lava liscio dentro il corno: affiora nei solchi fra gli anelli e nella crepa
     core = sw.sdf(scale=0.945)
-    span = sw.field(lambda s, Ls=Ls: np.maximum(0.08 * Ls - s, s - 0.9 * Ls))
+    span = sw.field(lambda s, Ls=Ls: np.maximum(0.03 * Ls - s, s - 0.9 * Ls))
     lava.append(core.intersect(span, k=0.02))
 m_horns = H(fast_union(horn_black))
 m_lava = H(fast_union(lava))
@@ -516,8 +502,9 @@ hide_legs, wool_limbs = [], []
 for key, L in LEGS.items():
     pts = [np.array(p) for p in L["pts"]]
     hide_legs.append(tube([tuple(p) for p in pts[1:]], L["r"][1:], k=0.04))
-    hide_legs.append(round_cone(tuple(pts[0] * 0.3 + pts[1] * 0.7), tuple(pts[1]), L["r"][1] * 1.15, L["r"][1]))
-    f_ = 0.5 if key[0] == "H" else 0.65
+    f_ = 0.62 if key[0] == "H" else 0.65
+    hide_legs.append(round_cone(tuple(pts[0] * (0.92 - f_) + pts[1] * (0.08 + f_)), tuple(pts[1]), L["r"][1] * 1.15,
+                                L["r"][1]))
     wool_limbs.append(round_cone(tuple(pts[0]), tuple(pts[0] * (1 - f_) + pts[1] * f_), L["r"][0] * 1.15,
                                  L["r"][1] * 1.55))
 wool_core = union(torso, neck, k=0.2)

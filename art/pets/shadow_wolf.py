@@ -276,7 +276,7 @@ def slash(base, origin, a, b, n=9, w=0.04):
     pts, nr = curve_on(base, origin, line_pts(a, b, n))
     prof = [math.sin(math.pi * (0.08 + 0.84 * j / (n - 1))) ** 0.8 for j in range(n)]
     groove = tube([tuple(p) for p in pts], [max(w * f, 0.008) for f in prof])
-    fill = tube([tuple(p - q * w * 0.45) for p, q in zip(pts, nr)], [max(w * 0.62 * f, 0.007) for f in prof])
+    fill = tube([tuple(p - q * w * 0.45) for p, q in zip(pts, nr)], [max(w * 0.62 * f, 0.012) for f in prof])
     return groove, fill
 
 
@@ -298,7 +298,7 @@ def chain_link(c, axis, normal, half_len, R, r):
     return SDF(f, c - e, c + e)
 
 
-def wisp(base, d, L, r0, curl, wiggle=0.0, n=7, r1=0.012, phase=0.0):
+def wisp(base, d, L, r0, curl, wiggle=0.0, n=7, r1=0.014, phase=0.0):
     """Lingua di fumo: tubo che si assottiglia fino a una punta, con una curva a S (wiggle)."""
     base, d, c = np.asarray(base, float), norm(d), np.asarray(curl, float)
     side = np.cross(d, c)
@@ -457,7 +457,7 @@ throat_skin = ell(hp((0.0, -0.12, -0.30)), (0.22, 0.26, 0.22), axis=hv((0, -0.4,
 
 # zampe: anteriori larghe piantate a terra, posteriori raccolte come molle
 FRONT = {sx: dict(sh=np.array([sx * 0.38, -0.62, 1.22]), el=np.array([sx * 0.57, -0.66, 0.64]),
-                  wr=np.array([sx * 0.62, -0.95, 0.22]), paw=np.array([sx * 0.64, -1.09, 0.105])) for sx in (1, -1)}
+                  wr=np.array([sx * 0.67, -0.95, 0.22]), paw=np.array([sx * 0.7, -1.09, 0.105])) for sx in (1, -1)}
 HIND = {sx: dict(hip=np.array([sx * 0.30, 0.64, 1.44]), knee=np.array([sx * 0.42, 0.30, 0.84]),
                  hock=np.array([sx * 0.42, 0.92, 0.42]), paw=np.array([sx * 0.42, 0.76, 0.085])) for sx in (1, -1)}
 leg_parts, TOES = [], []
@@ -515,7 +515,7 @@ for j, s in enumerate(np.linspace(0.18, 0.86, 7)):
         dd = up * math.cos(math.radians(a)) + side * math.sin(math.radians(a))
         p, nr = surf(tail_core, c, c + dd)
         tail_fur.append(horn(p - nr * 0.04, norm(nr * 0.45 + t * 0.9), 0.2, 0.075, curl=tuple(t * 0.25), n=4,
-                             r1=0.012))
+                             r1=0.016))
 tail = union(tail_core, fast_union(tail_fur), k=0.03)
 
 
@@ -530,7 +530,7 @@ def tufts(base, origin, targets, flow, L, r0, lean=0.6, sink=0.05):
         fl = norm(fl) if np.linalg.norm(fl) > 1e-6 else nr
         d = norm(nr * (1 - lean) + fl * lean)
         out.append(horn(p - nr * sink, d, L * rng.uniform(0.88, 1.12), r0, curl=tuple(fl * 0.3 - nr * 0.1), n=4,
-                        r1=0.012))
+                        r1=0.015))
     return out
 
 
@@ -557,8 +557,8 @@ m_fur = fast_union(fur).subtract(core0.offset(-0.035))
 SEAM_T = [(0.9, -0.12, 1.62), (0.9, 0.02, 1.42), (0.9, 0.16, 1.24), (0.9, 0.32, 1.1), (0.9, 0.5, 1.02)]
 seam_o = [(0.0, y, z) for _, y, z in SEAM_T]
 seam_pts, _ = project_many(core0, seam_o, [np.array(t) - np.array(o) for t, o in zip(SEAM_T, seam_o)])
-scar_line = resample(seam_pts, 0.03)
-scar_groove = tube([tuple(p) for p in scar_line], 0.026)
+seam_line = resample(seam_pts, 0.03)
+seam_groove = tube([tuple(p) for p in seam_line], 0.026)
 # graffi di battaglia che bruciano di viola: spalla sinistra e anca destra
 scar_cut, scar_glow = [], []
 for i in range(3):
@@ -571,7 +571,7 @@ for i in range(2):
     g, f = slash(core0, (0.2, 0.62, 1.3), (0.5, 0.42 + dy, 1.78), (0.62, 0.62 + dy, 1.2), n=10, w=0.034)
     scar_cut.append(g)
     scar_glow.append(f)
-core = core0.subtract(union(scar_groove, fast_union(scar_cut)), k=0.012)
+core = core0.subtract(union(seam_groove, fast_union(scar_cut)), k=0.012)
 
 # la pelle e' divisa in due parti dalla stessa forma (sovrapposte di poco: la giunta non si vede), cosi' la testa
 # ha piu' triangoli del corpo
@@ -605,7 +605,7 @@ for i, s in enumerate(np.linspace(0.0, 1.0, 5)):
         d = norm(nr * 0.5 + np.array([0.0, 0.2, 1.0]))
         curl = np.array([math.sin(ar) * 0.45, 0.42, -0.2])
         smoke.append(wisp(p - nr * 0.06, d, L, 0.12 + 0.04 * max(top, 0.0), curl, wiggle=0.16 * rng.choice((-1, 1)),
-                          phase=rng.uniform(0, 3)))
+                          phase=rng.uniform(0, 3), r1=0.022))
 # lingue piu' basse sui lati del collo (allargano la sagoma vista da davanti)
 for s in (0.1, 0.45, 0.8):
     c = mix(NAPE_IN, WITHERS_IN, s)
@@ -613,21 +613,21 @@ for s in (0.1, 0.45, 0.8):
         ar = math.radians(sx * (128 + rng.normal(0, 5)))
         p, nr = surf(core0, c, c + np.array([math.sin(ar), 0.1, math.cos(ar)]))
         smoke.append(wisp(p - nr * 0.05, norm(nr * 0.8 + np.array([0.0, 0.25, 0.9])), 0.5 * rng.uniform(0.9, 1.1), 0.11,
-                          np.array([sx * 0.45, 0.3, -0.1]), wiggle=0.14, phase=rng.uniform(0, 3)))
+                          np.array([sx * 0.45, 0.3, -0.1]), wiggle=0.14, phase=rng.uniform(0, 3), r1=0.022))
 # la criniera continua un poco lungo la schiena, piu' bassa (la chiave resta libera dietro)
 for a in (-30, 30):
     c = np.array([0.0, 0.1, 1.4])
     ar = math.radians(a)
     p, nr = surf(core0, c, c + np.array([math.sin(ar), 0.0, math.cos(ar)]))
     smoke.append(wisp(p - nr * 0.05, norm(nr * 0.4 + np.array([0.0, 0.35, 1.0])), 0.45 * rng.uniform(0.9, 1.1), 0.1,
-                      np.array([math.sin(ar) * 0.3, 0.45, -0.2]), wiggle=0.14, phase=rng.uniform(0, 3)))
+                      np.array([math.sin(ar) * 0.3, 0.45, -0.2]), wiggle=0.14, phase=rng.uniform(0, 3), r1=0.022))
 # fumo che sale anche dalle scapole
 for sx in (1, -1):
     for dy, dz in ((0.0, 0.0), (0.18, -0.08)):
         c = np.array([sx * 0.18, -0.4 + dy, 1.5 + dz])
         p, nr = surf(core0, c, c + np.array([sx * 0.8, 0.1, 0.6]))
         smoke.append(wisp(p - nr * 0.05, norm(nr * 0.5 + np.array([sx * 0.2, 0.5, 0.8])), 0.5 * rng.uniform(0.9, 1.1),
-                          0.1, np.array([sx * 0.3, 0.4, -0.1]), wiggle=0.1, phase=rng.uniform(0, 3)))
+                          0.1, np.array([sx * 0.3, 0.4, -0.1]), wiggle=0.1, phase=rng.uniform(0, 3), r1=0.022))
 # sbuffi di fumo alla radice della criniera: le lingue nascono da una nuvola
 for i, s in enumerate(np.linspace(0.0, 1.0, 6)):
     c = mix(NAPE_IN, WITHERS_IN, s)
@@ -643,16 +643,16 @@ TT = np.array(TAIL_PTS[-1])
 TD = norm(np.array(TAIL_PTS[-1]) - np.array(TAIL_PTS[-3]))
 ts1 = norm(np.cross(TD, (1.0, 0.0, 0.0)))
 ts2 = np.cross(TD, ts1)
-tail_smoke = [wisp(TT - TD * 0.12, norm(TD * 0.7 + np.array([0, 0, 0.7])), 0.55, 0.12, np.array([0, -0.2, 0.3]),
-                   wiggle=0.1)]
-for k_ in range(5):
-    a = 2 * math.pi * k_ / 5 + 0.4
+tail_smoke = [wisp(TT - TD * 0.12, norm(TD * 0.5 + np.array([0, 0, 1.0])), 0.6, 0.13, np.array([0, -0.25, 0.1]),
+                   wiggle=0.12)]
+for k_ in range(4):
+    a = 2 * math.pi * k_ / 4 + 0.4
     off = ts1 * math.cos(a) + ts2 * math.sin(a)
-    tail_smoke.append(wisp(TT - TD * 0.1 + off * 0.06, norm(TD * 0.6 + off * 0.5 + np.array([0, 0, 0.5])),
-                           0.38 * rng.uniform(0.85, 1.15), 0.085, off * 0.3 + np.array([0, -0.1, 0.25]),
-                           wiggle=0.12, phase=rng.uniform(0, 3)))
+    tail_smoke.append(wisp(TT - TD * 0.1 + off * 0.05, norm(TD * 0.4 + off * 0.28 + np.array([0, 0, 0.9])),
+                           0.42 * rng.uniform(0.85, 1.15), 0.09, off * 0.12 + np.array([0, -0.18, 0.1]),
+                           wiggle=0.14, phase=rng.uniform(0, 3)))
 m.add("TailSmoke", fast_union(tail_smoke).subtract(tail_core.offset(-0.03)), SMOKE, material="Neon", role="glow",
-      tris=400, voxel=0.0298, group="Tail", pivot=TAIL_PIVOT)
+      tris=400, voxel=0.0269, group="Tail", pivot=TAIL_PIVOT)
 
 # ============================================================ occhi, bocca, naso, pupille
 eyes, pupils = [], []
@@ -692,7 +692,7 @@ def tooth_row(jaw_sdf, path, z_in, down, teeth_spec, back_lean=0.22, out_lean=0.
         p = rim[k] + (rim[k + 1] - rim[k]) * (s - cum[k]) / max(seg[k], 1e-9)
         side = math.copysign(1.0, p[0]) if abs(p[0]) > 0.02 else 0.0
         d = norm([side * out_lean + rng.normal(0, 0.04), back_lean + rng.normal(0, 0.04), down])
-        teeth.append(horn(p - d * 0.04, d, L + 0.04, r, curl=(0, 0.16, 0), n=4, r1=0.004, power=1.2))
+        teeth.append(horn(p - d * 0.04, d, L + 0.04, r, curl=(0, 0.16, 0), n=4, r1=0.01, power=1.2))
         gums.append(ellipsoid((r * 1.5, r * 1.7, r * 1.0), tuple(p + np.array([0, 0, -down * 0.01]))))
     return teeth, gums
 
@@ -715,7 +715,7 @@ for sx in (1, -1):
                        back_lean=0.18)
     teeth_all += [H(JW(t)) for t in t_]
     gums_all += [H(JW(g)) for g in g_]
-m.add("Teeth", fast_union(teeth_all), TOOTH, role="shine", tris=880, voxel=0.0183)
+m.add("Teeth", fast_union(teeth_all), TOOTH, role="shine", tris=880, voxel=0.0199)
 tongue_l = union(ellipsoid((0.1, 0.24, 0.05), (0, -0.34, -0.155)),
                  ellipsoid((0.08, 0.12, 0.045), (0, -0.56, -0.14)), k=0.06)
 tongue_l = tongue_l.subtract(capsule((0, -0.18, -0.1), (0, -0.64, -0.085), 0.015), k=0.02)
@@ -725,7 +725,7 @@ m.add("Gums", union(fast_union(gums_all, k=0.02), H(JW(tongue_l))), GUM, role="d
 claws = []
 for tp, sc in TOES:
     claws.append(horn(tp + np.array([0, -0.045, 0.02]), (0, -1.0, -0.3), 0.17 * sc + 0.03, 0.04 * sc + 0.006,
-                      curl=(0, 0, -0.55), n=5, r1=0.005))
+                      curl=(0, 0, -0.55), n=5, r1=0.01))
 m.add("Claws", fast_union(claws).intersect(halfspace_z(0.004, above=True)), BONE, role="detail", tris=720,
       voxel=0.0186)
 
@@ -793,7 +793,7 @@ m.add("WindUpKey", fast_union(key), BRASS, material="Metal", role="detail", tris
 
 # ============================================================ punti incrociati sulla cucitura del fianco
 stitches = []
-st_pts = resample(scar_line, 0.1)
+st_pts = resample(seam_line, 0.1)
 surf_h = core0.offset(0.012)
 for i in range(1, len(st_pts) - 1):
     c = st_pts[i]

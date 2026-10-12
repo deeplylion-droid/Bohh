@@ -304,7 +304,7 @@ def slash(base, origin, a, b, n=9, w=0.04):
     pts, nr = curve_on(base, origin, line_pts(a, b, n))
     prof = [math.sin(math.pi * (0.08 + 0.84 * j / (n - 1))) ** 0.8 for j in range(n)]
     groove = tube([tuple(p) for p in pts], [max(w * f, 0.008) for f in prof])
-    fill = tube([tuple(p - q * w * 0.45) for p, q in zip(pts, nr)], [max(w * 0.62 * f, 0.007) for f in prof])
+    fill = tube([tuple(p - q * w * 0.45) for p, q in zip(pts, nr)], [max(w * 0.62 * f, 0.012) for f in prof])
     return groove, fill
 
 
@@ -436,7 +436,7 @@ EAR_CUP = ellipsoid((0.115, 0.06, 0.105), (0, -0.065, 0.015))
 EAR_L = ear_shape().rot(0, -22, 18).translate((-0.33, 0.06, 0.46))
 EAR_CUP_L = EAR_CUP.rot(0, -22, 18).translate((-0.33, 0.06, 0.46))
 # ciuffi irti fra le orecchie, piegati all'indietro (parte "ShaggyFur")
-crown = [horn((x, y, 0.40), (x * 1.2, 0.8, 0.8), 0.24, 0.085, curl=(0, 0.35, -0.2), n=4, r1=0.012)
+crown = [horn((x, y, 0.40), (x * 1.2, 0.8, 0.8), 0.24, 0.085, curl=(0, 0.35, -0.2), n=4, r1=0.02)
          for x, y in ((0.0, -0.1), (0.12, 0.04), (-0.12, 0.04))]
 head_solid = union(head_solid, EAR_L, k=0.05)
 
@@ -526,7 +526,7 @@ def tufts(base, origin, targets, flow, L, r0, lean=0.6, sink=0.05):
         fl = norm(fl) if np.linalg.norm(fl) > 1e-6 else nr
         d = norm(nr * (1 - lean) + fl * lean)
         out.append(horn(p - nr * sink, d, L * rng.uniform(0.88, 1.12), r0, curl=tuple(fl * 0.3 - nr * 0.12), n=4,
-                        r1=0.014))
+                        r1=0.02))
     return out
 
 
@@ -585,7 +585,7 @@ def vein(base, origin, p0, d0, n=6, step=0.06, turn=0.45, r0=0.026):
         pts.append(pts[-1] + d * step)
     q, nr = curve_on(base, origin, pts)
     q = [p + nn * 0.004 for p, nn in zip(q, nr)]
-    return tube([tuple(p) for p in q], [max(r0 * (1 - j / len(q)) ** 0.8, 0.012) for j in range(len(q))])
+    return tube([tuple(p) for p in q], [max(r0 * (1 - j / len(q)) ** 0.8, 0.016) for j in range(len(q))])
 
 
 # vene incandescenti che partono dai graffi del petto
@@ -681,7 +681,7 @@ for j, (di, Lf) in enumerate(((-6, 0.2), (-4, 0.25), (-2, 0.3), (0, 0.35), (2, 0
     p, nn = cord_c[i], cord_n[i]
     d = norm(np.array([0, 0, -1.0]) + nn * 0.5)
     fangs.append(horn(p + nn * 0.012 + np.array([0, 0, -0.02]), d, Lf * 1.25, 0.078 if di == 0 else 0.068,
-                      curl=tuple(nn * 0.3), n=5, r1=0.007, power=1.2))
+                      curl=tuple(nn * 0.3), n=5, r1=0.015, power=1.2))
     cord.append(sphere(0.05, tuple(p + nn * 0.01)))                        # nodo attorno alla radice
     if j < 6:
         beads.append(sphere(0.042, tuple(cord_c[i + 1])))
@@ -712,7 +712,7 @@ def tooth_row(jaw_sdf, path, z_in, down, teeth_spec, back_lean=0.25, out_lean=0.
         p = rim[k] + (rim[k + 1] - rim[k]) * (s - cum[k]) / max(seg[k], 1e-9)
         side = math.copysign(1.0, p[0]) if abs(p[0]) > 0.03 else 0.0
         d = norm([side * out_lean + rng.normal(0, 0.05), back_lean + rng.normal(0, 0.05), down])
-        teeth.append(horn(p - d * 0.05, d, L + 0.05, r, curl=(0, 0.18, 0), n=4, r1=0.005, power=1.2))
+        teeth.append(horn(p - d * 0.05, d, L + 0.05, r, curl=(0, 0.18, 0), n=4, r1=0.011, power=1.2))
         gums.append(ellipsoid((r * 1.5, r * 1.6, r * 0.95), tuple(p + np.array([0, 0, -down * 0.012]))))
     return teeth, gums
 
@@ -735,7 +735,7 @@ for sx in (1, -1):
                        back_lean=0.2)
     teeth_all += [H(JW(t)) for t in t_]
     gums_all += [H(JW(g)) for g in g_]
-m.add("Teeth", fast_union(teeth_all), TOOTH, role="shine", tris=950, voxel=0.0205)
+m.add("Teeth", fast_union(teeth_all), TOOTH, role="shine", tris=950, voxel=0.0215)
 
 # lingua grossa con il solco centrale (stessa parte delle gengive)
 tongue_l = union(ellipsoid((0.15, 0.30, 0.075), (0, -0.36, -0.215)),
@@ -752,7 +752,7 @@ for sx in (1, -1):
     tilt = sx * 16
     eyes.append(H(eye_place(ellipsoid((EA, EB, EC)).rot(0, tilt, 0), sx, (0, 0.035, 0))))
     pupils.append(H(eye_place(ellipsoid((0.02, 0.022, 0.056)).rot(0, tilt * 0.5, 0), sx, (sx * 0.008, -0.016, -0.006))))
-m.add("Maw", maw, MAW, role="eye", tris=480, voxel=0.04)
+m.add("Maw", maw, MAW, role="eye", tris=480, voxel=0.0415)
 m.add("Nose", union(nose, fast_union(pupils)), MAW, role="eye", tris=320, voxel=0.017)
 
 m.add("Rage", fast_union(eyes + scar_glow), RAGE, material="Neon", role="glow", tris=700, voxel=0.0235)
@@ -763,12 +763,12 @@ for b1, dk, F, big in CLAW_ROOTS:
     L = 0.5 if big else 0.42
     d = norm(dk * 0.9 + F * 0.35)
     claws.append(horn(b1 + dk * 0.03, d, L, 0.08 if big else 0.07, curl=tuple(F * 0.75 - dk * 0.3), n=7,
-                      r1=0.007, power=1.15))
+                      r1=0.016, power=1.15))
 for tp in TOES:
     claws.append(horn(tp + np.array([0, -0.06, 0.02]), (0, -1.0, -0.2), 0.22, 0.055, curl=(0, 0, -0.5), n=4,
-                      r1=0.006))
+                      r1=0.015))
 m.add("Claws", fast_union(claws + fangs).intersect(halfspace_z(0.004, above=True)), BONE, role="detail", tris=1500,
-      voxel=0.0295)
+      voxel=0.0315)
 
 # ============================================================ toy horror: punti a croce, imbottitura, toppa
 ear_w = H(ear_r)
@@ -807,7 +807,7 @@ pf = Frame(core, mix(L["hip"], L["knee"], 0.4), (-0.35, -1.0, 0.1), sink=0.0)
 PATCH_ROT = 12.0
 patch_reg = pf.place(box((0.18, 0.3, 0.16), round=0.04).rot(0, PATCH_ROT, 0))
 m.add("Patch", paint(core, patch_reg, out=0.028, inn=0.05), PATCH, material="Fabric", role="detail", tris=240,
-      voxel=0.024)
+      voxel=0.0226)
 corners = [(-0.155, -0.135), (0.155, -0.135), (0.155, 0.135), (-0.155, 0.135)]
 outline = []
 ar = math.radians(PATCH_ROT)

@@ -19,7 +19,7 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from lib.sdf import (SDF, box, capsule, cylinder, ellipsoid, euler, halfspace_z, look_matrix, octahedron,  # noqa: E402
+from lib.sdf import (SDF, box, capsule, cylinder, ellipsoid, euler, halfspace_z, look_matrix,  # noqa: E402
                      rot_matrix, round_cone, smin, sphere, tube, union)
 from lib.toy import Model  # noqa: E402
 
@@ -283,7 +283,7 @@ CHAIN = (126, 118, 112)
 RAGE = (255, 52, 18)
 EYE_RED = (255, 30, 22)
 TONGUE = (178, 50, 62)
-DIRT = (92, 64, 44)
+DIRT = (122, 88, 58)
 
 m = Model("WarBoar", "pet", voxel=0.03 * VX)
 rng = np.random.default_rng(7)
@@ -590,7 +590,7 @@ while s < SP_LEN - 0.02:
 tip = np.array(TAIL_PTS[-1])
 for d in ((0.5, -0.2, 0.6), (-0.5, -0.1, 0.6), (0.1, 0.45, 0.8), (0.0, -0.5, 0.7), (0.3, 0.3, 0.9)):
     bristles.append(horn(tip - np.array([0, 0, 0.04]), d, 0.26, 0.05, n=3, r1=0.01))
-m.add("Mane", fast_union(bristles), BRISTLE, role="detail", tris=1250, voxel=0.036 * VX)
+m.add("Bristles", fast_union(bristles), BRISTLE, role="detail", tris=1250, voxel=0.036 * VX)
 
 # ============================================================ corazza di ferro: spallacci e piastre sulla schiena
 plates, rivets, spikes = [], [], []
@@ -729,20 +729,20 @@ VEINS = [
     ((0.0, -0.75, 1.75), (0.72, -0.62, 1.42), (0.1, -0.3, -1.0)),     # braccio +x
     ((0.0, -0.75, 1.75), (-0.66, -0.86, 1.92), (-0.1, -0.9, -0.4)),   # collo -x
     ((0.0, 0.62, 1.6), (0.62, 0.74, 1.96), (0.2, 0.3, -1.0)),         # coscia +x
-    ((0.0, 0.62, 1.6), (0.56, 0.36, 1.86), (0.2, -0.2, -1.0)),        # fianco +x
+    ((0.0, 0.62, 1.6), (-0.56, 0.36, 1.86), (-0.2, -0.2, -1.0)),      # fianco -x
     ((0.0, 0.62, 1.6), (-0.62, 0.74, 1.96), (-0.2, 0.3, -1.0)),       # coscia -x
 ]
 veins = [vein(core, o, p0, d0) for o, p0, d0 in VEINS]
 m.add("Veins", fast_union(veins), RAGE, material="Neon", role="glow", tris=520, voxel=0.0178 * VX)
 
 # ============================================================ toy horror: toppa cucita sul fianco + cicatrice ricucita
-PC, PN = surf(core, (0.2, 0.30, 1.58), (1.0, 0.34, 1.5))
+PC, PN = surf(core, (0.1, 0.12, 1.74), (1.0, 0.12, 1.72))
 PM = look_matrix(PN)
 PW, PH = 0.25, 0.2
 PATCH_ROT = rot_matrix((0, 1, 0), 12)
-patch_reg = box((PW, 0.4, PH), round=0.05).rotate(PATCH_ROT).rotate(PM).translate(PC)
+patch_reg = box((PW, 0.14, PH), round=0.05).rotate(PATCH_ROT).rotate(PM).translate(PC)
 m.add("Patch", paint(core, patch_reg, out=0.03, inn=0.03), PATCH, material="Fabric", role="detail", tris=300,
-      voxel=0.034 * VX)
+      voxel=0.028 * VX)
 thread = []
 patch_surf = core.offset(0.03)
 border = []
@@ -789,15 +789,15 @@ m.add("Chain", fast_union(iron).intersect(halfspace_z(0.0, above=True)), CHAIN, 
       tris=550, voxel=0.024 * VX)
 
 # solco di terra sollevato dallo zoccolo che raspa: zolle sfaccettate dietro lo zoccolo
-clods = [ellipsoid((0.24, 0.2, 0.08), (0.72, -0.72, 0.0)).rot(0, 0, 20, pivot=(0.72, -0.72, 0.0))]
-for (x, y, z, s) in ((0.72, -0.72, 0.05, 0.13), (0.58, -0.66, 0.0, 0.1), (0.86, -0.68, 0.0, 0.1),
-                     (0.68, -0.56, 0.0, 0.095), (0.82, -0.84, 0.0, 0.08), (0.61, -0.84, 0.0, 0.075),
-                     (0.80, -0.54, 0.0, 0.07), (0.74, -0.44, 0.16, 0.06), (0.67, -0.36, 0.3, 0.045)):
-    rot = rng.uniform(0, 70, 3)
-    c_ = (x, y, z + s * 0.42)
-    clods.append(octahedron(s, c_).rot(*rot, pivot=c_))
+clods = [ellipsoid((0.3, 0.24, 0.07), (0.72, -0.70, 0.0)).rot(0, 0, 20, pivot=(0.72, -0.70, 0.0))]
+for (x, y, z, s) in ((0.72, -0.70, 0.04, 0.085), (0.56, -0.64, 0.0, 0.075), (0.88, -0.66, 0.0, 0.07),
+                     (0.67, -0.52, 0.0, 0.07), (0.83, -0.84, 0.0, 0.06), (0.60, -0.84, 0.0, 0.06),
+                     (0.81, -0.52, 0.0, 0.055), (0.95, -0.78, 0.0, 0.045), (0.50, -0.76, 0.0, 0.045)):
+    rot = (rng.uniform(-25, 25), rng.uniform(-25, 25), rng.uniform(0, 90))
+    c_ = (x, y, z + s * 0.5)
+    clods.append(box((s, s * 0.85, s * 0.6), c_, round=0.012).rot(*rot, pivot=c_))
 m.add("Dirt", fast_union(clods).intersect(halfspace_z(0.0, above=True)), DIRT, role="detail", tris=300,
-      voxel=0.025 * VX, smooth=False)
+      voxel=0.027 * VX, smooth=False)
 
 if __name__ == "__main__":
     only = [s for s in os.environ.get("ONLY", "").split(",") if s]

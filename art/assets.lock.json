@@ -268,6 +268,10 @@
    "asset": 102514670772746,
    "hash": "322e10fb0332904dd7826009c9d1f996dc0bccfa"
   },
+  "BerserkBear": {
+   "asset": 127949439934262,
+   "hash": "1d6397d3b330791379ff06b4e4496dc2907c60dd"
+  },
   "Boulder": {
    "asset": 73922759028700,
    "hash": "9d1d049595ddc765e7ad67a7ef53441f4d1480c0"
@@ -567,6 +571,10 @@
   "RockSpire": {
    "asset": 130151522848403,
    "hash": "c014fa655b12c539647beb34b3c79d7a1e201b20"
+  },
+  "ShadowWolf": {
+   "asset": 115274355160336,
+   "hash": "1fb37ab2221c1772d50c2186f507468793fee358"
   },
   "SnowLeopard": {
    "asset": 105068395096915,
