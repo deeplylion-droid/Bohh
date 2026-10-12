@@ -549,7 +549,7 @@ for sx in (1, -1):
     c_ = b + d0 * LT * tt + cu * LT * tt * tt
     tan = norm(d0 + 2 * cu * tt)
     rr = R0 + (0.016 - R0) * tt ** 1.1
-    tusk_bands.append(chain_link(c_, np.cross(tan, (0, 1, 0)), tan, 0.0, rr + 0.01, 0.028))
+    tusk_bands.append(chain_link(c_, np.cross(tan, (0, 1, 0)), tan, 0.0, rr + 0.012, 0.034))
 TUSK_BANDS = H(union(*tusk_bands))
 m.add("Tusks", H(fast_union(tusks)), BONE, role="detail", tris=700, voxel=0.014 * VX)
 
@@ -617,8 +617,7 @@ for i, (y0, y1) in enumerate(BANDS):
         o = np.array((0.0, (y0 + y1) / 2, 1.9))
         q, nn = surf(torso.offset(lift), o, o + np.array((sx * 0.45, 0, 0.9)))
         d = norm(nn + np.array([0, 0.35, 0.3]))
-        spikes.append(horn(q - d * 0.03, d, 0.3, 0.075, curl=(0, 0.12, 0.0), n=4, r1=0.01))
-        spikes.append(cylinder(tuple(q - nn * 0.02), tuple(q + nn * 0.025), 0.095, round=0.015))
+        spikes.append(horn(q - d * 0.05, d, 0.32, 0.08, curl=(0, 0.12, 0.0), n=4, r1=0.012))
 # spallacci: tre lame sovrapposte a scandole per lato (bordi netti), rivetti sul bordo basso, spuntoni in cima
 ZC = 1.84 + LIFT
 LAMES = [(17.0, 47.0, 0.115), (43.0, 70.0, 0.09), (66.0, 93.0, 0.065)]
@@ -650,8 +649,7 @@ for sx in (1, -1):
         o = np.array((0.0, y, ZC))
         q, nn = surf(torso.offset(0.115), o, o + np.array((sx * math.sin(th), 0.0, math.cos(th))))
         d = norm(nn + np.array([0, 0.3, 0.45]))
-        spikes.append(horn(q - d * 0.04, d, L, 0.09, curl=(0, 0.16, 0.05), n=5, r1=0.012))
-        spikes.append(cylinder(tuple(q - nn * 0.02), tuple(q + nn * 0.03), 0.115, round=0.015))
+        spikes.append(horn(q - d * 0.06, d, L + 0.02, 0.095, curl=(0, 0.16, 0.05), n=5, r1=0.014))
 # viti a vista con il taglio a croce (toy): una per lato sulla schiena
 for sx, y in ((1, 0.62), (-1, 0.2)):
     o = np.array((0.0, y, 1.8))
@@ -663,9 +661,8 @@ for sx, y in ((1, 0.62), (-1, 0.2)):
                 capsule(tuple(q + nn * 0.055 + t2 * 0.06), tuple(q + nn * 0.055 - t2 * 0.06), 0.015))
     spikes.append(head_s.subtract(cut, k=0.005))
 m.add("Armor", fast_union(plates), IRON, material="Metal", role="detail", tris=2000, voxel=0.022 * VX)
-m.add("Rivets", fast_union(rivets), STEEL, material="Metal", role="detail", tris=650, voxel=0.016 * VX)
-m.add("Spikes", fast_union(spikes + [TUSK_BANDS]), STEEL, material="Metal", role="detail", tris=750,
-      voxel=0.014 * VX)
+m.add("Rivets", fast_union(rivets + [TUSK_BANDS]), STEEL, material="Metal", role="detail", tris=750, voxel=0.016 * VX)
+m.add("Spikes", fast_union(spikes), STEEL, material="Metal", role="detail", tris=650, voxel=0.014 * VX)
 
 # ============================================================ zoccoli fessi
 hooves = []
@@ -755,22 +752,22 @@ for i in range(28):
     sq = max(abs(math.cos(tt)), abs(math.sin(tt)))
     x, z = x / sq ** 0.75, z / sq ** 0.75
     border.append(on_surface(patch_surf, PM @ (PATCH_ROT @ np.array([x, 0.0, z])) + PC, 0.0, 4))
-border = resample(border + [border[0]], 0.11)
+border = resample(border + [border[0]], 0.135)
 for i in range(len(border) - 1):
-    thread += x_stitch(patch_surf, border[i], border[i + 1] - border[i - 1], size=0.085, r=0.016, lift=-0.008)
+    thread += x_stitch(patch_surf, border[i], border[i + 1] - border[i - 1], size=0.095, r=0.022, lift=-0.01)
 # cicatrice ricucita sopra l'occhio destro (-x): taglia l'arcata dall'alto in basso
 scar = [hp((-0.30 + 0.02 * t, -0.42 - 0.3 * t, 0.62 - 0.5 * t)) for t in np.linspace(0, 1, 7)]
 scar = [on_surface(core, p, 0.0, 6) for p in scar]
-thread += [tube([tuple(p) for p in scar], 0.013)]
-cs = resample(scar, 0.075)
+thread += [tube([tuple(p) for p in scar], 0.017)]
+cs = resample(scar, 0.09)
 for i in range(1, len(cs) - 1):
-    thread += x_stitch(core, cs[i], cs[i + 1] - cs[i - 1], size=0.08, r=0.015, lift=-0.004)
+    thread += x_stitch(core, cs[i], cs[i + 1] - cs[i - 1], size=0.09, r=0.02, lift=-0.006)
 # cucitura lunga sulla coscia (+x): la pelle e' stata ricucita dopo una battaglia
 seam = [on_surface(core, np.array((0.9, 0.5 + 0.28 * t, 1.62 - 0.62 * t)), 0.0, 6) for t in np.linspace(0, 1, 7)]
-thread += [tube([tuple(p) for p in seam], 0.013)]
-ss = resample(seam, 0.085)
+thread += [tube([tuple(p) for p in seam], 0.017)]
+ss = resample(seam, 0.1)
 for i in range(1, len(ss) - 1):
-    thread += x_stitch(core, ss[i], ss[i + 1] - ss[i - 1], size=0.085, r=0.016, lift=-0.004)
+    thread += x_stitch(core, ss[i], ss[i + 1] - ss[i - 1], size=0.095, r=0.021, lift=-0.006)
 m.add("Thread", fast_union(thread), THREAD, role="detail", tris=700, voxel=0.011 * VX)
 
 # ============================================================ cavigliera con la catena spezzata (zampa post. sx)
@@ -780,18 +777,14 @@ cc = LHL[2] * 0.45 + LHL[3] * 0.55
 cuff = cylinder(tuple(cc - ax * 0.07), tuple(cc + ax * 0.07), 0.225, round=0.022)
 cuff = cuff.subtract(cylinder(tuple(cc - ax * 0.3), tuple(cc + ax * 0.3), 0.16))
 iron = [cuff]
-ring_side = np.array([1.0, 0, 0])
-for a in np.linspace(0, 2 * math.pi, 9)[:-1]:
-    dvec = ring_side * math.cos(a) + np.cross(ax, ring_side) * math.sin(a)
-    iron.append(sphere(0.026, tuple(cc + norm(dvec) * 0.23)))
 hook = cc + np.array([0.2, 0.08, -0.04])
 links = [(hook + np.array([0.0, 0.02, -0.06]), (0, 0.2, 1), (0, 1, 0)),
          (hook + np.array([0.02, 0.08, -0.18]), (0.1, 0.4, 1), (1, 0, 0)),
          (hook + np.array([0.03, 0.17, -0.28]), (0.1, 1, 0.3), (0, 0.3, -1))]
 for c_, a_, n_ in links:
-    iron.append(chain_link(c_, a_, n_, 0.045, 0.058, 0.023))
+    iron.append(chain_link(c_, a_, n_, 0.045, 0.06, 0.031))
 lc = np.array([hook[0] + 0.05, hook[1] + 0.36, 0.05])
-broken = chain_link(lc, (0.2, 1, 0), (0, 0, 1), 0.045, 0.058, 0.023)
+broken = chain_link(lc, (0.2, 1, 0), (0, 0, 1), 0.045, 0.06, 0.031)
 iron.append(broken.subtract(sphere(0.05, tuple(lc + norm((0.2, 1, 0)) * 0.1))))
 m.add("Chain", fast_union(iron).intersect(halfspace_z(0.0, above=True)), CHAIN, material="Metal", role="detail",
       tris=550, voxel=0.012 * VX)

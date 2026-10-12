@@ -300,6 +300,10 @@
    "asset": 133549091213665,
    "hash": "7dfcd73ec0e6c1f62d8698d9592de3a1f1397589"
   },
+  "CrystalGolem": {
+   "asset": 103801646122300,
+   "hash": "b0de0db5ae7158fd53f1aab99cfdb683bd85e2c8"
+  },
   "CrystalMother": {
    "asset": 131071898605393,
    "hash": "08ea16a9c8ca35ea5336a2a58d7fa90198a52529"
@@ -343,6 +347,10 @@
   "EggMythic": {
    "asset": 87824274908355,
    "hash": "42228ffbeba0252da3a2087a379ca5e1b10cce38"
+  },
+  "EggPrimal": {
+   "asset": 125669894734941,
+   "hash": "0500146c5277b238c71c3beeeb535d3da5678731"
   },
   "EggRare": {
    "asset": 107235932397354,
@@ -392,6 +400,10 @@
    "asset": 109311377448450,
    "hash": "3f9604fee70fc546849d1034eb9ac219bd2b5d89"
   },
+  "FrostWyvern": {
+   "asset": 133111499106423,
+   "hash": "026202b50f76c3b71997c41f67ebc5d19fe207eb"
+  },
   "GallinaGalattica": {
    "asset": 135310737444730,
    "hash": "b7c6a1e34644d407761162ae7a33e3cbed79476f"
@@ -427,6 +439,14 @@
   "InfernoKomodo": {
    "asset": 120884698561421,
    "hash": "e994b1ab5c3ac3472a42d81012878d1db7efb4ee"
+  },
+  "IronScorpion": {
+   "asset": 117368103807583,
+   "hash": "5d60b767154b66a6753b8ea94b1b9fc5eaba0ee0"
+  },
+  "KingCobra": {
+   "asset": 139355844382157,
+   "hash": "8338e928987df226d36790952993c1a2b19c3ec6"
   },
   "Lamb": {
    "asset": 110152343940847,

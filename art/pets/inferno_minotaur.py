@@ -256,7 +256,7 @@ def tuft(L, r0, curl=0.25):
 
 
 # ============================================================ colori
-HIDE = (112, 38, 28)        # pelle rosso-bruna
+HIDE = (104, 34, 26)        # pelle rosso-bruna
 FUR = (44, 24, 22)          # pelo nero-bruno
 IVORY = (238, 226, 196)     # corna e denti
 FIRE = (255, 126, 22)       # corna in fiamme (Neon)
@@ -345,7 +345,7 @@ tail = tube(TAIL_PTS, taper(11, 0.075, 0.04))
 # ============================================================ testa di toro (spazio locale: muso verso -Y)
 HEAD_T = np.array([0.0, -0.32, 2.78], dtype=np.float32)
 HS = 1.18                       # scala della testa
-R_HEAD = euler(6.0, 0.0, 0.0)   # muso appena abbassato
+R_HEAD = euler(6.0, -4.0, 7.0)  # muso appena abbassato, testa girata e inclinata verso chi guarda
 JAW_Z = -0.14
 HINGE = (0.0, 0.0, JAW_Z)
 GAPE = 26.0
@@ -638,7 +638,7 @@ button = cylinder(tuple(BTN_C + (0, 0.025, 0)), tuple(BTN_C + (0, -0.025, 0)), 0
 button = union(button, torus(0.13, 0.022).rot(90, 0, 0).translate(tuple(BTN_C + (0, -0.03, 0))), k=0.01)
 HOLES = [BTN_C + np.array([dx, 0, dz]) for dx in (-0.045, 0.045) for dz in (-0.045, 0.045)]
 button = button.subtract(union(*[cylinder(tuple(h + (0, 0.1, 0)), tuple(h + (0, -0.1, 0)), 0.022) for h in HOLES]))
-m.add("Button", button, BUTTON, role="detail", tris=260, voxel=0.018)
+m.add("Button", button, BUTTON, role="detail", tris=300, voxel=0.0165)
 
 
 def flap(y0, sgn, top, bot, half_w, seed):
@@ -739,7 +739,7 @@ def patch_region(p):
 
 
 patch = paint(core, SDF(patch_region, PF_O - 0.35, PF_O + 0.35), out=0.022, inn=0.03)
-m.add("Patch", patch, PATCH, material="Fabric", role="detail", tris=240, voxel=0.034)
+m.add("Patch", patch, PATCH, material="Fabric", role="detail", tris=300, voxel=0.031)
 stitches = []
 corners = [(-0.2, -0.19), (0.2, -0.19), (0.2, 0.19), (-0.2, 0.19)]
 for i in range(4):

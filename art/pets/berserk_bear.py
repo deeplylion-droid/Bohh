@@ -307,19 +307,6 @@ def slash(base, origin, a, b, n=9, w=0.04):
     return groove, fill
 
 
-def cross_stitch(sdf, c, along, size, r, sink=0.3):
-    """Punto a croce (X) appoggiato sulla superficie in c: 'along' e' la direzione della cucitura."""
-    nrm = grad(sdf, c)
-    t = norm(np.asarray(along, float) - nrm * float(np.dot(along, nrm)))
-    s = np.cross(nrm, t)
-    out = []
-    for a, b in ((t + s, -t - s), (t - s, -t + s)):
-        pa = on_surface(sdf, c + a * size * 0.5, -r * sink, 3)
-        pb = on_surface(sdf, c + b * size * 0.5, -r * sink, 3)
-        out.append(capsule(tuple(pa), tuple(pb), r))
-    return out
-
-
 # ============================================================ colori
 FUR = (96, 56, 34)          # pelo marrone scuro
 SHAGGY = (68, 39, 26)       # pelo irto piu' scuro (collo, gobba, gomiti, guance, testa)

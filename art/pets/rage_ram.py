@@ -543,8 +543,8 @@ for v, nv in zip(verts, nrms):
     r = rng.uniform(0.19, 0.25)
     c = v - nv * r * 0.38
     puffs.append(sphere(r, tuple(c)))
-    if nv[2] > -0.2 and rng.random() < 0.8:
-        caps.append(sphere(r * 0.56, tuple(c + norm(UP * 1.5 + nv) * r * 0.74)))
+    if nv[2] > -0.2 and rng.random() < 0.55:
+        caps.append(sphere(r * 0.6, tuple(c + norm(UP * 1.5 + nv) * r * 0.72)))
 # nuvoletta sulla nuca, fra le corna, e codino
 for p in ((0.0, -0.05, 0.16), (0.1, 0.08, 0.1), (-0.1, 0.08, 0.1), (0.0, 0.16, 0.0)):
     q = hp(p)
@@ -554,20 +554,20 @@ for p, r in (((0, 0.82, 1.08), 0.16), ((0.06, 0.92, 0.96), 0.13), ((-0.05, 0.9, 
     puffs.append(sphere(r, p))
 wool = fast_union(puffs, k=0.045, base=wool_core)
 wool = shrink(wool.intersect(halfspace_z(0.0, above=True)))
-m.add("Wool", wool, WOOL, material="Fabric", tris=4100, voxel=0.03 * VX)
-m.add("WoolTufts", paint(wool, fast_union(caps), out=0.02, inn=0.05), WOOL_LIGHT, material="Fabric", role="detail",
-      tris=1300, voxel=0.022 * VX)
+m.add("Wool", wool, WOOL, material="Fabric", tris=3400, voxel=0.042 * VX)
+m.add("WoolTufts", paint(wool, fast_union(caps), out=0.02, inn=0.09), WOOL_LIGHT, material="Fabric", role="detail",
+      tris=1300, voxel=0.045 * VX)
 
 # ============================================================ pelle: testa, orecchie, zampe
-hide = union(H(union(head_solid, *EARS, k=0.03)), *hide_legs)
-m.add("Hide", hide, HIDE, role="detail", tris=2400, voxel=0.024 * VX)
+m.add("Face", H(union(head_solid, *EARS, k=0.03)), HIDE, role="detail", tris=2100, voxel=0.036 * VX)
+m.add("Legs", union(*hide_legs), HIDE, role="detail", tris=1300, voxel=0.046 * VX)
 
 # ============================================================ corna e lava
-m.add("Horns", m_horns, OBSIDIAN, role="detail", tris=2700, voxel=0.02 * VX, reflectance=0.12)
-m.add("Flames", m_lava, LAVA, material="Neon", role="glow", tris=900, voxel=0.02 * VX)
+m.add("Horns", m_horns, OBSIDIAN, role="detail", tris=2700, voxel=0.033 * VX, reflectance=0.12)
+m.add("Flames", m_lava, LAVA, material="Neon", role="glow", tris=800, voxel=0.05 * VX)
 
 # ============================================================ bocca, denti, lingua
-m.add("Mouth", H(maw_l), MAW, role="eye", tris=280, voxel=0.016 * VX)
+m.add("Mouth", H(maw_l), MAW, role="eye", tris=250, voxel=0.048 * VX)
 teeth = []
 UP_T = [(-0.74, 0.16), (-0.66, 0.09), (-0.59, 0.11), (-0.52, 0.08), (-0.45, 0.08), (-0.38, 0.06)]
 LO_T = [(-0.71, 0.14), (-0.63, 0.08), (-0.56, 0.09), (-0.49, 0.07), (-0.42, 0.06)]
@@ -582,18 +582,18 @@ for sx in (1, -1):
         e, _ = surf(lower_closed, (0.0, y, z - 0.03), (sx, y, z - 0.03))
         b = np.array([e[0] - sx * 0.025, y, z - 0.035])
         teeth.append(JW(horn(b, (sx * 0.08, 0.1, 1.0), L + 0.035, 0.024 + 0.12 * L, n=4, r1=0.004, power=1.2)))
-m.add("Teeth", H(fast_union(teeth)), BONE, role="shine", tris=520, voxel=0.011 * VX)
+m.add("Teeth", H(fast_union(teeth)), BONE, role="shine", tris=650, voxel=0.027 * VX)
 tongue = ellipsoid((0.11, 0.22, 0.05), (0, -0.52, -0.37)).subtract(capsule((0, -0.34, -0.32), (0, -0.72, -0.32), 0.015),
                                                                      k=0.015)
-m.add("Tongue", H(JW(tongue)), TONGUE, role="detail", tris=160, voxel=0.014 * VX)
+m.add("Tongue", H(JW(tongue)), TONGUE, role="detail", tris=150, voxel=0.032 * VX)
 
 # ============================================================ occhi
 eyes, pupils = [], []
 for sx in (1, -1):
     eyes.append(eye_place(ellipsoid((EA, EB, EC)), sx, (0, EYE_SINK, 0)))
     pupils.append(eye_place(ellipsoid((0.068, 0.02, 0.017)), sx, (sx * 0.006, EYE_SINK - EB + 0.008, -0.004)))
-m.add("EyeGlow", H(union(*eyes)), EYE_GLOW, material="Neon", role="glow", tris=260, voxel=0.01 * VX)
-m.add("Pupils", H(union(*pupils)), PUPIL, role="eye", tris=160, voxel=0.007 * VX)
+m.add("EyeGlow", H(union(*eyes)), EYE_GLOW, material="Neon", role="glow", tris=260, voxel=0.024 * VX)
+m.add("Pupils", H(union(*pupils)), PUPIL, role="eye", tris=160, voxel=0.0114 * VX)
 
 # ============================================================ zoccoli pesanti cerchiati di ferro (con le viti)
 hooves, iron = [], []
@@ -606,14 +606,14 @@ for key, L in LEGS.items():
     pts = [np.array(p) for p in L["pts"]]
     axl = norm(pts[-2] - pts[-1])
     band_c = c + axl * 0.1
-    iron.append(cylinder(tuple(band_c - axl * 0.04), tuple(band_c + axl * 0.04), 0.19, round=0.014))
     s1 = norm(np.cross(axl, (0, 1, 0)) if abs(axl[1]) < 0.9 else np.cross(axl, (1, 0, 0)))
     s2 = np.cross(axl, s1)
-    for a in np.linspace(0, 2 * math.pi, 6, endpoint=False):
+    iron.append(chain_link(band_c, s1, axl, 0.0, 0.165, 0.045))   # cerchio di ferro sopra lo zoccolo
+    for a in np.linspace(0, 2 * math.pi, 4, endpoint=False) + 0.4:
         rd = s1 * math.cos(a) + s2 * math.sin(a)
-        iron.append(sphere(0.03, tuple(band_c + rd * 0.19)))
-m.add("Hooves", fast_union(hooves).intersect(halfspace_z(0.0, above=True)), HOOF, role="detail", tris=700,
-      voxel=0.014 * VX)
+        iron.append(sphere(0.048, tuple(band_c + rd * 0.2)))
+m.add("Hooves", fast_union(hooves).intersect(halfspace_z(0.0, above=True)), HOOF, role="detail", tris=650,
+      voxel=0.031 * VX)
 
 # chiave di carica arrugginita piantata nella schiena (toy horror)
 kd = norm(KEY_N + np.array([0, 0.15, 0.25]))
@@ -626,8 +626,8 @@ for sgn in (1, -1):
     ctr = k1 + kd * 0.06 + kx * sgn * 0.13
     key.append(chain_link(ctr, kx, np.cross(kd, kx), 0.0, 0.1, 0.035))
 key.append(sphere(0.06, tuple(k1 + kd * 0.06)))
-m.add("Key", fast_union(key), RUST, material="Metal", role="detail", tris=500, voxel=0.013 * VX)
-m.add("Iron", fast_union(iron), IRON, material="Metal", role="detail", tris=450, voxel=0.012 * VX)
+m.add("Key", fast_union(key), RUST, material="Metal", role="detail", tris=450, voxel=0.0195 * VX)
+m.add("Iron", fast_union(iron), IRON, material="Metal", role="detail", tris=450, voxel=0.0345 * VX)
 
 # ============================================================ bottone cucito sul petto + sopracciglia ricucite
 BM = look_matrix(BTN_N)
@@ -636,12 +636,12 @@ btn = cylinder((0, 0.02, 0), (0, -0.06, 0), BR, round=0.025)
 rim = chain_link((0, -0.065, 0), (0, 0, 1), (0, 1, 0), 0.0, BR - 0.035, 0.022)
 holes = union(*[cylinder((hx, 0.1, hz), (hx, -0.2, hz), 0.03) for hx in (-0.062, 0.062) for hz in (-0.062, 0.062)])
 button = union(btn, rim).subtract(holes, k=0.006).rot(0, 18, 0)
-m.add("Button", button.rotate(BM).translate(BTN_C), BUTTON, role="detail", tris=420, voxel=0.012 * VX)
+m.add("Button", button.rotate(BM).translate(BTN_C), BUTTON, role="detail", tris=400, voxel=0.025 * VX)
 thread = []
 for a, b in (((-0.062, -0.062), (0.062, 0.062)), ((-0.062, 0.062), (0.062, -0.062))):
     pa = np.array([a[0], -0.07, a[1]])
     pb = np.array([b[0], -0.07, b[1]])
-    th = capsule(tuple(pa), tuple(pb), 0.022).rot(0, 18, 0)
+    th = capsule(tuple(pa), tuple(pb), 0.026).rot(0, 18, 0)
     thread.append(th.rotate(BM).translate(BTN_C))
 # sopracciglia ricucite: tre punti a X inclinati sopra ogni occhio
 brow_shapes = []
@@ -651,9 +651,9 @@ for sx in (1, -1):
         p = np.array((sx * (0.11 + 0.19 * t_), -0.49 + 0.13 * t_, 0.11 + 0.1 * t_))
         q = on_surface(head_solid, p, 0.0, 6)
         tdir = np.array((sx * 0.17, 0.12, 0.09))
-        brow_shapes += x_stitch(head_solid, q, tdir, size=0.09, r=0.017, lift=-0.004)
+        brow_shapes += x_stitch(head_solid, q, tdir, size=0.095, r=0.02, lift=-0.005)
 thread += [H(s) for s in brow_shapes]
-m.add("Thread", fast_union(thread), THREAD, role="detail", tris=420, voxel=0.01 * VX)
+m.add("Thread", fast_union(thread), THREAD, role="detail", tris=650, voxel=0.0168 * VX)
 
 if __name__ == "__main__":
     only = [s for s in os.environ.get("ONLY", "").split(",") if s]

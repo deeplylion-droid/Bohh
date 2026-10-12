@@ -258,35 +258,6 @@ def poly_at(P, s):
     return pts[i] + seg[i] * t, seg[i] / ln[i]
 
 
-def wrap_curves(base, P, s, a0, a1, side, up=(0, 0, 1), lean=0.0, wob=0.0, n=14, phase=0.0):
-    """Curva sulla superficie che gira attorno all'asse P alla stazione s: angoli da a0 ad a1 (gradi,
-    0 = direzione 'up', positivi verso il lato 'side' = +1/-1); lean la fa scivolare lungo l'asse."""
-    c, t = poly_at(P, s)
-    u = norm(np.asarray(up, float) - t * float(np.dot(up, t)))
-    v = np.cross(t, u)
-    dirs = []
-    for j, a in enumerate(np.linspace(a0, a1, n)):
-        f = j / (n - 1)
-        ar = math.radians(a)
-        dirs.append(u * math.cos(ar) + side * v * math.sin(ar) + t * (lean * f + wob * math.sin(f * 5.0 + phase)))
-    pts, _ = project_many(base, [c], dirs)
-    return pts
-
-
-def stripe_tube(pts, w, both=False):
-    """Striscia: tubo che si assottiglia fino a una punta (o a entrambe le estremita')."""
-    n = len(pts)
-    radii = []
-    for j in range(n):
-        f = j / (n - 1)
-        if both:
-            r = math.sin(math.pi * min(max(f, 0.0), 1.0)) ** 0.6
-        else:
-            r = (0.6 + 0.4 * math.sin(math.pi * min(f * 1.6, 1.0) / 2)) * (1.0 - f ** 2.4)
-        radii.append(max(w * r, 0.008))
-    return tube([tuple(p) for p in pts], radii)
-
-
 def curve_on(base, origin, targets):
     """Punti della superficie lungo i raggi da origin (interno) verso i punti 'targets'."""
     o = np.asarray(origin, float)
@@ -305,21 +276,6 @@ def slash(base, origin, a, b, n=9, w=0.04):
     groove = tube([tuple(p) for p in pts], [max(w * f, 0.008) for f in prof])
     fill = tube([tuple(p - q * w * 0.45) for p, q in zip(pts, nr)], [max(w * 0.62 * f, 0.007) for f in prof])
     return groove, fill
-
-
-def cross_stitch(sdf, c, along, size, r, sink=0.3):
-    """Punto a croce (X) appoggiato sulla superficie in c: 'along' e' la direzione della cucitura."""
-    nrm = grad(sdf, c)
-    t = norm(np.asarray(along, float) - nrm * float(np.dot(along, nrm)))
-    s = np.cross(nrm, t)
-    out = []
-    for a, b in ((t + s, -t - s), (t - s, -t + s)):
-        pa = on_surface(sdf, c + a * size * 0.5, -r * sink, 3)
-        pb = on_surface(sdf, c + b * size * 0.5, -r * sink, 3)
-        out.append(capsule(tuple(pa), tuple(pb), r))
-    return out
-
-
 
 
 def chain_link(c, axis, normal, half_len, R, r):
@@ -590,8 +546,8 @@ for sx in (1, -1):
     tg = [mix(L["hip"], L["knee"], 0.5) + np.array([sx * 0.2, 0.5, -0.1]), L["hip"] + np.array([sx * 0.2, 0.5, -0.1])]
     fur += tufts(core0, mix(L["hip"], L["knee"], 0.4), tg, (0, 0.6, -1.0), 0.22, 0.08, lean=0.7)
 # pelo ritto lungo la schiena, dalla criniera di fumo alla coda
-for y in (0.08, 0.3, 0.52, 0.74):
-    tg = [np.array((x, y + 0.2, 2.4)) for x in ((0.0,) if y in (0.3, 0.74) else (-0.12, 0.12))]
+for y, xs in ((0.08, (-0.12, 0.12)), (0.3, (0.0,)), (0.86, (0.0,))):
+    tg = [np.array((x, y + 0.2, 2.4)) for x in xs]
     fur += tufts(core0, (0.0, y, 1.3), tg, (0, 1.0, 0.25), 0.24, 0.085, lean=0.55)
 m_fur = fast_union(fur).subtract(core0.offset(-0.035))
 
@@ -628,8 +584,8 @@ under_head = union(ellipsoid((0.2, 0.42, 0.13), (0, -0.62, -0.10)),             
                    k=0.04).subtract(cavity.offset(0.045))
 underfur = union(paint(core, H(under_head), out=0.016, inn=0.075),
                  paint(core, H(union(*EAR_CUPS).offset(0.03)), out=0.014, inn=0.04))
-m.add("Underfur", underfur, UNDER, role="detail", tris=600, voxel=0.0373)
-m.add("Ruff", m_fur.intersect(halfspace_z(0.004, above=True)), RUFF, role="detail", tris=740, voxel=0.0307)
+m.add("Underfur", underfur, UNDER, role="detail", tris=600, voxel=0.0385)
+m.add("Ruff", m_fur.intersect(halfspace_z(0.004, above=True)), RUFF, role="detail", tris=740, voxel=0.0289)
 
 # ============================================================ criniera di fumo viola (parte Neon "Shadow")
 NAPE_IN = np.array([0.0, -0.5, 1.52])           # dentro il collo, subito dietro il collare
@@ -657,8 +613,8 @@ for s in (0.1, 0.45, 0.8):
         smoke.append(wisp(p - nr * 0.05, norm(nr * 0.8 + np.array([0.0, 0.25, 0.9])), 0.5 * rng.uniform(0.9, 1.1), 0.11,
                           np.array([sx * 0.45, 0.3, -0.1]), wiggle=0.14, phase=rng.uniform(0, 3)))
 # la criniera continua lungo la schiena, sempre piu' bassa, fino alla chiave
-for j, y in enumerate((0.1, 0.24)):
-    for a in ((-30, 30) if j == 0 else (0,)):
+for j, y in enumerate((0.1,)):
+    for a in (-30, 30):
         c = np.array([0.0, y, 1.4])
         ar = math.radians(a)
         p, nr = surf(core0, c, c + np.array([math.sin(ar), 0.0, math.cos(ar)]))
@@ -680,7 +636,7 @@ for i, s in enumerate(np.linspace(0.0, 1.0, 6)):
         p, nr = surf(core0, c, c + np.array([math.sin(ar), 0.1, math.cos(ar)]))
         smoke.append(sphere(rng.uniform(0.11, 0.16), tuple(p + nr * 0.02)))
 shadow = fast_union(smoke, k=0.04).subtract(core0.offset(-0.04))
-m.add("Shadow", shadow, SMOKE, material="Neon", role="glow", tris=2180, voxel=0.0407)
+m.add("Shadow", shadow, SMOKE, material="Neon", role="glow", tris=2180, voxel=0.0449)
 
 # punta della coda che si sfalda in fumo
 TT = np.array(TAIL_PTS[-1])
@@ -696,7 +652,7 @@ for k_ in range(5):
                            0.38 * rng.uniform(0.85, 1.15), 0.085, off * 0.3 + np.array([0, -0.1, 0.25]),
                            wiggle=0.12, phase=rng.uniform(0, 3)))
 m.add("TailSmoke", fast_union(tail_smoke).subtract(tail_core.offset(-0.03)), SMOKE, material="Neon", role="glow",
-      tris=400, voxel=0.0286, group="Tail", pivot=TAIL_PIVOT)
+      tris=400, voxel=0.0298, group="Tail", pivot=TAIL_PIVOT)
 
 # ============================================================ occhi, bocca, naso, pupille
 eyes, pupils = [], []
@@ -771,7 +727,7 @@ for tp, sc in TOES:
     claws.append(horn(tp + np.array([0, -0.045, 0.02]), (0, -1.0, -0.3), 0.17 * sc + 0.03, 0.04 * sc + 0.006,
                       curl=(0, 0, -0.55), n=5, r1=0.005))
 m.add("Claws", fast_union(claws).intersect(halfspace_z(0.004, above=True)), BONE, role="detail", tris=720,
-      voxel=0.0173)
+      voxel=0.0186)
 
 # ============================================================ collare di cuoio rosso con borchie e catena spezzata
 C0 = np.array([0.0, -0.62, 1.52])                 # centro del collo sotto il collare
@@ -819,21 +775,21 @@ for i in range(3):
     pos = c - axis * 0.05 + axis * 0.04
 iron += links
 
-m.add("Iron", fast_union(iron), IRON, material="Metal", role="detail", tris=920, voxel=0.0146)
+m.add("Iron", fast_union(iron), IRON, material="Metal", role="detail", tris=920, voxel=0.0151)
 
 # chiave di carica da giocattolo d'ottone piantata nella schiena
-kb, kn = surf(core0, (0.0, 0.44, 1.25), (0.0, 0.52, 2.5))
-kd = norm(kn + np.array([0.0, 0.45, 0.0]))
+kb, kn = surf(core0, (0.0, 0.56, 1.3), (0.0, 0.6, 2.5))
+kd = norm(kn + np.array([0.0, 0.3, 0.0]))
 KS = np.array([1.0, 0.0, 0.0])
-key = [cylinder(kb - kd * 0.02, kb + kd * 0.04, 0.1, round=0.015),                        # rondella
-       capsule(kb - kd * 0.06, kb + kd * 0.34, 0.048)]                                       # perno
-top = kb + kd * 0.38
-key.append(sphere(0.075, tuple(top)))
+key = [cylinder(kb - kd * 0.02, kb + kd * 0.045, 0.11, round=0.016),                       # rondella
+       capsule(kb - kd * 0.06, kb + kd * 0.4, 0.052)]                                        # perno
+top = kb + kd * 0.44
+key.append(sphere(0.08, tuple(top)))
 for sgn in (1, -1):
-    lc = top + KS * sgn * 0.17 + kd * 0.07
-    lobe = ell(lc, (0.16, 0.045, 0.13), axis=kd, side=KS).subtract(ell(lc, (0.085, 0.2, 0.065), axis=kd, side=KS))
+    lc = top + KS * sgn * 0.19 + kd * 0.08
+    lobe = ell(lc, (0.18, 0.05, 0.15), axis=kd, side=KS).subtract(ell(lc, (0.095, 0.2, 0.075), axis=kd, side=KS))
     key.append(lobe)
-m.add("WindUpKey", fast_union(key), BRASS, material="Metal", role="detail", tris=500, voxel=0.0201)
+m.add("WindUpKey", fast_union(key), BRASS, material="Metal", role="detail", tris=500, voxel=0.0221)
 
 # ============================================================ punti incrociati sulla cucitura del fianco
 stitches = []

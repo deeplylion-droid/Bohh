@@ -355,7 +355,7 @@ THROAT = (0, -0.5, -0.86)
 
 HEADS = [
     # centrale: la capobranco con le corna, ringhia a muso basso verso chi guarda
-    dict(T=(0.0, -1.0, 2.14), s=1.2, yaw=0, pitch=9, roll=0, open=34, horns=True, eye_dir=(0.5, -0.86), scar=True, slant=16, lid=(0.022, 0.42),
+    dict(T=(0.0, -1.0, 2.14), s=1.2, yaw=4, pitch=9, roll=-6, open=34, horns=True, eye_dir=(0.5, -0.86), scar=True, slant=16, lid=(0.022, 0.42),
          tongue=True, P0=(0, -0.56, 1.66), d0=(0, -0.6, 0.55), L0=0.3, L1=0.28, r0=0.34),
     # sinistra (+X): ulula verso il cielo con la gola piena di fuoco; dal suo collare pende la catena
     dict(T=(1.06, -0.82, 2.46), s=0.97, yaw=36, pitch=-16, roll=-12, open=40, slant=12, lid=(0.024, 0.35),
@@ -626,7 +626,7 @@ for j in range(1, len(seam_pts) - 1):
         b = on_surface(core, c + sd * 0.085 + tn * 0.05 * sg, 0.006, 3)
         stitches.append(capsule(tuple(a), tuple(b), 0.02))
 
-m.add("Body", core, BLACK, tris=3300, voxel=0.048 * VX)
+m.add("Body", core, BLACK, tris=3150, voxel=0.0495 * VX)
 m.add("Heads", fast_union([union(nk["end"], hk["skin"], k=0.07 * h["s"]) for nk, hk, h in zip(necks, heads, HEADS)]),
       BLACK, role="skin", tris=3450, voxel=0.032 * VX)
 print("[cerberus] teste pronte", flush=True)
@@ -656,7 +656,7 @@ for y, z, L in ((-0.42, 2.12, 0.56), (-0.16, 2.08, 0.5), (0.08, 1.98, 0.4)):
             p + np.array([sx * 0.22, 0, 0]) - nrm * 0.06))
 # punta della coda che brucia: tre lingue aperte a ventaglio
 t_end = norm(TAIL_DENSE[-1] - TAIL_DENSE[-6])
-for tilt, L, back in ((0.0, 0.4, 0.5), (0.9, 0.3, 0.2), (-0.9, 0.3, 0.2)):
+for tilt, L, back in ((0.0, 0.5, 0.5), (0.9, 0.36, 0.2), (-0.9, 0.36, 0.2)):
     up = norm(np.array([tilt, 0.0, 1.0]) + np.array([0, -back, 0]))
     fires.append(flame(L, 0.085, bend=0.5, wig=0.05, flat=0.7).rotate(frame(up, (0, 1, 0))).translate(
         TAIL_DENSE[-1] - t_end * 0.06))
@@ -666,11 +666,11 @@ m.add("LavaCracks", fast_union(crack_tubes + [x for hk in heads for x in hk["sca
 # ============================================================ facce
 m.add("EyeGlow", fast_union([g for hk in heads for g in hk["glow"]]), EYE_GLOW, material="Neon", role="glow", tris=300,
       voxel=0.023 * VX)
-m.add("Pupils", fast_union([p for hk in heads for p in hk["pupils"]]), PUPIL, role="eye", tris=200, voxel=0.0195 * VX)
+m.add("Pupils", fast_union([p for hk in heads for p in hk["pupils"]]), PUPIL, role="eye", tris=300, voxel=0.016 * VX)
 m.add("Mouths", fast_union([d for hk in heads for d in hk["dark"]]), MOUTH, role="eye", tris=600, voxel=0.035 * VX)
 m.add("Teeth", fast_union([t for hk in heads for t in hk["teeth"]]), TOOTH, role="shine", tris=1200, voxel=0.0228 * VX)
-m.add("Tongues", union(*[hk["tongue"] for hk in heads if hk["tongue"] is not None]), TONGUE, role="detail", tris=200,
-      voxel=0.028 * VX)
+m.add("Tongues", union(*[hk["tongue"] for hk in heads if hk["tongue"] is not None]), TONGUE, role="detail", tris=300,
+      voxel=0.023 * VX)
 
 # ============================================================ rosso sangue: corna, orecchie, spuntoni di schiena e coda
 spikes = [x for hk in heads for x in hk["red"]]
