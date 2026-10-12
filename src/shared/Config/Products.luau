@@ -37,8 +37,8 @@ Products.Products = {
 	CoinsSmall = { key = "CoinsSmall", id = 3717390930, price = 49, icon = "CoinsSmall" },
 	CoinsMedium = { key = "CoinsMedium", id = 3717390935, price = 149, icon = "CoinsMedium" },
 	CoinsLarge = { key = "CoinsLarge", id = 3717390941, price = 399, icon = "CoinsLarge" },
-	WheelSpin1 = { key = "WheelSpin1", id = 0, price = 29, icon = "Wheel" },
-	WheelSpins5 = { key = "WheelSpins5", id = 0, price = 119, icon = "Wheel" },
+	WheelSpin1 = { key = "WheelSpin1", id = 3718229338, price = 29, icon = "Wheel" },
+	WheelSpins5 = { key = "WheelSpins5", id = 3718229344, price = 119, icon = "Wheel" },
 } :: { [string]: Product }
 
 -- Giri della ruota della fortuna
