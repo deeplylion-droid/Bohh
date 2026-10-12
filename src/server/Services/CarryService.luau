@@ -5,8 +5,10 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CollectionService = game:GetService("CollectionService")
 
 local GameConfig = require(ReplicatedStorage.Shared.Config.Game)
+local Plaza = require(ReplicatedStorage.Shared.Config.Plaza)
 local Rarities = require(ReplicatedStorage.Shared.Config.Rarities)
 local Upgrades = require(ReplicatedStorage.Shared.Config.Upgrades)
+local Zones = require(ReplicatedStorage.Shared.Config.Zones)
 
 local CarryService = {}
 
@@ -385,6 +387,12 @@ local function tryDeliver(player: Player)
 				local data = S.DataService.Get(player)
 				data.Stats.Delivered += 1
 				S.TutorialService.Advance(player, "Delivered")
+				S.RewardService.RecordZone(player, item.egg.zone)
+				S.QuestService.Add(player, "Deliver", 1)
+				local zone = item.egg.zone and Zones.List[item.egg.zone]
+				if zone and zone.order >= Zones.List[Plaza.Quests.DeepFrom].order then
+					S.QuestService.Add(player, "DeliverDeep", 1)
+				end
 			elseif os.clock() - (noRoomAt[player] or 0) > 6 then
 				-- un solo avviso ogni tanto (il controllo gira ogni secondo per ogni uovo)
 				noRoomAt[player] = os.clock()

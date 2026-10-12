@@ -185,7 +185,7 @@ function UI.Start()
 	C.State.WaitReady()
 	local Hud = require(script.Parent.Parent.UI.Hud)
 	UI.Hud = Hud.Build(guis.HUD, C)
-	for _, name in { "Shop", "Upgrades", "Index", "Gifts", "Codes", "Settings", "Admin" } do
+	for _, name in { "Shop", "Upgrades", "Index", "Gifts", "Quests", "Wheel", "Codes", "Settings", "Admin" } do
 		local module = script.Parent.Parent.UI.Panels:FindFirstChild(name)
 		if module then
 			local ok, panel = pcall(function()

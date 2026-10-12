@@ -1404,6 +1404,100 @@ def Language(m):
     add(m, "Shine", paint(ball, glint, t=0.035, depth=0.08), (176, 220, 255), tris=1200, voxel=0.012)
 
 
+# ====================================================================== piazza
+@icon()
+def Wheel(m):
+    """Ruota della fortuna: spicchi colorati, cerchio d'oro con lampadine, freccia rossa e cavalletto."""
+    R, t = 1.0, 0.24
+    yf = -t / 2  # faccia anteriore
+    disc = cyl((0, -t / 2, 0), (0, t / 2, 0), R, round=0.06)
+    n = 8
+    groups = {RED: [], YELLOW: [], BLUE: [], GREEN: []}
+    order = [RED, YELLOW, BLUE, GREEN]
+    for i in range(n):
+        a0 = 2 * math.pi * i / n + math.pi / 2 - math.pi / n
+        arc = [(0.86 * math.cos(a), 0.86 * math.sin(a)) for a in np.linspace(a0, a0 + 2 * math.pi / n, 7)]
+        poly = inset_poly([(0.0, 0.0)] + arc, 0.035)
+        groups[order[i % 4]].append(front(poly))
+    t3 = dict(rz=-10)
+    add(m, "Disc", tf(disc, **t3), WHITE, tris=8000, role="skin")
+    for k, (col, regs) in enumerate(groups.items()):
+        add(m, f"Wedges{k}", tf(paint(disc, union(*regs), t=0.03, depth=0.06), **t3), col, tris=4000, voxel=0.013)
+    rim = torus(0.94, 0.085).rot(90, 0, 0).translate((0, yf, 0))
+    add(m, "Rim", tf(rim, **t3), GOLD, tris=6000, gloss=0.3)
+    bulbs = union(*[sphere(0.058, (0.94 * math.cos(2 * math.pi * k / 16), yf - 0.075, 0.94 * math.sin(2 * math.pi * k / 16)))
+                    for k in range(16)])
+    add(m, "Bulbs", tf(bulbs, **t3), CREAM, tris=3000, gloss=0.5, voxel=0.011)
+    hub = union(cyl((0, yf - 0.12, 0), (0, yf + 0.02, 0), 0.17, round=0.04), sphere(0.09, (0, yf - 0.13, 0)), k=0.03)
+    add(m, "Hub", tf(hub, **t3), GOLD_DEEP, tris=3000, gloss=0.3, voxel=0.012)
+    pointer = plate([(-0.2, 1.24), (0.2, 1.24), (0.0, 0.84)], 0.16, r=0.06, corner=0.04).translate((0, yf - 0.16, 0))
+    add(m, "Pointer", tf(pointer, **t3), RED_DARK, tris=3000)
+    legs = union(*[cyl((0, t / 2 + 0.08, 0), (sx * 0.62, t / 2 + 0.08, -1.32), 0.085, round=0.04) for sx in (1, -1)])
+    base = box((0.82, 0.26, 0.08), (0, t / 2 + 0.08, -1.36), round=0.06)
+    add(m, "Stand", tf(union(legs, base, k=0.04), **t3), WOOD, tris=4000)
+
+
+@icon()
+def Quests(m):
+    """Lavagnetta delle missioni: foglio con tre caselle (due spuntate) e molletta d'oro."""
+    W, H = 0.86, 1.14
+    board = plate(rrect(W, H, 0.16), 0.16, r=0.06)
+    paper = plate(rrect(W - 0.12, H - 0.2, 0.06), 0.04, r=0.015).translate((0, -0.1, -0.07))
+    clip = union(box((0.34, 0.09, 0.13), (0, -0.15, H - 0.1), round=0.05),
+                 torus(0.14, 0.045).rot(90, 0, 0).translate((0, -0.12, H + 0.06)), k=0.03)
+    yp = -0.12  # faccia del foglio
+    rows = (0.5, 0.0, -0.5)
+    boxes = union(*[plate(rrect(0.17, 0.17, 0.05), 0.05, r=0.02).translate((-0.48, yp - 0.02, z - 0.07)) for z in rows])
+    lines = union(*[tube([(-0.18, yp - 0.015, z - 0.07), (0.56, yp - 0.015, z - 0.07)], 0.05) for z in rows])
+    checks = union(*[tube([(-0.62, yp - 0.09, z - 0.05), (-0.5, yp - 0.09, z - 0.19), (-0.26, yp - 0.09, z + 0.17)], 0.07)
+                     for z in rows[:2]])
+    t3 = dict(ry=-6, rz=-8)
+    add(m, "Board", tf(board, **t3), WOOD, tris=6000, role="skin")
+    add(m, "Paper", tf(paper, **t3), CREAM, tris=4000)
+    add(m, "Clip", tf(clip, **t3), GOLD, tris=3000, gloss=0.3, voxel=0.012)
+    add(m, "Boxes", tf(boxes, **t3), (176, 190, 222), tris=2500, voxel=0.012)
+    add(m, "Lines", tf(lines, **t3), (150, 160, 196), tris=2500, voxel=0.012)
+    add(m, "Checks", tf(checks, **t3), GREEN, tris=3000, voxel=0.012)
+    add(m, "Sparkle", tf(sparkle(0.3), (0.86, -0.25, 1.0)), YELLOW, tris=1500, voxel=0.012)
+
+
+@icon()
+def King(m):
+    """Corona d'oro piantata sulla cima di una collinetta erbosa."""
+    hill = ellipsoid((1.1, 0.72, 0.62), (0, 0, -0.78)).intersect(above(-1.06), k=0.05)
+    add(m, "Hill", hill, GREEN, tris=6000, role="skin")
+    add(m, "Grass", paint(hill, above(-0.5), t=0.03, depth=0.06), GREEN_LIGHT, tris=3000, voxel=0.012)
+    Ro, Ri, zl, zh, k, fl = 0.98, 0.84, 0.62, 1.32, 5, 0.12
+    th0 = -math.pi / 2
+
+    def crown_f(p):
+        rho = np.sqrt(p[:, 0] ** 2 + p[:, 1] ** 2)
+        th = np.arctan2(p[:, 1], p[:, 0])
+        u = (th - th0) * k / (2 * np.pi)
+        fr = np.abs(u - np.round(u))
+        ztop = zl + (zh - zl) * np.clip(1 - 2 * fr, 0, 1) ** 1.3
+        z = p[:, 2]
+        d = smax(rho - (Ro + fl * z), (Ri + fl * z) - rho, 0.04)
+        d = smax(d, z - ztop, 0.07)
+        return smax(d, -z, 0.04)
+
+    crown = SDF(crown_f, (-1.3, -1.3, -0.05), (1.3, 1.3, 1.45))
+    rm = (Ro + Ri) / 2 + fl * zh
+    balls = union(*[sphere(0.13, (rm * math.cos(th0 + 2 * math.pi * i / k), rm * math.sin(th0 + 2 * math.pi * i / k), zh + 0.06))
+                    for i in range(k)])
+    gold = union(crown, balls, torus(Ro + 0.01, 0.06, (0, 0, 0.07)))
+    rb = Ro + fl * 0.33
+    ruby = ellipsoid((0.21, 0.11, 0.25), (0, -rb + 0.03, 0.33))
+    velvet = ellipsoid((0.86, 0.86, 0.7), (0, 0, 0.36))
+    c = dict(pos=(0, 0, -0.3), rx=8)
+    s = 0.8
+    add(m, "Crown", tf(gold.scale(s), **c), GOLD, tris=12000, gloss=0.3)
+    add(m, "Velvet", tf(velvet.scale(s), **c), RED_DARK, tris=4000, gloss=0.05)
+    add(m, "Ruby", tf(ruby.scale(s), **c), (255, 34, 84), tris=2000, gloss=0.5, voxel=0.012)
+    sp = union(tf(sparkle(0.3), (1.05, -0.3, 0.75)), tf(sparkle(0.2), (-1.05, -0.3, 0.45)))
+    add(m, "Sparkles", sp, YELLOW, tris=2000, voxel=0.012)
+
+
 # ---------------------------------------------------------------------- esecuzione
 def build_icon(name: str, res: int):
     fn, view, voxel = ICONS[name]

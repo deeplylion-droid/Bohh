@@ -219,10 +219,13 @@ function StealService.Complete(thief: Player, item): boolean
 			restore(st)
 			return true
 		end
-		S.HatchService.Insert(
-			thief,
-			{ rarity = entry.Rarity, remaining = remaining, duration = entry.Duration, cosmicMin = entry.CosmicMin }
-		)
+		S.HatchService.Insert(thief, {
+			rarity = entry.Rarity,
+			remaining = remaining,
+			duration = entry.Duration,
+			cosmicMin = entry.CosmicMin,
+			zone = entry.Zone,
+		})
 	else
 		if not S.PetService.HasRoomFor(thief, st.rarity) then
 			return false
@@ -239,6 +242,7 @@ function StealService.Complete(thief: Player, item): boolean
 	local tData, vData = S.DataService.Get(thief), S.DataService.Get(victim)
 	tData.Stats.Steals += 1
 	vData.Stats.Stolen += 1
+	S.QuestService.Add(thief, "Steal", 1)
 	S.StateService.Push(thief, { "Stats" })
 	S.StateService.Push(victim, { "Stats" })
 	S.StateService.Notify(thief, "StealSuccessThief", { item = itemKey(st), name = victim.DisplayName }, "Gold")

@@ -14,6 +14,7 @@ local Upgrades = require(ReplicatedStorage.Shared.Config.Upgrades)
 local Variants = require(ReplicatedStorage.Shared.Config.Variants)
 local Visuals = require(ReplicatedStorage.Shared.Visuals)
 local Weighted = require(ReplicatedStorage.Shared.Util.Weighted)
+local Zones = require(ReplicatedStorage.Shared.Config.Zones)
 
 local HatchService = {}
 
@@ -31,11 +32,14 @@ local function now(): number
 	return os.time()
 end
 
-function HatchService.Duration(player: Player, rarity: string): number
+-- Durata della schiusa (zone = dove e' stato trovato l'uovo: conta per i Primordiali)
+function HatchService.Duration(player: Player, rarity: string, zone: string?): number
 	local data = S.DataService.Get(player)
 	local level = if data then data.Upgrades.HatchSpeed else 0
 	local factor = Upgrades.HatchFactor(level, S.MonetizationService.HasPass(player, "FastHatch"))
-	return math.max(5, math.floor(Rarities.Get(rarity).hatch * factor))
+	local r = Rarities.Get(rarity)
+	local base = if zone and r.hatchByZone and r.hatchByZone[zone] then r.hatchByZone[zone] else r.hatch
+	return math.max(5, math.floor(base * factor))
 end
 
 local function slotPart(player: Player, slot: string)
@@ -107,17 +111,25 @@ function HatchService.FreeSlot(player: Player): string?
 	return nil
 end
 
--- Mette un uovo nella prima incubatrice libera. egg.remaining (uova rubate) conserva il tempo rimasto.
+-- Mette un uovo nella prima incubatrice libera. egg.remaining (uova rubate) conserva il tempo rimasto;
+-- egg.zone (dove e' stato trovato) decide quale Primordiale nasce; egg.starter = uovo iniziale.
 function HatchService.Insert(
 	player: Player,
-	egg: { rarity: string, remaining: number?, duration: number?, cosmicMin: number? }
+	egg: {
+		rarity: string,
+		remaining: number?,
+		duration: number?,
+		cosmicMin: number?,
+		zone: string?,
+		starter: boolean?,
+	}
 ): boolean
 	local slot = HatchService.FreeSlot(player)
 	local data = S.DataService.Get(player)
 	if not slot or not data then
 		return false
 	end
-	local duration = egg.duration or HatchService.Duration(player, egg.rarity)
+	local duration = egg.duration or HatchService.Duration(player, egg.rarity, egg.zone)
 	local start = now()
 	if egg.remaining then
 		start = now() - (duration - egg.remaining)
@@ -127,6 +139,8 @@ function HatchService.Insert(
 		Start = start,
 		Duration = duration,
 		CosmicMin = egg.cosmicMin,
+		Zone = egg.zone,
+		Starter = egg.starter,
 	})
 	HatchService.ShowEgg(player, slot)
 	-- il messaggio dice anche quando sara' pronto (il timer e' sopra l'incubatrice)
@@ -150,13 +164,13 @@ function HatchService.Take(player: Player, slot: string)
 end
 
 -- Uova regalo in attesa di un'incubatrice libera
-function HatchService.AddPending(player: Player, rarity: string)
+function HatchService.AddPending(player: Player, rarity: string, zone: string?)
 	local data = S.DataService.Get(player)
 	if not data then
 		return
 	end
-	if not HatchService.Insert(player, { rarity = rarity }) then
-		table.insert(data.PendingEggs, { Rarity = rarity })
+	if not HatchService.Insert(player, { rarity = rarity, zone = zone }) then
+		table.insert(data.PendingEggs, { Rarity = rarity, Zone = zone })
 		S.StateService.Push(player, { "PendingEggs" })
 		S.StateService.Notify(player, "EggStored", nil, "Info")
 	end
@@ -169,14 +183,26 @@ function HatchService.FillPending(player: Player)
 	end
 	while #data.PendingEggs > 0 and HatchService.FreeSlot(player) do
 		local item = table.remove(data.PendingEggs, 1)
-		HatchService.Insert(player, { rarity = item.Rarity })
+		HatchService.Insert(player, { rarity = item.Rarity, zone = item.Zone })
 	end
 	S.StateService.Push(player, { "PendingEggs" })
 end
 
--- Estrazione del pet: la fortuna sposta i pesi verso i pet piu' rari della fascia
-local function rollPet(rarity: string, luck: number): string
+-- Estrazione del pet: la fortuna sposta i pesi verso i pet piu' rari della fascia. Per i Primordiali
+-- contano solo i mostri della zona in cui e' stato trovato l'uovo (tutti, se la zona non c'e').
+local function rollPet(rarity: string, luck: number, zone: string?): string
 	local list = Pets.ByRarity[rarity]
+	if zone then
+		local inZone = {}
+		for _, p in list do
+			if p.zone == zone then
+				table.insert(inZone, p)
+			end
+		end
+		if #inZone > 0 then
+			list = inZone
+		end
+	end
 	local entries = {}
 	for i, p in list do
 		local w = p.chance * (if i > 1 then luck else 1)
@@ -211,7 +237,7 @@ function HatchService.Hatch(player: Player, slot: string, skipRequirement: boole
 	if entry.CosmicMin then
 		minChance.Cosmic = entry.CosmicMin
 	end
-	local petId = rollPet(entry.Rarity, luck)
+	local petId = rollPet(entry.Rarity, luck, entry.Zone)
 	local mutation = Variants.RollMutation(rng, luck, minChance)
 	local size = Variants.RollSize(rng, luck)
 	S.StateService.Set(player, { "Incubators", slot }, nil)
@@ -219,6 +245,10 @@ function HatchService.Hatch(player: Player, slot: string, skipRequirement: boole
 	local isNew = S.IndexService.Record(player, petId, mutation)
 	local uid = S.PetService.AddPet(player, { Id = petId, Mutation = mutation, Size = size })
 	data.Stats.Hatched += 1
+	S.QuestService.Add(player, "Hatch", 1)
+	if entry.Rarity == "Primal" then
+		S.QuestService.Add(player, "HatchPrimal", 1)
+	end
 	revealEvent:FireClient(player, {
 		pet = petId,
 		rarity = entry.Rarity,
@@ -229,7 +259,14 @@ function HatchService.Hatch(player: Player, slot: string, skipRequirement: boole
 	})
 	S.TutorialService.Advance(player, "Hatched")
 	S.AnalyticsService.Custom(player, "Hatch", 1, { rarity = entry.Rarity, mutation = mutation })
-	if Rarities.Get(entry.Rarity).order >= 6 or mutation == "Cosmic" or mutation == "Rainbow" then
+	-- annuncio a tutti: dai Mitici in su (i Primordiali di Prati e Bosco e l'uovo iniziale no, sono
+	-- frequenti), e le mutazioni piu' rare
+	local announce = Rarities.Get(entry.Rarity).order >= 6
+	if entry.Rarity == "Primal" then
+		local zone = entry.Zone and Zones.List[entry.Zone]
+		announce = not entry.Starter and (zone == nil or zone.order >= 3)
+	end
+	if announce or mutation == "Cosmic" or mutation == "Rainbow" then
 		S.StateService.Announce("AnnounceHatch", { name = player.DisplayName, pet = "Pet_" .. petId }, entry.Rarity)
 	end
 	HatchService.FillPending(player)
@@ -306,16 +343,19 @@ function HatchService.Start()
 		for slot, entry in table.clone(data.Incubators) do
 			if tonumber(slot) > S.PlotService.IncubatorCount(player) then
 				data.Incubators[slot] = nil
-				table.insert(data.PendingEggs, { Rarity = entry.Rarity })
+				table.insert(data.PendingEggs, { Rarity = entry.Rarity, Zone = entry.Zone })
 			end
 		end
 		for i = 1, #plot.incubators do
 			HatchService.ShowEgg(player, tostring(i))
 		end
 		HatchService.FillPending(player)
-		-- uovo iniziale per i nuovi giocatori: si schiude in pochi secondi
+		-- uovo iniziale per i nuovi giocatori: un mostro Primordiale dei Prati, si schiude in pochi secondi
 		if data.Tutorial == 0 and next(data.Incubators) == nil and data.Stats.Hatched == 0 then
-			HatchService.Insert(player, { rarity = "Common", duration = GameConfig.StarterEggHatch })
+			HatchService.Insert(
+				player,
+				{ rarity = "Primal", zone = "Meadow", starter = true, duration = GameConfig.StarterEggHatch }
+			)
 		end
 	end)
 	S.PlotService.Released:Connect(function(player, plot)

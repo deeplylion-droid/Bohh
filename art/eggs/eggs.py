@@ -1,4 +1,4 @@
-"""Uova per rarita'. Uso: python eggs/eggs.py Common Uncommon Rare Epic Legendary Mythic Divine Secret Ultra"""
+"""Uova per rarita'. Uso: python eggs/eggs.py Common Uncommon Rare Epic Legendary Mythic Divine Secret Primal Ultra"""
 import math
 import os
 import sys
@@ -137,6 +137,24 @@ def cracks(base: SDF, n: int, seed: int, steps: int = 9, step: float = 0.22) -> 
     return union(*lines)
 
 
+def claw_marks(base: SDF, n: int = 3, radius: float = 0.07):
+    """Graffi d'artiglio paralleli sul davanti (-Y), in diagonale: ritorna (solchi, riempimento)."""
+    grooves, fills = [], []
+    for k in range(n):
+        off = (k - (n - 1) / 2) * 0.24
+        d0 = np.array([-0.42 + off, -1.0, 0.62 + off * 0.35])
+        d1 = np.array([0.3 + off, -1.0, -0.28 + off * 0.35])
+        pts = []
+        for i in range(10):
+            d = d0 + (d1 - d0) * i / 9
+            p, nrm = project(base, CENTER, tuple(d / np.linalg.norm(d)))
+            pts.append(tuple(np.asarray(p) - np.asarray(nrm) * 0.02))
+        shape = [math.sin(math.pi * (0.12 + 0.76 * i / 9)) for i in range(10)]
+        grooves.append(tube(pts, [radius * (0.45 + 0.55 * w) for w in shape]))
+        fills.append(tube(pts, [radius * 0.72 * (0.45 + 0.55 * w) for w in shape]))
+    return union(*grooves), union(*fills)
+
+
 def spiral(turns: float, width: float, phase: float = 0.0) -> SDF:
     """Fascia a spirale attorno all'asse verticale (larghezza in radianti)."""
     def f(p):
@@ -216,6 +234,30 @@ def build(kind: str) -> Model:
         m.add("Stars", s.offset(0.02).intersect(spots(s, 40, 0.025, 0.05, seed=77)), (235, 255, 255), material="Neon", role="glow", tris=2500, voxel=0.012)
         ring = torus(R + 0.42, 0.06).rot(68, 0, 18).translate(CENTER)
         m.add("Ring", ring, (120, 255, 240), material="Neon", role="glow", tris=1400, voxel=0.015)
+    elif kind == "Primal":
+        # uovo di bestia primordiale: guscio di basalto con tre graffi d'artiglio incandescenti,
+        # crepe di brace, fascia frastagliata rosso sangue e una corona di zanne d'osso
+        PS = 1.1
+        grooves, fills = claw_marks(s)
+        m.add("Shell", s.subtract(grooves, k=0.02).scale(PS), (46, 28, 26), reflectance=0.05, tris=5500)
+        m.add("Claws", fills.scale(PS), (255, 128, 34), material="Neon", role="glow", tris=3000, voxel=0.012)
+        m.add("Embers", cracks(s, 7, seed=23, steps=6, step=0.18).scale(PS), (255, 58, 30), material="Neon", role="glow",
+              tris=3000, voxel=0.013)
+        thin = s.offset(-0.07)
+        m.add("Band", lift.subtract(thin).intersect(band(0.48, 0.74, 0.12, 9, 0.4, sharp=True)).scale(PS), (128, 18, 22),
+              role="detail", tris=2500, voxel=0.013)
+        fangs = []
+        for i in range(5):
+            a = math.radians(i * 72 + 90)
+            d = (math.cos(a) * 0.7, math.sin(a) * 0.7, 0.62)
+            p0, nrm = project(s, CENTER, d)
+            out = np.array([math.cos(a), math.sin(a), 0.0])
+            p0 = np.asarray(p0) - np.asarray(nrm) * 0.06
+            pts = bezier(tuple(p0), tuple(p0 + out * 0.22 + np.array([0, 0, 0.05])),
+                         tuple(p0 + out * 0.36 + np.array([0, 0, 0.3])), tuple(p0 + out * 0.3 + np.array([0, 0, 0.62])), 10)
+            radii = [0.15 * (1 - j / 10) ** 1.2 + 0.01 for j in range(len(pts))]
+            fangs.append(tube(pts, radii))
+        m.add("Fangs", union(*fangs).scale(PS), (238, 226, 198), role="detail", tris=3000, voxel=0.013)
     elif kind == "Ultra":
         # uovo di drago d'ossidiana, piu' grande degli altri: crepe incandescenti cremisi e oro,
         # corona di corna d'oro, fascia a zig-zag con gemme e due anelli di energia incrociati

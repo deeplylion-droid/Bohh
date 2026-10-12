@@ -118,7 +118,7 @@ function Hud.Build(gui: ScreenGui, C)
 	local menu = New("Frame", {
 		Name = "Menu",
 		BackgroundTransparency = 1,
-		Size = UDim2.fromOffset(220, 338),
+		Size = UDim2.fromOffset(332, 338),
 		Position = UDim2.new(0, 16, 0.5, -10),
 		AnchorPoint = Vector2.new(0, 0.5),
 		Parent = gui,
@@ -126,8 +126,10 @@ function Hud.Build(gui: ScreenGui, C)
 	local items = {
 		{ name = "Shop", key = "MenuShop", color = "Green", icon = "Shop", x = 0, y = 0, rot = -4 },
 		{ name = "Upgrades", key = "MenuUpgrades", color = "Blue", icon = "Upgrades", x = 112, y = 0, rot = 4 },
-		{ name = "Index", key = "MenuIndex", color = "Purple", icon = "Index", x = 0, y = 136, rot = 4 },
-		{ name = "Gifts", key = "MenuGifts", color = "Pink", icon = "Gifts", x = 112, y = 136, rot = -4 },
+		{ name = "Index", key = "MenuIndex", color = "Purple", icon = "Index", x = 224, y = 0, rot = -4 },
+		{ name = "Gifts", key = "MenuGifts", color = "Pink", icon = "Gifts", x = 0, y = 136, rot = 4 },
+		{ name = "Quests", key = "MenuQuests", color = "Cyan", icon = "Quests", x = 112, y = 136, rot = -4 },
+		{ name = "Wheel", key = "MenuWheel", color = "Orange", icon = "Wheel", x = 224, y = 136, rot = 4 },
 	}
 	hud.Badges = {}
 	for _, it in items do
@@ -264,7 +266,7 @@ function Hud.Build(gui: ScreenGui, C)
 	local chips = New("Frame", {
 		Name = "Chips",
 		BackgroundTransparency = 1,
-		Size = UDim2.fromOffset(240, 98),
+		Size = UDim2.fromOffset(240, 152),
 		Visible = false,
 		LayoutOrder = 2,
 		Parent = status,
@@ -292,6 +294,7 @@ function Hud.Build(gui: ScreenGui, C)
 	end
 	local luckChip, luckText = chip(1, "Luck")
 	local friendChip, friendText = chip(2, "Friends")
+	local kingChip, kingText = chip(0, "King")
 
 	-- pulsante della barriera (il proprio lotto si puo' bloccare da ovunque)
 	local barrier = Kit.Button({
@@ -344,7 +347,19 @@ function Hud.Build(gui: ScreenGui, C)
 		local fb = player:GetAttribute("FriendBonus") or 0
 		friendChip.Visible = fb > 0
 		friendText.Text = `{T("FriendBonus")} <font color="#9dff6b">+{math.floor(fb * 100)}%</font>`
-		chips.Visible = luckChip.Visible or friendChip.Visible
+		-- re della collina (solo a chi e' in cima al monumento)
+		kingChip.Visible = player:GetAttribute("OnHill") == true
+		if kingChip.Visible then
+			if player:GetAttribute("King") and player:GetAttribute("KingIdle") then
+				kingText.Text = `<font color="#c9bdf5">{T("KingIdle")}</font>`
+			elseif player:GetAttribute("King") then
+				local rate = Format.Rate(player:GetAttribute("KingRate") or 0)
+				kingText.Text = `{T("KingYou")} <font color="#9dff6b">{rate}</font>`
+			else
+				kingText.Text = `<font color="#ff8a7a">{T("KingContested")}</font>`
+			end
+		end
+		chips.Visible = luckChip.Visible or friendChip.Visible or kingChip.Visible
 		-- barriera
 		local plotIndex = player:GetAttribute("PlotIndex")
 		barrier.Frame.Visible = plotIndex ~= nil

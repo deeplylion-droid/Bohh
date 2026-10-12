@@ -133,7 +133,7 @@ function Panel.Build(parent: Instance, C)
 		TextSize = 22,
 		Parent = eggRow,
 		OnClick = function()
-			send("EggToBase", { rarity = Rarities.Order[rarityIndex] })
+			send("EggToBase", { rarity = Rarities.Order[rarityIndex], zone = Zones.Order[zoneIndex] })
 		end,
 	})
 	local function refreshEgg()

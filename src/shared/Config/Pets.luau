@@ -1,6 +1,8 @@
 --!strict
--- I 37 pet (4 per rarita', 5 Ultra). income = monete al secondo di base.
+-- I 47 pet (4 per rarita', 10 Primordiali, 5 Ultra). income = monete al secondo di base.
 -- chance = peso dentro la propria rarita' (il pet piu' raro della fascia guadagna di piu').
+-- I Primordiali hanno una zona: l'uovo Primordiale fa nascere uno dei due mostri della zona in cui
+-- e' stato trovato, cosi' quelli dei Prati arrivano subito ai nuovi giocatori senza rompere il gioco.
 -- model = nome del modello 3D in ReplicatedStorage.Assets.Pets
 
 export type Pet = {
@@ -12,9 +14,22 @@ export type Pet = {
 	height: number, -- altezza di riferimento in stud (taglia Normale)
 	flying: boolean?, -- fluttua sul piedistallo
 	giant: boolean?, -- creatura Ultra: sta sul trono dietro al lotto, non su un piedistallo
+	zone: string?, -- Primordiali: zona in cui si trova il loro uovo
 }
 
 local Pets = {}
+
+local function primal(id: string, zone: string, income: number, chance: number, height: number): Pet
+	return {
+		id = id,
+		rarity = "Primal",
+		income = income,
+		chance = chance,
+		model = id,
+		height = height,
+		zone = zone,
+	}
+end
 
 local function pet(id: string, rarity: string, income: number, chance: number, height: number, flying: boolean?): Pet
 	return {
@@ -70,6 +85,17 @@ Pets.List = {
 	pet("TortelloneCosmico", "Secret", 60000, 30, 4.6, true),
 	pet("ArancinoAstronauta", "Secret", 70000, 20, 4.8),
 	pet("MozzarellaNinjella", "Secret", 80000, 10, 4.4),
+	-- Primordiali: mostri aggressivi grandi il doppio degli altri pet, due per zona
+	primal("WarBoar", "Meadow", 20, 60, 8.5),
+	primal("RageRam", "Meadow", 25, 40, 9.5),
+	primal("BerserkBear", "Forest", 220, 60, 9.5),
+	primal("ShadowWolf", "Forest", 300, 40, 8.5),
+	primal("IronScorpion", "Canyon", 1200, 60, 8.5),
+	primal("KingCobra", "Canyon", 1600, 40, 9.5),
+	primal("CrystalGolem", "Crystal", 6500, 60, 9.5),
+	primal("FrostWyvern", "Crystal", 9000, 40, 9.5),
+	primal("Cerberus", "Crater", 110000, 60, 9),
+	primal("InfernoMinotaur", "Crater", 160000, 40, 10),
 	-- Ultra: creature colossali, 10 volte piu' grandi degli altri pet
 	pet("InfernoKomodo", "Ultra", 250000, 30, 22),
 	pet("VenomWidow", "Ultra", 300000, 25, 24),

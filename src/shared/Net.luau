@@ -33,11 +33,13 @@ Net.Events = {
 	"AdminAction", -- (action, args)
 	"Swing", -- () schiaffo (il server convalida tempi e bersagli)
 	"ObstacleHit", -- (obstacleId) il client segnala di essere stato colpito (il server convalida)
+	"ClaimQuest", -- (kind: "Daily"|"Weekly"|"DailyBonus"|"WeeklyBonus", index?)
 }
 
 Net.Functions = {
 	"RedeemCode", -- (code) -> (ok, messageKey)
 	"GetLeaderboards", -- () -> data
+	"SpinWheel", -- () -> (ok, segmentIndex | messageKey)
 }
 
 local FOLDER = "Remotes"

@@ -456,7 +456,7 @@ MapLayout.Lairs = {
 		radius = 26,
 		leash = 70,
 		nests = 3,
-		eggs = { Epic = 30, Legendary = 50, Mythic = 18, Divine = 2 },
+		eggs = { Epic = 30, Legendary = 50, Mythic = 18, Divine = 2, Primal = 4 },
 	},
 	{
 		id = "Crater",
@@ -466,7 +466,7 @@ MapLayout.Lairs = {
 		radius = 24,
 		leash = 80,
 		nests = 3,
-		eggs = { Legendary = 45, Mythic = 40, Divine = 13, Secret = 2 },
+		eggs = { Legendary = 45, Mythic = 40, Divine = 13, Secret = 2, Primal = 4 },
 	},
 } :: { any }
 do

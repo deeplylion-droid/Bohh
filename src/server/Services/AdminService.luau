@@ -52,7 +52,8 @@ local ACTIONS = {
 	-- prove: un uovo della rarita' scelta direttamente in un'incubatrice del proprio lotto
 	EggToBase = function(player, args)
 		if type(args.rarity) == "string" and Rarities.List[args.rarity] then
-			S.HatchService.AddPending(player, args.rarity)
+			local zone = if type(args.zone) == "string" and Zones.List[args.zone] then args.zone else nil
+			S.HatchService.AddPending(player, args.rarity, zone)
 		end
 	end,
 	-- prove: tutte le uova del proprio lotto pronte da schiudere

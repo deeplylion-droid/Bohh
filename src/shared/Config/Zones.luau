@@ -24,7 +24,7 @@ Zones.List = {
 	Meadow = {
 		id = "Meadow",
 		order = 1,
-		eggs = { Common = 72, Uncommon = 25, Rare = 3 },
+		eggs = { Common = 72, Uncommon = 25, Rare = 3, Primal = 5 },
 		respawn = 8,
 		announceFrom = "Rare",
 		color = Color3.fromRGB(110, 214, 80),
@@ -34,7 +34,7 @@ Zones.List = {
 	Forest = {
 		id = "Forest",
 		order = 2,
-		eggs = { Common = 30, Uncommon = 50, Rare = 18, Epic = 2 },
+		eggs = { Common = 30, Uncommon = 50, Rare = 18, Epic = 2, Primal = 4 },
 		respawn = 12,
 		announceFrom = "Epic",
 		color = Color3.fromRGB(48, 170, 96),
@@ -44,7 +44,7 @@ Zones.List = {
 	Canyon = {
 		id = "Canyon",
 		order = 3,
-		eggs = { Uncommon = 25, Rare = 50, Epic = 22, Legendary = 3 },
+		eggs = { Uncommon = 25, Rare = 50, Epic = 22, Legendary = 3, Primal = 3 },
 		respawn = 18,
 		announceFrom = "Legendary",
 		color = Color3.fromRGB(232, 140, 70),
@@ -54,7 +54,7 @@ Zones.List = {
 	Crystal = {
 		id = "Crystal",
 		order = 4,
-		eggs = { Rare = 25, Epic = 50, Legendary = 22, Mythic = 3 },
+		eggs = { Rare = 25, Epic = 50, Legendary = 22, Mythic = 3, Primal = 2.5 },
 		respawn = 25,
 		announceFrom = "Mythic",
 		color = Color3.fromRGB(120, 190, 255),
@@ -64,7 +64,7 @@ Zones.List = {
 	Crater = {
 		id = "Crater",
 		order = 5,
-		eggs = { Epic = 30, Legendary = 50, Mythic = 17, Divine = 3 },
+		eggs = { Epic = 30, Legendary = 50, Mythic = 17, Divine = 3, Primal = 2 },
 		respawn = 35,
 		announceFrom = "Mythic",
 		color = Color3.fromRGB(255, 92, 40),

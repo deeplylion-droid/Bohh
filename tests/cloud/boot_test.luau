@@ -451,6 +451,69 @@ do
 	end
 end
 
+-- piazza: ruota della fortuna, bacheca delle missioni, scale e cima del re della collina,
+-- estrazione delle missioni per un giocatore finto
+do
+	local CollectionService = game:GetService("CollectionService")
+	local Plaza = require(ReplicatedStorage.Shared.Config.Plaza)
+	local c = MapLayout.SummitCenter
+	local wheels = CollectionService:GetTagged("FortuneWheel")
+	add("plaza_wheel", #wheels)
+	local w = wheels[1]
+	if w then
+		local face = w:FindFirstChild("WheelFace")
+		local gui = face and face:FindFirstChild("WheelGui")
+		local img = gui and gui:FindFirstChild("Face") :: ImageLabel?
+		add("plaza_wheel_image", img ~= nil and img.Image ~= "")
+		add("plaza_wheel_axle", typeof(w:GetAttribute("Axle")) == "CFrame")
+		local anchor = w:FindFirstChild("WheelPromptAnchor")
+		add("plaza_wheel_prompt", anchor ~= nil and anchor:FindFirstChildOfClass("ProximityPrompt") ~= nil)
+	end
+	add("plaza_board", #CollectionService:GetTagged("QuestBoard"))
+	add("plaza_band", #CollectionService:GetTagged("HillBand"))
+	local top = S.KingService.TopY()
+	local down = Vector3.new(0, -60, 0)
+	local hit = workspace:Raycast(Vector3.new(c.X + 10, top + 40, c.Z), down)
+	add("hill_top", if hit then string.format("%.2f/%.2f", hit.Position.Y, top) else "nil")
+	-- scale: dal bordo della piazza verso il centro la superficie sale di al massimo uno scalino
+	for _, deg in Plaza.King.StairAngles do
+		local dir = Vector3.new(math.sin(math.rad(deg)), 0, math.cos(math.rad(deg)))
+		local prevY, maxStep = nil, 0
+		for r = 26, 11, -0.5 do
+			local q = c + dir * r
+			local h = workspace:Raycast(Vector3.new(q.X, top + 40, q.Z), down)
+			if h then
+				if prevY then
+					maxStep = math.max(maxStep, h.Position.Y - prevY)
+				end
+				prevY = h.Position.Y
+			end
+		end
+		add("hill_stairs_" .. deg, string.format("max %.2f end %.2f", maxStep, prevY or -1))
+	end
+	local fake = { UserId = 123456 }
+	local data = { Quests = { Day = -1, Week = -1, Daily = {}, Weekly = {}, DailyBonus = false, WeeklyBonus = false } }
+	S.QuestService.Refresh(fake, data)
+	local function ids(list)
+		local out = {}
+		for _, e in list do
+			table.insert(out, e.Id)
+		end
+		return table.concat(out, ",")
+	end
+	add("quests_daily", ids(data.Quests.Daily))
+	add("quests_weekly", ids(data.Quests.Weekly))
+	add("quests_again", S.QuestService.Refresh(fake, data)) -- stesso giorno: nessun cambio
+	local total, jackpot = 0, 0
+	for _, seg in Plaza.Wheel.Segments do
+		total += seg.weight
+		if seg.kind == "Primal" then
+			jackpot += seg.weight
+		end
+	end
+	add("wheel_segments", string.format("%d jackpot %.1f%%", #Plaza.Wheel.Segments, 100 * jackpot / total))
+end
+
 -- avvisi raccolti durante l'avvio
 add("warnings", #warnings)
 for i = 1, math.min(#warnings, 25) do

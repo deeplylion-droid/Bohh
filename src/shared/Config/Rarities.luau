@@ -3,6 +3,7 @@
 -- weight  = moltiplicatore di velocita' mentre si trasporta un uovo/pet di questa rarita'
 -- hatch   = secondi di incubazione
 -- sell    = il pet si vende per (guadagno al secondo x sell)
+-- hatchByZone = incubazione secondo la zona in cui e' stato trovato l'uovo (Primordiali)
 
 export type Rarity = {
 	id: string,
@@ -13,11 +14,12 @@ export type Rarity = {
 	hatch: number,
 	sell: number,
 	announce: boolean, -- annuncia a tutto il server quando compare un uovo di questa rarita'
+	hatchByZone: { [string]: number }?,
 }
 
 local Rarities = {}
 
-Rarities.Order = { "Common", "Uncommon", "Rare", "Epic", "Legendary", "Mythic", "Divine", "Secret", "Ultra" }
+Rarities.Order = { "Common", "Uncommon", "Rare", "Epic", "Legendary", "Mythic", "Divine", "Secret", "Primal", "Ultra" }
 
 Rarities.List = {
 	Common = {
@@ -100,10 +102,23 @@ Rarities.List = {
 		sell = 120,
 		announce = true,
 	},
+	-- mostri primordiali: grandi il doppio degli altri pet, due per zona; la zona in cui si trova
+	-- l'uovo decide quale mostro nasce, quanto guadagna e quanto dura la schiusa (vedi Config/Pets)
+	Primal = {
+		id = "Primal",
+		order = 9,
+		color = Color3.fromRGB(255, 122, 26),
+		colorDark = Color3.fromRGB(150, 30, 0),
+		weight = 0.5,
+		hatch = 1500,
+		sell = 120,
+		announce = true,
+		hatchByZone = { Meadow = 30, Forest = 90, Canyon = 240, Crystal = 600, Crater = 1500 },
+	},
 	-- creature colossali: uova rarissime e pesantissime, un solo pet Ultra per lotto (sul trono)
 	Ultra = {
 		id = "Ultra",
-		order = 9,
+		order = 10,
 		color = Color3.fromRGB(255, 52, 88),
 		colorDark = Color3.fromRGB(150, 0, 40),
 		weight = 0.3,
@@ -113,7 +128,7 @@ Rarities.List = {
 	},
 } :: { [string]: Rarity }
 
--- Divine, Secret e Ultra usano un gradiente animato nell'interfaccia
+-- Divine, Secret, Primal e Ultra usano un gradiente animato nell'interfaccia
 Rarities.Gradients = {
 	Divine = ColorSequence.new({
 		ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 90, 90)),
@@ -127,6 +142,12 @@ Rarities.Gradients = {
 		ColorSequenceKeypoint.new(0, Color3.fromRGB(40, 255, 220)),
 		ColorSequenceKeypoint.new(0.5, Color3.fromRGB(160, 60, 255)),
 		ColorSequenceKeypoint.new(1, Color3.fromRGB(40, 255, 220)),
+	}),
+	Primal = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 150, 30)),
+		ColorSequenceKeypoint.new(0.4, Color3.fromRGB(230, 36, 30)),
+		ColorSequenceKeypoint.new(0.75, Color3.fromRGB(255, 214, 70)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 150, 30)),
 	}),
 	Ultra = ColorSequence.new({
 		ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 40, 80)),

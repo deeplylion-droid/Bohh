@@ -72,7 +72,7 @@ end
 
 local parts = {}
 for _, d in workspace:GetDescendants() do
-	if d:IsA("BasePart") and d ~= workspace.Terrain and d.Transparency < 1 then
+	if d:IsA("BasePart") and d ~= workspace.Terrain and (d.Transparency < 1 or d.Name == "WheelFace") then
 		local cf = d.CFrame
 		local entry = {
 			c = d.ClassName,

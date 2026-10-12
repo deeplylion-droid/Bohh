@@ -78,6 +78,9 @@ Theme.Emoji = {
 	Language = "🌍",
 	Group = "👥",
 	Alarm = "🚨",
+	Wheel = "🎡",
+	Quests = "📋",
+	King = "👑",
 }
 
 return Theme

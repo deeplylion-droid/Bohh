@@ -105,6 +105,11 @@
    "hash": "0c645b04e3ac2659c93b5699d6a4846304b37f2a",
    "image": 138755183386090
   },
+  "IconKing": {
+   "decal": 136401422788691,
+   "hash": "283a260d092610499cdb8eb97d8af9b7ba73934b",
+   "image": 103904812619134
+  },
   "IconLanguage": {
    "decal": 123236661958205,
    "hash": "562415260cd8828372fea9789c66f28acdfd6bf7",
@@ -134,6 +139,11 @@
    "decal": 93485810088662,
    "hash": "cbeecceae323b2937fa994dbb44fe3ac9ccb0cd0",
    "image": 110178684696715
+  },
+  "IconQuests": {
+   "decal": 88657769932922,
+   "hash": "4dbd53cca82d662bde14290e53a97587ff1f1d3c",
+   "image": 119354362072639
   },
   "IconSettings": {
    "decal": 120858429482552,
@@ -195,6 +205,11 @@
    "hash": "0984f5933bfd7e00ac251185b2d4a3b52ebf6657",
    "image": 126447849633466
   },
+  "IconWheel": {
+   "decal": 96754441029943,
+   "hash": "dfa93164477b2447a1c72fa24870c24a58b2a89f",
+   "image": 122468014144570
+  },
   "SkyDn": {
    "decal": 99796846626844,
    "hash": "1e94f97b30dfc17123be54a0324722e0ba09f5e6",
@@ -209,6 +224,11 @@
    "decal": 135226943448644,
    "hash": "ac2d2d5aae3a0fb7b4662824948af38b935e286a",
    "image": 115456508303091
+  },
+  "WheelFace": {
+   "decal": 82498062807948,
+   "hash": "188d56e08eeacaa8da0f2f0155c7b362298c1ba5",
+   "image": 128665285270479
   }
  },
  "models": {

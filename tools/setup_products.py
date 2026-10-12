@@ -36,6 +36,8 @@ PRODUCTS = {
     "CoinsSmall": ("Coin Pouch", "A pouch of coins (15 minutes of your income, at least 1,500).", 49, "IconCoinsSmall"),
     "CoinsMedium": ("Coin Chest", "A chest of coins (1 hour of your income, at least 7,500).", 149, "IconCoinsMedium"),
     "CoinsLarge": ("Coin Mountain", "A mountain of coins (4 hours of your income, at least 40,000).", 399, "IconCoinsLarge"),
+    "WheelSpin1": ("Wheel Spin", "One extra spin of the Wheel of Fortune in the summit plaza.", 29, "IconWheel"),
+    "WheelSpins5": ("5 Wheel Spins", "Five extra spins of the Wheel of Fortune in the summit plaza.", 119, "IconWheel"),
 }
 
 

@@ -43,7 +43,7 @@ Events.List = {
 Events.Meteor = {
 	interval = { 10, 16 },
 	zones = { "Canyon", "Crystal", "Crater" },
-	eggs = { Epic = 45, Legendary = 32, Mythic = 16, Divine = 6, Secret = 1 },
+	eggs = { Epic = 45, Legendary = 32, Mythic = 16, Divine = 6, Secret = 1, Primal = 2 },
 	cosmicMin = 0.1, -- probabilita' minima di mutazione Cosmica per le uova dei meteoriti
 	blastRadius = 14,
 }

@@ -17,8 +17,17 @@ Products.Passes = {
 	SuperBarrier = { key = "SuperBarrier", id = 2022500356, price = 149, icon = "Barrier" },
 } :: { [string]: Pass }
 
-Products.ProductOrder =
-	{ "SkipHatchSmall", "SkipHatchMedium", "SkipHatchLarge", "Luck15", "CoinsSmall", "CoinsMedium", "CoinsLarge" }
+Products.ProductOrder = {
+	"SkipHatchSmall",
+	"SkipHatchMedium",
+	"SkipHatchLarge",
+	"Luck15",
+	"CoinsSmall",
+	"CoinsMedium",
+	"CoinsLarge",
+	"WheelSpin1",
+	"WheelSpins5",
+}
 Products.Products = {
 	-- salta l'attesa di un'incubatrice: piccolo fino a Raro, medio fino a Leggendario, grande per tutto
 	SkipHatchSmall = { key = "SkipHatchSmall", id = 3717390839, price = 19, icon = "SkipHatch" },
@@ -28,7 +37,15 @@ Products.Products = {
 	CoinsSmall = { key = "CoinsSmall", id = 3717390930, price = 49, icon = "CoinsSmall" },
 	CoinsMedium = { key = "CoinsMedium", id = 3717390935, price = 149, icon = "CoinsMedium" },
 	CoinsLarge = { key = "CoinsLarge", id = 3717390941, price = 399, icon = "CoinsLarge" },
+	WheelSpin1 = { key = "WheelSpin1", id = 0, price = 29, icon = "Wheel" },
+	WheelSpins5 = { key = "WheelSpins5", id = 0, price = 119, icon = "Wheel" },
 } :: { [string]: Product }
+
+-- Giri della ruota della fortuna
+Products.WheelSpins = {
+	WheelSpin1 = 1,
+	WheelSpins5 = 5,
+}
 
 -- Rarita' massima coperta da ciascun "salta schiusa"
 Products.SkipHatchTier = {

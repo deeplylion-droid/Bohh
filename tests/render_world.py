@@ -132,11 +132,42 @@ def model_meshes(model):
     return found
 
 
+def image_quad(name, image_path):
+    """Quadrato con un'immagine sulla faccia anteriore (-Z locale Roblox), come una SurfaceGui Front."""
+    mesh = bpy.data.meshes.new(name)
+    # guardando la faccia anteriore la destra e' -X locale: u=0 a x=+0.5
+    verts = [(0.5, -0.5, -0.52), (-0.5, -0.5, -0.52), (-0.5, 0.5, -0.52), (0.5, 0.5, -0.52)]
+    mesh.from_pydata(verts, [], [(0, 1, 2, 3)])
+    uv = mesh.uv_layers.new()
+    for i, (u, v) in enumerate([(0, 0), (1, 0), (1, 1), (0, 1)]):
+        uv.data[i].uv = (u, v)
+    m = bpy.data.materials.new(name)
+    m.use_nodes = True
+    nt = m.node_tree
+    bsdf = nt.nodes["Principled BSDF"]
+    tex = nt.nodes.new("ShaderNodeTexImage")
+    tex.image = bpy.data.images.load(str(image_path))
+    nt.links.new(tex.outputs["Color"], bsdf.inputs["Base Color"])
+    nt.links.new(tex.outputs["Color"], bsdf.inputs["Emission Color"])
+    nt.links.new(tex.outputs["Alpha"], bsdf.inputs["Alpha"])
+    bsdf.inputs["Emission Strength"].default_value = 0.6
+    if hasattr(m, "blend_method"):
+        m.blend_method = "BLEND"
+    mesh.materials.append(m)
+    return mesh
+
+
 def add_parts(world):
     coll = bpy.data.collections.new("World")
     bpy.context.scene.collection.children.link(coll)
     skipped = 0
     for p in world["parts"]:
+        if p["n"] == "WheelFace":
+            # faccia trasparente della ruota della fortuna: si disegna l'immagine della SurfaceGui
+            obj = bpy.data.objects.new("WheelFace", image_quad("WheelFace", ROOT / "art/out/images/WheelFace.png"))
+            obj.matrix_world = part_matrix(p)
+            coll.objects.link(obj)
+            continue
         mat = material(p["k"], p["m"], p.get("t", 0))
         obj = None
         if p["c"] == "MeshPart":
@@ -305,6 +336,11 @@ VIEWS = {
     "dentunnel": ((60, 96, 770), (82, 92, 806), 20),
     "dentunnel2": ((81, 95, 803), (70, 89, 838), 20),
     "mountain": ((-260, 420, 1250), (0, 210, 320), 34),
+    # piazza: ruota della fortuna, bacheca delle missioni, scale del re della collina (dallo spawn)
+    "plaza": ((0, 346, 92), (0, 336, 4), 20),
+    "wheel": ((14, 338, 44), (46, 341, 28), 24),
+    "board": ((-14, 338, 44), (-46, 338, 28), 24),
+    "hill": ((34, 352, 40), (0, 336, 0), 22),
 }
 
 

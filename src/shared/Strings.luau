@@ -33,6 +33,8 @@ local T: { [string]: Entry } = {
 	MenuSettings = { en = "SETTINGS", it = "OPZIONI" },
 	MenuCodes = { en = "CODES", it = "CODICI" },
 	MenuDefense = { en = "DEFENSE", it = "DIFESA" },
+	MenuQuests = { en = "MISSIONS", it = "MISSIONI" },
+	MenuWheel = { en = "WHEEL", it = "RUOTA" },
 
 	-- rarita'
 	Rarity_Common = { en = "COMMON", it = "COMUNE" },
@@ -43,6 +45,7 @@ local T: { [string]: Entry } = {
 	Rarity_Mythic = { en = "MYTHIC", it = "MITICO" },
 	Rarity_Divine = { en = "DIVINE", it = "DIVINO" },
 	Rarity_Secret = { en = "SECRET", it = "SEGRETO" },
+	Rarity_Primal = { en = "PRIMAL", it = "PRIMORDIALE" },
 	Rarity_Ultra = { en = "ULTRA", it = "ULTRA" },
 
 	-- uova
@@ -54,6 +57,7 @@ local T: { [string]: Entry } = {
 	Egg_Mythic = { en = "Mythic Egg", it = "Uovo Mitico" },
 	Egg_Divine = { en = "Divine Egg", it = "Uovo Divino" },
 	Egg_Secret = { en = "Secret Egg", it = "Uovo Segreto" },
+	Egg_Primal = { en = "Primal Egg", it = "Uovo Primordiale" },
 	Egg_Ultra = { en = "Ultra Egg", it = "Uovo Ultra" },
 
 	-- pet
@@ -89,6 +93,16 @@ local T: { [string]: Entry } = {
 	Pet_TortelloneCosmico = { en = "Tortellone Cosmico", it = "Tortellone Cosmico" },
 	Pet_ArancinoAstronauta = { en = "Arancino Astronauta", it = "Arancino Astronauta" },
 	Pet_MozzarellaNinjella = { en = "Mozzarella Ninjella", it = "Mozzarella Ninjella" },
+	Pet_WarBoar = { en = "War Boar", it = "Cinghiale da Guerra" },
+	Pet_RageRam = { en = "Rage Ram", it = "Ariete Furioso" },
+	Pet_BerserkBear = { en = "Berserker Bear", it = "Orso Berserker" },
+	Pet_ShadowWolf = { en = "Shadow Wolf", it = "Lupo Ombra" },
+	Pet_IronScorpion = { en = "Iron Scorpion", it = "Scorpione d'Acciaio" },
+	Pet_KingCobra = { en = "King Cobra", it = "Cobra Reale" },
+	Pet_CrystalGolem = { en = "Crystal Golem", it = "Golem di Cristallo" },
+	Pet_FrostWyvern = { en = "Frost Wyvern", it = "Viverna di Ghiaccio" },
+	Pet_Cerberus = { en = "Cerberus", it = "Cerbero" },
+	Pet_InfernoMinotaur = { en = "Inferno Minotaur", it = "Minotauro Infernale" },
 	Pet_InfernoKomodo = { en = "Inferno Komodo", it = "Komodo Infernale" },
 	Pet_VenomWidow = { en = "Venom Widow", it = "Vedova Velenosa" },
 	Pet_ThunderGriffin = { en = "Thunder Griffin", it = "Grifone del Tuono" },
@@ -121,6 +135,8 @@ local T: { [string]: Entry } = {
 	Prompt_Traps = { en = "TRAPS", it = "TRAPPOLE" },
 	Prompt_Upgrades = { en = "UPGRADES", it = "POTENZIAMENTI" },
 	Prompt_DenUnlock = { en = "UNLOCK {price}", it = "SBLOCCA {price}" },
+	Prompt_Wheel = { en = "SPIN", it = "GIRA" },
+	Prompt_Quests = { en = "MISSIONS", it = "MISSIONI" },
 
 	-- HUD
 	Carrying = { en = "{item}", it = "{item}" },
@@ -288,6 +304,16 @@ local T: { [string]: Entry } = {
 		it = "Più mutazioni, pet giganti e pet rari",
 	},
 	ProductDesc_Coins = { en = "Get {amount} coins now", it = "Ricevi subito {amount} monete" },
+	Product_WheelSpin1 = { en = "Wheel Spin", it = "Giro della Ruota" },
+	Product_WheelSpins5 = { en = "5 Wheel Spins", it = "5 Giri della Ruota" },
+	ProductDesc_WheelSpin1 = {
+		en = "One extra spin of the Wheel of Fortune",
+		it = "Un giro in più della Ruota della Fortuna",
+	},
+	ProductDesc_WheelSpins5 = {
+		en = "Five extra spins of the Wheel of Fortune",
+		it = "Cinque giri in più della Ruota della Fortuna",
+	},
 	PurchaseThanks = { en = "Thank you for your purchase!", it = "Grazie per l'acquisto!" },
 	SkipHatchWhich = { en = "Skips the egg that needs the most time", it = "Salta l'uovo con più tempo rimanente" },
 	NoEggToSkip = { en = "No egg to skip right now", it = "Nessun uovo da saltare adesso" },
@@ -372,6 +398,10 @@ local T: { [string]: Entry } = {
 		it = "{name} ha preso un uovo Ultra nella Tana dei Mostri! Rubalo prima che arrivi in cima!",
 	},
 	AnnounceAdmin = { en = "{text}", it = "{text}" },
+	AnnounceWheelJackpot = {
+		en = "{name} hit the JACKPOT on the Wheel of Fortune: a Primal egg!",
+		it = "{name} ha vinto il JACKPOT alla Ruota della Fortuna: un uovo Primordiale!",
+	},
 
 	-- tutorial
 	Tut_Hatch = {
@@ -395,6 +425,66 @@ local T: { [string]: Entry } = {
 	LbSteals = { en = "TOP THIEVES", it = "I LADRI MIGLIORI" },
 	LbIncome = { en = "BEST INCOME", it = "GUADAGNI MIGLIORI" },
 	LbEmpty = { en = "Loading...", it = "Caricamento..." },
+
+	-- piazza: ruota della fortuna
+	WheelTitle = { en = "WHEEL OF FORTUNE", it = "RUOTA DELLA FORTUNA" },
+	WheelSign = { en = "WHEEL OF FORTUNE", it = "RUOTA DELLA FORTUNA" },
+	WheelFree = { en = "FREE SPIN", it = "GIRO GRATIS" },
+	WheelReady = { en = "READY!", it = "PRONTO!" },
+	WheelExtra = { en = "Extra spins: {n}", it = "Giri extra: {n}" },
+	WheelSpinFree = { en = "FREE SPIN!", it = "GIRA GRATIS!" },
+	WheelSpin = { en = "SPIN!", it = "GIRA!" },
+	WheelNoSpin = { en = "NO SPINS", it = "NIENTE GIRI" },
+	WheelBuy = { en = "Get more spins", it = "Altri giri" },
+	WheelHint = {
+		en = "Finish all daily missions for a free extra spin!",
+		it = "Completa tutte le missioni del giorno per un giro extra!",
+	},
+	WheelJackpot = { en = "JACKPOT: PRIMAL EGG!", it = "JACKPOT: UOVO PRIMORDIALE!" },
+	Jackpot = { en = "JACKPOT", it = "JACKPOT" },
+	SpinsCount = { en = "+{n} spins", it = "+{n} giri" },
+	SpinsCount1 = { en = "+1 spin", it = "+1 giro" },
+	WheelWon = { en = "The wheel gives you {reward}!", it = "La ruota ti regala {reward}!" },
+	WheelBusy = { en = "The wheel is still spinning!", it = "La ruota sta ancora girando!" },
+	WheelNoSpins = { en = "No spins left: come back later!", it = "Giri finiti: torna più tardi!" },
+	RewardSpins = { en = "{n} wheel spins", it = "{n} giri della ruota" },
+	RewardSpin1 = { en = "a wheel spin", it = "un giro della ruota" },
+
+	-- piazza: missioni
+	QuestsTitle = { en = "MISSIONS", it = "MISSIONI" },
+	QuestsDaily = { en = "DAILY", it = "GIORNALIERE" },
+	QuestsWeekly = { en = "WEEKLY", it = "SETTIMANALI" },
+	QuestsNew = { en = "New in {t}", it = "Nuove tra {t}" },
+	DaysHours = { en = "{d}d {h}h", it = "{d}g {h}h" },
+	QuestGo = { en = "GO!", it = "VAI!" },
+	QuestsBonusDaily = { en = "Claim all 3: {reward}", it = "Riscattale tutte e 3: {reward}" },
+	QuestsBonusWeekly = { en = "Claim all 3: {reward} egg", it = "Riscattale tutte e 3: uovo {reward}" },
+	QuestsBoard = { en = "MISSIONS", it = "MISSIONI" },
+	QuestsBoardClaim = { en = "{n} rewards to claim!", it = "{n} premi da riscattare!" },
+	QuestsBoardHint = { en = "New missions every day", it = "Nuove missioni ogni giorno" },
+	QuestDone = { en = "Mission complete: {reward}!", it = "Missione completata: {reward}!" },
+	Quest_Deliver = { en = "Deliver {n} eggs to your base", it = "Consegna {n} uova alla tua base" },
+	Quest_Hatch = { en = "Hatch {n} eggs", it = "Schiudi {n} uova" },
+	Quest_Steal = { en = "Steal {n} times from other players", it = "Ruba {n} volte agli altri giocatori" },
+	Quest_Slap = { en = "Slap {n} players", it = "Dai {n} schiaffi agli altri giocatori" },
+	Quest_Collect = { en = "Collect your pets' coins {n} times", it = "Raccogli le monete dei pet {n} volte" },
+	Quest_King = { en = "Be King of the Hill for {n} seconds", it = "Resta Re della Collina per {n} secondi" },
+	Quest_Wheel = { en = "Spin the Wheel of Fortune", it = "Gira la Ruota della Fortuna" },
+	Quest_PickupPrimal = { en = "Pick up a Primal egg", it = "Raccogli un uovo Primordiale" },
+	Quest_HatchPrimal = { en = "Hatch {n} Primal eggs", it = "Schiudi {n} uova Primordiali" },
+	Quest_DeliverDeep = {
+		en = "Deliver {n} eggs from the Canyon or deeper",
+		it = "Consegna {n} uova dal Canyon in giù",
+	},
+
+	-- piazza: re della collina
+	KingTitle = { en = "KING OF THE HILL", it = "RE DELLA COLLINA" },
+	KingIs = { en = "👑 {name}", it = "👑 {name}" },
+	KingClimb = { en = "Climb to the top alone to earn coins!", it = "Resta da solo in cima e guadagni monete!" },
+	KingContested = { en = "CONTESTED! Push them off!", it = "CONTESA! Buttali giù!" },
+	KingYou = { en = "KING", it = "RE" },
+	KingIdle = { en = "Move to keep earning", it = "Muoviti per guadagnare" },
+	KingNew = { en = "{name} is the new King of the Hill!", it = "{name} è il nuovo Re della Collina!" },
 }
 
 Strings.Table = T

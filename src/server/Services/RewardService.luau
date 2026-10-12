@@ -6,7 +6,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local GameConfig = require(ReplicatedStorage.Shared.Config.Game)
 local Net = require(ReplicatedStorage.Shared.Net)
+local Plaza = require(ReplicatedStorage.Shared.Config.Plaza)
 local Rewards = require(ReplicatedStorage.Shared.Config.Rewards)
+local Zones = require(ReplicatedStorage.Shared.Config.Zones)
 
 local RewardService = {}
 
@@ -27,27 +29,69 @@ end
 
 local DAY = 86400
 
-local function scaledCoins(player: Player, amount: number): number
+local function scaledCoins(player: Player, amount: number, minutes: number?): number
 	-- i premi in monete crescono con i guadagni del giocatore (alcuni minuti di guadagno)
 	local income = S.PetService.TotalIncome(player)
-	return math.max(amount, math.floor(income * 60 * Rewards.CoinScaleMinutes))
+	return math.max(amount, math.floor(income * 60 * (minutes or Rewards.CoinScaleMinutes)))
 end
 
--- Consegna un premio e ritorna la sua descrizione (chiave + argomenti) per il client
+-- Zona piu' profonda (del sentiero) da cui il giocatore ha consegnato un uovo
+function RewardService.BestZone(player: Player): string
+	local data = S.DataService.Get(player)
+	local zone = data and data.Stats.BestZone
+	return if zone and Plaza.EggTiers[zone] then zone else "Meadow"
+end
+
+-- Le uova consegnate alzano la zona migliore (la Tana conta come il Cratere)
+function RewardService.RecordZone(player: Player, zone: string?)
+	local data = S.DataService.Get(player)
+	if not data or not zone or not Zones.List[zone] then
+		return
+	end
+	if zone == "Den" then
+		zone = "Crater"
+	end
+	local best = Zones.List[RewardService.BestZone(player)]
+	if Zones.List[zone].order > best.order then
+		S.StateService.Set(player, { "Stats", "BestZone" }, zone)
+	end
+end
+
+-- Rarita' dell'uovo premio di un certo livello (1 buono, 2 ottimo) per la zona migliore
+function RewardService.TierEgg(player: Player, tier: number): string
+	local tiers = Plaza.EggTiers[RewardService.BestZone(player)]
+	return tiers[math.clamp(tier, 1, #tiers)]
+end
+
+-- Consegna un premio e ritorna la sua descrizione (chiave + argomenti) per il client.
+-- Monete: amount (o min) come minimo, minutes di guadagno; Egg: rarity fissa o tier secondo la
+-- zona migliore; Primal: uovo Primordiale della zona migliore (+ amount minuti di fortuna);
+-- Spin: giri della ruota.
 function RewardService.Give(player: Player, reward): (string, { [string]: any })
 	if reward.kind == "Coins" then
-		local amount = scaledCoins(player, reward.amount)
+		local amount = scaledCoins(player, reward.min or reward.amount, reward.minutes)
 		S.DataService.AddCoins(player, amount, "Reward")
 		S.StateService.Effect(player, "Coins", { amount = amount })
 		return "RewardCoins", { amount = amount }
 	elseif reward.kind == "Luck" then
 		S.MonetizationService.AddLuck(player, reward.amount)
 		return "RewardLuck", { t = reward.amount .. "m" }
-	else
-		for _ = 1, reward.amount do
-			S.HatchService.AddPending(player, reward.rarity)
+	elseif reward.kind == "Spin" then
+		local n = reward.amount or 1
+		S.WheelService.AddSpins(player, n)
+		return if n == 1 then "RewardSpin1" else "RewardSpins", { n = n }
+	elseif reward.kind == "Primal" then
+		S.HatchService.AddPending(player, "Primal", RewardService.BestZone(player))
+		if reward.amount then
+			S.MonetizationService.AddLuck(player, reward.amount)
 		end
-		return "RewardEgg", { egg = "Egg_" .. reward.rarity }
+		return "RewardEgg", { egg = "Egg_Primal" }
+	else
+		local rarity = reward.rarity or RewardService.TierEgg(player, reward.tier or 1)
+		for _ = 1, reward.amount or 1 do
+			S.HatchService.AddPending(player, rarity)
+		end
+		return "RewardEgg", { egg = "Egg_" .. rarity }
 	end
 end
 

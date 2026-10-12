@@ -186,6 +186,7 @@ function CombatService.Swing(player: Player)
 		dir * def.knockback + Vector3.new(0, def.knockback * 0.45, 0)
 	)
 	S.StateService.Notify(best, "SlappedBy", { name = player.DisplayName }, "Bad")
+	S.QuestService.Add(player, "Slap", 1)
 	S.StateService.Effect(nil, "Slap", { position = bhrp.Position, bat = data and data.EquippedBat })
 end
 

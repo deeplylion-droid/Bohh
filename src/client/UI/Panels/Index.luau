@@ -82,9 +82,13 @@ function Panel.Build(parent: Instance, C)
 		built = true
 		for i, rarity in Rarities.Order do
 			local r = Rarities.List[rarity]
+			local list = Pets.ByRarity[rarity]
+			-- 4 pet per riga, 5 per gli Ultra; i 10 Primordiali vanno su due file da 5
+			local perLine = if #list > 5 then math.ceil(#list / 2) else #list
+			local lines = math.ceil(#list / perLine)
 			local row = New("Frame", {
 				BackgroundColor3 = Color3.new(1, 1, 1),
-				Size = UDim2.new(1, 0, 0, 196),
+				Size = UDim2.new(1, 0, 0, 50 + lines * 146),
 				LayoutOrder = i,
 				Parent = scroll,
 			}, {
@@ -124,14 +128,14 @@ function Panel.Build(parent: Instance, C)
 				end,
 			})
 			local slots = {}
-			local list = Pets.ByRarity[rarity]
-			local w = 1 / #list -- 4 pet per riga, 5 per gli Ultra
+			local w = 1 / perLine
 			for k, pet in list do
+				local col, line = (k - 1) % perLine, (k - 1) // perLine
 				local slot = New("Frame", {
 					BackgroundColor3 = Color3.fromRGB(29, 22, 48),
 					BackgroundTransparency = 0.35,
 					Size = UDim2.new(w - 0.015, 0, 0, 138),
-					Position = UDim2.new((k - 1) * w + 0.0075, 0, 0, 50),
+					Position = UDim2.new(col * w + 0.0075, 0, 0, 50 + line * 146),
 					Parent = row,
 				}, { Kit.Corner(UDim.new(0, 16)) })
 				local name = Kit.Text({

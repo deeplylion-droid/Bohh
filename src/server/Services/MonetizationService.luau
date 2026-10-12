@@ -89,6 +89,10 @@ local function grant(player: Player, key: string): boolean
 			MonetizationService.AddLuck(player, 5)
 		end
 		return true
+	elseif Products.WheelSpins[key] then
+		S.WheelService.AddSpins(player, Products.WheelSpins[key])
+		S.StateService.Effect(player, "Purchase", {})
+		return true
 	elseif Products.CoinPacks[key] then
 		local pack = Products.CoinPacks[key]
 		local amount = math.max(pack.min, math.floor(S.PetService.TotalIncome(player) * 60 * pack.minutes))

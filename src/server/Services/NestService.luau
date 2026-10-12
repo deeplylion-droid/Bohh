@@ -45,10 +45,11 @@ local function zoneWeights(nest: Nest): { [string]: number }
 	local base = nest.weights or Zones.Get(nest.zone).eggs
 	local w = table.clone(base)
 	if S.EventService.IsActive("SuperAvalanche") then
-		-- le due rarita' piu' alte della zona diventano molto piu' frequenti
+		-- le due rarita' piu' alte della zona diventano molto piu' frequenti (i Primordiali, che ci
+		-- sono in tutte le zone, restano come sono)
 		local present = {}
 		for _, id in Rarities.Order do
-			if w[id] then
+			if w[id] and id ~= "Primal" then
 				table.insert(present, id)
 			end
 		end
@@ -111,6 +112,9 @@ local function placeEgg(nest: Nest, info)
 		end
 		if nest.lair then
 			S.GuardianService.EggTaken(nest.lair, player)
+		end
+		if info.rarity == "Primal" then
+			S.QuestService.Add(player, "PickupPrimal", 1)
 		end
 		if nest.always then
 			-- l'uovo non torna a questo altare: dopo pochi secondi ne compare un altro

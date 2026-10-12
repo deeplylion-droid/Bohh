@@ -3,7 +3,9 @@
 local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local Assets = require(ReplicatedStorage.Shared.Assets)
 local MapLayout = require(ReplicatedStorage.Shared.MapLayout)
+local Plaza = require(ReplicatedStorage.Shared.Config.Plaza)
 local Visuals = require(ReplicatedStorage.Shared.Visuals)
 local Build = require(script.Parent.Build)
 
@@ -133,6 +135,257 @@ function Scenery.Summit(parent: Instance, assets)
 			end
 		end
 	end
+	return folder
+end
+
+---------------------------------------------------------------------------------------------
+-- Piazza: ruota della fortuna, bacheca delle missioni, scale e anello del re della collina
+---------------------------------------------------------------------------------------------
+local function plazaPrompt(parent: BasePart, name: string, action: string, distance: number)
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.Name = name
+	prompt.ActionText = action
+	prompt.HoldDuration = 0
+	prompt.MaxActivationDistance = distance
+	prompt.RequiresLineOfSight = false
+	prompt.Style = Enum.ProximityPromptStyle.Custom
+	prompt.Parent = parent
+	return prompt
+end
+
+function Scenery.Plaza(parent: Instance, _assets)
+	local folder = Build.Model("Plaza", parent)
+	local c = MapLayout.SummitCenter
+	local floorY = c.Y + 0.8
+	local GOLD = Color3.fromRGB(255, 196, 40)
+	local PURPLE = Color3.fromRGB(40, 30, 72)
+
+	-- ruota della fortuna su un palco rotondo, rivolta verso lo spawn
+	local wcfg = Plaza.Wheel
+	local wpos = Vector3.new(wcfg.Position.X, floorY, wcfg.Position.Y)
+	local wlook = Vector3.new(wcfg.FaceToward.X, floorY, wcfg.FaceToward.Y)
+	local base = CFrame.lookAt(wpos, wlook)
+	local wheel = Build.Model("FortuneWheel", folder)
+	local stageTop = floorY + 0.8
+	Build.Part({
+		name = "Stage",
+		size = Vector3.new(1.6, 15, 15),
+		cframe = base * CFrame.new(0, 0, 0) * CFrame.Angles(0, 0, math.rad(90)),
+		color = Color3.fromRGB(216, 48, 60),
+		material = Enum.Material.SmoothPlastic,
+		shape = Enum.PartType.Cylinder,
+		parent = wheel,
+	})
+	Build.Part({
+		name = "StageRim",
+		size = Vector3.new(1.2, 15.6, 15.6),
+		cframe = base * CFrame.new(0, -0.3, 0) * CFrame.Angles(0, 0, math.rad(90)),
+		color = GOLD,
+		material = Enum.Material.SmoothPlastic,
+		shape = Enum.PartType.Cylinder,
+		parent = wheel,
+	})
+	local R = wcfg.Radius
+	local axleY = stageTop + R + 1.6
+	local axle = base * CFrame.new(0, axleY - floorY, 0)
+	wheel:SetAttribute("Axle", axle)
+	-- pilastro dietro la ruota (regge anche l'insegna) e due puntoni
+	local signY = axleY + R + 2.6
+	Build.Part({
+		name = "Pillar",
+		size = Vector3.new(2.4, signY - stageTop, 2.4),
+		cframe = base * CFrame.new(0, (stageTop + signY) / 2 - floorY, 2.1),
+		color = PURPLE,
+		parent = wheel,
+	})
+	for _, sx in { -1, 1 } do
+		local a = (base * CFrame.new(sx * 5.5, stageTop - floorY, 2.1)).Position
+		local b = (base * CFrame.new(0, axleY - floorY - 3, 2.1)).Position
+		Build.Part({
+			name = "Brace",
+			size = Vector3.new(1.2, 1.2, (b - a).Magnitude),
+			cframe = CFrame.lookAt((a + b) / 2, b),
+			color = PURPLE,
+			parent = wheel,
+		})
+	end
+	Build.Part({
+		name = "Axle",
+		size = Vector3.new(3.6, 1.6, 1.6),
+		cframe = axle * CFrame.new(0, 0, 0.4) * CFrame.Angles(0, math.rad(90), 0),
+		color = GOLD,
+		material = Enum.Material.Metal,
+		shape = Enum.PartType.Cylinder,
+		parent = wheel,
+	})
+	-- ruota: disco (contorno scuro) e faccia trasparente con l'immagine; le girano i client
+	local disc = Build.Part({
+		name = "WheelDisc",
+		size = Vector3.new(1.2, 2 * R + 0.6, 2 * R + 0.6),
+		cframe = axle * CFrame.Angles(0, math.rad(90), 0),
+		color = PURPLE,
+		shape = Enum.PartType.Cylinder,
+		parent = wheel,
+	})
+	local face = Build.Part({
+		name = "WheelFace",
+		size = Vector3.new(2 * R, 2 * R, 0.05),
+		cframe = axle * CFrame.new(0, 0, -0.64),
+		transparency = 1,
+		collide = false,
+		parent = wheel,
+	})
+	local gui = Instance.new("SurfaceGui")
+	gui.Name = "WheelGui"
+	gui.Face = Enum.NormalId.Front
+	gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+	gui.PixelsPerStud = 40
+	gui.LightInfluence = 0.15
+	gui.Parent = face
+	local image = Instance.new("ImageLabel")
+	image.Name = "Face"
+	image.BackgroundTransparency = 1
+	image.Size = UDim2.fromScale(1, 1)
+	image.Image = Assets.Images.WheelFace or ""
+	image.Parent = gui
+	disc:SetAttribute("Spin", true)
+	face:SetAttribute("Spin", true)
+	-- freccia: rombo rosso in cima, con la punta dentro la ruota
+	Build.Part({
+		name = "Pointer",
+		size = Vector3.new(2.2, 2.2, 0.9),
+		cframe = axle * CFrame.new(0, R + 0.5, -1.1) * CFrame.Angles(0, 0, math.rad(45)),
+		color = Color3.fromRGB(216, 27, 43),
+		parent = wheel,
+	})
+	Build.Part({
+		name = "PointerCap",
+		size = Vector3.new(1.1, 1.1, 1.1),
+		cframe = axle * CFrame.new(0, R + 1.9, -1.1),
+		color = GOLD,
+		shape = Enum.PartType.Ball,
+		parent = wheel,
+	})
+	Build.Sign(wheel, base * CFrame.new(0, signY + 1.2 - floorY, 0.6), Vector3.new(17, 3.6, 0.8), "WheelSign", nil, {
+		bg = GOLD,
+		text = Color3.fromRGB(90, 30, 10),
+	})
+	local light = Instance.new("PointLight")
+	light.Color = Color3.fromRGB(255, 220, 160)
+	light.Range = 18
+	light.Brightness = 0.8
+	light.Shadows = false
+	light.Parent = face
+	local wprompt = Build.Part({
+		name = "WheelPromptAnchor",
+		size = Vector3.new(1, 1, 1),
+		cframe = base * CFrame.new(0, 3.5, -4),
+		transparency = 1,
+		collide = false,
+		parent = wheel,
+	})
+	plazaPrompt(wprompt, "WheelPrompt", "SPIN", 12)
+	CollectionService:AddTag(wheel, "FortuneWheel")
+
+	-- bacheca delle missioni (il client ci scrive le missioni del giocatore)
+	local bpos = Vector3.new(-wcfg.Position.X, floorY, wcfg.Position.Y)
+	local blook = Vector3.new(-wcfg.FaceToward.X, floorY, wcfg.FaceToward.Y)
+	local bbase = CFrame.lookAt(bpos, blook)
+	local boardModel = Build.Model("QuestBoard", folder)
+	for _, sx in { -1, 1 } do
+		Build.Part({
+			name = "Post",
+			size = Vector3.new(1.4, 14, 1.4),
+			cframe = bbase * CFrame.new(sx * 8, 6, 0.4),
+			color = WOOD_DARK,
+			material = Enum.Material.Wood,
+			parent = boardModel,
+		})
+	end
+	local board = Build.Part({
+		name = "Board",
+		size = Vector3.new(15, 9.6, 0.8),
+		cframe = bbase * CFrame.new(0, 7.6, 0),
+		color = PURPLE,
+		parent = boardModel,
+	})
+	Build.Part({
+		name = "BoardFrame",
+		size = Vector3.new(15.8, 10.4, 0.6),
+		cframe = bbase * CFrame.new(0, 7.6, 0.25),
+		color = WOOD,
+		material = Enum.Material.Wood,
+		parent = boardModel,
+	})
+	Build.Part({
+		name = "Roof",
+		size = Vector3.new(18.4, 0.9, 3.4),
+		cframe = bbase * CFrame.new(0, 13.3, 0.2) * CFrame.Angles(math.rad(-12), 0, 0),
+		color = ROOF,
+		material = Enum.Material.Wood,
+		parent = boardModel,
+	})
+	local bgui = Instance.new("SurfaceGui")
+	bgui.Name = "BoardGui"
+	bgui.Face = Enum.NormalId.Front
+	bgui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+	bgui.PixelsPerStud = 30
+	bgui.LightInfluence = 0
+	bgui.Parent = board
+	local bprompt = Build.Part({
+		name = "QuestPromptAnchor",
+		size = Vector3.new(1, 1, 1),
+		cframe = bbase * CFrame.new(0, 3.5, -3),
+		transparency = 1,
+		collide = false,
+		parent = boardModel,
+	})
+	plazaPrompt(bprompt, "QuestPrompt", "MISSIONS", 12)
+	CollectionService:AddTag(board, "QuestBoard")
+
+	-- re della collina: scale verso la cima del monumento e anello luminoso sul bordo
+	local kcfg = Plaza.King
+	local top = floorY + kcfg.Height
+	local rise = kcfg.Height / kcfg.Steps
+	for _, deg in kcfg.StairAngles do
+		local a = math.rad(deg)
+		local dir = Vector3.new(math.sin(a), 0, math.cos(a))
+		for k = 1, kcfg.Steps do
+			-- l'ultimo scalino un filo sotto la cima: dove entra nel monumento le due facce non sfarfallano
+			local stepTop = floorY + rise * k - (if k == kcfg.Steps then 0.04 else 0)
+			local r0, r1 = 13.5, 15 + (kcfg.Steps + 1 - k) * 1.5
+			local rc = (r0 + r1) / 2
+			local h = stepTop - (floorY - 1)
+			local pos = Vector3.new(c.X, (stepTop + floorY - 1) / 2, c.Z) + dir * rc
+			Build.Part({
+				name = "Step",
+				size = Vector3.new(7, h, r1 - r0),
+				cframe = CFrame.lookAt(pos, pos + dir),
+				color = if k % 2 == 0 then Color3.fromRGB(214, 196, 168) else Color3.fromRGB(196, 176, 150),
+				material = Enum.Material.Slate,
+				parent = folder,
+			})
+		end
+	end
+	local band = Build.Part({
+		name = "HillBand",
+		size = Vector3.new(1, 30.6, 30.6),
+		cframe = CFrame.new(c.X, top - 0.6, c.Z) * CFrame.Angles(0, 0, math.rad(90)),
+		color = GOLD,
+		material = Enum.Material.Neon,
+		shape = Enum.PartType.Cylinder,
+		parent = folder,
+	})
+	CollectionService:AddTag(band, "HillBand")
+	local anchor = Build.Part({
+		name = "HillSignAnchor",
+		size = Vector3.new(1, 1, 1),
+		cframe = CFrame.new(c.X, top + 22, c.Z),
+		transparency = 1,
+		collide = false,
+		parent = folder,
+	})
+	CollectionService:AddTag(anchor, "HillSign")
 	return folder
 end
 

@@ -241,6 +241,7 @@ local function collect(player: Player, slot: number)
 	local ped = pedestal(player, slot)
 	S.StateService.Effect(player, "Collect", { amount = amount, position = if ped then ped.pad.Position else nil })
 	S.TutorialService.Advance(player, "Collected")
+	S.QuestService.Add(player, "Collect", 1)
 end
 
 -- Quando i piedistalli sbloccati cambiano, i pet fuori posto vengono riassegnati

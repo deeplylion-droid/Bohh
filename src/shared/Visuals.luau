@@ -12,6 +12,7 @@ local Visuals = {}
 
 local SPARKLE = "rbxasset://textures/particles/sparkles_main.dds"
 local FIRE = "rbxasset://textures/particles/fire_main.dds"
+local SMOKE = "rbxasset://textures/particles/smoke_main.dds"
 
 local function assetsFolder(category: string): Folder?
 	local root = ReplicatedStorage:FindFirstChild("Assets")
@@ -127,6 +128,18 @@ function Visuals.EggEffects(model: Model, rarity: string)
 			speed = NumberRange.new(2, 4),
 			lightEmission = 1,
 		})
+	elseif rarity == "Primal" then
+		-- braci arancio-cremisi che salgono dal guscio
+		emitter(core, {
+			texture = FIRE,
+			color = ColorSequence.new(Color3.fromRGB(255, 170, 50), Color3.fromRGB(220, 30, 20)),
+			size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.7), NumberSequenceKeypoint.new(1, 0) }),
+			rate = 14,
+			speed = NumberRange.new(1, 2.2),
+			acceleration = Vector3.new(0, 3.5, 0),
+			lightEmission = 1,
+		})
+		light(core, r.color, 16, 2)
 	elseif rarity == "Ultra" then
 		emitter(core, {
 			texture = FIRE,
@@ -217,12 +230,35 @@ local PET_FX: { [string]: { [string]: any } } = {
 		lifetime = NumberRange.new(0.8, 1.4),
 		light = Color3.fromRGB(110, 255, 80),
 	},
+	Frost = {
+		color = ColorSequence.new(Color3.fromRGB(230, 250, 255), Color3.fromRGB(90, 200, 255)),
+		size = 0.22,
+		rate = 26,
+		speed = NumberRange.new(0.6, 1.6),
+		acceleration = Vector3.new(0, -0.6, 0),
+		lifetime = NumberRange.new(0.8, 1.6),
+		light = Color3.fromRGB(120, 220, 255),
+	},
+	Shadow = {
+		texture = SMOKE,
+		color = ColorSequence.new(Color3.fromRGB(90, 40, 140), Color3.fromRGB(20, 8, 30)),
+		size = 0.6,
+		rate = 16,
+		speed = NumberRange.new(0.3, 0.8),
+		acceleration = Vector3.new(0, 0.8, 0),
+		lifetime = NumberRange.new(1, 1.8),
+		light = Color3.fromRGB(150, 70, 255),
+	},
 }
 
+-- Ultra e Primordiali (questi con meno particelle e senza luci: sono tanti sui piedistalli)
 function Visuals.PetEffects(model: Model, petId: string, intensity: number)
 	local def = Pets.ById[petId]
-	if not def or not def.giant then
+	if not def or not (def.giant or def.rarity == "Primal") then
 		return
+	end
+	if not def.giant then
+		intensity *= 0.6
 	end
 	local k = model:GetScale()
 	for _, d in model:GetDescendants() do

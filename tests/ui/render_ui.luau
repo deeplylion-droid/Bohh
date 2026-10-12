@@ -55,7 +55,15 @@ local function baseData(cfg)
 		Bats = { RubberMallet = true, Baguette = true },
 		EquippedBat = "Baguette",
 		Traps = { ["1"] = "BananaPeel" },
-		Stats = { Steals = 12, Stolen = 4, Hatched = 57, Delivered = 63, PlayTime = 18000, BestIncome = 1250 },
+		Stats = {
+			Steals = 12,
+			Stolen = 4,
+			Hatched = 57,
+			Delivered = 63,
+			PlayTime = 18000,
+			BestIncome = 1250,
+			BestZone = "Canyon",
+		},
 		Codes = {},
 		Daily = { Last = NOW - 90000, Streak = 2 },
 		LuckUntil = 0,
@@ -65,6 +73,23 @@ local function baseData(cfg)
 		GroupClaimed = false,
 		Purchases = {},
 		PurchaseOrder = {},
+		Wheel = { NextFree = NOW + 7322, Spins = 2 },
+		Quests = {
+			Day = NOW // 86400,
+			Week = (NOW - 4 * 86400) // (7 * 86400),
+			Daily = {
+				{ Id = "Deliver", P = 12, C = false },
+				{ Id = "Slap", P = 4, C = false },
+				{ Id = "King", P = 45, C = true },
+			},
+			Weekly = {
+				{ Id = "HatchW", P = 23, C = false },
+				{ Id = "HatchPrimalW", P = 1, C = false },
+				{ Id = "DeliverDeepW", P = 25, C = true },
+			},
+			DailyBonus = false,
+			WeeklyBonus = false,
+		},
 	}
 end
 
@@ -352,6 +377,30 @@ SCENES.carry_ultra = {
 	end,
 }
 
+-- novita' Primordiali: riga dell'album su due file, schiusa di un mostro (il primo uovo dei nuovi)
+SCENES.index_primal = {
+	data = function(d)
+		d.Index.WarBoar = { Normal = true }
+		d.Index.Cerberus = { Normal = true, Gold = true }
+		d.Index.KingCobra = { Normal = true }
+	end,
+	run = function(ctx)
+		ctx.C.UI.Open("Index")
+		for _, sf in ctx.gui("Panels"):GetDescendants() do
+			if sf:IsA("ScrollingFrame") and sf.Parent and sf.Parent.Name == "Body" then
+				sf.CanvasPosition = roblox.Vector2.new(0, 1580)
+			end
+		end
+	end,
+}
+SCENES.hatch_primal = {
+	run = function(ctx)
+		local ev = ctx.req("ReplicatedStorage/Shared/Net").Event("HatchReveal")
+		ev.OnClientEvent:Fire({ pet = "WarBoar", rarity = "Primal", mutation = "None", size = "Normal", new = true })
+	end,
+	advance = 5.6,
+}
+
 SCENES.loading = {
 	loading = true,
 	workspace = { ServerReady = false },
@@ -380,6 +429,48 @@ SCENES.settings_english = {
 		ctx.C.UI.Open("Settings")
 		press(ctx.gui("Panels"), "ITALIANO")
 	end,
+}
+
+-- piazza: ruota della fortuna, missioni, re della collina
+SCENES.wheel = panelScene("Wheel")
+SCENES.wheel_free = {
+	data = function(d)
+		d.Wheel = { NextFree = 0, Spins = 0 }
+	end,
+	run = function(ctx)
+		ctx.C.UI.Open("Wheel")
+	end,
+}
+-- giro che finisce sul jackpot (spicchio 8): la freccia deve indicare lo spicchio rosso
+SCENES.wheel_spin = {
+	data = function(d)
+		d.Wheel = { NextFree = 0, Spins = 0 }
+	end,
+	run = function(ctx)
+		ctx.req("ReplicatedStorage/Shared/Net").Function("SpinWheel").InvokeServer = function()
+			return true, 8
+		end
+		ctx.C.UI.Open("Wheel")
+		press(ctx.gui("Panels"), ctx.C.Lang.T("WheelSpinFree"))
+	end,
+	advance = 7,
+}
+SCENES.quests = panelScene("Quests")
+SCENES.quests_phone = {
+	viewport = { 844, 390 },
+	touch = true,
+	run = function(ctx)
+		ctx.C.UI.Open("Quests")
+	end,
+}
+SCENES.hud_king = {
+	attributes = { OnHill = true, King = true, KingRate = 625, LuckUntil = NOW + 300 },
+	run = function() end,
+}
+SCENES.hud_contested = {
+	attributes = { OnHill = true },
+	workspace = { HillContested = true },
+	run = function() end,
 }
 
 SCENES.shop = panelScene("Shop")
