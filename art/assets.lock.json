@@ -548,6 +548,10 @@
    "asset": 140654900127918,
    "hash": "b3c583c233bbd9ddb2f88a3b55847c5824528fea"
   },
+  "RageRam": {
+   "asset": 102849466506445,
+   "hash": "3a308e83846792f69035387e7467d52428b61442"
+  },
   "RedPanda": {
    "asset": 99395105538247,
    "hash": "e3f6fcbf3e54a9167dda3d89ba466f8f6eb9c247"
@@ -623,6 +627,10 @@
   "VulcanoSpaghettone": {
    "asset": 111369780589501,
    "hash": "f50c974aac0c3662787678d524a893ee1a0be3ec"
+  },
+  "WarBoar": {
+   "asset": 116489562211138,
+   "hash": "2ea37f2ca0a6789d97491c9fd03fe2f50ebd846d"
   },
   "Yeti": {
    "asset": 81608070901357,

@@ -341,6 +341,8 @@ VIEWS = {
     "wheel": ((14, 338, 44), (46, 341, 28), 24),
     "board": ((-14, 338, 44), (-46, 338, 28), 24),
     "hill": ((34, 352, 40), (0, 336, 0), 22),
+    # piedistalli del lotto 1: pet normali, un Segreto e i dieci Primordiali (Cerbero gigante)
+    "primals": ((64, 352, 77), (91, 334, 108), 22),
 }
 
 

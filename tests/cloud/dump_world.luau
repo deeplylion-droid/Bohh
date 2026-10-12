@@ -13,10 +13,27 @@ S.AssetService.WaitReady()
 do
 	local Visuals = require(ReplicatedStorage.Shared.Visuals)
 	local plot = S.PlotService.ByIndex(1)
-	local ids = { "Chick", "LavaDragon", "PinguinoPanettone", "Chick", "LavaDragon", "PinguinoPanettone" }
+	-- pet normali e Primordiali vicini, per confrontare le taglie sui piedistalli
+	local ids = {
+		"Chick",
+		"LavaDragon",
+		"PinguinoPanettone",
+		"GallinaGalattica",
+		"WarBoar",
+		"RageRam",
+		"BerserkBear",
+		"ShadowWolf",
+		"IronScorpion",
+		"KingCobra",
+		"CrystalGolem",
+		"FrostWyvern",
+		"Cerberus",
+		"InfernoMinotaur",
+	}
 	for i, id in ids do
 		local ped = plot.pedestals[i]
-		local pet = Visuals.MakePet(id, if i == 2 then "Gold" else "None", if i == 3 then "Giant" else "Normal")
+		local pet =
+			Visuals.MakePet(id, if i == 2 then "Gold" else "None", if i == 3 or i == 13 then "Giant" else "Normal")
 		local point = ped.base:FindFirstChild("PetPoint") :: Attachment
 		pet:PivotTo(point.WorldCFrame)
 		pet.Parent = plot.model
