@@ -71,6 +71,14 @@ local LOOK = {
 		tint = Color3.fromRGB(255, 238, 224),
 		fx = "Embers",
 	},
+	-- dentro il vulcano: foschia rosso scuro e braci
+	Den = {
+		color = Color3.fromRGB(150, 56, 70),
+		decay = Color3.fromRGB(70, 18, 40),
+		density = 0.44,
+		tint = Color3.fromRGB(255, 226, 222),
+		fx = "Embers",
+	},
 }
 
 -- Particelle ambientali (emesse in un volume attorno alla telecamera)

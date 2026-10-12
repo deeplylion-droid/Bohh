@@ -560,7 +560,7 @@ end
 local function updatePulse(entry, t: number, hrpPos: Vector3?)
 	local p = entry.def
 	if not entry.cf then
-		local g = groundAt(p.cframe.Position)
+		local g = if p.fixed then p.cframe.Position.Y else groundAt(p.cframe.Position)
 		if not g then
 			return
 		end

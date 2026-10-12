@@ -164,8 +164,76 @@ def add_parts(world):
     print(f"parti: {len(world['parts'])}, mesh mancanti: {skipped}")
 
 
+# ------------------------------------------------------------------------------- voxel della Tana
+def add_den_voxels(path):
+    """Terreno vero attorno alla Tana dei Mostri (da tests/cloud/dump_den_voxels.luau): superficie a
+    occupazione 0.5 con marching cubes, colorata col materiale del voxel pieno piu' vicino."""
+    from skimage import measure
+
+    D = json.load(open(path))
+    res = D["res"]
+    names = D["materials"]
+    slices = D["slices"]
+    nx, ny, nz = len(slices), len(slices[0]), len(slices[0][0].split(","))
+    occ = np.zeros((nx, ny, nz), dtype=np.float32)
+    mat = np.zeros((nx, ny, nz), dtype=np.int16)
+    for ix in range(nx):
+        for iy in range(ny):
+            for iz, cell in enumerate(slices[ix][iy].split(",")):
+                o, m = cell.split(".")
+                occ[ix, iy, iz] = int(o) / 255
+                mat[ix, iy, iz] = int(m) - 1
+    padded = np.pad(occ, 1, constant_values=0)
+    verts, faces, _, _ = measure.marching_cubes(padded, 0.5)
+    verts = verts - 1  # padding
+    # centri dei voxel: x0 + (i + 0.5) * res
+    world = np.empty_like(verts)
+    world[:, 0] = D["x0"] + (verts[:, 0] + 0.5) * res
+    world[:, 1] = D["y0"] + (verts[:, 1] + 0.5) * res
+    world[:, 2] = D["z0"] + (verts[:, 2] + 0.5) * res
+    colors = {
+        "Basalt": (60, 54, 62), "CrackedLava": (236, 92, 34), "Rock": (126, 130, 142), "Slate": (96, 94, 114),
+        "Asphalt": (74, 66, 72), "Ground": (140, 108, 78), "Snow": (240, 245, 252),
+    }
+    mesh = bpy.data.meshes.new("DenVoxels")
+    mesh.from_pydata([tuple(rb(v)) for v in world], [], faces.tolist())
+    col = mesh.color_attributes.new("col", "FLOAT_COLOR", "CORNER")
+    full = occ > 0.5
+    for poly in mesh.polygons:
+        c = np.mean(verts[list(poly.vertices)], axis=0)
+        i, j, k = (int(round(v)) for v in c)
+        best = None
+        for di in (0, -1, 1):
+            for dj in (0, -1, 1):
+                for dk in (0, -1, 1):
+                    a, b, cc = i + di, j + dj, k + dk
+                    if 0 <= a < nx and 0 <= b < ny and 0 <= cc < nz and full[a, b, cc]:
+                        best = names[mat[a, b, cc]]
+                        break
+                if best:
+                    break
+            if best:
+                break
+        rgb = colors.get(best or "Basalt", (90, 90, 90))
+        lin = [srgb_to_linear(rgb[0]), srgb_to_linear(rgb[1]), srgb_to_linear(rgb[2]), 1.0]
+        for li in poly.loop_indices:
+            col.data[li].color = lin
+    obj = bpy.data.objects.new("DenVoxels", mesh)
+    bpy.context.scene.collection.objects.link(obj)
+    m = bpy.data.materials.new("DenVoxelMat")
+    m.use_nodes = True
+    nt = m.node_tree
+    attr = nt.nodes.new("ShaderNodeVertexColor")
+    attr.layer_name = "col"
+    nt.links.new(attr.outputs["Color"], nt.nodes["Principled BSDF"].inputs["Base Color"])
+    nt.nodes["Principled BSDF"].inputs["Roughness"].default_value = 0.9
+    obj.active_material = m
+    print(f"voxel della Tana: {len(faces)} triangoli")
+    return (D["x0"], D["z0"], D["x0"] + nx * res, D["z0"] + nz * res)
+
+
 # ------------------------------------------------------------------------------- terreno
-def add_terrain(T):
+def add_terrain(T, skip=None):
     x0, z0, step = T["x0"], T["z0"], T["step"]
     rows, mats, colors = T["rows"], T["mats"], T["colors"]
     nz, nx = len(rows), len(rows[0])
@@ -180,6 +248,11 @@ def add_terrain(T):
     col_layer = bm.loops.layers.color.new("col")
     for j in range(nz - 1):
         for i in range(nx - 1):
+            if skip:
+                x = x0 + (i + 0.5) * step
+                z = z0 + (j + 0.5) * step
+                if skip[0] + 8 < x < skip[2] - 8 and skip[1] + 8 < z < skip[3] - 8:
+                    continue  # li' c'e' il terreno vero della Tana (voxel)
             a = j * nx + i
             f = bm.faces.new((verts[a], verts[a + 1], verts[a + nx + 1], verts[a + nx]))
             c = colors.get(mats[j][i], [0.5, 0.5, 0.5])
@@ -222,6 +295,15 @@ VIEWS = {
     "gate": ((52, 343, 58), (83, 341, 99), 34),
     "trail": ((190, 340, 250), (20, 262, 320), 28),
     "crater": ((70, 210, 470), (70, 96, 630), 28),
+    # Tana dei Mostri: il vulcano a sud del cratere, l'imbocco del tunnel e la grotta (dall'interno)
+    "volcano": ((330, 300, 520), (70, 140, 800), 28),
+    "denentrance": ((86, 106, 690), (70, 100, 735), 26),
+    "denportal": ((70, 98, 708), (70, 104, 732), 24),
+    "dencave": ((84, 100, 852), (70, 92, 896), 22),
+    "denaltar": ((70, 96, 846), (70, 92, 900), 18),
+    "denback": ((70, 114, 898), (70, 90, 842), 18),
+    "dentunnel": ((60, 96, 770), (82, 92, 806), 20),
+    "dentunnel2": ((81, 95, 803), (70, 89, 838), 20),
     "mountain": ((-260, 420, 1250), (0, 210, 320), 34),
 }
 
@@ -258,7 +340,12 @@ def main():
     for o in list(scene.objects):
         if o.name.startswith("Rim"):
             bpy.data.objects.remove(o)
-    add_terrain(json.load(open(ROOT / "art" / "out" / "terrain.json")))
+    # DEN=1: terreno vero della Tana dai voxel del server (al posto della mappa delle altezze li')
+    skip = None
+    den_path = ROOT / "art" / "out" / "den_voxels.json"
+    if os.environ.get("DEN") == "1" and den_path.exists():
+        skip = add_den_voxels(den_path)
+    add_terrain(json.load(open(ROOT / "art" / "out" / "terrain.json")), skip)
     add_parts(json.load(open(ROOT / "art" / "out" / "world.json")))
     for v in views:
         render(v)

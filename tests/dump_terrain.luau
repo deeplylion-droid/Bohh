@@ -5,7 +5,7 @@ local H = require("./harness")
 local Terrain = H.require("ServerScriptService/Server/World/Terrain")
 Terrain.Prepare()
 local ok = true
-local X0, X1, Z0, Z1, STEP = -324, 324, -332, 832, 4
+local X0, X1, Z0, Z1, STEP = -324, 324, -332, 1104, 4
 local rows, kinds, zones, edges = {}, {}, {}, {}
 local t0 = os.clock()
 for z = Z0, Z1, STEP do

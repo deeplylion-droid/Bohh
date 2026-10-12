@@ -23,6 +23,7 @@ local STYLE = {
 	StealPrompt = { key = "Prompt_Steal", color = "Red" },
 	SellPrompt = { key = "Prompt_Sell", color = "Orange" },
 	BarrierPrompt = { key = "Prompt_Barrier", color = "Red" },
+	DenPrompt = { key = "Prompt_DenUnlock", color = "Red" },
 }
 
 function Prompts.Init(controllers)
@@ -113,6 +114,8 @@ local function promptTexts(prompt: ProximityPrompt): (string, string)
 	local rarity = prompt:GetAttribute("Rarity")
 	if prompt.Name == "PickupPrompt" and rarity then
 		object = T("Egg_" .. rarity)
+	elseif prompt.Name == "DenPrompt" then
+		object = T("Zone_Den")
 	elseif prompt.Name == "StealPrompt" or prompt.Name == "HatchPrompt" then
 		local base = prompt.Parent
 		local petId = base and base:GetAttribute("PetId")

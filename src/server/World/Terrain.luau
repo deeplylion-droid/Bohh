@@ -12,8 +12,11 @@ local Terrain = {}
 
 local RES = 4
 local SURFACE_BIAS = RES * 0.5
+-- terreno sotto i pavimenti di pietra della Tana dei Mostri: Fill* riempie voxel interi (4 stud) e la
+-- superficie disegnata sta ~2 stud sopra l'ultimo voxel pieno, quindi serve un margine di 4.5 stud
+local FLOOR_SINK = 4.5
 local X0, X1 = -324, 324
-local Z0, Z1 = -332, 832
+local Z0, Z1 = -332, 1104 -- fino al vulcano della Tana dei Mostri, a sud del cratere
 local Y0, Y1 = 44, 344
 
 type Feature = { x: number, z: number, y: number, r: number, k: number, kind: string, zone: string }
@@ -125,6 +128,27 @@ local function buildFeatures()
 	indexFeatures()
 end
 
+-- Quota minima del terreno sopra il tunnel e la grotta della Tana dei Mostri (nil = nessun vincolo).
+-- L'imbocco resta aperto: fino al portale (z = GateZ + 2) il tunnel e' una trincea nel pendio, poi
+-- una parete di roccia con il portale addossato.
+local function denRoof(x: number, z: number): number?
+	local den = MapLayout.Den
+	local cave = den.Cave
+	local roof: number? = nil
+	local dc = math.sqrt((x - cave.center.X) ^ 2 + (z - cave.center.Z) ^ 2)
+	if dc < cave.dome + 12 then
+		roof = cave.center.Y + 10 + cave.dome + 16
+	end
+	if z > den.GateZ + 2 then
+		local floorY, d = MapLayout.DenTunnelAt(x, z)
+		if d < den.TunnelRadius + 10 then
+			local r = floorY + 5 + den.TunnelRadius + 12
+			roof = if roof then math.max(roof, r) else r
+		end
+	end
+	return roof
+end
+
 -- Prepara gli elementi (sentiero, isole, vulcano): va chiamata prima di HeightAt
 function Terrain.Prepare()
 	if #features == 0 then
@@ -220,12 +244,34 @@ function Terrain.HeightAt(x: number, z: number): (number, string, string, number
 			best, kind, zone = h, "rim", "Crater"
 		end
 	end
+	-- vulcano della Tana dei Mostri, a sud del cratere: cono con la cima arrotondata e una piccola
+	-- caldera di lava in cima (da li' esce la colonna di luce dell'uovo Ultra)
+	local volcano = MapLayout.Den.Volcano
+	local vr = math.sqrt((x - volcano.center.X) ^ 2 + (z - volcano.center.Z) ^ 2)
+	if vr < volcano.radius + 40 then
+		local h = volcano.center.Y - vr * vr / (vr + 40)
+		local k = "volcano"
+		local caldera = volcano.caldera
+		if vr < caldera then
+			h = volcano.center.Y - 36 + 20 * (vr / caldera) ^ 2
+			k = if vr < caldera * 0.75 then "caldera" else "volcano"
+		end
+		if h > best then
+			best, kind, zone = h, k, "Crater"
+		end
+	end
 	-- rumore sulle scarpate (mai sulle superfici calpestabili): ondulazioni ampie, dettaglio e
 	-- creste affilate (rumore "a cresta"); si attenua vicino al bordo del sentiero
-	if kind == "bank" or kind == "flank" or kind == "rim" then
+	if kind == "bank" or kind == "flank" or kind == "rim" or kind == "volcano" then
 		local fade = math.clamp((pathMin - (MapLayout.PathWidth / 2 + 1)) / 8, 0, 1)
 		local ridge = math.clamp(1 - math.abs(noise(x, z, 15, 6.3)) * 2.2, 0, 1) ^ 4
 		best += (noise(x, z, 26, 3.1) * 5 + noise(x, z, 9, 8.7) * 1.8 + ridge * 4) * fade
+	end
+	-- sopra il tunnel e la grotta della Tana resta sempre uno strato spesso di roccia (il tunnel e
+	-- la grotta vengono scavati dopo, vedi Terrain.CarveDen)
+	local roof = denRoof(x, z)
+	if roof and best < roof then
+		best = roof
 	end
 	return best, kind, zone, 1
 end
@@ -262,6 +308,16 @@ local function surfaceMaterial(
 	local steep = slope > 1.25
 	local cliff = slope > 2.2
 	if kind == "crater" then
+		return Enum.Material.Basalt
+	end
+	if kind == "caldera" then
+		return Enum.Material.CrackedLava
+	end
+	if kind == "volcano" then
+		-- roccia scura con colate di lava verso la cima
+		if y > 150 and noise(x or 0, z or 0, 18, 2.4) > 0.22 then
+			return Enum.Material.CrackedLava
+		end
 		return Enum.Material.Basalt
 	end
 	if kind == "rim" then
@@ -404,7 +460,61 @@ function Terrain.Build(): number
 			Enum.Material.CrackedLava
 		)
 	end
+	Terrain.CarveDen()
 	return filled
+end
+
+-- Scava il tunnel e la grotta della Tana dei Mostri dentro il vulcano (il terreno a colonne non puo'
+-- avere gallerie): sfere d'aria lungo il tunnel, cilindro e cupola per la grotta, poi pareti di
+-- basalto e il riempimento sotto i pavimenti (le lastre di pietra le mette Scenery.Den)
+function Terrain.CarveDen()
+	local terrain = workspace.Terrain
+	local den = MapLayout.Den
+	local pts = den.Tunnel
+	local R = den.TunnelRadius
+	local cave = den.Cave
+	-- le sfere partono a R stud dall'inizio, cosi' il fondo del cratere davanti al tunnel non viene scavato
+	local acc = 0
+	for i = 1, #pts - 1 do
+		local a, b = pts[i], pts[i + 1]
+		local len = (b - a).Magnitude
+		local n = math.ceil(len / 2)
+		for k = 0, n do
+			if acc + len * k / n >= R then
+				terrain:FillBall(a:Lerp(b, k / n) + Vector3.new(0, 5, 0), R, Enum.Material.Air)
+			end
+		end
+		acc += len
+	end
+	terrain:FillCylinder(
+		CFrame.new(cave.center + Vector3.new(0, cave.wall / 2 - 2, 0)),
+		cave.wall + 4,
+		cave.radius,
+		Enum.Material.Air
+	)
+	terrain:FillBall(cave.center + Vector3.new(0, 10, 0), cave.dome, Enum.Material.Air)
+	task.wait()
+	-- pareti scure (all'interno della montagna il riempimento e' roccia grigia)
+	local lo = Vector3.new(cave.center.X - 90, 64, pts[1].Z - 8)
+	local hi = Vector3.new(cave.center.X + 90, 160, cave.center.Z + cave.radius + 12)
+	local region = Region3.new(lo, hi):ExpandToGrid(RES)
+	terrain:ReplaceMaterial(region, RES, Enum.Material.Rock, Enum.Material.Basalt)
+	-- sotto i pavimenti: il terreno si riempie fino a FLOOR_SINK stud sotto la quota del pavimento; i
+	-- pavimenti veri sono lastre di pietra (Scenery.Den), precise e senza gobbe
+	for i = 1, #pts - 1 do
+		local a, b = pts[i], pts[i + 1]
+		local mid = (a + b) / 2
+		local cf = CFrame.lookAt(mid, mid + (b - a)) * CFrame.new(0, -FLOOR_SINK - 3, 0)
+		terrain:FillBlock(cf, Vector3.new(R * 2, 6, (b - a).Magnitude + 6), Enum.Material.Basalt)
+	end
+	-- grotta: la cupola scava anche sotto il pavimento, si riempie fino al fondo del terreno
+	local depth = cave.center.Y - FLOOR_SINK - Y0
+	terrain:FillCylinder(
+		CFrame.new(cave.center - Vector3.new(0, FLOOR_SINK + depth / 2, 0)),
+		depth,
+		cave.radius + 6,
+		Enum.Material.Basalt
+	)
 end
 
 return Terrain

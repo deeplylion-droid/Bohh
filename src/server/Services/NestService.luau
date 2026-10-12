@@ -26,6 +26,7 @@ type Nest = {
 	respawnAt: number,
 	lair: string?,
 	weights: { [string]: number }?,
+	always: boolean?, -- altare della Tana: l'uovo ricompare subito dopo essere stato preso
 }
 
 local S
@@ -111,6 +112,14 @@ local function placeEgg(nest: Nest, info)
 		if nest.lair then
 			S.GuardianService.EggTaken(nest.lair, player)
 		end
+		if nest.always then
+			-- l'uovo non torna a questo altare: dopo pochi secondi ne compare un altro
+			nest.away = false
+			nest.respawnAt = os.clock() + Zones.Get(nest.zone).respawn
+			if info.rarity == "Ultra" then
+				S.StateService.Announce("AnnounceUltraTaken", { name = player.DisplayName }, info.rarity)
+			end
+		end
 	end)
 end
 
@@ -118,6 +127,11 @@ local function spawnEgg(nest: Nest, forced: string?)
 	local rarity = forced or Weighted.Pick(Weighted.FromMap(zoneWeights(nest), Rarities.Order), rng)
 	local info = { id = HttpService:GenerateGUID(false), rarity = rarity, nestId = nest.id, zone = nest.zone }
 	placeEgg(nest, info)
+	if nest.always then
+		-- l'altare della Tana ne ha sempre uno: niente annuncio, solo l'effetto della comparsa
+		S.StateService.Effect(nil, "EggReturn", { position = nest.cframe.Position })
+		return
+	end
 	local zone = Zones.Get(nest.zone)
 	if Rarities.Compare(rarity, zone.announceFrom) >= 0 and Rarities.Get(rarity).announce or forced then
 		S.StateService.Announce("AnnounceEgg", { rarity = "Rarity_" .. rarity, zone = "Zone_" .. nest.zone }, rarity)
@@ -169,6 +183,20 @@ function NestService.Start()
 			buildNest(`{lair.id}Lair{k}`, lair.zone, CFrame.new(p.X, y, p.Z), lair.id, lair.eggs)
 		end
 	end
+	-- Tana dei Mostri: l'uovo Ultra sull'altare (senza il nido di paglia)
+	nests.DenAltar = {
+		id = "DenAltar",
+		zone = "Den",
+		cframe = CFrame.new(MapLayout.Den.Altar),
+		model = nil,
+		egg = nil,
+		eggInfo = nil,
+		away = false,
+		respawnAt = 0,
+		lair = nil,
+		weights = nil,
+		always = true,
+	}
 	for _, nest in nests do
 		spawnEgg(nest)
 	end
@@ -189,16 +217,6 @@ function NestService.Start()
 		while true do
 			task.wait(rng:NextNumber(Zones.SecretSpawn.minInterval, Zones.SecretSpawn.maxInterval))
 			NestService.SpawnSpecial(Zones.SecretSpawn.zone, "Secret")
-		end
-	end)
-	-- uovo Ultra: rarissimo, una colonna di luce lo rende visibile da tutta la montagna
-	task.spawn(function()
-		while true do
-			task.wait(rng:NextNumber(Zones.UltraSpawn.minInterval, Zones.UltraSpawn.maxInterval))
-			-- se un altro uovo Ultra e' ancora in giro se ne aspetta un altro giro
-			if not NestService.UltraAround() then
-				NestService.SpawnSpecial(Zones.UltraSpawn.zone, "Ultra")
-			end
 		end
 	end)
 end
@@ -288,16 +306,6 @@ end
 
 function NestService.All()
 	return nests
-end
-
--- C'e' gia' un uovo Ultra in un nido o portato in giro da qualcuno?
-function NestService.UltraAround(): boolean
-	for _, nest in nests do
-		if nest.eggInfo and nest.eggInfo.rarity == "Ultra" and (nest.egg or nest.away) then
-			return true
-		end
-	end
-	return false
 end
 
 return NestService

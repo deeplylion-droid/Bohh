@@ -10,6 +10,7 @@ local ORDER = {
 	"Notify",
 	"Prompts",
 	"World",
+	"Den",
 	"Carry",
 	"Ragdoll",
 	"Combat",

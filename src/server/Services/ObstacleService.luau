@@ -28,6 +28,11 @@ local function ground(cf: CFrame): CFrame
 	return CFrame.new(p.X, y, p.Z) * (cf - cf.Position)
 end
 
+-- Base di un impulso: appoggiata al terreno, o alla quota data (sotto la roccia della Tana)
+local function pulseFrame(p: any): CFrame
+	return if p.fixed then p.cframe else ground(p.cframe)
+end
+
 local function buildStatic()
 	folder = Build.Model("Obstacles", workspace:FindFirstChild("Map"))
 	-- portali di legno da cui pendono i tronchi
@@ -57,7 +62,7 @@ local function buildStatic()
 	end
 	-- bocche dei geyser e canali di lava (la parte animata la disegna il client)
 	for _, p in Obstacles.Pulses do
-		local cf = ground(p.cframe)
+		local cf = pulseFrame(p)
 		if p.kind == "Geyser" or p.kind == "FireGeyser" then
 			local color = if p.kind == "Geyser" then Color3.fromRGB(150, 140, 210) else Color3.fromRGB(70, 56, 64)
 			Build.Part({
@@ -195,7 +200,7 @@ local function onHit(player: Player, id: any)
 		if state ~= "Active" and state2 ~= "Active" then
 			return
 		end
-		local cf = ground(o.cframe)
+		local cf = pulseFrame(o)
 		local lp = cf:PointToObjectSpace(pos)
 		if math.abs(lp.X) > o.size.X / 2 + 5 or math.abs(lp.Z) > o.size.Z / 2 + 5 or lp.Y > o.size.Y + 6 then
 			return

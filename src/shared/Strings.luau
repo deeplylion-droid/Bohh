@@ -110,6 +110,7 @@ local T: { [string]: Entry } = {
 	Zone_Canyon = { en = "Canyon", it = "Canyon" },
 	Zone_Crystal = { en = "Crystal Caves", it = "Grotte di Cristallo" },
 	Zone_Crater = { en = "Volcanic Crater", it = "Cratere Vulcanico" },
+	Zone_Den = { en = "Monster Lair", it = "Tana dei Mostri" },
 
 	-- prompt (azioni nel mondo)
 	Prompt_Pickup = { en = "PICK UP", it = "RACCOGLI" },
@@ -119,6 +120,7 @@ local T: { [string]: Entry } = {
 	Prompt_Barrier = { en = "LOCK BASE", it = "BLOCCA BASE" },
 	Prompt_Traps = { en = "TRAPS", it = "TRAPPOLE" },
 	Prompt_Upgrades = { en = "UPGRADES", it = "POTENZIAMENTI" },
+	Prompt_DenUnlock = { en = "UNLOCK {price}", it = "SBLOCCA {price}" },
 
 	-- HUD
 	Carrying = { en = "{item}", it = "{item}" },
@@ -157,6 +159,15 @@ local T: { [string]: Entry } = {
 		it = "Il trono Ultra è occupato! Vendi prima il tuo pet Ultra.",
 	},
 	ThroneSign = { en = "ULTRA THRONE", it = "TRONO ULTRA" },
+	DenSign = { en = "MONSTER LAIR", it = "TANA DEI MOSTRI" },
+	DenLocked = {
+		en = "The Monster Lair is locked! Unlock it at the gate for {price}.",
+		it = "La Tana dei Mostri è chiusa! Sbloccala al cancello per {price}.",
+	},
+	DenUnlocked = {
+		en = "Monster Lair unlocked! An Ultra egg is always waiting inside.",
+		it = "Tana dei Mostri sbloccata! Dentro c'è sempre un uovo Ultra che ti aspetta.",
+	},
 	PetSold = { en = "Sold {pet} for {price}!", it = "Hai venduto {pet} per {price}!" },
 	Collected = { en = "+{amount}", it = "+{amount}" },
 	UpgradeBought = { en = "{upgrade} upgraded!", it = "{upgrade} potenziato!" },
@@ -356,6 +367,10 @@ local T: { [string]: Entry } = {
 	AnnounceEgg = { en = "A {rarity} egg appeared in the {zone}!", it = "Un uovo {rarity} è apparso: {zone}!" },
 	AnnounceHatch = { en = "{name} hatched {pet}!", it = "{name} ha schiuso {pet}!" },
 	AnnounceSteal = { en = "{thief} stole {pet} from {victim}!", it = "{thief} ha rubato {pet} a {victim}!" },
+	AnnounceUltraTaken = {
+		en = "{name} grabbed an Ultra egg in the Monster Lair! Steal it before it reaches the top!",
+		it = "{name} ha preso un uovo Ultra nella Tana dei Mostri! Rubalo prima che arrivi in cima!",
+	},
 	AnnounceAdmin = { en = "{text}", it = "{text}" },
 
 	-- tutorial

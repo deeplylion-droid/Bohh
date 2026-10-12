@@ -38,6 +38,7 @@ local TEMPLATE = {
 	Tutorial = 0,
 	LastOnline = 0,
 	GroupClaimed = false,
+	Unlocks = {}, -- zone sbloccate per sempre (Den = Tana dei Mostri)
 	Purchases = {}, -- [PurchaseId] = os.time()
 	PurchaseOrder = {},
 }

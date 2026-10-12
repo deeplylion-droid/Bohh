@@ -4,6 +4,7 @@ local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local MapLayout = require(ReplicatedStorage.Shared.MapLayout)
+local Visuals = require(ReplicatedStorage.Shared.Visuals)
 local Build = require(script.Parent.Build)
 
 local Scenery = {}
@@ -237,15 +238,22 @@ function Scenery.CloudSea(parent: Instance)
 		parent = folder,
 	})
 	local rng = Random.new(42)
+	local volcano = MapLayout.Den.Volcano.center
 	for _ = 1, 260 do
 		local a = rng:NextNumber(0, math.pi * 2)
 		local r = rng:NextNumber(200, 1100)
 		local x, z = math.cos(a) * r, 200 + math.sin(a) * r * 1.2
 		local d = rng:NextNumber(40, 110)
+		local size = Vector3.new(d * rng:NextNumber(1.2, 1.8), d * 0.55, d)
+		local cf = CFrame.new(x, y - 4 + rng:NextNumber(0, 10), z) * CFrame.Angles(0, rng:NextNumber(0, 6.28), 0)
+		-- niente nuvole dentro il vulcano della Tana (finirebbero nella grotta)
+		if Vector2.new(x - volcano.X, z - volcano.Z).Magnitude < 170 then
+			continue
+		end
 		Build.Part({
 			name = "Puff",
-			size = Vector3.new(d * rng:NextNumber(1.2, 1.8), d * 0.55, d),
-			cframe = CFrame.new(x, y - 4 + rng:NextNumber(0, 10), z) * CFrame.Angles(0, rng:NextNumber(0, 6.28), 0),
+			size = size,
+			cframe = cf,
 			color = Color3.fromRGB(255, 255, 255),
 			material = Enum.Material.SmoothPlastic,
 			shape = Enum.PartType.Ball,
@@ -382,6 +390,11 @@ function Scenery.Decor(parent: Instance, assets, terrainHeight: (number, number)
 				if zone ~= "Summit" and zn ~= zone then
 					continue
 				end
+				-- non sopra la trincea e il tunnel della Tana dei Mostri (scavati dopo il terreno)
+				local _, tunnelDist = MapLayout.DenTunnelAt(x, z)
+				if tunnelDist < MapLayout.Den.TunnelRadius + 8 then
+					continue
+				end
 				if kind == "path" or kind == "crater" or h < MapLayout.CloudSeaY + 4 then
 					continue
 				end
@@ -499,6 +512,493 @@ function Scenery.TrailEdges(parent: Instance, assets, terrainHeight: (number, nu
 		s += 16
 	end
 	folder:SetAttribute("Count", count)
+	return folder
+end
+
+---------------------------------------------------------------------------------------------
+-- Tana dei Mostri: portale con il cancello in fondo al cratere, puntelli e lanterne lungo il
+-- tunnel, e la grotta con l'altare dell'uovo Ultra, le statue dei cinque giganti, cristalli e
+-- occhi che brillano nel buio
+---------------------------------------------------------------------------------------------
+local DEN_STONE = Color3.fromRGB(58, 50, 64)
+local DEN_STONE_LIGHT = Color3.fromRGB(92, 82, 100)
+local DEN_LAVA = Color3.fromRGB(255, 104, 34)
+local DEN_EYES = Color3.fromRGB(255, 36, 64)
+local DEN_BONE = Color3.fromRGB(238, 226, 200)
+
+local function denLight(parent: Instance, color: Color3, range: number, brightness: number)
+	local l = Instance.new("PointLight")
+	l.Color = color
+	l.Range = range
+	l.Brightness = brightness
+	l.Shadows = false
+	l.Parent = parent
+end
+
+-- Torcia: bastone con fiamma, fuoco e luce (cf = base)
+local function denTorch(folder: Instance, cf: CFrame)
+	Build.Part({
+		name = "TorchStick",
+		size = Vector3.new(0.7, 4, 0.7),
+		cframe = cf * CFrame.new(0, 2, 0),
+		color = WOOD_DARK,
+		material = Enum.Material.Wood,
+		collide = false,
+		parent = folder,
+	})
+	local flame = Build.Part({
+		name = "TorchFlame",
+		size = Vector3.new(1, 1.1, 1),
+		cframe = cf * CFrame.new(0, 4.4, 0),
+		color = DEN_LAVA,
+		material = Enum.Material.Neon,
+		collide = false,
+		castShadow = false,
+		parent = folder,
+	})
+	local fire = Instance.new("Fire")
+	fire.Size = 3
+	fire.Heat = 7
+	fire.Color = Color3.fromRGB(255, 140, 50)
+	fire.SecondaryColor = Color3.fromRGB(255, 60, 20)
+	fire.Parent = flame
+	denLight(flame, Color3.fromRGB(255, 150, 80), 26, 1.6)
+end
+
+-- Coppia di occhi luminosi (cf: centro fra i due occhi, rivolto verso chi guarda)
+local function denEyes(folder: Instance, cf: CFrame, size: number, color: Color3)
+	for _, sx in { -1, 1 } do
+		Build.Part({
+			name = "Eye",
+			size = Vector3.new(size, size, size),
+			cframe = cf * CFrame.new(sx * size * 0.9, 0, 0),
+			color = color,
+			material = Enum.Material.Neon,
+			shape = Enum.PartType.Ball,
+			collide = false,
+			castShadow = false,
+			parent = folder,
+		})
+	end
+end
+
+-- Statua di pietra di un gigante Ultra: stesso modello del pet, pietra scura e occhi accesi
+local function denStatue(folder: Instance, petId: string, cf: CFrame, height: number)
+	local model = Visuals.MakePet(petId, "None", "Normal", height)
+	model.Name = "Statue" .. petId
+	for _, d in model:GetDescendants() do
+		if d:IsA("BasePart") then
+			local role = d:GetAttribute("Role")
+			d.Anchored = true
+			d.CanCollide = false
+			d.CanTouch = false
+			if role == "eye" or role == "glow" then
+				d.Material = Enum.Material.Neon
+				d.Color = if role == "eye" then DEN_EYES else DEN_LAVA
+			else
+				local shade = if role == "detail" then 0.8 elseif role == "shine" then 0.65 else 1
+				d.Material = Enum.Material.Slate
+				d.Color = Color3.new(0.43 * shade, 0.39 * shade, 0.46 * shade)
+				d.Reflectance = 0
+			end
+		elseif d:IsA("ParticleEmitter") or d:IsA("Beam") or d:IsA("Light") or d:IsA("Trail") then
+			d:Destroy()
+		end
+	end
+	model:SetAttribute("Giant", false)
+	model:PivotTo(cf)
+	model.Parent = folder
+	-- dentro la statua non si passa: un cilindro invisibile al centro
+	local _, size = model:GetBoundingBox()
+	local r = math.min(size.X, size.Z) * 0.32
+	Build.Part({
+		name = "StatueCollider",
+		size = Vector3.new(size.Y * 0.8, r * 2, r * 2),
+		cframe = cf * CFrame.new(0, size.Y * 0.4, 0) * CFrame.Angles(0, 0, math.rad(90)),
+		shape = Enum.PartType.Cylinder,
+		transparency = 1,
+		query = false,
+		castShadow = false,
+		parent = folder,
+	})
+	return model
+end
+
+function Scenery.Den(parent: Instance, assets)
+	local folder = Build.Model("Den", parent)
+	local den = MapLayout.Den
+	local cave = den.Cave
+	local floorY = cave.center.Y
+
+	-- portale: due colonne, architrave con la faccia di un mostro (occhi e denti), insegna, torce
+	local gate = MapLayout.DenGateFrame()
+	for _, sx in { -1, 1 } do
+		Build.Part({
+			name = "PortalPillar",
+			size = Vector3.new(5, 24, 5),
+			cframe = gate * CFrame.new(sx * 11, 9, 0),
+			color = DEN_STONE,
+			material = Enum.Material.Slate,
+			parent = folder,
+		})
+		Build.Part({
+			name = "PortalBase",
+			size = Vector3.new(6.4, 1.6, 6.4),
+			cframe = gate * CFrame.new(sx * 11, 0.8, 0),
+			color = DEN_STONE_LIGHT,
+			material = Enum.Material.Slate,
+			parent = folder,
+		})
+		denTorch(folder, gate * CFrame.new(sx * 15.5, 0, -2.5))
+	end
+	Build.Part({
+		name = "PortalLintel",
+		size = Vector3.new(30, 6, 6),
+		cframe = gate * CFrame.new(0, 21, 0),
+		color = DEN_STONE,
+		material = Enum.Material.Slate,
+		parent = folder,
+	})
+	denEyes(folder, gate * CFrame.new(0, 22, -3.1), 2.4, DEN_EYES)
+	for k = -3, 3 do
+		Build.Part({
+			name = "Tooth",
+			class = "WedgePart",
+			size = Vector3.new(1.4, 2.6, 1.2),
+			cframe = gate * CFrame.new(k * 2.4, 16.7, -2.2) * CFrame.Angles(math.rad(180), 0, 0),
+			color = DEN_BONE,
+			material = Enum.Material.SmoothPlastic,
+			collide = false,
+			parent = folder,
+		})
+	end
+	for _, sx in { -1, 1 } do
+		local spikes = assets.Clone("Props", "ObsidianSpikes")
+		if spikes then
+			spikes:ScaleTo(1.6)
+			spikes:PivotTo(gate * CFrame.new(sx * 9, 24, 0) * CFrame.Angles(0, sx * 0.6, 0))
+			spikes.Parent = folder
+		end
+	end
+	Build.Sign(folder, gate * CFrame.new(0, 27.5, -1.5), Vector3.new(26, 5, 1), "DenSign", nil, {
+		bg = Color3.fromRGB(44, 12, 28),
+		text = Color3.fromRGB(255, 72, 96),
+	})
+	-- barriera: rossa e solida per chi non ha sbloccato la Tana (il client la apre a chi l'ha sbloccata)
+	local barrier = Build.Part({
+		name = "DenGate",
+		size = Vector3.new(18, 16, 0.8),
+		cframe = gate * CFrame.new(0, 8, 0),
+		color = Color3.fromRGB(255, 50, 70),
+		material = Enum.Material.ForceField,
+		transparency = 0.25,
+		castShadow = false,
+		parent = folder,
+	})
+	CollectionService:AddTag(barrier, "DenGate")
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.Name = "DenPrompt"
+	prompt.ActionText = "UNLOCK"
+	prompt.ObjectText = tostring(den.UnlockPrice)
+	prompt.HoldDuration = 0.6
+	prompt.MaxActivationDistance = 14
+	prompt.RequiresLineOfSight = false
+	prompt.Style = Enum.ProximityPromptStyle.Custom
+	prompt:SetAttribute("Kind", "DenGate")
+	prompt.Parent = barrier
+	denLight(barrier, Color3.fromRGB(255, 70, 90), 18, 1.2)
+
+	-- pavimenti: lastre di basalto spesse lungo il tunnel (la sommita' e' la quota del pavimento, il
+	-- fondo affonda nel terreno, cosi' sotto non restano vuoti) e un disco per la grotta
+	local pts = den.Tunnel
+	local FLOOR_DEPTH = 8
+	local floorColor = Color3.fromRGB(52, 46, 58)
+	for i = 1, #pts - 1 do
+		local a, b = pts[i], pts[i + 1]
+		local mid = (a + b) / 2
+		Build.Part({
+			name = "TunnelFloor",
+			size = Vector3.new(20, FLOOR_DEPTH, (b - a).Magnitude),
+			cframe = CFrame.lookAt(mid, mid + (b - a)) * CFrame.new(0, -FLOOR_DEPTH / 2, 0),
+			color = floorColor,
+			material = Enum.Material.Basalt,
+			parent = folder,
+		})
+		-- nelle curve un disco inclinato come la media delle due pendenze chiude lo spicchio fra le
+		-- lastre, appena sotto il pavimento (cosi' non sporge da nessuna delle due)
+		if i > 1 then
+			local dirIn = (a - pts[i - 1]).Unit
+			local dirOut = (b - a).Unit
+			local along = (dirIn + dirOut).Unit
+			local right = along:Cross(Vector3.yAxis).Unit
+			local up = right:Cross(along).Unit
+			local slopeIn = dirIn.Y / Vector2.new(dirIn.X, dirIn.Z).Magnitude
+			local slopeOut = dirOut.Y / Vector2.new(dirOut.X, dirOut.Z).Magnitude
+			local sink = 0.06 + 10 * math.abs(slopeOut - slopeIn) / 2
+			Build.Part({
+				name = "TunnelFloorJoint",
+				size = Vector3.new(FLOOR_DEPTH, 20, 20),
+				cframe = CFrame.fromMatrix(a - up * (FLOOR_DEPTH / 2 + sink), up, along),
+				color = floorColor,
+				material = Enum.Material.Basalt,
+				shape = Enum.PartType.Cylinder,
+				parent = folder,
+			})
+		end
+	end
+	Build.Part({
+		name = "CaveFloor",
+		size = Vector3.new(FLOOR_DEPTH, (cave.radius + 4) * 2, (cave.radius + 4) * 2),
+		cframe = CFrame.new(cave.center - Vector3.new(0, FLOOR_DEPTH / 2 + 0.04, 0))
+			* CFrame.Angles(0, 0, math.rad(90)),
+		color = floorColor,
+		material = Enum.Material.Basalt,
+		shape = Enum.PartType.Cylinder,
+		parent = folder,
+	})
+	Build.Part({
+		name = "LavaRing",
+		size = Vector3.new(0.2, 48, 48),
+		cframe = CFrame.new(cave.center + Vector3.new(0, 0.06, 0)) * CFrame.Angles(0, 0, math.rad(90)),
+		color = Color3.fromRGB(255, 120, 40),
+		material = Enum.Material.CrackedLava,
+		shape = Enum.PartType.Cylinder,
+		parent = folder,
+	})
+
+	-- tunnel: puntelli di legno con una lanterna ogni 16 stud, crepe di lava lungo i bordi
+	local acc = 0
+	local nextSupport = den.GateZ - pts[1].Z + 10
+	for i = 1, #pts - 1 do
+		local a, b = pts[i], pts[i + 1]
+		local len = (b - a).Magnitude
+		local flat = (b - a) * Vector3.new(1, 0, 1)
+		while nextSupport <= acc + len do
+			local t = (nextSupport - acc) / len
+			local p = a:Lerp(b, t)
+			if (p - cave.center).Magnitude > cave.radius + 2 then
+				local frame = CFrame.lookAt(p, p + flat)
+				for _, sx in { -1, 1 } do
+					Build.Part({
+						name = "SupportPost",
+						size = Vector3.new(1.6, 11.6, 1.6),
+						cframe = frame * CFrame.new(sx * 7.4, 5.8, 0),
+						color = WOOD_DARK,
+						material = Enum.Material.Wood,
+						parent = folder,
+					})
+				end
+				Build.Part({
+					name = "SupportBeam",
+					size = Vector3.new(17, 1.4, 1.8),
+					cframe = frame * CFrame.new(0, 11.2, 0),
+					color = WOOD,
+					material = Enum.Material.Wood,
+					parent = folder,
+				})
+				local lantern = Build.Part({
+					name = "Lantern",
+					size = Vector3.new(0.9, 1.3, 0.9),
+					cframe = frame * CFrame.new(0, 9.7, 0),
+					color = Color3.fromRGB(255, 176, 90),
+					material = Enum.Material.Neon,
+					collide = false,
+					castShadow = false,
+					parent = folder,
+				})
+				denLight(lantern, Color3.fromRGB(255, 160, 90), 26, 1.5)
+			end
+			nextSupport += 16
+		end
+		if a.Z >= den.GateZ - 1 then
+			local frame = CFrame.lookAt((a + b) / 2, (a + b) / 2 + (b - a))
+			for _, sx in { -1, 1 } do
+				Build.Part({
+					name = "LavaCrack",
+					size = Vector3.new(0.6, 0.22, len - 3),
+					cframe = frame * CFrame.new(sx * 7.6, 0.06, 0),
+					color = DEN_LAVA,
+					material = Enum.Material.Neon,
+					collide = false,
+					castShadow = false,
+					parent = folder,
+				})
+			end
+		end
+		acc += len
+	end
+
+	-- grotta: pedana a due gradini, altare con l'uovo Ultra, anello di rune
+	Build.Part({
+		name = "Dais",
+		size = Vector3.new(1.2, 28, 28),
+		cframe = CFrame.new(cave.center + Vector3.new(0, 0.6, 0)) * CFrame.Angles(0, 0, math.rad(90)),
+		color = DEN_STONE,
+		material = Enum.Material.Slate,
+		shape = Enum.PartType.Cylinder,
+		parent = folder,
+	})
+	Build.Part({
+		name = "DaisTop",
+		size = Vector3.new(1.2, 17, 17),
+		cframe = CFrame.new(cave.center + Vector3.new(0, 1.8, 0)) * CFrame.Angles(0, 0, math.rad(90)),
+		color = DEN_STONE_LIGHT,
+		material = Enum.Material.Slate,
+		shape = Enum.PartType.Cylinder,
+		parent = folder,
+	})
+	local altarTop = den.Altar.Y
+	Build.Part({
+		name = "Altar",
+		size = Vector3.new(altarTop - 0.6 - (floorY + 2.4), 4.6, 4.6),
+		cframe = CFrame.new(cave.center.X, (altarTop - 0.6 + floorY + 2.4) / 2, cave.center.Z)
+			* CFrame.Angles(0, 0, math.rad(90)),
+		color = DEN_STONE,
+		material = Enum.Material.Slate,
+		shape = Enum.PartType.Cylinder,
+		parent = folder,
+	})
+	local altarCap = Build.Part({
+		name = "AltarCap",
+		size = Vector3.new(0.6, 6.4, 6.4),
+		cframe = CFrame.new(cave.center.X, altarTop - 0.3, cave.center.Z) * CFrame.Angles(0, 0, math.rad(90)),
+		color = Color3.fromRGB(30, 22, 34),
+		material = Enum.Material.Basalt,
+		shape = Enum.PartType.Cylinder,
+		parent = folder,
+	})
+	denLight(altarCap, Color3.fromRGB(255, 70, 100), 30, 2)
+	for k = 1, 24 do
+		local ang = k / 24 * math.pi * 2
+		local p = cave.center + Vector3.new(math.cos(ang) * 11.4, 1.24, math.sin(ang) * 11.4)
+		Build.Part({
+			name = "Rune",
+			size = Vector3.new(1.6, 0.1, 0.5),
+			cframe = CFrame.lookAt(p, cave.center + Vector3.new(0, 1.24, 0)),
+			color = Color3.fromRGB(255, 50, 90),
+			material = Enum.Material.Neon,
+			collide = false,
+			castShadow = false,
+			parent = folder,
+		})
+	end
+	-- luce generale della grotta (rosso fuoco dall'alto)
+	local lamp = Build.Part({
+		name = "CaveLight",
+		size = Vector3.new(1, 1, 1),
+		cframe = CFrame.new(cave.center + Vector3.new(0, 26, 0)),
+		transparency = 1,
+		collide = false,
+		query = false,
+		castShadow = false,
+		parent = folder,
+	})
+	denLight(lamp, Color3.fromRGB(255, 120, 90), 60, 1.4)
+
+	-- statue dei giganti lungo le pareti, rivolte verso l'altare; l'ingresso (nord, -Z) resta libero
+	local statues = {
+		{ id = "InfernoKomodo", angle = 52, height = 17 },
+		{ id = "TitanRex", angle = 116, height = 30 },
+		{ id = "PentaDragon", angle = 180, height = 32 },
+		{ id = "ThunderGriffin", angle = 244, height = 30 },
+		{ id = "VenomWidow", angle = 308, height = 16 },
+	}
+	for _, st in statues do
+		local a = math.rad(st.angle)
+		local dir = Vector3.new(math.sin(a), 0, -math.cos(a))
+		local base = cave.center + dir * 40
+		local plinth = Build.Part({
+			name = "Plinth",
+			size = Vector3.new(16, 3, 16),
+			cframe = CFrame.lookAt(base + Vector3.new(0, 1.5, 0), cave.center + Vector3.new(0, 1.5, 0)),
+			color = DEN_STONE,
+			material = Enum.Material.Slate,
+			parent = folder,
+		})
+		denStatue(
+			folder,
+			st.id,
+			CFrame.lookAt(base + Vector3.new(0, 3, 0), cave.center + Vector3.new(0, 3, 0)),
+			st.height
+		)
+		-- luce rossa dal basso sulla statua
+		local up = Instance.new("SpotLight")
+		up.Face = Enum.NormalId.Top
+		up.Angle = 70
+		up.Range = 40
+		up.Brightness = 3
+		up.Color = Color3.fromRGB(255, 90, 60)
+		up.Shadows = false
+		up.Parent = plinth
+	end
+	for _, angle in { 18, 342 } do
+		local a = math.rad(angle)
+		denTorch(folder, CFrame.new(cave.center + Vector3.new(math.sin(a), 0, -math.cos(a)) * 30))
+	end
+
+	-- cristalli viola fra le statue e ai lati dell'ingresso
+	for k, angle in { 20, 84, 148, 212, 276, 340 } do
+		local a = math.rad(angle)
+		local dir = Vector3.new(math.sin(a), 0, -math.cos(a))
+		local crystal = assets.Clone("Props", if k % 2 == 0 then "CrystalCluster1" else "CrystalCluster2")
+		if crystal then
+			crystal:ScaleTo(2.4)
+			crystal:PivotTo(CFrame.new(cave.center + dir * 44 - Vector3.new(0, 0.5, 0)) * CFrame.Angles(0, a, 0))
+			crystal.Parent = folder
+			local glow = crystal.PrimaryPart or crystal:FindFirstChildWhichIsA("BasePart")
+			if glow then
+				denLight(glow, Color3.fromRGB(190, 90, 255), 24, 1.3)
+			end
+		end
+	end
+
+	-- fumo e bagliore dalla caldera in cima al vulcano: si vede da tutta la montagna
+	local volcano = den.Volcano.center
+	local vent = Build.Part({
+		name = "VolcanoSmoke",
+		size = Vector3.new(30, 2, 30),
+		cframe = CFrame.new(volcano.X, volcano.Y - 34, volcano.Z),
+		transparency = 1,
+		collide = false,
+		query = false,
+		castShadow = false,
+		parent = folder,
+	})
+	local smoke = Instance.new("ParticleEmitter")
+	smoke.Texture = "rbxasset://textures/particles/smoke_main.dds"
+	smoke.Color = ColorSequence.new(Color3.fromRGB(90, 80, 90), Color3.fromRGB(170, 160, 170))
+	smoke.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 14), NumberSequenceKeypoint.new(1, 46) })
+	smoke.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0.6),
+		NumberSequenceKeypoint.new(0.6, 0.75),
+		NumberSequenceKeypoint.new(1, 1),
+	})
+	smoke.Lifetime = NumberRange.new(9, 14)
+	smoke.Rate = 5
+	smoke.Speed = NumberRange.new(8, 12)
+	smoke.SpreadAngle = Vector2.new(12, 12)
+	smoke.Acceleration = Vector3.new(2, 1, 1)
+	smoke.RotSpeed = NumberRange.new(-10, 10)
+	smoke.Rotation = NumberRange.new(0, 360)
+	smoke.EmissionDirection = Enum.NormalId.Top
+	smoke.LightInfluence = 0.6
+	smoke.Parent = vent
+	denLight(vent, Color3.fromRGB(255, 110, 40), 60, 3)
+
+	-- occhi nel buio sulle pareti: qualcosa guarda chi entra
+	local rng = Random.new(66)
+	for k = 1, 12 do
+		local angle = (k + rng:NextNumber(-0.3, 0.3)) / 12 * 360
+		if math.abs(((angle + 180) % 360) - 180) < 18 then
+			continue -- li' c'e' l'apertura del tunnel
+		end
+		local a = math.rad(angle)
+		local dir = Vector3.new(math.sin(a), 0, -math.cos(a))
+		local y = floorY + rng:NextNumber(9, 22)
+		local p = Vector3.new(cave.center.X, y, cave.center.Z) + dir * (cave.radius - 1.5)
+		local color = if k % 3 == 0 then Color3.fromRGB(255, 220, 60) else DEN_EYES
+		denEyes(folder, CFrame.lookAt(p, Vector3.new(cave.center.X, y, cave.center.Z)), 0.8, color)
+	end
 	return folder
 end
 

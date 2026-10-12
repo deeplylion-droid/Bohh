@@ -290,6 +290,130 @@ do
 	add("exit_gaps", gaps)
 end
 
+-- Tana dei Mostri: pavimento del tunnel continuo, volta chiusa, uovo Ultra sull'altare,
+-- percorribile dal cratere fino all'altare (con la barriera aperta)
+do
+	local den = MapLayout.Den
+	local cave = den.Cave
+	local solid = RaycastParams.new()
+	solid.FilterType = Enum.RaycastFilterType.Exclude
+	solid.FilterDescendantsInstances = {}
+	solid.RespectCanCollide = true
+	local terrainOnly2 = RaycastParams.new()
+	terrainOnly2.FilterType = Enum.RaycastFilterType.Include
+	terrainOnly2.FilterDescendantsInstances = { workspace.Terrain }
+	-- lungo l'asse del tunnel ogni 2 stud: quota del pavimento, spazio sopra la testa, roccia sopra
+	local pts = den.Tunnel
+	local worstFloor, worstAt, minHead, headAt, holes = 0, "", math.huge, "", {}
+	for i = 1, #pts - 1 do
+		local a, b = pts[i], pts[i + 1]
+		local n = math.ceil((b - a).Magnitude / 2)
+		for k = 0, n - 1 do
+			local p = a:Lerp(b, k / n)
+			local down = workspace:Raycast(p + Vector3.new(0, 6, 0), Vector3.new(0, -14, 0), solid)
+			local dy = if down then down.Position.Y - p.Y else -99
+			-- (sul piano del cancello il raggio parte dentro la barriera)
+			if math.abs(dy) > math.abs(worstFloor) and math.abs(p.Z - den.GateZ) > 1.5 then
+				worstFloor, worstAt = dy, string.format("z=%d", p.Z)
+			end
+			local up = workspace:Raycast(p + Vector3.new(0, 1, 0), Vector3.new(0, 40, 0), terrainOnly2)
+			local head = if up then up.Position.Y - p.Y else 99
+			if p.Z > den.GateZ + 4 and head < minHead and (p - cave.center).Magnitude > cave.radius then
+				minHead, headAt = head, string.format("z=%d", p.Z)
+			end
+			-- dall'alto: oltre il portale il primo terreno incontrato deve essere la volta, non il pavimento
+			if p.Z > den.GateZ + 4 then
+				local top = workspace:Raycast(Vector3.new(p.X, 320, p.Z), Vector3.new(0, -300, 0), terrainOnly2)
+				if top and top.Position.Y < p.Y + 12 and #holes < 6 then
+					table.insert(holes, string.format("z=%d", p.Z))
+				end
+			end
+		end
+	end
+	add("den_floor_worst", string.format("%.2f@%s", worstFloor, worstAt))
+	add("den_headroom_min", string.format("%.1f@%s", minHead, headAt))
+	add("den_roof_holes", #holes == 0 and "none" or table.concat(holes, " "))
+	-- grotta: pavimento, cupola chiusa sopra il centro
+	local caveFloor = workspace:Raycast(cave.center + Vector3.new(30, 8, 0), Vector3.new(0, -20, 0), solid)
+	add("den_cave_floor", if caveFloor then string.format("%.2f", caveFloor.Position.Y - cave.center.Y) else "miss")
+	local dome = workspace:Raycast(cave.center + Vector3.new(0, 2, 0), Vector3.new(0, 120, 0), terrainOnly2)
+	add("den_dome", if dome then string.format("%.1f", dome.Position.Y - cave.center.Y) else "open")
+	-- oggetti costruiti
+	local map = workspace:FindFirstChild("Map")
+	local denModel = map and map:FindFirstChild("Den")
+	local statues = 0
+	if denModel then
+		for _, c in denModel:GetChildren() do
+			if string.sub(c.Name, 1, 6) == "Statue" and c:IsA("Model") then
+				statues += 1
+			end
+		end
+	end
+	add("den_statues", statues)
+	add("den_gates", #game:GetService("CollectionService"):GetTagged("DenGate"))
+	add("den_zone_cave", MapLayout.ZoneAt(cave.center + Vector3.new(0, 3, 0)))
+	add("den_zone_crater", MapLayout.ZoneAt(Vector3.new(70, 98, 715)))
+	-- l'uovo Ultra sull'altare, e che ricompaia dopo essere stato tolto
+	local altar = S and S.NestService.All().DenAltar
+	add("den_egg", if altar and altar.egg and altar.eggInfo then altar.eggInfo.rarity else "none")
+	if altar and altar.egg then
+		altar.egg:Destroy()
+		altar.egg = nil
+		altar.away = false
+		altar.respawnAt = os.clock() + 1
+		task.wait(3)
+		add("den_egg_respawn", if altar.egg then altar.eggInfo.rarity else "none")
+	end
+	-- percorribilita' dal cratere all'altare (il pathfinding di Roblox non regge i pavimenti di pietra
+	-- sopra il terreno scavato, quindi si misura con i raggi): ogni 2 stud pavimento al suo posto,
+	-- spazio sopra la testa e larghezza libera all'altezza del busto
+	local barriers = game:GetService("CollectionService"):GetTagged("DenGate")
+	for _, b in barriers do
+		(b :: BasePart).CanCollide = false
+	end
+	local route = table.clone(pts)
+	table.insert(route, cave.center + Vector3.new(0, 0, -15))
+	local worstDy, minRoom, minWidth, at = 0, math.huge, math.huge, ""
+	for i = 1, #route - 1 do
+		local a, b = route[i], route[i + 1]
+		local flat = ((b - a) * Vector3.new(1, 0, 1)).Unit
+		local side = flat:Cross(Vector3.yAxis)
+		local n = math.ceil((b - a).Magnitude / 2)
+		for k = 0, n - 1 do
+			local p = a:Lerp(b, k / n)
+			local down = workspace:Raycast(p + Vector3.new(0, 3, 0), Vector3.new(0, -8, 0), solid)
+			local dy = if down then down.Position.Y - p.Y else -9
+			if math.abs(dy) > math.abs(worstDy) then
+				worstDy = dy
+			end
+			local up = workspace:Raycast(p + Vector3.new(0, 0.5, 0), Vector3.new(0, 30, 0), solid)
+			local room = if up then up.Position.Y - p.Y else 30
+			local chest = p + Vector3.new(0, 2.5, 0)
+			local l = workspace:Raycast(chest, -side * 20, solid)
+			local r = workspace:Raycast(chest, side * 20, solid)
+			local width = (if l then (l.Position - chest).Magnitude else 20)
+				+ (if r then (r.Position - chest).Magnitude else 20)
+			if room < minRoom then
+				minRoom = room
+			end
+			if width < minWidth then
+				minWidth, at = width, string.format("z=%d", p.Z)
+			end
+		end
+	end
+	for _, b in barriers do
+		(b :: BasePart).CanCollide = true
+	end
+	add("den_walk", string.format("floor %.2f, headroom %.1f, width %.1f@%s", worstDy, minRoom, minWidth, at))
+	-- dal fondo del cratere fino al portale (fuori dal tunnel il pathfinding funziona)
+	local okp, status = pcall(function()
+		local path = PathfindingService:CreatePath(agent)
+		path:ComputeAsync(Vector3.new(70, 98, 690), MapLayout.DenGateFrame().Position + Vector3.new(0, 3, -6))
+		return path.Status.Name .. "/" .. #path:GetWaypoints()
+	end)
+	add("den_path_gate", if okp then status else "err:" .. tostring(status))
+end
+
 -- ragdoll su un personaggio R15 di prova (giunti AnimationConstraint): i giunti si spengono (gli
 -- snodi sferici tengono uniti gli arti), l'umanoide resta vivo e alla fine i giunti tornano rigidi.
 -- La fisica qui non gira (RunService:IsRunning() e' falso), quindi si controlla solo lo stato dei giunti.

@@ -227,6 +227,80 @@ MapLayout.Crater = {
 }
 
 ---------------------------------------------------------------------------------------------
+-- Tana dei Mostri: dal fondo del cratere un tunnel entra nel vulcano a sud e scende fino a una
+-- grande grotta, dove sull'altare c'e' sempre un uovo Ultra
+---------------------------------------------------------------------------------------------
+local DEN_FLOOR = 84
+MapLayout.Den = {
+	-- vulcano che contiene la grotta: cima arrotondata in center (y = quota della cima), con una
+	-- caldera di lava larga 'caldera' stud
+	Volcano = { center = Vector3.new(70, 236, 900), radius = 200, caldera = 34 },
+	-- pavimento del tunnel, dal fondo del cratere fino a dentro la grotta
+	Tunnel = {
+		Vector3.new(70, 95, 698),
+		Vector3.new(70, 94, 736),
+		Vector3.new(57, 92, 772),
+		Vector3.new(82, 89, 806),
+		Vector3.new(70, 86, 838),
+		Vector3.new(70, DEN_FLOOR, 854),
+	},
+	TunnelRadius = 10, -- raggio dello scavo: il centro e' 5 stud sopra il pavimento (largo ~17)
+	GateZ = 730, -- il cancello sta sul primo tratto, dove il tunnel entra sotto la roccia
+	Cave = {
+		center = Vector3.new(70, DEN_FLOOR, 890), -- centro del pavimento
+		radius = 50, -- pareti dritte fino a 'wall' stud, poi la cupola
+		wall = 26,
+		dome = 54, -- raggio della cupola (centro 10 stud sopra il pavimento)
+	},
+	Altar = Vector3.new(70, DEN_FLOOR + 6.5, 890), -- sommita' dell'altare con l'uovo Ultra
+	UnlockPrice = 25000000,
+}
+
+-- Quota del pavimento del tunnel nel punto piu' vicino a (x, z), distanza orizzontale dall'asse e
+-- distanza percorsa dall'inizio del tunnel
+function MapLayout.DenTunnelAt(x: number, z: number): (number, number, number)
+	local pts = MapLayout.Den.Tunnel
+	local bestD, bestY, bestS = math.huge, pts[1].Y, 0
+	local acc = 0
+	for i = 1, #pts - 1 do
+		local a, b = pts[i], pts[i + 1]
+		local ab = Vector2.new(b.X - a.X, b.Z - a.Z)
+		local ap = Vector2.new(x - a.X, z - a.Z)
+		local len = ab.Magnitude
+		local t = math.clamp(ap:Dot(ab) / (len * len), 0, 1)
+		local d = (ap - ab * t).Magnitude
+		if d < bestD then
+			bestD, bestY, bestS = d, a.Y + (b.Y - a.Y) * t, acc + len * t
+		end
+		acc += len
+	end
+	return bestY, bestD, bestS
+end
+
+-- Il cancello: sul pavimento del tunnel, rivolto verso il cratere
+function MapLayout.DenGateFrame(): CFrame
+	local z = MapLayout.Den.GateZ
+	local x = MapLayout.Den.Tunnel[1].X
+	local y = MapLayout.DenTunnelAt(x, z)
+	return CFrame.lookAt(Vector3.new(x, y, z), Vector3.new(x, y, z - 1))
+end
+
+-- Vero se la posizione e' oltre il cancello: nel tunnel o nella grotta
+function MapLayout.InDen(pos: Vector3): boolean
+	local den = MapLayout.Den
+	local cave = den.Cave
+	local flat = Vector2.new(pos.X - cave.center.X, pos.Z - cave.center.Z).Magnitude
+	if flat < cave.radius + 4 and pos.Y > cave.center.Y - 8 and pos.Y < cave.center.Y + cave.dome + 12 then
+		return true
+	end
+	if pos.Z <= den.GateZ then
+		return false
+	end
+	local floorY, d = MapLayout.DenTunnelAt(pos.X, pos.Z)
+	return d < den.TunnelRadius + 3 and pos.Y > floorY - 6 and pos.Y < floorY + 20
+end
+
+---------------------------------------------------------------------------------------------
 -- Zona in cui si trova una posizione
 ---------------------------------------------------------------------------------------------
 function MapLayout.ZoneAt(pos: Vector3): string
@@ -234,6 +308,9 @@ function MapLayout.ZoneAt(pos: Vector3): string
 	local summitFlat = Vector3.new(MapLayout.SummitCenter.X, 0, MapLayout.SummitCenter.Z)
 	if (flat - summitFlat).Magnitude < MapLayout.PlateauRadius - 4 and pos.Y > 322 then
 		return "Summit"
+	end
+	if pos.Z > 700 and MapLayout.InDen(pos) then
+		return "Den"
 	end
 	if pos.Z > 548 then
 		return "Crater"

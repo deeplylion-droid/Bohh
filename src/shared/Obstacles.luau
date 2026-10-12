@@ -51,6 +51,7 @@ export type Pulse = {
 	warn: number, -- durata dell'avviso prima dell'attivazione
 	active: number, -- durata della fase attiva
 	phase: number,
+	fixed: boolean?, -- la quota di cframe e' gia' quella del pavimento (Tana dei Mostri, sotto la roccia)
 }
 
 export type Wind = {
@@ -230,6 +231,42 @@ do
 			warn = 1.3,
 			active = 1.6,
 			phase = k * 1.4,
+		})
+	end
+
+	-- Tana dei Mostri: geyser di fuoco nel tunnel (bassi, sotto la volta) e attorno all'altare
+	local den = MapLayout.Den
+	for k, spec in { { 2, 0.45, -4 }, { 3, 0.42, 4.5 }, { 4, 0.5, -4 } } do
+		local a, b = den.Tunnel[spec[1]], den.Tunnel[spec[1] + 1]
+		local flat = (b - a) * Vector3.new(1, 0, 1)
+		local right = flat.Unit:Cross(Vector3.yAxis)
+		table.insert(Obstacles.Pulses, {
+			id = `DenGeyser{k}`,
+			kind = "FireGeyser",
+			zone = "Den",
+			cframe = CFrame.new(a:Lerp(b, spec[2]) + right * spec[3]),
+			size = Vector3.new(8, 13, 8),
+			period = 6.5,
+			warn = 1.3,
+			active = 1.6,
+			phase = k * 1.7,
+			fixed = true,
+		})
+	end
+	local cave = den.Cave
+	for k = 1, 4 do
+		local ang = (k - 1) / 4 * math.pi * 2
+		table.insert(Obstacles.Pulses, {
+			id = `DenFire{k}`,
+			kind = "FireGeyser",
+			zone = "Den",
+			cframe = CFrame.new(cave.center + Vector3.new(math.sin(ang) * 18.5, 0, -math.cos(ang) * 18.5)),
+			size = Vector3.new(8, 24, 8),
+			period = 7,
+			warn = 1.3,
+			active = 1.8,
+			phase = k * 1.75,
+			fixed = true,
 		})
 	end
 

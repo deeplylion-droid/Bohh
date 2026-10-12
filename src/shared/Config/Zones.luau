@@ -1,5 +1,6 @@
 --!strict
--- Le 5 zone della montagna, dalla vetta verso valle. Piu' si scende, piu' le uova sono rare.
+-- Le 5 zone della montagna, dalla vetta verso valle, e la Tana dei Mostri sotto il vulcano.
+-- Piu' si scende, piu' le uova sono rare.
 -- eggs     = pesi delle rarita' delle uova che compaiono nei nidi della zona
 -- respawn  = secondi prima che un nido vuoto produca un nuovo uovo
 -- announceFrom = da questa rarita' in su la comparsa viene annunciata a tutto il server
@@ -17,7 +18,7 @@ export type Zone = {
 
 local Zones = {}
 
-Zones.Order = { "Meadow", "Forest", "Canyon", "Crystal", "Crater" }
+Zones.Order = { "Meadow", "Forest", "Canyon", "Crystal", "Crater", "Den" }
 
 Zones.List = {
 	Meadow = {
@@ -70,6 +71,18 @@ Zones.List = {
 		fogColor = Color3.fromRGB(255, 150, 110),
 		music = "Crater",
 	},
+	-- Tana dei Mostri (oltre il cancello nel cratere): sull'altare c'e' sempre un uovo Ultra; quando
+	-- qualcuno lo prende, dopo 'respawn' secondi ne compare un altro
+	Den = {
+		id = "Den",
+		order = 6,
+		eggs = { Ultra = 1 },
+		respawn = 8,
+		announceFrom = "Ultra",
+		color = Color3.fromRGB(255, 52, 88),
+		fogColor = Color3.fromRGB(120, 40, 60),
+		music = "Danger",
+	},
 } :: { [string]: Zone }
 
 -- Uovo Segreto: compare raramente nel Cratere (oltre che con gli eventi)
@@ -77,13 +90,6 @@ Zones.SecretSpawn = {
 	zone = "Crater",
 	minInterval = 20 * 60,
 	maxInterval = 32 * 60,
-}
-
--- uovo Ultra: ancora piu' raro, annunciato a tutti e visibile da lontano (colonna di luce)
-Zones.UltraSpawn = {
-	zone = "Crater",
-	minInterval = 30 * 60,
-	maxInterval = 45 * 60,
 }
 
 function Zones.Get(id: string): Zone
