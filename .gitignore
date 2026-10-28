@@ -3,6 +3,7 @@
 # Output di build e cache
 build/*.rbxl
 build/*.rbxlx
+build/pack/
 art/out/
 art/cache/
 __pycache__/
