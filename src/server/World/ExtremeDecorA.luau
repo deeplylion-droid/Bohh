@@ -304,6 +304,7 @@ type Opts = {
 }
 
 local stats = { parts = 0, lights = 0, emitters = 0, fires = 0, skipped = 0 }
+local partLimit = MAX_PARTS -- limite della fase in corso (gli ornamenti delle sponde hanno una quota per sezione)
 local group: Instance = nil :: any
 local obj: Model? = nil
 local objParts: { BasePart } = {}
@@ -344,7 +345,14 @@ local function P(name: string, size: Vector3, cf: CFrame, color: Color3, materia
 end
 
 -- sfera (sempre con le tre misure uguali, come le fa Roblox)
-local function ball(name: string, d: number, pos: Vector3 | CFrame, color: Color3, material: Enum.Material?, o: Opts?): BasePart
+local function ball(
+	name: string,
+	d: number,
+	pos: Vector3 | CFrame,
+	color: Color3,
+	material: Enum.Material?,
+	o: Opts?
+): BasePart
 	local opts: Opts = o or {}
 	opts.shape = BALL
 	local cf = if typeof(pos) == "CFrame" then pos else CF(pos)
@@ -352,7 +360,15 @@ local function ball(name: string, d: number, pos: Vector3 | CFrame, color: Color
 end
 
 -- cilindro dal punto a al punto b (coordinate del mondo)
-local function rod(name: string, a: Vector3, b: Vector3, d: number, color: Color3, material: Enum.Material?, o: Opts?): BasePart
+local function rod(
+	name: string,
+	a: Vector3,
+	b: Vector3,
+	d: number,
+	color: Color3,
+	material: Enum.Material?,
+	o: Opts?
+): BasePart
 	local opts: Opts = o or {}
 	opts.shape = CYL
 	local mid = (a + b) / 2
@@ -411,7 +427,7 @@ end
 local function commit(ignore: { [any]: boolean }?, pad: number?, padIgnore: { [any]: boolean }?): boolean
 	local m = obj :: Model
 	obj = nil
-	local ok = stats.parts + #objParts <= MAX_PARTS
+	local ok = stats.parts + #objParts <= math.min(partLimit, MAX_PARTS)
 	local boxes = {}
 	if ok then
 		local grow = V3(2, 2, 2) * (pad or 0)
@@ -581,16 +597,49 @@ local function levelAt(levels: { { number } }, u: number): number
 	return best
 end
 
+-- Santuario della sezione i: quota della faccia superiore del tetto e distanza (|v|) della faccia interna delle
+-- pareti, lette dagli elementi (se cambiano in Shared.Extreme gli ornamenti restano appoggiati)
+local function shrineShell(i: number): (number, number)
+	local s = Extreme.Sections[i]
+	local roofTop = s.floor + 28
+	local wallFace = HW + 0.5
+	for _, p in Extreme.Pieces do
+		if p.section == i and p.wall and not p.deco and s.x0 - p.cframe.X > s.length then
+			local v = math.abs(p.cframe.Z - Extreme.Z)
+			if p.size.Z > HW * 2 then
+				roofTop = p.cframe.Y + p.size.Y / 2
+			elseif v > HW then
+				wallFace = v - p.size.Z / 2
+			end
+		end
+	end
+	return roofTop, wallFace
+end
+
 ---------------------------------------------------------------------------------------------
 -- Pezzi comuni
 ---------------------------------------------------------------------------------------------
 -- Pinnacolo di roccia sospeso: blocchi sovrapposti sempre piu' stretti verso il basso e una punta. top = centro della
 -- faccia superiore (orientata come il riferimento), w x d = pianta in cima, h = altezza fino alla punta
-local function pinnacle(top: CFrame, w: number, d: number, h: number, color: Color3, material: Enum.Material, cap: Color3?)
+local function pinnacle(
+	top: CFrame,
+	w: number,
+	d: number,
+	h: number,
+	color: Color3,
+	material: Enum.Material,
+	cap: Color3?
+)
 	local h1 = h * 0.3
 	P("Rock", V3(w, h1, d), top * CF(0, -h1 / 2, 0), color, material)
 	local h2 = h * 0.32
-	P("Rock", V3(w * 0.78, h2, d * 0.8), top * CF(w * 0.04, -h1 - h2 / 2 + 0.6, -d * 0.03) * ANG(0, rad(9), 0), color, material)
+	P(
+		"Rock",
+		V3(w * 0.78, h2, d * 0.8),
+		top * CF(w * 0.04, -h1 - h2 / 2 + 0.6, -d * 0.03) * ANG(0, rad(9), 0),
+		color,
+		material
+	)
 	local h3 = h * 0.26
 	P(
 		"Rock",
@@ -600,7 +649,13 @@ local function pinnacle(top: CFrame, w: number, d: number, h: number, color: Col
 		material
 	)
 	local tip = math.min(w, d) * 0.36
-	P("Rock", V3(tip, tip, tip), top * CF(0, -h1 - h2 - h3 + 1.4 - tip * 0.3, 0) * ANG(rad(45), 0, rad(35)), color, material)
+	P(
+		"Rock",
+		V3(tip, tip, tip),
+		top * CF(0, -h1 - h2 - h3 + 1.4 - tip * 0.3, 0) * ANG(rad(45), 0, rad(35)),
+		color,
+		material
+	)
 	if cap then
 		P("Moss", V3(w + 0.4, 0.6, d + 0.4), top * CF(0, 0.3, 0), cap, M.Grass)
 	end
@@ -610,7 +665,13 @@ end
 local function island(top: CFrame, d: number, color: Color3, material: Enum.Material, under: Color3)
 	P("Island", V3(4, d, d), top * CF(0, -2, 0) * UPRIGHT, color, material, { shape = CYL })
 	local h2 = d * 0.3
-	P("IslandRock", V3(d * 0.66, h2, d * 0.66), top * CF(0, -4 - h2 / 2 + 0.5, 0) * ANG(0, rad(20), 0), under, M.Sandstone)
+	P(
+		"IslandRock",
+		V3(d * 0.66, h2, d * 0.66),
+		top * CF(0, -4 - h2 / 2 + 0.5, 0) * ANG(0, rad(20), 0),
+		under,
+		M.Sandstone
+	)
 	local h3 = d * 0.26
 	P(
 		"IslandRock",
@@ -620,11 +681,25 @@ local function island(top: CFrame, d: number, color: Color3, material: Enum.Mate
 		M.Sandstone
 	)
 	local tip = d * 0.22
-	P("IslandRock", V3(tip, tip, tip), top * CF(0, -4 - h2 - h3 + 1.2 - tip * 0.25, 0) * ANG(rad(45), 0, rad(35)), under, M.Sandstone)
+	P(
+		"IslandRock",
+		V3(tip, tip, tip),
+		top * CF(0, -4 - h2 - h3 + 1.2 - tip * 0.25, 0) * ANG(rad(45), 0, rad(35)),
+		under,
+		M.Sandstone
+	)
 end
 
 -- Ventaglio di conchiglia (pettine) nel piano XY locale: cerniera in hinge, coste di lunghezza len
-local function scallop(hinge: CFrame, len: number, ribs: number, spread: number, colA: Color3, colB: Color3, thick: number)
+local function scallop(
+	hinge: CFrame,
+	len: number,
+	ribs: number,
+	spread: number,
+	colA: Color3,
+	colB: Color3,
+	thick: number
+)
 	for k = 0, ribs - 1 do
 		local a = -spread / 2 + spread * k / (ribs - 1)
 		local w = len * 0.3
@@ -644,7 +719,14 @@ local function coralTree(cf: CFrame, col: Color3, s: number)
 	for k, br in { { 10, 20, 4.8 }, { 140, 30, 3.6 }, { 250, 24, 4.2 } } do
 		local len = br[3] * s
 		local root = cf * CF(0, 0.65 * s, 0) * ANG(0, rad(br[1]), 0) * ANG(rad(br[2]), 0, 0)
-		P("Coral", V3(len, 0.75 * s, 0.75 * s), root * CF(0, len / 2, 0) * UPRIGHT, col, M.SmoothPlastic, { shape = CYL })
+		P(
+			"Coral",
+			V3(len, 0.75 * s, 0.75 * s),
+			root * CF(0, len / 2, 0) * UPRIGHT,
+			col,
+			M.SmoothPlastic,
+			{ shape = CYL }
+		)
 		if k ~= 2 then
 			ball("CoralTip", 1.15 * s, root * CF(0, len, 0), C.coralTip, M.SmoothPlastic)
 		end
@@ -654,7 +736,14 @@ end
 local function sponges(cf: CFrame, cols: { Color3 }, s: number)
 	for k, t in { { 0, 0, 4.6, 1.5 }, { 1.45, 0.6, 3.1, 1.2 }, { -1.15, 0.95, 2.2, 1.1 } } do
 		local h, d = t[3] * s, t[4] * s
-		P("Sponge", V3(h, d, d), cf * CF(t[1] * s, h / 2, t[2] * s) * UPRIGHT, cols[k], M.SmoothPlastic, { shape = CYL })
+		P(
+			"Sponge",
+			V3(h, d, d),
+			cf * CF(t[1] * s, h / 2, t[2] * s) * UPRIGHT,
+			cols[k],
+			M.SmoothPlastic,
+			{ shape = CYL }
+		)
 	end
 end
 
@@ -674,7 +763,14 @@ local function fanCoral(cf: CFrame, col: Color3, s: number)
 end
 
 local function kelp(cf: CFrame, s: number)
-	P("KelpRoot", V3(0.6 * s, 2 * s, 2 * s), cf * CF(0, 0.3 * s, 0) * UPRIGHT, C.kelpDark, M.SmoothPlastic, { shape = CYL })
+	P(
+		"KelpRoot",
+		V3(0.6 * s, 2 * s, 2 * s),
+		cf * CF(0, 0.3 * s, 0) * UPRIGHT,
+		C.kelpDark,
+		M.SmoothPlastic,
+		{ shape = CYL }
+	)
 	local col = if math.floor(s * 10 + 0.5) % 2 == 0 then C.kelp else C.kelpLight
 	for k, st in { { -0.4, 0.1, 8.5, -7, 13 }, { 0.45, -0.2, 10.5, 6, -10 } } do
 		local l1, l2 = st[3] * 0.55 * s, st[3] * 0.5 * s
@@ -686,7 +782,14 @@ local function kelp(cf: CFrame, s: number)
 end
 
 local function brainCoral(cf: CFrame, col: Color3, s: number)
-	P("CoralBase", V3(0.5 * s, 2.4 * s, 2.4 * s), cf * CF(0, 0.25 * s, 0) * UPRIGHT, C.rockDark, M.Slate, { shape = CYL })
+	P(
+		"CoralBase",
+		V3(0.5 * s, 2.4 * s, 2.4 * s),
+		cf * CF(0, 0.25 * s, 0) * UPRIGHT,
+		C.rockDark,
+		M.Slate,
+		{ shape = CYL }
+	)
 	ball("BrainCoral", 3 * s, cf * CF(0, 1.65 * s, 0), col, M.Sand)
 end
 
@@ -694,7 +797,14 @@ local function anemone(cf: CFrame, col: Color3, tip: Color3, s: number)
 	P("Anemone", V3(1.4 * s, 1.6 * s, 1.6 * s), cf * CF(0, 0.7 * s, 0) * UPRIGHT, col, M.SmoothPlastic, { shape = CYL })
 	for k = 0, 3 do
 		local root = cf * CF(0, 1.2 * s, 0) * ANG(0, rad(k * 90 + 20), 0) * ANG(rad(38), 0, 0)
-		P("Tentacle", V3(1.7 * s, 0.42 * s, 0.42 * s), root * CF(0, 0.85 * s, 0) * UPRIGHT, tip, M.SmoothPlastic, { shape = CYL })
+		P(
+			"Tentacle",
+			V3(1.7 * s, 0.42 * s, 0.42 * s),
+			root * CF(0, 0.85 * s, 0) * UPRIGHT,
+			tip,
+			M.SmoothPlastic,
+			{ shape = CYL }
+		)
 	end
 end
 
@@ -710,7 +820,13 @@ end
 -- Ornamenti sulla faccia interna delle sponde (f = sulla faccia, avanti = verso il canyon)
 local function starfish(f: CFrame, col: Color3, s: number, turn: number)
 	for k = 0, 4 do
-		P("Starfish", V3(0.75 * s, 1.75 * s, 0.32), f * ANG(0, 0, turn + rad(k * 72)) * CF(0, 0.8 * s, -0.16), col, M.SmoothPlastic)
+		P(
+			"Starfish",
+			V3(0.75 * s, 1.75 * s, 0.32),
+			f * ANG(0, 0, turn + rad(k * 72)) * CF(0, 0.8 * s, -0.16),
+			col,
+			M.SmoothPlastic
+		)
 	end
 end
 
@@ -719,68 +835,76 @@ local function crust(f: CFrame, rng: Random)
 	local cols = { C.coralPurple, C.coralOrange, C.coralPink, C.coralYellow }
 	local first = rng:NextInteger(1, #cols)
 	for k = 1, 3 do
-		local d = rng:NextNumber(1.1, 1.7)
-		local t = 0.3 + k * 0.08
-		local off = V3((k - 2) * 2.0, (if k == 2 then 0.7 else -0.3) + rng:NextNumber(-0.2, 0.2), -t / 2)
+		local d = rng:NextNumber(1.7, 2.4)
+		local t = 0.32 + k * 0.08
+		local off = V3((k - 2) * 2.6, (if k == 2 then 0.9 else -0.4) + rng:NextNumber(-0.2, 0.2), -t / 2)
 		P("Crust", V3(t, d, d), f * CF(off) * FORWARD, cols[(first + k) % #cols + 1], M.SmoothPlastic, { shape = CYL })
 	end
 end
 
--- Abbellimento delle sponde della sezione 1, a gruppi: ogni tre sponde una ha un ornamento in cima e uno sulla
--- faccia (stella marina o spugne vicino all'acqua), la successiva solo alghe che pendono dal muschio
+-- Abbellimento delle sponde della sezione 1, a gruppi: ogni quattro sponde una ha un ornamento grande in cima e
+-- uno sulla faccia (stella marina o spugne poco sopra l'acqua), un'altra alghe che pendono dal muschio
 local function dressBanks1()
 	local banks = banksOf(1)
 	local levels = liquidLevels(1)
 	local rng = Random.new(1101)
-	local tops = {
+	-- { nome, raggio in pianta, costruttore }
+	local tops: { { any } } = {
 		{
 			"Coral",
+			1.6,
 			function(cf: CFrame, k: number)
-				coralTree(cf, if k % 2 == 0 then C.coralPink else C.coralOrange, 1)
+				coralTree(cf, if k % 2 == 0 then C.coralPink else C.coralOrange, 1.55)
 			end,
 		},
 		{
 			"Kelp",
+			1.6,
 			function(cf: CFrame, k: number)
-				kelp(cf, if k % 2 == 0 then 1.2 else 1)
+				kelp(cf, if k % 2 == 0 then 1.6 else 1.4)
 			end,
 		},
 		{
 			"Sponges",
+			2.4,
 			function(cf: CFrame, k: number)
-				sponges(cf, if k % 2 == 0 then { C.coralYellow, C.coralOrange, C.coralPurple } else { C.coralPurple, C.coralPink, C.coralYellow }, 1.1)
+				sponges(cf, if k % 2 == 0 then { C.coralYellow, C.coralOrange, C.coralPurple } else { C.coralPurple, C.coralPink, C.coralYellow }, 1.5)
 			end,
 		},
 		{
 			"FanCoral",
+			1.2,
 			function(cf: CFrame, k: number)
-				fanCoral(cf, if k % 2 == 0 then C.coralPurple else C.coralRed, 1.1)
+				fanCoral(cf, if k % 2 == 0 then C.coralPurple else C.coralRed, 1.5)
 			end,
 		},
 		{
 			"Anemone",
+			1.6,
 			function(cf: CFrame, _k: number)
-				anemone(cf, C.anemone, C.glowPink, 1.1)
+				anemone(cf, C.anemone, C.glowPink, 1.5)
+			end,
+		},
+		{
+			"Kelp",
+			1.6,
+			function(cf: CFrame, _k: number)
+				kelp(cf, 1.5)
 			end,
 		},
 		{
 			"BrainCoral",
+			2,
 			function(cf: CFrame, k: number)
-				brainCoral(cf, if k % 2 == 0 then C.coralPink else C.coralPurple, 1.1)
-			end,
-		},
-		{
-			"Clam",
-			function(cf: CFrame, _k: number)
-				clamPearl(cf, 1.2)
+				brainCoral(cf, if k % 2 == 0 then C.coralPink else C.coralPurple, 1.6)
 			end,
 		},
 	}
 	local count = { [1] = 0, [-1] = 0 }
 	for _, side in { 1, -1 } do
 		for k, b in banks[side] do
-			local phase = (k + (if side == 1 then 0 else 1)) % 3
-			if phase == 2 then
+			local phase = (k + (if side == 1 then 0 else 2)) % 4
+			if phase == 1 or phase == 3 then
 				continue
 			end
 			local host = { [b.piece] = true }
@@ -793,12 +917,13 @@ local function dressBanks1()
 			if phase == 0 then
 				-- in cima
 				count[side] += 1
-				local which = (count[side] * 2 + (if side == 1 then 0 else 3)) % #tops + 1
-				local maxX, maxZ = b.hx - 2.8, b.hz - 2.6
+				local which = (count[side] * 3 + (if side == 1 then 0 else 2)) % #tops + 1
+				local r = tops[which][2]
+				local maxX, maxZ = b.hx - 1.9 - r, b.hz - 0.4 - r
 				if maxX > 0 and maxZ > 0 then
 					for _ = 1, 5 do
 						begin(tops[which][1])
-						tops[which][2](onTop(b, rng:NextNumber(-maxX, maxX), rng:NextNumber(-maxZ, maxZ * 0.3)), count[side])
+						tops[which][3](onTop(b, rng:NextNumber(-maxX, maxX), rng:NextNumber(-maxZ, maxZ * 0.3)), count[side])
 						if commit(nil, 0.15, host) then
 							break
 						end
@@ -806,16 +931,18 @@ local function dressBanks1()
 				end
 				-- sulla faccia, poco sopra l'acqua
 				for _ = 1, 4 do
-					local lx = rng:NextNumber(-b.size.X / 2 + 4.6, b.size.X / 2 - 4.6)
+					local big = count[side] % 3 == 0
+					local reach = if big then 4.4 else 3.6
+					local lx = rng:NextNumber(-b.size.X / 2 + 1.8 + reach, b.size.X / 2 - 1.8 - reach)
 					local lo = if water > -math.huge then faceLocalY(b, lx, water + 1.2) else hi - 12
-					local y = lo + 2.4 + rng:NextNumber(0, 2.2)
-					if y > hi - 2.6 then
+					local y = lo + reach + rng:NextNumber(0, 2)
+					if y > hi - reach or b.size.X < 2 * (1.8 + reach) then
 						break
 					end
 					if count[side] % 2 == 0 then
 						begin("Starfish")
 						local cols = { C.coralOrange, C.coralRed, C.coralYellow, C.coralPink }
-						starfish(onFace(b, lx, y), cols[rng:NextInteger(1, #cols)], rng:NextNumber(1, 1.3), rng:NextNumber(0, 1.2))
+						starfish(onFace(b, lx, y), cols[rng:NextInteger(1, #cols)], if big then 2.3 else 1.8, rng:NextNumber(0, 1.2))
 					else
 						begin("Sponges")
 						crust(onFace(b, lx, y), rng)
@@ -825,24 +952,22 @@ local function dressBanks1()
 					end
 				end
 			else
-				-- alghe: 2-3 strisce appese sotto il muschio
+				-- alghe: 3 strisce appese sotto il muschio
 				for _ = 1, 3 do
-					local lx = rng:NextNumber(-b.size.X / 2 + 3.4, b.size.X / 2 - 3.4)
+					local lx = rng:NextNumber(-b.size.X / 2 + 4, b.size.X / 2 - 4)
 					local lo = if water > -math.huge then faceLocalY(b, lx, water + 1.5) else hi - 12
-					local maxL = math.min(8, hi - lo)
-					if maxL < 2.5 then
+					local maxL = math.min(10, hi - lo)
+					if maxL < 3.5 then
 						break
 					end
 					begin("Seaweed")
-					local n = rng:NextInteger(2, 3)
-					for j = 1, n do
-						local L = rng:NextNumber(2.5, maxL)
-						local x = lx + (j - (n + 1) / 2) * 1.3
+					for j = 1, 3 do
+						local L = rng:NextNumber(math.max(3.5, maxL * 0.5), maxL)
 						P(
 							"Seaweed",
-							V3(rng:NextNumber(0.75, 1.05), L, 0.16),
-							onFace(b, x, hi - L / 2) * CF(0, 0, -0.08),
-							if j % 2 == 0 then C.kelp else C.kelpDark,
+							V3(rng:NextNumber(0.95, 1.25), L, 0.16),
+							onFace(b, lx + (j - 2) * 1.5, hi - L / 2) * CF(0, 0, -0.08),
+							if j == 2 then C.kelpLight else C.kelp,
 							M.SmoothPlastic
 						)
 					end
@@ -862,7 +987,19 @@ local function angler(base: CFrame)
 	ball("AnglerBody", 20, body, C.navy, M.SmoothPlastic)
 	P("AnglerJaw", V3(16, 3.5, 13), body * CF(0, -8.5, -4.5), C.navyLight, M.SmoothPlastic)
 	P("AnglerLip", V3(15, 2, 3), body * CF(0, -2.5, -8.9), C.navyLight, M.SmoothPlastic)
-	P("AnglerMouth", V3(14, 3.25, 1), body * CF(0, -5.125, -8.6), C.mouth, M.SmoothPlastic)
+	local mouth = P("AnglerMouth", V3(14, 3.25, 1), body * CF(0, -5.125, -8.6), C.mouth, M.SmoothPlastic)
+	emitter(mouth, {
+		Texture = SPARKLE,
+		Color = ColorSequence.new(rgb(200, 250, 255), rgb(120, 220, 255)),
+		LightEmission = 0.6,
+		Size = NumberSequence.new(0.5, 1.1),
+		Transparency = NumberSequence.new(0.1, 1),
+		Lifetime = NumberRange.new(3, 5),
+		Speed = NumberRange.new(2.5, 4.5),
+		EmissionDirection = Enum.NormalId.Top,
+		SpreadAngle = Vector2.new(25, 25),
+		Rate = 5,
+	})
 	-- denti: sopra appesi al labbro, sotto sulla mascella (triangoli visti da davanti)
 	for k, x in { -6, -3, 0, 3, 6 } do
 		local mirror = if x < 0 or (x == 0 and k % 2 == 0) then ANG(0, math.pi, 0) else CFrame.identity
@@ -894,7 +1031,8 @@ local function angler(base: CFrame)
 		ball("Pupil", 2.2, body * CF(e + n * 1.45), C.pupil, M.SmoothPlastic)
 	end
 	-- esca luminosa sulla canna
-	local p0, p1, p2, p3 = body * V3(0, 9.3, -1.5), body * V3(0, 15, -6), body * V3(0, 15.6, -12), body * V3(0, 12.8, -15.2)
+	local p0, p1, p2, p3 =
+		body * V3(0, 9.3, -1.5), body * V3(0, 15, -6), body * V3(0, 15.6, -12), body * V3(0, 12.8, -15.2)
 	rod("Lure", p0, p1, 0.9, C.navyLight, M.SmoothPlastic)
 	rod("Lure", p1, p2, 0.9, C.navyLight, M.SmoothPlastic)
 	rod("Lure", p2, p3, 0.8, C.navyLight, M.SmoothPlastic)
@@ -904,11 +1042,32 @@ local function angler(base: CFrame)
 	light(bulb, C.glowCyan, 26, 2.2)
 	-- pinne: dorsale a punte, pettorali e coda
 	for k, f in { { 9.2, 2.5, 22, 4.6 }, { 8.2, 5.8, 40, 4 }, { 6.2, 8.4, 58, 3.4 } } do
-		P("Fin", V3(0.6, f[4], 2.6), body * CF(0, f[1], f[2]) * ANG(rad(f[3]), 0, 0) * CF(0, f[4] / 2 - 0.6, 0), if k == 2 then C.glowCyan else C.fin, M.SmoothPlastic, { class = WEDGE })
+		P(
+			"Fin",
+			V3(0.6, f[4], 2.6),
+			body * CF(0, f[1], f[2]) * ANG(rad(f[3]), 0, 0) * CF(0, f[4] / 2 - 0.6, 0),
+			if k == 2 then C.glowCyan else C.fin,
+			M.SmoothPlastic,
+			{ class = WEDGE }
+		)
 	end
 	for _, sx in { -1, 1 } do
-		P("Fin", V3(0.5, 4.2, 4), body * CF(9.3 * sx, -1.5, 2.5) * ANG(0, 0, rad(-50 * sx)) * CF(0, 1.6, 0), C.fin, M.SmoothPlastic, { class = WEDGE })
-		P("Tail", V3(0.7, 6, 4.4), body * CF(1.5 * sx, 0.5, 9.3) * ANG(rad(70), rad(30 * sx), 0) * CF(0, 2.4, 0), C.fin, M.SmoothPlastic, { class = WEDGE })
+		P(
+			"Fin",
+			V3(0.5, 4.2, 4),
+			body * CF(9.3 * sx, -1.5, 2.5) * ANG(0, 0, rad(-50 * sx)) * CF(0, 1.6, 0),
+			C.fin,
+			M.SmoothPlastic,
+			{ class = WEDGE }
+		)
+		P(
+			"Tail",
+			V3(0.7, 6, 4.4),
+			body * CF(1.5 * sx, 0.5, 9.3) * ANG(rad(70), rad(30 * sx), 0) * CF(0, 2.4, 0),
+			C.fin,
+			M.SmoothPlastic,
+			{ class = WEDGE }
+		)
 	end
 	-- puntini luminosi sui fianchi
 	for _, d in { V3(-0.9, 0.05, 0.43), V3(0.9, 0.05, 0.43), V3(-0.72, -0.35, 0.6), V3(0.72, -0.35, 0.6) } do
@@ -941,17 +1100,45 @@ local function shipwreck(frame: CFrame)
 	P("Hole", V3(0.2, 2.6, 3.4), frame * CF(-4.6, -1.3, 3.2) * ANG(rad(14), 0, 0), rgb(34, 26, 20), M.SmoothPlastic)
 	-- albero, pennone e vela strappata davanti all'albero, coffa e bandiera
 	local deckTop = 3.4
-	rod("Mast", (frame * CF(0, deckTop, -1)).Position, (frame * CF(0, deckTop + 24, -1)).Position, 1.3, C.woodDark, M.Wood)
+	rod(
+		"Mast",
+		(frame * CF(0, deckTop, -1)).Position,
+		(frame * CF(0, deckTop + 24, -1)).Position,
+		1.3,
+		C.woodDark,
+		M.Wood
+	)
 	local yardY = deckTop + 18
-	rod("Yard", (frame * CF(-6.5, yardY, -2.05)).Position, (frame * CF(6.5, yardY, -2.05)).Position, 0.8, C.woodDark, M.Wood)
+	rod(
+		"Yard",
+		(frame * CF(-6.5, yardY, -2.05)).Position,
+		(frame * CF(6.5, yardY, -2.05)).Position,
+		0.8,
+		C.woodDark,
+		M.Wood
+	)
 	local sail = frame * CF(0, yardY - 0.35 - 4.25, -2.05)
 	P("Sail", V3(12, 8.5, 0.25), sail, C.sail, M.Fabric)
 	P("SailStripe", V3(12, 1.4, 0.12), sail * CF(0, 1.4, -0.185), C.red, M.Fabric)
 	P("SailRag", V3(4.4, 3.2, 0.25), sail * CF(3.4, -5, 0) * ANG(0, 0, rad(16)), C.sail, M.Fabric)
-	P("CrowsNest", V3(1.4, 3.2, 3.2), frame * CF(0, deckTop + 21.5, -1) * UPRIGHT, C.wood, M.WoodPlanks, { shape = CYL })
+	P(
+		"CrowsNest",
+		V3(1.4, 3.2, 3.2),
+		frame * CF(0, deckTop + 21.5, -1) * UPRIGHT,
+		C.wood,
+		M.WoodPlanks,
+		{ shape = CYL }
+	)
 	P("Flag", V3(3.2, 2, 0.15), frame * CF(1.65, deckTop + 23, -1), rgb(30, 28, 34), M.Fabric)
 	ball("Skull", 0.9, frame * CF(1.9, deckTop + 23.1, -1), C.teeth, M.SmoothPlastic)
-	rod("Foremast", (frame * CF(0, deckTop, -8.5)).Position, (frame * CF(0, deckTop + 8, -13)).Position, 1.1, C.woodDark, M.Wood)
+	rod(
+		"Foremast",
+		(frame * CF(0, deckTop, -8.5)).Position,
+		(frame * CF(0, deckTop + 8, -13)).Position,
+		1.1,
+		C.woodDark,
+		M.Wood
+	)
 	rod("Bowsprit", (frame * CF(0, 1.8, -16.5)).Position, (frame * CF(0, 5.6, -24)).Position, 0.8, C.woodDark, M.Wood)
 	-- forziere del tesoro sul ponte
 	local chest = frame * CF(1.6, deckTop + 0.9, 2.2)
@@ -966,11 +1153,24 @@ local function shipwreck(frame: CFrame)
 	local a1 = (hang * CF(-1.2, -9, 0)).Position
 	rod("Chain", a0, a1, 0.5, C.iron, M.DiamondPlate)
 	local anchor = CF(a1) * (frame - frame.Position)
-	P("AnchorRing", V3(0.4, 1.4, 1.4), anchor * CF(0, -0.5, 0) * ANG(0, math.pi / 2, 0), C.iron, M.DiamondPlate, { shape = CYL })
+	P(
+		"AnchorRing",
+		V3(0.4, 1.4, 1.4),
+		anchor * CF(0, -0.5, 0) * ANG(0, math.pi / 2, 0),
+		C.iron,
+		M.DiamondPlate,
+		{ shape = CYL }
+	)
 	P("AnchorShank", V3(0.8, 6, 0.8), anchor * CF(0, -4.1, 0), C.iron, M.DiamondPlate)
 	P("AnchorStock", V3(4.4, 0.6, 0.6), anchor * CF(0, -2, 0), C.iron, M.DiamondPlate)
 	for _, sx in { -1, 1 } do
-		P("AnchorArm", V3(0.8, 3.4, 0.8), anchor * CF(0, -7, 0) * ANG(0, 0, rad(-52 * sx)) * CF(0, 1.4, 0), C.iron, M.DiamondPlate)
+		P(
+			"AnchorArm",
+			V3(0.8, 3.4, 0.8),
+			anchor * CF(0, -7, 0) * ANG(0, 0, rad(-52 * sx)) * CF(0, 1.4, 0),
+			C.iron,
+			M.DiamondPlate
+		)
 	end
 	-- scoglio sotto la chiglia, inclinato come lo scafo
 	local rockTop = frame * CF(0, -5.4, 1)
@@ -989,9 +1189,6 @@ local function jellyfish(c: Vector3, bell: Color3, glow: Color3)
 	P("BellRim", V3(0.8, 7.8, 7.8), cf * CF(0, -0.7, 0) * UPRIGHT, bell, M.Glass, { shape = CYL, shine = 0.15 })
 	local crown = ball("Crown", 3.4, cf * CF(0, 2.5, 0), glow, M.Neon)
 	light(crown, glow, 18, 1.6)
-	for _, sp in { V3(1.6, 2.2, 1.9), V3(-2.1, 1.9, 1.5), V3(0.4, 1.7, -2.6) } do
-		ball("Spot", 0.9, cf * CF(sp.Unit * 3.45), glow, M.Neon)
-	end
 	for k = 0, 3 do
 		local a = rad(k * 90 + 45)
 		local top = cf * V3(math.cos(a) * 2.5, -1.4, math.sin(a) * 2.5)
@@ -1049,10 +1246,27 @@ local function clamFalls(top: CFrame)
 	local hinge = clam * CF(0, h, d / 2 - 0.3) * ANG(rad(50), 0, 0)
 	P("ClamShell", V3(1, d, d), hinge * CF(0, 0.5, -d / 2) * UPRIGHT, C.shell, M.SmoothPlastic, { shape = CYL })
 	for k = -2, 2 do
-		P("ClamRib", V3(0.8, 0.25, d * 0.42), hinge * CF(0, 1.125, -d / 2) * ANG(0, rad(k * 26), 0) * CF(0, 0, -d * 0.24), C.shellPink, M.SmoothPlastic)
+		P(
+			"ClamRib",
+			V3(0.8, 0.25, d * 0.42),
+			hinge * CF(0, 1.125, -d / 2) * ANG(0, rad(k * 26), 0) * CF(0, 0, -d * 0.24),
+			C.shellPink,
+			M.SmoothPlastic
+		)
 	end
 	local pearl = ball("Pearl", 3.6, clam * CF(0, h + 1.65, -0.8), C.pearl, M.SmoothPlastic, { shine = 0.3 })
 	light(pearl, rgb(220, 240, 255), 20, 1.6)
+	emitter(pearl, {
+		Texture = SPARKLE,
+		Color = ColorSequence.new(rgb(255, 255, 255), rgb(150, 230, 255)),
+		LightEmission = 1,
+		Size = NumberSequence.new(0.5, 0.1),
+		Transparency = NumberSequence.new(0, 1),
+		Lifetime = NumberRange.new(1, 1.8),
+		Speed = NumberRange.new(1, 3),
+		SpreadAngle = Vector2.new(180, 180),
+		Rate = 8,
+	})
 	-- la cascata scende dal lato rivolto ai giocatori
 	sideFall(top * CF(0, 0, -7), 6, 66)
 	return commit()
@@ -1168,9 +1382,23 @@ local function glassHeadStatue(base: CFrame)
 	end
 	ball("Mouth", 0.8, body * CF(0, -0.6, -2.35), C.coralOrange, M.SmoothPlastic)
 	for _, sx in { -1, 1 } do
-		P("Tail", V3(0.4, 3.4, 2.6), body * CF(0.5 * sx, 0, 2.2) * ANG(rad(60), rad(14 * sx), 0) * CF(0, 1.2, 0), C.glassFin, M.SmoothPlastic, { class = WEDGE })
+		P(
+			"Tail",
+			V3(0.4, 3.4, 2.6),
+			body * CF(0.5 * sx, 0, 2.2) * ANG(rad(60), rad(14 * sx), 0) * CF(0, 1.2, 0),
+			C.glassFin,
+			M.SmoothPlastic,
+			{ class = WEDGE }
+		)
 	end
-	P("Fin", V3(0.4, 2.2, 2.4), body * CF(0, 2.1, 1.3) * ANG(rad(35), 0, 0) * CF(0, 0.5, 0), C.glassFin, M.SmoothPlastic, { class = WEDGE })
+	P(
+		"Fin",
+		V3(0.4, 2.2, 2.4),
+		body * CF(0, 2.1, 1.3) * ANG(rad(35), 0, 0) * CF(0, 0.5, 0),
+		C.glassFin,
+		M.SmoothPlastic,
+		{ class = WEDGE }
+	)
 end
 
 local function viperStatue(base: CFrame)
@@ -1189,7 +1417,14 @@ local function viperStatue(base: CFrame)
 	P("Head", V3(2.4, 2, 3), head, C.indigo, M.SmoothPlastic)
 	P("Jaw", V3(2.2, 0.8, 2.6), head * CF(0, -1.6, 0.35) * ANG(rad(-24), 0, 0), C.navy, M.SmoothPlastic)
 	for _, sx in { -1, 1 } do
-		P("Fang", V3(0.3, 2.2, 0.6), head * CF(0.75 * sx, -1.6, -1.25) * ANG(0, math.pi / 2, 0) * ANG(math.pi, 0, 0), C.teeth, M.SmoothPlastic, { class = WEDGE })
+		P(
+			"Fang",
+			V3(0.3, 2.2, 0.6),
+			head * CF(0.75 * sx, -1.6, -1.25) * ANG(0, math.pi / 2, 0) * ANG(math.pi, 0, 0),
+			C.teeth,
+			M.SmoothPlastic,
+			{ class = WEDGE }
+		)
 		ball("Eye", 0.7, head * CF(1.15 * sx, 0.35, -0.7), C.glowPink, M.Neon)
 	end
 	P("Fin", V3(0.4, 2.4, 2), base * CF(0, 5.8, 2.7) * ANG(rad(20), 0, 0), C.fin, M.SmoothPlastic, { class = WEDGE })
@@ -1201,7 +1436,7 @@ local function shrineCrest1()
 	local sh = Extreme.Shrines[1]
 	local s = Extreme.Sections[1]
 	local u0 = s.length
-	local roof = s.floor + 28
+	local roof = shrineShell(1)
 	local facing = ANG(0, -math.pi / 2, 0) -- sguardo verso +X (verso chi arriva)
 	begin("ShrineCrest", true)
 	local base = CF(Extreme.At(1, u0 + 3, roof, 0)) * facing
@@ -1229,6 +1464,7 @@ local function shrinePortholes1()
 	local sh = Extreme.Shrines[1]
 	local u0 = s.length
 	local portalU = s.x0 - sh.portal.Position.X
+	local _, wall = shrineShell(1)
 	for _, side in { 1, -1 } do
 		for _, du in { 10, 22, 34, 46 } do
 			local u = u0 + du
@@ -1236,7 +1472,8 @@ local function shrinePortholes1()
 				continue
 			end
 			begin("Porthole")
-			local f = CF(Extreme.At(1, u, s.floor + 13, side * (HW + 0.5))) * (if side == 1 then CFrame.identity else FLIP)
+			local f = CF(Extreme.At(1, u, s.floor + 13, side * wall))
+				* (if side == 1 then CFrame.identity else FLIP)
 			P("PortholeRim", V3(0.3, 4.6, 4.6), f * CF(0, 0, -0.15) * FORWARD, C.brass, M.Metal, { shape = CYL })
 			P("PortholeGlass", V3(0.2, 3.6, 3.6), f * CF(0, 0, -0.35) * FORWARD, C.porthole, M.Neon, { shape = CYL })
 			commit()
@@ -1245,12 +1482,17 @@ local function shrinePortholes1()
 end
 
 -- Bocca del canyon (lato del ponticello): fauci di rana pescatrice attorno all'ingresso
-local function canyonJaws()
-	local A = Extreme.At(1, -4, 0, 0) -- faccia esterna della bocca: x della parete verso il ponticello
-	local faceX = A.X
-	local Z = Extreme.Z
-	local lintelY = 331 + 12
-	local topY = 352
+local function canyonJaws(root: Instance)
+	-- architrave sopra l'apertura: la sua faccia verso il ponticello (+X) e' quella delle fauci
+	local lintel = root:FindFirstChild("CanyonLintel")
+	if not lintel or not lintel:IsA("BasePart") then
+		return
+	end
+	local lp = lintel.CFrame.Position
+	local faceX = lp.X + lintel.Size.X / 2
+	local Z = lp.Z
+	local lintelY = lp.Y - lintel.Size.Y / 2
+	local topY = lp.Y + lintel.Size.Y / 2
 	begin("CanyonJaws", true)
 	for k, v in { -4.5, -2.7, -0.9, 0.9, 2.7, 4.5 } do
 		local mirror = if v < 0 then FLIP else CFrame.identity
@@ -1268,8 +1510,22 @@ local function canyonJaws()
 		local c = V3(faceX, 346.6, Z + side * 12.5)
 		local face = CFrame.lookAt(c, c + V3(1, 0, 0))
 		P("Eye", V3(0.5, 6.4, 6.4), face * CF(0, 0, -0.25) * FORWARD, C.eye, M.SmoothPlastic, { shape = CYL })
-		P("Pupil", V3(0.4, 3.2, 3.2), face * CF(0.5 * side, -0.6, -0.55) * FORWARD, C.pupil, M.SmoothPlastic, { shape = CYL })
-		P("Glint", V3(0.3, 1, 1), face * CF(-0.4 * side, 0.3, -0.8) * FORWARD, C.teeth, M.SmoothPlastic, { shape = CYL })
+		P(
+			"Pupil",
+			V3(0.4, 3.2, 3.2),
+			face * CF(0.5 * side, -0.6, -0.55) * FORWARD,
+			C.pupil,
+			M.SmoothPlastic,
+			{ shape = CYL }
+		)
+		P(
+			"Glint",
+			V3(0.3, 1, 1),
+			face * CF(-0.4 * side, 0.3, -0.8) * FORWARD,
+			C.teeth,
+			M.SmoothPlastic,
+			{ shape = CYL }
+		)
 		P("Brow", V3(6, 1.1, 0.7), face * CF(0, 4, -0.35) * ANG(0, 0, rad(16 * side)), C.navy, M.SmoothPlastic)
 	end
 	-- esca luminosa che pende davanti all'ingresso
@@ -1293,7 +1549,7 @@ local function section1(root: Instance)
 		return Extreme.At(1, u, y, v)
 	end
 	-- fauci all'ingresso del canyon
-	canyonJaws()
+	canyonJaws(root.Parent or root)
 	-- rana pescatrice gigante a destra del bacino dei tronchi, rivolta al canyon e a chi arriva
 	do
 		local p = at(190, 323.75, -50)
@@ -1321,8 +1577,6 @@ local function section1(root: Instance)
 	-- santuario
 	shrineCrest1()
 	shrinePortholes1()
-	-- ornamenti delle sponde per ultimi: girano attorno a tutto il resto
-	dressBanks1()
 	local _ = s
 end
 
@@ -1338,7 +1592,14 @@ end
 
 -- Ornamenti in cima alle sponde di sabbia (cf = sulla copertura, sguardo verso il canyon)
 local function urn(cf: CFrame, body: Color3, trim: Color3, s: number)
-	P("UrnFoot", V3(0.4 * s, 1.4 * s, 1.4 * s), cf * CF(0, 0.2 * s, 0) * UPRIGHT, trim, M.SmoothPlastic, { shape = CYL })
+	P(
+		"UrnFoot",
+		V3(0.4 * s, 1.4 * s, 1.4 * s),
+		cf * CF(0, 0.2 * s, 0) * UPRIGHT,
+		trim,
+		M.SmoothPlastic,
+		{ shape = CYL }
+	)
 	ball("Urn", 2.2 * s, cf * CF(0, 1.3 * s, 0), body, M.SmoothPlastic)
 	P("UrnNeck", V3(1 * s, 0.9 * s, 0.9 * s), cf * CF(0, 2.6 * s, 0) * UPRIGHT, trim, M.SmoothPlastic, { shape = CYL })
 end
@@ -1351,28 +1612,70 @@ end
 -- gatta nera (Bastet) col collare d'oro
 local function catStatue(cf: CFrame, s: number)
 	P("CatBase", V3(2.2 * s, 0.6 * s, 3 * s), cf * CF(0, 0.3 * s, 0), C.sandLight, M.Sandstone)
-	P("CatBody", V3(2.8 * s, 1.7 * s, 1.7 * s), cf * CF(0, 2 * s, 0.2 * s) * UPRIGHT, C.black, M.SmoothPlastic, { shape = CYL })
-	P("CatCollar", V3(0.35 * s, 1.95 * s, 1.95 * s), cf * CF(0, 3.1 * s, 0.2 * s) * UPRIGHT, C.gold, M.Foil, { shape = CYL })
+	P(
+		"CatBody",
+		V3(2.8 * s, 1.7 * s, 1.7 * s),
+		cf * CF(0, 2 * s, 0.2 * s) * UPRIGHT,
+		C.black,
+		M.SmoothPlastic,
+		{ shape = CYL }
+	)
+	P(
+		"CatCollar",
+		V3(0.35 * s, 1.95 * s, 1.95 * s),
+		cf * CF(0, 3.1 * s, 0.2 * s) * UPRIGHT,
+		C.gold,
+		M.Foil,
+		{ shape = CYL }
+	)
 	ball("CatHead", 1.6 * s, cf * CF(0, 3.9 * s, 0.1 * s), C.black, M.SmoothPlastic)
 	for _, sx in { -1, 1 } do
 		local mirror = if sx < 0 then FLIP else CFrame.identity
-		P("CatEar", V3(0.3 * s, 1.1 * s, 0.7 * s), cf * CF(0.42 * sx * s, 4.85 * s, 0.15 * s) * mirror * ANG(0, math.pi / 2, 0), C.black, M.SmoothPlastic, { class = WEDGE })
+		P(
+			"CatEar",
+			V3(0.3 * s, 1.1 * s, 0.7 * s),
+			cf * CF(0.42 * sx * s, 4.85 * s, 0.15 * s) * mirror * ANG(0, math.pi / 2, 0),
+			C.black,
+			M.SmoothPlastic,
+			{ class = WEDGE }
+		)
 	end
 end
 
 local function papyrus(cf: CFrame, s: number)
-	P("PapyrusRoot", V3(0.5 * s, 1.6 * s, 1.6 * s), cf * CF(0, 0.25 * s, 0) * UPRIGHT, C.palmDark, M.SmoothPlastic, { shape = CYL })
+	P(
+		"PapyrusRoot",
+		V3(0.5 * s, 1.6 * s, 1.6 * s),
+		cf * CF(0, 0.25 * s, 0) * UPRIGHT,
+		C.palmDark,
+		M.SmoothPlastic,
+		{ shape = CYL }
+	)
 	for _, st in { { 0, 6.5, 8 }, { 125, 5.2, 16 }, { 245, 4.4, 12 } } do
 		local root = cf * CF(0, 0.35 * s, 0) * ANG(0, rad(st[1]), 0) * ANG(rad(st[3]), 0, 0)
 		local len = st[2] * s
-		P("Papyrus", V3(len, 0.32 * s, 0.32 * s), root * CF(0, len / 2, 0) * UPRIGHT, C.papyrus, M.SmoothPlastic, { shape = CYL })
+		P(
+			"Papyrus",
+			V3(len, 0.32 * s, 0.32 * s),
+			root * CF(0, len / 2, 0) * UPRIGHT,
+			C.papyrus,
+			M.SmoothPlastic,
+			{ shape = CYL }
+		)
 		ball("PapyrusHead", 1.3 * s, root * CF(0, len + 0.35 * s, 0), C.papyrusTop, M.SmoothPlastic)
 	end
 end
 
 -- braciere d'oro con le braci; lit = fuoco vero e luce (pochi: costano)
 local function brazier(cf: CFrame, s: number, lit: boolean)
-	P("BrazierFoot", V3(0.4 * s, 1.8 * s, 1.8 * s), cf * CF(0, 0.2 * s, 0) * UPRIGHT, C.sandDark, M.Sandstone, { shape = CYL })
+	P(
+		"BrazierFoot",
+		V3(0.4 * s, 1.8 * s, 1.8 * s),
+		cf * CF(0, 0.2 * s, 0) * UPRIGHT,
+		C.sandDark,
+		M.Sandstone,
+		{ shape = CYL }
+	)
 	P("BrazierStand", V3(2.2 * s, 0.7 * s, 0.7 * s), cf * CF(0, 1.4 * s, 0) * UPRIGHT, C.gold, M.Foil, { shape = CYL })
 	P("Brazier", V3(0.9 * s, 2.6 * s, 2.6 * s), cf * CF(0, 2.95 * s, 0) * UPRIGHT, C.gold, M.Foil, { shape = CYL })
 	local coals = ball("Embers", 1.9 * s, cf * CF(0, 3.5 * s, 0), C.ember, M.Neon)
@@ -1387,8 +1690,20 @@ local function miniObelisk(cf: CFrame, s: number)
 	local h = 6.5 * s
 	P("Obelisk", V3(1.3 * s, h, 1.3 * s), cf * CF(0, 0.6 * s + h / 2, 0), C.sandLight, M.Sandstone)
 	gable("ObeliskTip", cf * CF(0, 0.6 * s + h, 0), 1.3 * s, 1.1 * s, 1.3 * s, C.gold, M.Foil)
-	P("ObeliskGlyph", V3(0.3 * s, h * 0.55, 0.08), cf * CF(-0.25 * s, 0.6 * s + h * 0.55, -0.65 * s - 0.04), C.lapis, M.SmoothPlastic)
-	P("ObeliskGlyph", V3(0.3 * s, h * 0.4, 0.08), cf * CF(0.3 * s, 0.6 * s + h * 0.62, -0.65 * s - 0.04), C.bannerRed, M.SmoothPlastic)
+	P(
+		"ObeliskGlyph",
+		V3(0.3 * s, h * 0.55, 0.08),
+		cf * CF(-0.25 * s, 0.6 * s + h * 0.55, -0.65 * s - 0.04),
+		C.lapis,
+		M.SmoothPlastic
+	)
+	P(
+		"ObeliskGlyph",
+		V3(0.3 * s, h * 0.4, 0.08),
+		cf * CF(0.3 * s, 0.6 * s + h * 0.62, -0.65 * s - 0.04),
+		C.bannerRed,
+		M.SmoothPlastic
+	)
 end
 
 -- palma: tronco in due tratti che pende verso -Z locale, ciuffo di foglie e noci di cocco
@@ -1438,7 +1753,14 @@ local function banner(b: Bank, lx: number, len: number, col: Color3)
 	P("BannerRod", V3(3.6, 0.36, 0.36), onFace(b, lx, rodY) * CF(0, 0, -0.18), C.gold, M.Foil, { shape = CYL })
 	P("Banner", V3(2.8, len, 0.12), onFace(b, lx, rodY - len / 2) * CF(0, 0, -0.06), col, M.Fabric)
 	P("BannerBand", V3(2.8, 0.5, 0.06), onFace(b, lx, rodY - len + 0.9) * CF(0, 0, -0.15), C.gold, M.Foil)
-	P("BannerSun", V3(0.06, 1.3, 1.3), onFace(b, lx, rodY - len * 0.42) * CF(0, 0, -0.15) * FORWARD, C.gold, M.Foil, { shape = CYL })
+	P(
+		"BannerSun",
+		V3(0.06, 1.3, 1.3),
+		onFace(b, lx, rodY - len * 0.42) * CF(0, 0, -0.15) * FORWARD,
+		C.gold,
+		M.Foil,
+		{ shape = CYL }
+	)
 end
 
 -- Abbellimento delle sponde della sezione 2: ogni quattro sponde una ha un ornamento in cima e un rilievo sulla
@@ -1591,7 +1913,13 @@ local function sphinx(top: CFrame)
 		local root = top * CF(4.4 * sx, 6.5, -1) * ANG(0, 0, rad(-14 * sx))
 		for k, f in { { 14, 30 }, { 12, 48 }, { 10, 66 } } do
 			local out = if k == 2 then 0.3 * sx else 0
-			P("Feather", V3(0.7, f[1], 2.6), root * CF(out, 0, 0) * ANG(rad(f[2]), 0, 0) * CF(0, f[1] / 2, 0), if k == 2 then C.gold else C.lapis, M.SmoothPlastic)
+			P(
+				"Feather",
+				V3(0.7, f[1], 2.6),
+				root * CF(out, 0, 0) * ANG(rad(f[2]), 0, 0) * CF(0, f[1] / 2, 0),
+				if k == 2 then C.gold else C.lapis,
+				M.SmoothPlastic
+			)
 		end
 	end
 	return commit()
@@ -1605,7 +1933,13 @@ local function pyramidIsland(top: CFrame, size: number, height: number, steps: n
 	for k = 0, steps - 1 do
 		local w = size * (1 - k / steps)
 		local last = k == steps - 1
-		P("PyramidStep", V3(w, h, w), top * CF(0, (k + 0.5) * h, 0), if last then C.gold else C.sandLight, if last then M.Foil else M.Sandstone)
+		P(
+			"PyramidStep",
+			V3(w, h, w),
+			top * CF(0, (k + 0.5) * h, 0),
+			if last then C.gold else C.sandLight,
+			if last then M.Foil else M.Sandstone
+		)
 	end
 	return commit()
 end
@@ -1617,7 +1951,6 @@ local function oasis(top: CFrame)
 	P("Pond", V3(0.4, 12, 12), top * CF(-1, 0, 1) * UPRIGHT, C.pond, M.SmoothPlastic, { shape = CYL, shine = 0.2 })
 	palm(top * CF(-9, 0, -4) * ANG(0, rad(40), 0), 17, 3, 1, C.palmLeaf)
 	palm(top * CF(7.5, 0, -6) * ANG(0, rad(-120), 0), 20, 4, 1.1, C.palmDark)
-	palm(top * CF(4, 0, 9.5) * ANG(0, rad(170), 0), 14, 2.5, 0.9, C.palmLeaf)
 	papyrus(top * CF(-6.5, 0, 7.5), 1.2)
 	return commit()
 end
@@ -1626,9 +1959,23 @@ end
 local function column(base: CFrame, h: number, capital: boolean)
 	P("ColumnBase", V3(1, 4.2, 4.2), base * CF(0, 0.5, 0) * UPRIGHT, C.sandDark, M.Sandstone, { shape = CYL })
 	P("Column", V3(h, 3.2, 3.2), base * CF(0, 0.9 + h / 2, 0) * UPRIGHT, C.sandLight, M.Sandstone, { shape = CYL })
-	P("ColumnBand", V3(0.8, 3.5, 3.5), base * CF(0, 0.9 + h - 1.6, 0) * UPRIGHT, C.lapis, M.SmoothPlastic, { shape = CYL })
+	P(
+		"ColumnBand",
+		V3(0.8, 3.5, 3.5),
+		base * CF(0, 0.9 + h - 1.6, 0) * UPRIGHT,
+		C.lapis,
+		M.SmoothPlastic,
+		{ shape = CYL }
+	)
 	if capital then
-		P("Capital", V3(1.6, 4.4, 4.4), base * CF(0, h + 1.6, 0) * UPRIGHT, C.turquoise, M.SmoothPlastic, { shape = CYL })
+		P(
+			"Capital",
+			V3(1.6, 4.4, 4.4),
+			base * CF(0, h + 1.6, 0) * UPRIGHT,
+			C.turquoise,
+			M.SmoothPlastic,
+			{ shape = CYL }
+		)
 		P("Abacus", V3(4.6, 1, 4.6), base * CF(0, h + 2.9, 0), C.sandLight, M.Sandstone)
 	end
 end
@@ -1646,7 +1993,14 @@ local function colonnade(top: CFrame)
 	end
 	P("Lintel", V3(12.1, 2.2, 4.6), top * CF(-7.25, h + 3.4 + 1.1, 0), C.sandLight, M.Sandstone)
 	P("LintelStripe", V3(12.1, 0.6, 0.1), top * CF(-7.25, h + 4.5, -2.35), C.lapis, M.SmoothPlastic)
-	P("Drum", V3(3.6, 3.2, 3.2), top * CF(7.8, 1.6, 3.6) * ANG(0, rad(70), 0), C.sandLight, M.Sandstone, { shape = CYL })
+	P(
+		"Drum",
+		V3(3.6, 3.2, 3.2),
+		top * CF(7.8, 1.6, 3.6) * ANG(0, rad(70), 0),
+		C.sandLight,
+		M.Sandstone,
+		{ shape = CYL }
+	)
 	return commit()
 end
 
@@ -1654,8 +2008,20 @@ end
 local function wingedSun(f: CFrame, s: number)
 	P("WingedSun", V3(0.5, 3.4 * s, 3.4 * s), f * CF(0, 0, -0.25) * FORWARD, C.sunRed, M.SmoothPlastic, { shape = CYL })
 	for _, sx in { -1, 1 } do
-		P("Wing", V3(10 * s, 1.5 * s, 0.4), f * CF(sx * 7.2 * s, 0.3 * s, -0.2) * ANG(0, 0, rad(7 * sx)), C.lapis, M.SmoothPlastic)
-		P("WingGold", V3(8 * s, 0.5 * s, 0.12), f * CF(sx * 7.4 * s, 0.3 * s, -0.2) * ANG(0, 0, rad(7 * sx)) * CF(0, -0.1 * s, -0.26), C.gold, M.Foil)
+		P(
+			"Wing",
+			V3(10 * s, 1.5 * s, 0.4),
+			f * CF(sx * 7.2 * s, 0.3 * s, -0.2) * ANG(0, 0, rad(7 * sx)),
+			C.lapis,
+			M.SmoothPlastic
+		)
+		P(
+			"WingGold",
+			V3(8 * s, 0.5 * s, 0.12),
+			f * CF(sx * 7.4 * s, 0.3 * s, -0.2) * ANG(0, 0, rad(7 * sx)) * CF(0, -0.1 * s, -0.26),
+			C.gold,
+			M.Foil
+		)
 	end
 end
 
@@ -1667,7 +2033,13 @@ local function desertGate()
 	begin("DesertGate", true)
 	for _, side in { -1, 1 } do
 		P("GatePillar", V3(6, top - 254, 6), CF(Extreme.At(2, u, (254 + top) / 2, side * 40)), C.sandstone, M.Sandstone)
-		P("GatePillar", V3(5, 5, 5), CF(Extreme.At(2, u, 256, side * 40)) * ANG(rad(45), 0, rad(35)), C.sandstone, M.Sandstone)
+		P(
+			"GatePillar",
+			V3(5, 5, 5),
+			CF(Extreme.At(2, u, 256, side * 40)) * ANG(rad(45), 0, rad(35)),
+			C.sandstone,
+			M.Sandstone
+		)
 		P("GateBand", V3(6.4, 1.2, 6.4), CF(Extreme.At(2, u, top - 3, side * 40)), C.lapis, M.SmoothPlastic)
 		P("GateCapital", V3(7, 1.6, 7), CF(Extreme.At(2, u, top + 0.8, side * 40)), C.gold, M.Foil)
 	end
@@ -1694,7 +2066,14 @@ local function anubis(base: CFrame)
 	for _, sx in { -1, 1 } do
 		P("AnubisLeg", V3(1.3, 6, 1.6), base * CF(0.9 * sx, 4.2, 0), C.black, M.SmoothPlastic)
 		P("AnubisArm", V3(1.1, 4.4, 1.2), base * CF(2.45 * sx, 11.2, 0), C.black, M.SmoothPlastic)
-		P("AnubisEar", V3(0.5, 3.2, 1.2), base * CF(0.75 * sx, 17.85, 0.2) * (if sx < 0 then FLIP else CFrame.identity) * ANG(0, math.pi / 2, 0), C.black, M.SmoothPlastic, { class = WEDGE })
+		P(
+			"AnubisEar",
+			V3(0.5, 3.2, 1.2),
+			base * CF(0.75 * sx, 17.85, 0.2) * (if sx < 0 then FLIP else CFrame.identity) * ANG(0, math.pi / 2, 0),
+			C.black,
+			M.SmoothPlastic,
+			{ class = WEDGE }
+		)
 		P("AnubisEye", V3(0.55, 0.25, 0.1), base * CF(0.65 * sx, 15.5, -1.45), C.glowCyan, M.Neon)
 	end
 	P("AnubisKilt", V3(3.8, 2.6, 2.4), base * CF(0, 7.6, 0), C.gold, M.Foil)
@@ -1703,7 +2082,14 @@ local function anubis(base: CFrame)
 	P("AnubisCollar", V3(0.9, 4.6, 4.6), base * CF(0, 13.2, 0) * UPRIGHT, C.lapis, M.SmoothPlastic, { shape = CYL })
 	P("AnubisHead", V3(2.4, 2.6, 2.8), base * CF(0, 14.95, 0), C.black, M.SmoothPlastic)
 	P("AnubisSnout", V3(1.3, 1.2, 2.4), base * CF(0, 14.5, -2.4), C.black, M.SmoothPlastic)
-	rod("AnubisStaff", (base * CF(2.3, 1.2, -1.6)).Position, (base * CF(2.3, 17.5, -1.6)).Position, 0.5, C.lapis, M.SmoothPlastic)
+	rod(
+		"AnubisStaff",
+		(base * CF(2.3, 1.2, -1.6)).Position,
+		(base * CF(2.3, 17.5, -1.6)).Position,
+		0.5,
+		C.lapis,
+		M.SmoothPlastic
+	)
 	P("AnubisStaffTop", V3(1.4, 0.6, 0.6), base * CF(2.3, 17.6, -1.6) * ANG(0, 0, rad(-20)), C.gold, M.Foil)
 end
 
@@ -1717,11 +2103,35 @@ local function sunScarab(base: CFrame)
 			local b = (base * CF(2.9 * sx, 0.25, 0.4 + 2.3 * sz)).Position
 			rod("ScarabLeg", a, b, 0.45, C.navy, M.SmoothPlastic)
 		end
-		rod("ScarabArm", (base * CF(0.8 * sx, 3.2, -2.2)).Position, (base * CF(1.2 * sx, 7.4, -2.6)).Position, 0.45, C.navy, M.SmoothPlastic)
-		P("ScarabWing", V3(0.2, 3.6, 5), base * CF(2.3 * sx, 3.6, 1.4) * ANG(rad(-10), 0, rad(-28 * sx)), rgb(150, 224, 255), M.SmoothPlastic)
+		rod(
+			"ScarabArm",
+			(base * CF(0.8 * sx, 3.2, -2.2)).Position,
+			(base * CF(1.2 * sx, 7.4, -2.6)).Position,
+			0.45,
+			C.navy,
+			M.SmoothPlastic
+		)
+		P(
+			"ScarabWing",
+			V3(0.2, 3.6, 5),
+			base * CF(2.3 * sx, 3.6, 1.4) * ANG(rad(-10), 0, rad(-28 * sx)),
+			rgb(150, 224, 255),
+			M.SmoothPlastic
+		)
 	end
 	local sun = ball("Sun", 4.4, base * CF(0, 9.4, -2.6), C.sun, M.Neon)
 	light(sun, C.sun, 26, 2)
+	emitter(sun, {
+		Texture = SPARKLE,
+		Color = ColorSequence.new(rgb(255, 236, 140), rgb(255, 150, 40)),
+		LightEmission = 1,
+		Size = NumberSequence.new(0.6, 0.1),
+		Transparency = NumberSequence.new(0, 1),
+		Lifetime = NumberRange.new(1.2, 2),
+		Speed = NumberRange.new(2, 4),
+		SpreadAngle = Vector2.new(180, 180),
+		Rate = 12,
+	})
 end
 
 -- Facciata del santuario 2: due piloni con i rilievi, architrave col disco alato e lo scarabeo, Anubi e bracieri
@@ -1765,14 +2175,16 @@ local function shrineBanners2()
 	local sh = Extreme.Shrines[2]
 	local u0 = s.length
 	local portalU = s.x0 - sh.portal.Position.X
+	local _, wall = shrineShell(2)
 	for _, side in { 1, -1 } do
-		for k, du in { 6, 20, 34, 48 } do
+		for k, du in { 9, 32 } do
 			local u = u0 + du
 			if side == -1 and math.abs(u - portalU) < 11 then
-				continue
+				u = u0 + 20
 			end
 			begin("ShrineBanner")
-			local f = CF(Extreme.At(2, u, s.floor + 19.6, side * (HW + 0.5))) * (if side == 1 then CFrame.identity else FLIP)
+			local f = CF(Extreme.At(2, u, s.floor + 19.6, side * wall))
+				* (if side == 1 then CFrame.identity else FLIP)
 			P("BannerRod", V3(3.6, 0.36, 0.36), f * CF(0, 0, -0.18), C.gold, M.Foil, { shape = CYL })
 			P("Banner", V3(2.8, 8, 0.12), f * CF(0, -4, -0.06), if k % 2 == 0 then C.lapis else C.bannerRed, M.Fabric)
 			P("BannerBand", V3(2.8, 0.5, 0.06), f * CF(0, -7.1, -0.15), C.gold, M.Foil)
@@ -1806,7 +2218,6 @@ local function section2(root: Instance)
 	pyramidIsland(CF(at(305, 270, 125)), 72, 56, 8)
 	shrineFacade2()
 	shrineBanners2()
-	dressBanks2()
 end
 
 ---------------------------------------------------------------------------------------------
@@ -1816,8 +2227,16 @@ function ExtremeDecorA.Build(folder: Instance)
 	stats = { parts = 0, lights = 0, emitters = 0, fires = 0, skipped = 0 }
 	local root = folder.Parent or folder
 	addObstacles(root, folder)
+	-- prima i pezzi grossi di tutte e due le sezioni, poi gli ornamenti delle sponde (girano attorno al resto),
+	-- ciascuna sezione con la sua quota di parti
 	section1(folder)
 	section2(folder)
+	partLimit = stats.parts + math.floor((MAX_PARTS - stats.parts) * 0.5)
+	group = folder:FindFirstChild("Abyss") :: Instance
+	dressBanks1()
+	partLimit = MAX_PARTS
+	group = folder:FindFirstChild("Desert") :: Instance
+	dressBanks2()
 	folder:SetAttribute("Parts", stats.parts)
 	folder:SetAttribute("Lights", stats.lights)
 	folder:SetAttribute("Emitters", stats.emitters)

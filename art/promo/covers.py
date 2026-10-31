@@ -266,7 +266,7 @@ def glow_pass(path: Path, width: int, extra=()):
 
 
 def finish(beauty: Path, glow: Path | None, bloom=0.5, radii=(0.01, 0.03, 0.08), vignette=0.16, sat=1.12,
-           contrast=1.04, lift=0.0):
+           contrast=1.04, lift=0.0, sharpen=0.0):
     """Bagliore (somma di sfocature gaussiane della passata luminosa, in 'screen'), saturazione e contrasto
     leggeri, vignettatura. Scrive <render>_post.png."""
     from PIL import Image
@@ -294,19 +294,24 @@ def finish(beauty: Path, glow: Path | None, bloom=0.5, radii=(0.01, 0.03, 0.08),
         r = np.sqrt(((xx - w / 2) / (w / 2)) ** 2 + ((yy - h / 2) / (h / 2)) ** 2)
         im *= (1.0 - vignette * np.clip(r - 0.6, 0, 1) ** 1.5)[..., None]
     post = beauty.with_name(beauty.stem + "_post.png")
-    Image.fromarray((np.clip(im, 0, 1) * 255 + 0.5).astype(np.uint8)).save(post)
+    out_im = Image.fromarray((np.clip(im, 0, 1) * 255 + 0.5).astype(np.uint8))
+    if sharpen > 0:
+        from PIL import ImageFilter
+        out_im = out_im.filter(ImageFilter.UnsharpMask(radius=max(1.0, w / 1400), percent=int(sharpen * 100), threshold=2))
+    out_im.save(post)
     print(f"[covers] {post}")
     return post
 
 
-def render_all(name: str, tag: str, width: int, bloom=0.5, sat=1.12, vignette=0.16, extra_glow=(), radii=(0.01, 0.03, 0.08)):
+def render_all(name: str, tag: str, width: int, bloom=0.5, sat=1.12, vignette=0.16, extra_glow=(), radii=(0.01, 0.03, 0.08),
+               contrast=1.04, sharpen=0.0):
     if os.environ.get("NORENDER") == "1":
         return None
     stem = name + (f"_{tag}" if tag else "")
     beauty = S.render_to(WORK / f"{stem}.png")
     glow = glow_pass(WORK / f"{stem}_glow.png", max(320, width // 3), extra_glow)
     return finish(beauty, glow, bloom=env("BLOOM", bloom), sat=env("SAT", sat), vignette=env("VIG", vignette),
-                  radii=radii)
+                  radii=radii, contrast=env("CONTRAST", contrast), sharpen=env("SHARPEN", sharpen))
 
 
 def cam_basis(cam_loc, target):
@@ -373,6 +378,24 @@ def screen(pt):
     bpy.context.view_layer.update()
     v = world_to_camera_view(sc, sc.camera, Vector(pt))
     return round(v.x, 3), round(v.y, 3)
+
+
+def screen_extent(objs, step=7):
+    """Estensione nel fotogramma (min x, min y, max x, max y) dei vertici degli oggetti."""
+    from bpy_extras.object_utils import world_to_camera_view
+    sc = bpy.context.scene
+    bpy.context.view_layer.update()
+    xs, ys = [], []
+    for o in objs:
+        if o.type != "MESH":
+            continue
+        m = o.matrix_world
+        vs = o.data.vertices
+        for i in range(0, len(vs), step):
+            v = world_to_camera_view(sc, sc.camera, m @ vs[i].co)
+            xs.append(v.x)
+            ys.append(v.y)
+    return round(min(xs), 3), round(min(ys), 3), round(max(xs), 3), round(max(ys), 3)
 
 
 def report(**pts):
@@ -466,7 +489,7 @@ def scene_steal(w: int, samples: int, tag: str):
     S.point_light("EggGlow2", tuple(egg_c + Vector((0, -1.6, -0.6))), env("EGGLIGHT", 300.0) * 0.6, 0.4, lin("#ffd36b")[:3])
 
     # --- camera davanti al Bacon Hair, all'altezza del petto, leggermente dal basso
-    cam_loc = env("CAM", (-2.0, -14.0, 1.7))
+    cam_loc = env("CAM", (-2.3, -16.2, 1.9))
     target = env("TARGET", (0.4, 3.0, 5.9))
     S.camera(cam_loc, target, lens=env("LENS", 25.0), dof_target=tuple(ac) if not PREVIEW else None,
              fstop=env("FSTOP", 8.0))
@@ -474,6 +497,8 @@ def scene_steal(w: int, samples: int, tag: str):
     head = rig.joints["HeadCenter"].matrix_world.translation
     feet = rig.parts["ShoeR"].matrix_world @ Vector((0, 0, -1.82))
     e_lo, e_hi = S.bounds(egg_objs)
+    print("[covers] avatar (x0, y0, x1, y1):", screen_extent(rig.objects), " uovo:", screen_extent(egg_objs),
+          " rex:", screen_extent(rex_objs, 25))
     report(feet=feet, head=head, egg_top=(egg_c.x, egg_c.y, e_hi[2]), mouth=model_pt(rex, mouth),
            rex_eye=model_pt(rex, (0.25, -2.1, 3.1)), rex_crown=model_pt(rex, (0, -1.6, 3.6)),
            rex_tail=model_pt(rex, (0.3, 1.9, 2.6)), rex_foot=model_pt(rex, (0.8, -0.5, 0.0)))
@@ -539,7 +564,7 @@ def scene_giants(w: int, samples: int, tag: str):
         return float(ground(np.array([[x]]), np.array([[y]]))[0, 0])
 
     snow = S.grid_object("Snow", -60, 60, -30, 70, 260, 220, ground)
-    snow.data.materials.append(S.snow_material("Snow", tint=(226, 220, 246), fog=(lin("#ff9d8a"), 0.003, 40.0)))
+    snow.data.materials.append(S.snow_material("Snow", tint=env("SNOW", (168, 162, 220)), fog=(lin("#ff9d8a"), 0.003, 40.0)))
 
     # --- trono al centro con il Penta Drago
     tx, ty = env("THRONE_XY", (0.0, 9.0))
@@ -581,11 +606,11 @@ def scene_giants(w: int, samples: int, tag: str):
     bpy.context.view_layer.update()
 
     # --- cielo del tramonto: oro all'orizzonte, rosa, viola, indaco in alto; il sole basso dietro i giganti
-    sun_dir = Vector(env("SUN", (0.32, 1.0, 0.1))).normalized()
-    sky_gradient([(0.0, lin("#ffd36e")), (0.05, lin("#ff9d5c")), (0.13, lin("#ff6a8e")), (0.3, lin("#c04fd8")),
-                  (0.55, lin("#6a3fd0")), (1.0, lin("#33289a"))], light_color=lin("#b49cff"),
-                 light_strength=env("AMB", 0.35), sun_dir=tuple(sun_dir), sun_size=0.0005, sun_strength=20.0,
-                 halo=1.2, halo_color="#ffb070", stars=env("STARS", 0.0))
+    sun_dir = Vector(env("SUN", (0.62, 1.0, 0.075))).normalized()
+    sky_gradient([(0.0, lin("#ffd36e")), (0.03, lin("#ff9d5c")), (0.08, lin("#ff6a8e")), (0.17, lin("#c04fd8")),
+                  (0.3, lin("#6a3fd0")), (0.55, lin("#33289a")), (1.0, lin("#1d1a6a"))], light_color=lin("#b49cff"),
+                 light_strength=env("AMB", 0.25), sun_dir=tuple(sun_dir), sun_size=0.0004, sun_strength=20.0,
+                 halo=env("HALO", 0.35), halo_color="#ffb070", stars=env("STARS", 0.0))
     fogc = "#ff9d8a"
     m1 = S.rock_snow_material("Mnt1", "#5a3f86", "#ffd1dc", fogc, 0.0045, 30, snow_from=0.5)
     m2 = S.rock_snow_material("Mnt2", "#5a3f86", "#ffc6d6", fogc, 0.0065, 30, snow_from=0.45)
@@ -615,7 +640,7 @@ def scene_giants(w: int, samples: int, tag: str):
         S.area_light(f"Key{name}", tuple(c + Vector((-1.3 * size, -1.8 * size, 1.1 * size))), tuple(c),
                      env("KEY", 55.0) * size ** 2, 0.8 * size, lin("#fff0dc")[:3])
     S.area_light("FillCam", tuple(Vector(env("CAM", (0.0, -26.0, 3.2))) + Vector((6, 0, 4))), (0, 6, 5),
-                 env("FILL", 2500.0), 20.0, lin("#9fb0ff")[:3])
+                 env("FILL", 1200.0), 20.0, lin("#9fb0ff")[:3])
     wl, wh = S.bounds(w_objs)
     wc = Vector(((wl + wh) / 2).tolist())
     S.area_light("WhaleKey", tuple(wc + Vector((-8, -14, 6))), tuple(wc), env("WHALEKEY", 9000.0), 8.0, lin("#ffe6f0")[:3])
@@ -639,7 +664,7 @@ def scene_giants(w: int, samples: int, tag: str):
     pts["whale"] = tuple((wl + wh) / 2)
     pts["whale_l"] = (wl[0], (wl[1] + wh[1]) / 2, (wl[2] + wh[2]) / 2)
     report(**pts)
-    return render_all("giants", tag, w, bloom=0.5, sat=1.1)
+    return render_all("giants", tag, w, bloom=0.2, sat=1.1, radii=(0.004, 0.012, 0.03), contrast=1.08, sharpen=0.6)
 
 
 # =================================================================================== scena 3: Percorso Estremo (Inferno)

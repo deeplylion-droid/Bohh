@@ -161,7 +161,6 @@ local function fire(parent: Instance, size: number, heat: number, color: Color3,
 end
 
 local SPARKLE = "rbxasset://textures/particles/sparkles_main.dds"
-local FIRE_TEX = "rbxasset://textures/particles/fire_main.dds"
 
 local function seq(a: number, b: number): NumberSequence
 	return NumberSequence.new(a, b)
@@ -466,6 +465,25 @@ local function wallPipes(s: number, u: number, y0: number, y1: number, seed: num
 	wallDisc(s, u + 1.8, y0 + (y1 - y0) * (0.55 + 0.1 * (seed % 3)), 1.4, 0.2, 2.4, "Valve", RED, Mat.SmoothPlastic)
 end
 
+-- cartello "alta tensione": pannello giallo col fulmine nero (tre tratti a zig-zag nel piano della parete)
+local function wallBolt(s: number, uc: number, yc: number)
+	onWall(s, uc - 3, uc + 3, yc - 3, yc + 3, 0, 0.2, "WarnBorder", BLACK, Mat.SmoothPlastic)
+	onWall(s, uc - 2.6, uc + 2.6, yc - 2.6, yc + 2.6, 0.2, 0.06, "WarnPanel", YELLOW, Mat.SmoothPlastic)
+	local pts = { { 0.9, 1.9 }, { -0.6, 0.15 }, { 0.6, -0.15 }, { -0.9, -1.9 } }
+	for k = 1, 3 do
+		-- il tratto centrale sporge un filo di piu': nessuna faccia complanare dove i tratti si toccano
+		local t = if k == 2 then 0.09 else 0.06
+		local v = s * (WALL_IN - (if k == 2 then 0.265 else 0.26) - t / 2)
+		local a = at(3, uc + pts[k][1], yc + pts[k][2], v)
+		local b = at(3, uc + pts[k + 1][1], yc + pts[k + 1][2], v)
+		local up = (b - a).Unit
+		local right = up:Cross(Vector3.zAxis).Unit
+		local size = Vector3.new(0.55, (b - a).Magnitude + 0.4, t)
+		local p = box("WarnBolt", size, CFrame.fromMatrix((a + b) / 2, right, up), BLACK, Mat.SmoothPlastic)
+		p.CastShadow = false
+	end
+end
+
 -- oblo' del reattore: anello, vetro luminoso e mozzo
 local function wallPorthole(s: number, u: number, y: number)
 	wallDisc(s, u, y, 0, 0.3, 8, "PortRing", STEEL, Mat.Metal)
@@ -522,6 +540,9 @@ local function labWalls()
 	end
 	wallScreen(-1, 120, 136, 272, 282, "graph", 11)
 	wallScreen(1, 130, 146, 272, 282, "code", 12)
+	for _, w in { { -1, 141, 250 }, { -1, 166, 262 }, { 1, 122, 262 }, { 1, 154, 250 } } do
+		wallBolt(w[1], w[2], w[3])
+	end
 	-- C) sala rotonda: oblo' luminosi del reattore
 	for _, s in { -1, 1 } do
 		for _, u in { 198, 222 } do
@@ -531,6 +552,18 @@ local function labWalls()
 	-- D) piattaforme volanti: altri fasci di tubi
 	for _, b in { { -1, 252, 1 }, { 1, 280, 2 }, { -1, 306, 3 } } do
 		wallPipes(b[1], b[2], 226, 266.4, b[3])
+	end
+	for _, t in
+		{
+			{ -1, 268, CYAN },
+			{ -1, 292, PINK },
+			{ -1, 328, LIME },
+			{ 1, 258, LIME },
+			{ 1, 300, CYAN },
+			{ 1, 322, PINK },
+		}
+	do
+		wallTube(t[1], t[2], 242, 266, t[3])
 	end
 end
 
@@ -574,7 +607,8 @@ local function labTanks()
 		-- anelli di rinforzo fra base e liquido e fra vetro e coperchio sono le flange: niente dentro il vetro
 		if k == 1 then
 			light(liquid, LIME, 22, 1.4)
-			emitter(liquid, {
+			local source = span(3, u - 1.5, u + 1.5, 279, 290, 28.5, 31.5, "BubbleSource", WHITE, Mat.SmoothPlastic, 1)
+			emitter(source, {
 				Texture = SPARKLE,
 				Color = ColorSequence.new(rgb(230, 255, 220)),
 				LightEmission = 0.6,
@@ -854,6 +888,35 @@ local function labDish()
 	sphere("DishReceiver", 1.6, front + n * 7.6, RED, Mat.Neon)
 end
 
+-- Braccio robotico arancione su una terrazza del muro sinistro, prima del santuario: regge un'ampolla luminosa
+local function labRobotArm()
+	annex(3, 314, 330, -23, -37, 268, -1, LIGHT, Mat.DiamondPlate)
+	local U, V = 322, -30
+	column(3, U, V, 268, 270, 6, "RobotBase", DARK, Mat.DiamondPlate)
+	column(3, U, V, 270, 273.6, 4.4, "RobotTurret", ORANGE, Mat.SmoothPlastic)
+	local S = at(3, U, seatedY(273.6, 3.6, 1.4), V)
+	local E = at(3, U - 3, 285.5, V + 3)
+	local W = at(3, U - 7, 283, V + 6.5)
+	sphere("RobotShoulder", 3.6, S, DARK, Mat.Metal)
+	box("RobotArm", Vector3.new(2.2, 2.2, (E - S).Magnitude), CFrame.lookAt((S + E) / 2, E), ORANGE, Mat.SmoothPlastic)
+	sphere("RobotElbow", 2.8, E, DARK, Mat.Metal)
+	box(
+		"RobotForearm",
+		Vector3.new(1.8, 1.8, (W - E).Magnitude),
+		CFrame.lookAt((E + W) / 2, W),
+		ORANGE,
+		Mat.SmoothPlastic
+	)
+	sphere("RobotWrist", 2, W, DARK, Mat.Metal)
+	local dir = (W - E).Unit
+	local side = dir:Cross(Vector3.yAxis).Unit
+	for _, k in { -1, 1 } do
+		local f = W + dir * 1.6 + side * k * 0.9
+		box("RobotFinger", Vector3.new(0.45, 0.45, 2), CFrame.lookAt(f, f + dir), STEEL, Mat.Metal)
+	end
+	sphere("RobotFlask", 1.3, W + dir * 2.2, LIME, Mat.Neon)
+end
+
 -- Santuario 3: plafoniere, travi, vetrine luminose dietro i trofei e schermi; sul tetto la torre di Tesla
 local function labShrine()
 	local s3 = Extreme.Sections[3]
@@ -930,6 +993,7 @@ local function buildLab(folder: Instance)
 	labHolo()
 	labBrainJar()
 	labDish()
+	labRobotArm()
 	labShrine()
 end
 
@@ -1055,7 +1119,7 @@ local function lavafall(s: number, um: number, w: number, top: number, bottom: n
 			Transparency = seq(0, 1),
 			Lifetime = NumberRange.new(1.5, 2.6),
 			Speed = NumberRange.new(3, 6),
-			EmissionDirection = if s > 0 then Enum.NormalId.Right else Enum.NormalId.Left,
+			EmissionDirection = if s > 0 then Enum.NormalId.Front else Enum.NormalId.Back,
 			SpreadAngle = Vector2.new(30, 30),
 			Acceleration = Vector3.new(0, 5, 0),
 			Rate = 10,
@@ -1130,6 +1194,41 @@ local function infernoCliffs()
 				-- schegge di ossidiana sulla cima piatta
 				local k = math.floor(r(1, 3.99))
 				local placed = {}
+				if n == 5 then
+					-- mucchio di teschi a blocchetti che guardano il percorso
+					local su, sv = um, vIn + 3
+					for j, sk in { { -1.3, 0 }, { 1.3, 0 }, { 0, 2.4 } } do
+						local cu, cy = su + sk[1], top + sk[2]
+						span(
+							4,
+							cu - 1.2,
+							cu + 1.2,
+							cy,
+							cy + 2.4,
+							s * (sv - 1.2),
+							s * (sv + 1.2),
+							"SkullPile",
+							BONE,
+							Mat.SmoothPlastic
+						)
+						for _, ex in { -0.5, 0.5 } do
+							local a, b = s * (sv - 1.2), s * (sv - 1.26)
+							span(
+								4,
+								cu + ex - 0.25,
+								cu + ex + 0.25,
+								cy + 1.2,
+								cy + 1.7,
+								math.min(a, b),
+								math.max(a, b),
+								"SkullPileEye",
+								if j == 3 then EMBER else BLACK,
+								Mat.Neon
+							)
+						end
+					end
+					k = 0
+				end
 				for j = 1, k do
 					local w = r(2.4, 4)
 					local margin = w + 0.5

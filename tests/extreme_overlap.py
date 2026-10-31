@@ -801,9 +801,21 @@ def same_look(A, B, tol=8):
 
 
 def is_layer(P):
-    """Strato sottile appoggiato (vernice, muschio, schiuma, strisce): spesso al massimo 0.5 stud."""
+    """Strato sottile (vernice, muschio, schiuma, strisce, pannelli): spesso al massimo 0.5 stud."""
     s = np.sort(P.size)
     return s[0] <= 0.5 and s[1] >= 1.0
+
+
+def is_flat_layer(P):
+    """Strato sottile steso in orizzontale (vernice per terra, muschio, schiuma sull'acqua)."""
+    if not is_layer(P) or P.shape not in ("Block", "Cylinder"):
+        return False
+    k = int(np.argmin(P.size))
+    if P.shape == "Cylinder":
+        k = 0 if P.size[0] <= min(P.size[1], P.size[2]) else -1
+        if k < 0:
+            return False
+    return abs(P.rot[1, k]) > 0.9
 
 
 def is_rod(P):
@@ -931,8 +943,8 @@ def classify_static(g):
         return None, "stessa forma (stesso materiale e colore)", None
     if A.wall and B.wall:
         return None, "rocce delle sponde", None
-    if is_layer(A) or is_layer(B):
-        return None, "strato sottile appoggiato", None
+    if is_flat_layer(A) or is_flat_layer(B):
+        return None, "strato sottile steso (vernice, muschio, schiuma)", None
     for X, Y, which in ((A, B, "B"), (B, A, "A")):
         comps = exit_components(X, Y)
         if len(comps) < 2:
@@ -1020,7 +1032,11 @@ def static_pass(parts, viewer, findings, ignored):
             if not kind:
                 continue
             c = pts.mean(axis=0)
-            samples = np.concatenate([[c], pts + (c - pts) * 0.15]) + nrm * 0.03
+            # appena davanti a tutte e due le facce (per le quasi complanari la seconda e' piu' avanti)
+            ahead = max(0.0, max(A.poly.offsets[A.poly.normals @ nrm > 1 - 1e-5].max(initial=-np.inf),
+                                 B.poly.offsets[B.poly.normals @ nrm > 1 - 1e-5].max(initial=-np.inf))
+                        - float(nrm @ c))
+            samples = np.concatenate([[c], pts + (c - pts) * 0.15]) + nrm * (min(ahead, NEAR_COPLANAR) + 0.03)
             near = [P for P in static if np.all(P.poly.lo <= samples.max(0) + 0.1) and np.all(P.poly.hi >= samples.min(0) - 0.1)]
             hid = hidden_points(samples, near, {A.i, B.i})
             exposed = samples[~hid]
@@ -1029,8 +1045,7 @@ def static_pass(parts, viewer, findings, ignored):
                         A, B, c, exposed, area, extra="near" if kind == "ZF~" else "")
             f.groups = [(exposed, set())]
             if len(exposed) == 0:
-                f.sev = "."
-                f.extra = "coperte da altre parti"
+                f.sev, f.extra, f.settled = ".", "coperte da altre parti", True
             findings.append(f)
         # compenetrazioni
         g = pair_geometry(A, B)
@@ -1086,8 +1101,8 @@ def mover_pass(parts, viewer, findings, ignored):
             if S.is_liquid:
                 ok("mobile nel liquido")
                 continue
-            if is_layer(S):
-                ok("mobile che passa in uno strato sottile (schiuma, vernice)")
+            if is_flat_layer(S):
+                ok("mobile che passa in uno strato sottile steso (schiuma, vernice)")
                 continue
             if M.kind in ("Swing", "Sweeper", "Spinner") and np.all(
                     S.poly.normals @ pv - S.poly.offsets <= 0.6):
@@ -1186,7 +1201,7 @@ def terrain_pass(parts, terrain, findings):
                 text = f"{P.name} entra nel terreno dal bordo (fino a {worst:.1f} stud, {len(group)} punti)"
             f = Finding("TE", text, P, None, pts.mean(axis=0), top, float(worst))
             if kind == "bordo":
-                f.sev = "."
+                f.sev, f.settled = ".", True
                 f.extra = "voluto se la parte deve uscire dal terreno (es. l'inizio del ponte)"
             findings.append(f)
 
@@ -1205,8 +1220,8 @@ SEVERITY_RULES = {
 
 
 def grade(f, viewer):
-    if f.sev == "." and f.extra:
-        return
+    if getattr(f, "settled", False):
+        return  # gia' deciso (coperto da altre parti, voluto...)
     both = {p.i for p in (f.A, f.B) if p is not None}
     groups = getattr(f, "groups", None) or [(f.points, both)]
     f.seen, f.dist = math.inf, math.inf
