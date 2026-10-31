@@ -8,6 +8,8 @@
 -- Coordinate di sezione: u = distanza lungo il percorso (verso -X), v = spostamento laterale (z),
 -- y = quota assoluta.
 
+local Rng = require(script.Parent.Util.Rng)
+
 local Extreme = {}
 
 Extreme.Z = 215 -- asse del percorso (si procede verso -X)
@@ -254,7 +256,7 @@ end
 -- Sponde di roccia irregolari ai due lati: blocchi di lunghezza, altezza e colore diversi, inclinati
 -- verso l'esterno, alti 8-20 stud sopra il percorso (si vede il cielo; il confine vero e' il muro
 -- invisibile). floorAt(u) = quota del percorso in quel punto; cap = colore della cima (muschio...)
-local bankRng = Random.new(20261031)
+local bankRng = Rng.new(20261031) -- uguale nel gioco e nei controlli offline
 local function banks(
 	i: number,
 	u0: number,
