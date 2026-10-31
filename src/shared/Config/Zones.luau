@@ -14,11 +14,12 @@ export type Zone = {
 	color: Color3, -- colore della zona nell'interfaccia
 	fogColor: Color3,
 	music: string, -- chiave in Config.Audio.Music
+	extreme: boolean?, -- sezione del Percorso Estremo
 }
 
 local Zones = {}
 
-Zones.Order = { "Meadow", "Forest", "Canyon", "Crystal", "Crater", "Den" }
+Zones.Order = { "Meadow", "Forest", "Canyon", "Crystal", "Crater", "Den", "Abyss", "Desert", "Lab", "Inferno" }
 
 Zones.List = {
 	Meadow = {
@@ -82,6 +83,52 @@ Zones.List = {
 		color = Color3.fromRGB(255, 52, 88),
 		fogColor = Color3.fromRGB(120, 40, 60),
 		music = "Danger",
+	},
+	-- Percorso Estremo (parte dalla piazza della vetta): in fondo a ogni sezione, sull'altare del
+	-- santuario, c'e' sempre un uovo Estremo; dopo che qualcuno lo prende ne ricompare un altro
+	Abyss = {
+		id = "Abyss",
+		order = 7,
+		eggs = { Extreme = 1 },
+		respawn = 3,
+		announceFrom = "Extreme",
+		color = Color3.fromRGB(40, 190, 255),
+		fogColor = Color3.fromRGB(120, 200, 230),
+		music = "Crystal",
+		extreme = true,
+	},
+	Desert = {
+		id = "Desert",
+		order = 8,
+		eggs = { Extreme = 1 },
+		respawn = 3,
+		announceFrom = "Extreme",
+		color = Color3.fromRGB(255, 196, 70),
+		fogColor = Color3.fromRGB(255, 220, 160),
+		music = "Canyon",
+		extreme = true,
+	},
+	Lab = {
+		id = "Lab",
+		order = 9,
+		eggs = { Extreme = 1 },
+		respawn = 3,
+		announceFrom = "Extreme",
+		color = Color3.fromRGB(80, 255, 220),
+		fogColor = Color3.fromRGB(170, 255, 240),
+		music = "Event",
+		extreme = true,
+	},
+	Inferno = {
+		id = "Inferno",
+		order = 10,
+		eggs = { Extreme = 1 },
+		respawn = 3,
+		announceFrom = "Extreme",
+		color = Color3.fromRGB(255, 60, 30),
+		fogColor = Color3.fromRGB(255, 120, 80),
+		music = "Danger",
+		extreme = true,
 	},
 } :: { [string]: Zone }
 

@@ -41,6 +41,7 @@ Rewards.IndexRow = {
 	Divine = 60000000,
 	Secret = 500000000,
 	Primal = 2000000000,
+	Extreme = 3500000000,
 	Ultra = 5000000000,
 }
 

@@ -8,6 +8,7 @@ local MapLayout = require(ReplicatedStorage.Shared.MapLayout)
 local Plaza = require(ReplicatedStorage.Shared.Config.Plaza)
 local Visuals = require(ReplicatedStorage.Shared.Visuals)
 local Build = require(script.Parent.Build)
+local ExtremeBuild = require(script.Parent.ExtremeBuild)
 
 local Scenery = {}
 
@@ -109,6 +110,9 @@ function Scenery.Summit(parent: Instance, assets)
 	end
 	-- lampioni fra i cancelli dei lotti e panchine attorno al monumento (se i modelli ci sono)
 	for k = 0, 8 do
+		if (20 + 40 * k) % 360 == 260 then
+			continue -- a 260 gradi parte il viale del Percorso Estremo
+		end
 		local a = math.rad(20 + 40 * k)
 		local dir = Vector3.new(math.sin(a), 0, math.cos(a))
 		local lamp = assets.Clone("Props", "LampPost")
@@ -635,6 +639,9 @@ function Scenery.Decor(parent: Instance, assets, terrainHeight: (number, number)
 					x, z = math.cos(a) * r, math.sin(a) * r
 					if z > 120 and math.abs(x) < 50 then
 						continue -- lascia libero l'inizio del sentiero
+					end
+					if ExtremeBuild.NearApproach(x, z) then
+						continue -- e il ponte del Percorso Estremo
 					end
 				else
 					x, z = rng:NextNumber(-300, 300), rng:NextNumber(150, 780)

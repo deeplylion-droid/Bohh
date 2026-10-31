@@ -140,6 +140,17 @@ function Visuals.EggEffects(model: Model, rarity: string)
 			lightEmission = 1,
 		})
 		light(core, r.color, 16, 2)
+	elseif rarity == "Extreme" then
+		-- scintille elettriche verde acido e azzurre che scoccano dal guscio
+		emitter(core, {
+			color = ColorSequence.new(Color3.fromRGB(200, 255, 60), Color3.fromRGB(40, 230, 255)),
+			size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.45), NumberSequenceKeypoint.new(1, 0) }),
+			rate = 26,
+			speed = NumberRange.new(4, 7),
+			lifetime = NumberRange.new(0.15, 0.35),
+			lightEmission = 1,
+		})
+		light(core, r.color, 18, 2.4)
 	elseif rarity == "Ultra" then
 		emitter(core, {
 			texture = FIRE,
@@ -249,12 +260,43 @@ local PET_FX: { [string]: { [string]: any } } = {
 		lifetime = NumberRange.new(1, 1.8),
 		light = Color3.fromRGB(150, 70, 255),
 	},
+	-- stelline bianche e oro che brillano attorno alla parte
+	Stars = {
+		color = ColorSequence.new(Color3.fromRGB(255, 255, 230), Color3.fromRGB(255, 206, 90)),
+		size = 0.26,
+		rate = 22,
+		speed = NumberRange.new(0.2, 0.8),
+		acceleration = Vector3.new(0, 0, 0),
+		lifetime = NumberRange.new(0.8, 1.6),
+		light = Color3.fromRGB(255, 230, 160),
+	},
+	-- nuvolette di nebulosa viola e blu
+	Nebula = {
+		texture = SMOKE,
+		color = ColorSequence.new(Color3.fromRGB(200, 90, 255), Color3.fromRGB(60, 140, 255)),
+		size = 0.7,
+		rate = 10,
+		speed = NumberRange.new(0.2, 0.6),
+		acceleration = Vector3.new(0, 0.3, 0),
+		lifetime = NumberRange.new(1.6, 2.6),
+		light = Color3.fromRGB(170, 100, 255),
+	},
+	-- bollicine che salgono (pesci degli abissi)
+	Bubbles = {
+		color = ColorSequence.new(Color3.fromRGB(220, 248, 255), Color3.fromRGB(90, 200, 255)),
+		size = 0.2,
+		rate = 16,
+		speed = NumberRange.new(0.5, 1.2),
+		acceleration = Vector3.new(0, 2.5, 0),
+		lifetime = NumberRange.new(1.2, 2.2),
+		light = Color3.fromRGB(90, 200, 255),
+	},
 }
 
--- Ultra e Primordiali (questi con meno particelle e senza luci: sono tanti sui piedistalli)
+-- Ultra, Primordiali ed Estremi (questi con meno particelle e senza luci: sono tanti sui piedistalli)
 function Visuals.PetEffects(model: Model, petId: string, intensity: number)
 	local def = Pets.ById[petId]
-	if not def or not (def.giant or def.rarity == "Primal") then
+	if not def or not (def.giant or def.rarity == "Primal" or def.rarity == "Extreme") then
 		return
 	end
 	if not def.giant then

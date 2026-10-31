@@ -18,6 +18,7 @@ Net.Events = {
 	"StealAlert", -- (thiefUserId, itemInfo) qualcuno sta rubando
 	"Knockback", -- (velocity, ragdollTime) al proprio personaggio
 	"Buried", -- () travolto dalla valanga
+	"ExtremeRun", -- (state) corsa nel Percorso Estremo: { active, checkpoint, started, best? } o nil
 	-- client -> server
 	"BuyUpgrade", -- (upgradeId)
 	"BuyBat", -- (batId)
@@ -33,6 +34,7 @@ Net.Events = {
 	"AdminAction", -- (action, args)
 	"Swing", -- () schiaffo (il server convalida tempi e bersagli)
 	"ObstacleHit", -- (obstacleId) il client segnala di essere stato colpito (il server convalida)
+	"ExtremeHit", -- (pieceId | "Fall") colpito nel Percorso Estremo (il server convalida)
 	"ClaimQuest", -- (kind: "Daily"|"Weekly"|"DailyBonus"|"WeeklyBonus", index?)
 }
 

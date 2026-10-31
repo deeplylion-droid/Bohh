@@ -11,7 +11,7 @@ Legenda: ⏳ in corso · 📋 da fare · ✅ fatto (con la versione pubblicata)
 |---|---|---|
 | 3 | La **miniatura quadrata** (icona del gioco) non piace: proporne una diversa. | ⏳ (3 proposte) |
 | 4 | **3 pet nuovi da vendere nel negozio**, livello ULTRA ma ancora più belli: "mozzafiato, animali fantastici di stazza mega galattica". | ⏳ modelli: Balena Cosmica, Leone Nebulosa, Kraken Stellare |
-| 5 | **PERCORSO ESTREMO**: percorso alternativo che parte dalla piazza iniziale (quello standard resta). Dà **pet migliori** del percorso standard. **Davvero difficile** e **NON cheattabile**: muri invisibili, va fatto per forza per intero. Almeno un tratto ispirato alle **rapide**. | 📋 |
+| 5 | **PERCORSO ESTREMO**: percorso alternativo che parte dalla piazza iniziale (quello standard resta). Dà **pet migliori** del percorso standard. **Davvero difficile** e **NON cheattabile**: muri invisibili, va fatto per forza per intero. Almeno un tratto ispirato alle **rapide**. | ⏳ scritto: viale fra i lotti 6 e 7, ponte, 4 sezioni (Rapide degli Abissi, Tempio del Deserto, Laboratorio dei Geni, Inferno) con santuario, checkpoint e portale; anti-cheat sul server (velocità, volo, teletrasporto, muri, salto delle sezioni); rarità Estremo e uovo. Manca: pet, test sul server, pubblicazione |
 | 6 | **12 pet nuovi** per il Percorso Estremo, **tutti molto fighi**: 3 ispirati ai **pesci abissali**, 3 agli **antichi egizi**, 3 ai **felini super intelligenti**, 3 ai **diavoli infernali biblici**, trasformati per renderli super fighi. | ⏳ modelli |
 | 7 | Lavorare **in parallelo con gli agenti** e **segnare tutto quello che chiede**, senza perdere nulla. | ⏳ (questo file) |
 

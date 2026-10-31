@@ -46,6 +46,7 @@ local T: { [string]: Entry } = {
 	Rarity_Divine = { en = "DIVINE", it = "DIVINO" },
 	Rarity_Secret = { en = "SECRET", it = "SEGRETO" },
 	Rarity_Primal = { en = "PRIMAL", it = "PRIMORDIALE" },
+	Rarity_Extreme = { en = "EXTREME", it = "ESTREMO" },
 	Rarity_Ultra = { en = "ULTRA", it = "ULTRA" },
 
 	-- uova
@@ -108,6 +109,19 @@ local T: { [string]: Entry } = {
 	Pet_ThunderGriffin = { en = "Thunder Griffin", it = "Grifone del Tuono" },
 	Pet_TitanRex = { en = "Titan Rex", it = "Titano Rex" },
 	Pet_PentaDragon = { en = "Penta Dragon", it = "Pentadrago" },
+	-- Estremi (Percorso Estremo)
+	Pet_AbyssAngler = { en = "Abyss Angler", it = "Pescatore degli Abissi" },
+	Pet_AbyssViper = { en = "Abyss Viperfish", it = "Vipera degli Abissi" },
+	Pet_GlassHead = { en = "Glass Head", it = "Testa di Vetro" },
+	Pet_AnubisGuard = { en = "Anubis Guardian", it = "Guardiano Anubi" },
+	Pet_GoldenSphinx = { en = "Golden Sphinx", it = "Sfinge Dorata" },
+	Pet_SunScarab = { en = "Sun Scarab", it = "Scarabeo del Sole" },
+	Pet_CyberLynx = { en = "Cyber Lynx", it = "Lince Cyber" },
+	Pet_QuantumTiger = { en = "Quantum Tiger", it = "Tigre Quantica" },
+	Pet_PsychicPanther = { en = "Psychic Panther", it = "Pantera Psichica" },
+	Pet_Behemoth = { en = "Behemoth", it = "Behemoth" },
+	Pet_Beelzebub = { en = "Beelzebub", it = "Belzebù" },
+	Pet_Abaddon = { en = "Abaddon", it = "Abaddon" },
 
 	-- mutazioni e taglie
 	Mutation_Gold = { en = "GOLD", it = "ORO" },
@@ -125,6 +139,53 @@ local T: { [string]: Entry } = {
 	Zone_Crystal = { en = "Crystal Caves", it = "Grotte di Cristallo" },
 	Zone_Crater = { en = "Volcanic Crater", it = "Cratere Vulcanico" },
 	Zone_Den = { en = "Monster Lair", it = "Tana dei Mostri" },
+	Zone_Abyss = { en = "Abyssal Rapids", it = "Rapide degli Abissi" },
+	Zone_Desert = { en = "Desert Temple", it = "Tempio del Deserto" },
+	Zone_Lab = { en = "Genius Lab", it = "Laboratorio dei Geni" },
+	Zone_Inferno = { en = "Inferno", it = "Inferno" },
+
+	-- Percorso Estremo
+	ExtremeSign = { en = "EXTREME TRAIL", it = "PERCORSO ESTREMO" },
+	ExtremeSignSub = { en = "ONLY FOR THE BRAVEST · EXTREME PETS", it = "SOLO PER I PIÙ BRAVI · PET ESTREMI" },
+	ExtremeArrow = { en = "EXTREME TRAIL >>", it = "PERCORSO ESTREMO >>" },
+	ExtremeSectionSign = { en = "SECTION {n} · {zone}", it = "SEZIONE {n} · {zone}" },
+	ExtremeCheckpointSign = { en = "CHECKPOINT {n}", it = "CHECKPOINT {n}" },
+	ExtremePortalSign = { en = "BACK TO THE SUMMIT", it = "TORNA IN VETTA" },
+	ExtremeStart = {
+		en = "EXTREME TRAIL! If you fall you go back to the last checkpoint",
+		it = "PERCORSO ESTREMO! Se cadi torni all'ultimo checkpoint",
+	},
+	ExtremeCheckpoint = {
+		en = "Checkpoint {n}: {zone}! Take the egg and the portal, or keep going",
+		it = "Checkpoint {n}: {zone}! Prendi l'uovo e il portale, oppure continua",
+	},
+	ExtremeComplete = { en = "You beat the Extreme Trail in {time}!", it = "Hai finito il Percorso Estremo in {time}!" },
+	ExtremeCheat = { en = "Not allowed! Back to the checkpoint", it = "Non vale! Torni al checkpoint" },
+	ExtremeKicked = {
+		en = "Run cancelled: too many irregular moves",
+		it = "Corsa annullata: troppe mosse irregolari",
+	},
+	ExtremeNoCarry = {
+		en = "You can't enter the Extreme Trail carrying something",
+		it = "Non puoi entrare nel Percorso Estremo con qualcosa in mano",
+	},
+	ExtremeEggPortal = {
+		en = "With the egg you can only go back through the portal",
+		it = "Con l'uovo puoi solo tornare indietro dal portale",
+	},
+	ExtremeNeedRun = {
+		en = "Run the Extreme Trail up to this shrine to take its egg",
+		it = "Per prendere quest'uovo devi arrivare fin qui col Percorso Estremo",
+	},
+	ExtremeOneEgg = { en = "Only one egg per run!", it = "Un solo uovo per corsa!" },
+	ExtremeEggTaken = {
+		en = "Extreme egg! Take the portal to bring it home",
+		it = "Uovo Estremo! Usa il portale per portarlo a casa",
+	},
+	ExtremeHudTitle = { en = "EXTREME TRAIL", it = "PERCORSO ESTREMO" },
+	ExtremeHudSection = { en = "Section {n}/{total}", it = "Sezione {n}/{total}" },
+	ExtremeHudBest = { en = "Best {time}", it = "Record {time}" },
+	ExtremeHudDone = { en = "Shrine {n} reached!", it = "Santuario {n} raggiunto!" },
 
 	-- prompt (azioni nel mondo)
 	Prompt_Pickup = { en = "PICK UP", it = "RACCOGLI" },
@@ -398,6 +459,10 @@ local T: { [string]: Entry } = {
 		it = "{name} ha preso un uovo Ultra nella Tana dei Mostri! Rubalo prima che arrivi in cima!",
 	},
 	AnnounceAdmin = { en = "{text}", it = "{text}" },
+	AnnounceExtreme = {
+		en = "{name} beat the EXTREME TRAIL in {time}!",
+		it = "{name} ha completato il PERCORSO ESTREMO in {time}!",
+	},
 	AnnounceWheelJackpot = {
 		en = "{name} hit the JACKPOT on the Wheel of Fortune: a Primal egg!",
 		it = "{name} ha vinto il JACKPOT alla Ruota della Fortuna: un uovo Primordiale!",

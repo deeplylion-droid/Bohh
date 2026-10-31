@@ -1,4 +1,4 @@
-"""Uova per rarita'. Uso: python eggs/eggs.py Common Uncommon Rare Epic Legendary Mythic Divine Secret Primal Ultra"""
+"""Uova per rarita'. Uso: python eggs/eggs.py Common Uncommon Rare Epic Legendary Mythic Divine Secret Primal Extreme Ultra"""
 import math
 import os
 import sys
@@ -286,6 +286,23 @@ def build(kind: str) -> Model:
         ring_b = torus(R + 0.58, 0.05).rot(16, 0, 25).translate((CENTER[0], CENTER[1], CENTER[2] - 0.15))
         m.add("RingA", ring_a.scale(US), (255, 60, 100), material="Neon", role="glow", tris=1600, voxel=0.015)
         m.add("RingB", ring_b.scale(US), (255, 205, 80), material="Neon", role="glow", tris=1600, voxel=0.015)
+    elif kind == "Extreme":
+        # uovo del Percorso Estremo: guscio nero lucido attraversato da fulmini verde acido, fascia
+        # gialla a zig-zag da segnale di pericolo, schegge di energia in cima e un anello elettrico
+        ES = 1.12
+        m.add("Shell", s.scale(ES), (22, 24, 30), reflectance=0.14, tris=6000)
+        m.add("Bolts", cracks(s, 9, seed=131, steps=7, step=0.21).scale(ES), (170, 255, 0), material="Neon", role="glow",
+              tris=4500, voxel=0.013)
+        thin = s.offset(-0.07)
+        m.add("Band", lift.subtract(thin).intersect(band(0.98, 1.3, 0.13, 9, 0.0, sharp=True)).scale(ES), (255, 206, 0),
+              role="detail", tris=3000, voxel=0.013)
+        m.add("BandEdge", lift.subtract(thin).intersect(band(1.36, 1.44, 0.13, 9, 0.0, sharp=True)).scale(ES), (170, 255, 0),
+              material="Neon", role="glow", tris=1600, voxel=0.012)
+        big, small = crystals(s, 5, seed=47, length=1.05, width=0.26, zmin=0.66, zmax=0.9)
+        m.add("Shards", big.scale(ES), (190, 255, 40), material="Neon", role="glow", tris=2400, voxel=0.012, smooth=False)
+        m.add("ShardsSmall", small.scale(ES), (255, 214, 0), material="Neon", role="glow", tris=1600, voxel=0.012, smooth=False)
+        ring = torus(R + 0.5, 0.065).rot(22, 0, -18).translate((CENTER[0], CENTER[1], CENTER[2] - 0.1))
+        m.add("Ring", ring.scale(ES), (40, 230, 255), material="Neon", role="glow", tris=1400, voxel=0.015)
     else:
         raise SystemExit(f"Rarita' sconosciuta: {kind}")
     m.meta["rarity"] = kind

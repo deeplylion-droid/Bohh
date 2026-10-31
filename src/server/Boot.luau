@@ -25,6 +25,7 @@ local ORDER = {
 	"UpgradeService",
 	"ObstacleService",
 	"DenService",
+	"ExtremeService",
 	"AvalancheService",
 	"GuardianService",
 	"EventService",

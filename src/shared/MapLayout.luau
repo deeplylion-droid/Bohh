@@ -3,6 +3,8 @@
 -- La vetta (con gli 8 lotti) e' al centro; il sentiero scende a tornanti sul versante +Z
 -- attraversando 5 zone fino al cratere vulcanico. Tutte le misure sono in stud.
 
+local Extreme = require(script.Parent.Extreme)
+
 local MapLayout = {}
 
 ---------------------------------------------------------------------------------------------
@@ -304,6 +306,9 @@ end
 -- Zona in cui si trova una posizione
 ---------------------------------------------------------------------------------------------
 function MapLayout.ZoneAt(pos: Vector3): string
+	if Extreme.InCourse(pos) then
+		return Extreme.Sections[Extreme.SectionAt(pos.X)].id
+	end
 	local flat = Vector3.new(pos.X, 0, pos.Z)
 	local summitFlat = Vector3.new(MapLayout.SummitCenter.X, 0, MapLayout.SummitCenter.Z)
 	if (flat - summitFlat).Magnitude < MapLayout.PlateauRadius - 4 and pos.Y > 322 then

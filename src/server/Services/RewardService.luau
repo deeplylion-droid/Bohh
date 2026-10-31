@@ -48,7 +48,7 @@ function RewardService.RecordZone(player: Player, zone: string?)
 	if not data or not zone or not Zones.List[zone] then
 		return
 	end
-	if zone == "Den" then
+	if zone == "Den" or Zones.List[zone].extreme then
 		zone = "Crater"
 	end
 	local best = Zones.List[RewardService.BestZone(player)]

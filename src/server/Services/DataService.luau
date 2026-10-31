@@ -40,6 +40,8 @@ local TEMPLATE = {
 	GroupClaimed = false,
 	Unlocks = {}, -- zone sbloccate per sempre (Den = Tana dei Mostri)
 	Wheel = { NextFree = 0, Spins = 0 }, -- ruota della fortuna: prossimo giro gratis, giri extra
+	-- Percorso Estremo: miglior tempo (s, 0 = mai finito), corse, arrivi, sezione massima, uova prese
+	Extreme = { Best = 0, Runs = 0, Completed = 0, Sections = 0, Eggs = 0 },
 	-- missioni: giorno e settimana di estrazione, elenchi { Id, P (progresso), C (riscattata) }
 	Quests = { Day = -1, Week = -1, Daily = {}, Weekly = {}, DailyBonus = false, WeeklyBonus = false },
 	Purchases = {}, -- [PurchaseId] = os.time()

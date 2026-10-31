@@ -6,6 +6,7 @@ local Signal = require(ReplicatedStorage.Shared.Util.Signal)
 local Terrain = require(script.Parent.Parent.World.Terrain)
 local WorldLighting = require(script.Parent.Parent.World.Lighting)
 local Scenery = require(script.Parent.Parent.World.Scenery)
+local ExtremeBuild = require(script.Parent.Parent.World.ExtremeBuild)
 
 local MapService = {}
 
@@ -52,6 +53,9 @@ function MapService.Start()
 	end)
 	stage("tana dei mostri", function()
 		Scenery.Den(folder, assets)
+	end)
+	stage("percorso estremo", function()
+		ExtremeBuild.Build(folder)
 	end)
 	stage("nuvole", function()
 		Scenery.CloudSea(folder)

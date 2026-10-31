@@ -4,6 +4,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
+local Extreme = require(ReplicatedStorage.Shared.Extreme)
 local GameConfig = require(ReplicatedStorage.Shared.Config.Game)
 local MapLayout = require(ReplicatedStorage.Shared.MapLayout)
 local Upgrades = require(ReplicatedStorage.Shared.Config.Upgrades)
@@ -39,6 +40,11 @@ function CharacterService.UpdateSpeed(player: Player)
 	speed *= S.CarryService.SpeedMultiplier(player)
 	local now = os.clock()
 	local fx = effects[player]
+	if S.ExtremeService.InRun(player) then
+		-- Percorso Estremo: stessa velocita' per tutti, senza potenziamenti ne' rallentamenti
+		speed = Extreme.WalkSpeed
+		fx = nil
+	end
 	if fx then
 		if (fx.Root or 0) > now then
 			speed = 0
@@ -64,7 +70,8 @@ function CharacterService.ApplyEffect(player: Player, name: string, duration: nu
 end
 
 function CharacterService.IsProtected(player: Player): boolean
-	return (player:GetAttribute("ProtectedUntil") or 0) > workspace:GetServerTimeNow()
+	-- chi corre nel Percorso Estremo non puo' essere colpito da nessuno
+	return (player:GetAttribute("ProtectedUntil") or 0) > workspace:GetServerTimeNow() or S.ExtremeService.InRun(player)
 end
 
 -- Riporta il giocatore nel suo lotto senza farlo morire (caduta, valanga, lava)

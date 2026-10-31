@@ -6,6 +6,7 @@ local HttpService = game:GetService("HttpService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Events = require(ReplicatedStorage.Shared.Config.Events)
+local Extreme = require(ReplicatedStorage.Shared.Extreme)
 local GameConfig = require(ReplicatedStorage.Shared.Config.Game)
 local MapLayout = require(ReplicatedStorage.Shared.MapLayout)
 local Rarities = require(ReplicatedStorage.Shared.Config.Rarities)
@@ -101,6 +102,11 @@ local function placeEgg(nest: Nest, info)
 			S.StateService.Notify(player, "BackpackFull", nil, "Bad")
 			return
 		end
+		-- santuari del Percorso Estremo: solo chi e' arrivato fin li' in questa corsa, un uovo a corsa
+		local extreme = S.ExtremeService.IsZone(nest.zone)
+		if extreme and not S.ExtremeService.CanPickup(player, nest.zone) then
+			return
+		end
 		prompt:Destroy()
 		nest.egg = nil
 		nest.away = true
@@ -115,6 +121,9 @@ local function placeEgg(nest: Nest, info)
 		end
 		if info.rarity == "Primal" then
 			S.QuestService.Add(player, "PickupPrimal", 1)
+		end
+		if extreme then
+			S.ExtremeService.Took(player, nest.zone)
 		end
 		if nest.always then
 			-- l'uovo non torna a questo altare: dopo pochi secondi ne compare un altro
@@ -201,6 +210,23 @@ function NestService.Start()
 		weights = nil,
 		always = true,
 	}
+	-- santuari del Percorso Estremo: un uovo Estremo della sezione, sempre presente
+	for i, sh in Extreme.Shrines do
+		local id = `ExtremeAltar{i}`
+		nests[id] = {
+			id = id,
+			zone = sh.zone,
+			cframe = CFrame.new(sh.altar),
+			model = nil,
+			egg = nil,
+			eggInfo = nil,
+			away = false,
+			respawnAt = 0,
+			lair = nil,
+			weights = nil,
+			always = true,
+		}
+	end
 	for _, nest in nests do
 		spawnEgg(nest)
 	end

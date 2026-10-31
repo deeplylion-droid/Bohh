@@ -19,7 +19,8 @@ export type Rarity = {
 
 local Rarities = {}
 
-Rarities.Order = { "Common", "Uncommon", "Rare", "Epic", "Legendary", "Mythic", "Divine", "Secret", "Primal", "Ultra" }
+Rarities.Order =
+	{ "Common", "Uncommon", "Rare", "Epic", "Legendary", "Mythic", "Divine", "Secret", "Primal", "Extreme", "Ultra" }
 
 Rarities.List = {
 	Common = {
@@ -115,10 +116,23 @@ Rarities.List = {
 		announce = true,
 		hatchByZone = { Meadow = 30, Forest = 90, Canyon = 240, Crystal = 600, Crater = 1500 },
 	},
+	-- Percorso Estremo: le uova stanno solo sugli altari dei santuari, in fondo alle quattro sezioni;
+	-- la sezione decide quale dei suoi tre pet nasce, quanto guadagna e quanto dura la schiusa
+	Extreme = {
+		id = "Extreme",
+		order = 10,
+		color = Color3.fromRGB(170, 255, 0),
+		colorDark = Color3.fromRGB(30, 120, 10),
+		weight = 0.5,
+		hatch = 2400,
+		sell = 120,
+		announce = true,
+		hatchByZone = { Abyss = 600, Desert = 1200, Lab = 1800, Inferno = 2400 },
+	},
 	-- creature colossali: uova rarissime e pesantissime, un solo pet Ultra per lotto (sul trono)
 	Ultra = {
 		id = "Ultra",
-		order = 10,
+		order = 11,
 		color = Color3.fromRGB(255, 52, 88),
 		colorDark = Color3.fromRGB(150, 0, 40),
 		weight = 0.3,
@@ -128,7 +142,7 @@ Rarities.List = {
 	},
 } :: { [string]: Rarity }
 
--- Divine, Secret, Primal e Ultra usano un gradiente animato nell'interfaccia
+-- Divine, Secret, Primal, Extreme e Ultra usano un gradiente animato nell'interfaccia
 Rarities.Gradients = {
 	Divine = ColorSequence.new({
 		ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 90, 90)),
@@ -142,6 +156,12 @@ Rarities.Gradients = {
 		ColorSequenceKeypoint.new(0, Color3.fromRGB(40, 255, 220)),
 		ColorSequenceKeypoint.new(0.5, Color3.fromRGB(160, 60, 255)),
 		ColorSequenceKeypoint.new(1, Color3.fromRGB(40, 255, 220)),
+	}),
+	Extreme = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, Color3.fromRGB(170, 255, 0)),
+		ColorSequenceKeypoint.new(0.35, Color3.fromRGB(40, 230, 255)),
+		ColorSequenceKeypoint.new(0.7, Color3.fromRGB(255, 214, 0)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(170, 255, 0)),
 	}),
 	Primal = ColorSequence.new({
 		ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 150, 30)),

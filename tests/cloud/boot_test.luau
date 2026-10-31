@@ -525,12 +525,89 @@ do
 	end
 	local out = {}
 	for _, z in Zones.Order do
-		if z ~= "Den" then
+		if z ~= "Den" and not Zones.List[z].extreme then
 			local hatch = Rarities.List.Primal.hatchByZone and Rarities.List.Primal.hatchByZone[z]
 			table.insert(out, string.format("%s:%d/%ss", z, byZone[z] or 0, tostring(hatch)))
 		end
 	end
 	add("primal_zones", table.concat(out, " "))
+end
+
+-- Percorso Estremo: parti costruite, elementi animati, altari con l'uovo, portali, muri
+-- invisibili, pavimento sotto le rinascite e strada dalla piazza fino alla partenza
+do
+	local CollectionService = game:GetService("CollectionService")
+	local Extreme = require(ReplicatedStorage.Shared.Extreme)
+	local Pets = require(ReplicatedStorage.Shared.Config.Pets)
+	local folder = map and map:FindFirstChild("Extreme")
+	local n, invisible = 0, 0
+	if folder then
+		for _, d in folder:GetDescendants() do
+			if d:IsA("BasePart") then
+				n += 1
+				if d.Name == "InvisibleWall" then
+					invisible += 1
+				end
+			end
+		end
+	end
+	add("extreme_parts", n)
+	add("extreme_invisible_walls", invisible)
+	local animated, expected = 0, 0
+	for _, p in Extreme.Pieces do
+		if p.kind ~= "Solid" and p.kind ~= "Kill" then
+			expected += 1
+		end
+	end
+	for _, d in CollectionService:GetTagged("ExtremePiece") do
+		if d:GetAttribute("Rope") == nil and d:GetAttribute("Stripe") == nil then
+			animated += 1
+		end
+	end
+	add("extreme_animated", `{animated}/{expected}`)
+	add("extreme_portals", #CollectionService:GetTagged("ExtremePortal"))
+	local altars = {}
+	for i = 1, #Extreme.Shrines do
+		local nest = S.NestService.All()[`ExtremeAltar{i}`]
+		local egg = nest and nest.egg
+		table.insert(altars, `{i}:{egg and egg:GetAttribute("Rarity") or "none"}`)
+	end
+	add("extreme_altars", table.concat(altars, " "))
+	-- rinascite: devono avere un pavimento vero sotto (raggio contro le parti del percorso)
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Include
+	params.FilterDescendantsInstances = { folder }
+	local spawns = { Extreme.StartSpawn }
+	for _, sh in Extreme.Shrines do
+		table.insert(spawns, sh.spawn)
+	end
+	local floors = {}
+	for i, cf in spawns do
+		local hit = workspace:Raycast(cf.Position, Vector3.new(0, -12, 0), params)
+		table.insert(floors, `{i - 1}:{if hit then string.format("%.1f", cf.Position.Y - hit.Position.Y) else "none"}`)
+	end
+	add("extreme_spawn_floor", table.concat(floors, " "))
+	-- viale e ponte senza buchi: raggi verso il basso ogni 4 stud dalla piazza alla bocca del canyon
+	local dir = Vector3.new(math.sin(Extreme.GateAngle), 0, math.cos(Extreme.GateAngle))
+	local holes, lowest, highest = 0, math.huge, -math.huge
+	local all = RaycastParams.new()
+	all.FilterType = Enum.RaycastFilterType.Exclude
+	all.FilterDescendantsInstances = {}
+	for r = 96, 198, 4 do
+		local p = dir * r + Vector3.new(0, 360, 0)
+		local hit = workspace:Raycast(p, Vector3.new(0, -60, 0), all)
+		if not hit or hit.Position.Y < 328 then
+			holes += 1
+		else
+			lowest = math.min(lowest, hit.Position.Y)
+			highest = math.max(highest, hit.Position.Y)
+		end
+	end
+	add("extreme_approach", string.format("holes %d, y %.2f..%.2f", holes, lowest, highest))
+	add("extreme_reach_start", reach(Vector3.new(0, 334, 0) + dir * 60, Extreme.StartSpawn.Position))
+	local count = #(Pets.ByRarity.Extreme or {})
+	add("extreme_pets", count)
+	add("extreme_zone_at_start", MapLayout.ZoneAt(Extreme.StartSpawn.Position))
 end
 
 -- avvisi raccolti durante l'avvio

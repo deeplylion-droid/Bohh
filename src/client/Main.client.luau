@@ -16,6 +16,7 @@ local ORDER = {
 	"Ragdoll",
 	"Combat",
 	"Obstacles",
+	"Extreme",
 	"Avalanche",
 	"Guardians",
 	"Zones",
