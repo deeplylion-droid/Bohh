@@ -161,6 +161,15 @@ def spike(a, b, r0, r1=0.008, bend=None, n=8):
     return tube(pts, taper(n + 1, r0, r1, 0.9))
 
 
+def glow_tip(a, b, r0, r1=0.008, bend=(0.0, 0.0, 0.0), n=10, frac=0.32, extra=0.012):
+    """Punta luminosa di una spina: l'ultimo tratto, appena piu' spesso, che ricopre la punta."""
+    a, b, bend = np.asarray(a, float), np.asarray(b, float), np.asarray(bend, float)
+    pts = bezier(tuple(a), tuple(a + (b - a) / 3 + bend), tuple(a + (b - a) * 2 / 3 + bend), tuple(b), n)
+    radii = taper(n + 1, r0, r1, 0.9)
+    k = int(round(n * (1 - frac)))
+    return tube(pts[k:], [r + extra for r in radii[k:]])
+
+
 class Spine:
     """Linea mediana del pesce, fitta, con un sistema di riferimento (T verso la coda, D dorso, L lato +X)."""
 
@@ -481,7 +490,12 @@ for dx, dy in ((0.11, 0.05), (-0.11, 0.06), (0.0, -0.11)):
                                  tuple(a + (dx * 0.8, dy * 1.4, -0.34)), 8), taper(9, 0.035, 0.014)))
     filaments.append(sphere(0.042, tuple(a + (dx * 0.8, dy * 1.4, -0.36))))
 shines.append(ellipsoid((0.07, 0.04, 0.05)).rot(0, 30, -20).translate(tuple(LURE_C + norm((0.45, -0.6, 0.65)) * 0.25)))
-nodes = [sphere(0.05, stalk_pts[i]) for i in (9, 15, 21)]
+nodes = []
+for i in (8, 13, 18, 23):     # anelli luminosi lungo l'antenna (come gli anelli di una canna da pesca)
+    tdir = norm(np.array(stalk_pts[i + 1]) - np.array(stalk_pts[i - 1]))
+    r_st = taper(29, 0.08, 0.036, 0.8)[i]
+    nodes.append(place(torus(r_st + 0.012, 0.026), basis(norm(np.cross(tdir, (1.0, 0.0, 0.0))), (1.0, 0.0, 0.0)) @
+                       np.array([[0, 0, 1], [1, 0, 0], [0, 1, 0]], dtype=np.float32).T, np.array(stalk_pts[i])))
 log("esca pronta")
 
 # ============================================================ bioluminescenza: branchie, strisce, puntini
@@ -568,8 +582,8 @@ for k_, t in enumerate(np.linspace(0.0, 1.0, 6)):
         dor_poly.append((s + 0.02, BT(s) + (h - BT(s)) * 0.5))
     dor_poly.append((tip_s - 0.04, h - 0.06))
     a, b = sp.world(s, 0.0, BT(s) - 0.12), sp.world(tip_s, 0.0, h + 0.12)
-    dor_rays.append(spike(a, b, 0.065, 0.007, bend=sp.frame(s)[1] * -0.06))
-    dor_tips.append(a + (b - a) * 0.84)
+    dor_rays.append(spike(a, b, 0.065, 0.007, bend=sp.frame(s)[1] * -0.06, n=10))
+    dor_tips.append(glow_tip(a, b, 0.065, 0.007, bend=sp.frame(s)[1] * -0.06))
 dor_poly += [(D_S1 + 0.34, BT(D_S1 + 0.34) - 0.02)]
 dor_poly += [(s, BT(s) - 0.12) for s in np.linspace(D_S1 + 0.3, D_S0 - 0.06, 9)]
 dorsal = spine_fin(sp, dor_poly, 0.035, (D_S0 - 0.2, D_S1 + 0.5), (0.0, 1.8))
@@ -593,15 +607,16 @@ TAIL_PIVOT = tuple(sp.world(L - 0.05, 0.0, 0.0))
 T_ANG = np.radians(np.linspace(-56, 56, 7))
 T_LEN = [1.0, 1.16, 1.02, 0.9, 1.02, 1.16, 1.0]
 tail_poly = [(L - 0.14, -0.2)]
-tail_rays = []
+tail_rays, tail_tips = [], []
 for k_, (ang, Ln) in enumerate(zip(T_ANG, T_LEN)):
     if k_ > 0:
         am = 0.5 * (T_ANG[k_ - 1] + ang)
         lm = 0.5 * (T_LEN[k_ - 1] + Ln) * 0.66
         tail_poly.append((L - 0.06 + math.cos(am) * lm, math.sin(am) * lm))
     tail_poly.append((L - 0.06 + math.cos(ang) * Ln, math.sin(ang) * Ln))
-    tail_rays.append(spike(sp.world(L - 0.12, 0.0, 0.0), sp.world(L - 0.06 + math.cos(ang) * (Ln + 0.14), 0.0,
-                                                                   math.sin(ang) * (Ln + 0.14)), 0.055, 0.006))
+    ta, tb = sp.world(L - 0.12, 0.0, 0.0), sp.world(L - 0.06 + math.cos(ang) * (Ln + 0.14), 0.0, math.sin(ang) * (Ln + 0.14))
+    tail_rays.append(spike(ta, tb, 0.055, 0.006))
+    tail_tips.append(glow_tip(ta, tb, 0.055, 0.006, frac=0.22, extra=0.014))
 tail_poly.append((L - 0.14, 0.2))
 tail_fin = spine_fin(sp, tail_poly, 0.035, (L - 0.3, L + 1.2), (-1.0, 1.0))
 log("pinne pronte")
@@ -622,14 +637,13 @@ log("chiave pronta")
 
 # ============================================================ parti
 m.add("Body", skin_body, INDIGO, tris=4800, voxel=0.045 * VX, reflectance=0.1)
-m.add("Maw", fast_union(maw), MAW, role="eye", tris=800, voxel=0.045 * VX)
+m.add("Maw", fast_union(maw + pupils), MAW, role="eye", tris=900, voxel=0.045 * VX)
 m.add("Teeth", fast_union(teeth), TOOTH, material="Glass", role="shine", transparency=0.1, tris=1500, voxel=0.02 * VX)
 m.add("EyeGlow", union(*eye_glow), EYE, material="Neon", role="glow", tris=240, voxel=0.022 * VX)
-m.add("Pupils", union(*pupils), PUPIL, role="eye", tris=120, voxel=0.012 * VX)
 m.add("Shine", union(*shines), WHITE, role="shine", tris=120, voxel=0.012 * VX)
 m.add("Armor", fast_union(armor + dor_rays + an_rays + [stalk, cup]), ARMOR, material="Metal", role="detail", tris=1700,
       voxel=0.022 * VX)
-m.add("Biolume", fast_union(glow + gums + nodes + [sphere(0.048, tuple(t)) for t in dor_tips]), BIOLUM, material="Neon",
+m.add("Biolume", fast_union(glow + gums + nodes + dor_tips), BIOLUM, material="Neon",
       role="glow", tris=1400, voxel=0.024 * VX)
 m.add("Bubbles", union(lure, *filaments, k=0.03), LURE, material="Neon", role="glow", tris=600, voxel=0.024 * VX)
 for nm in ("FinR", "FinL"):
@@ -639,6 +653,8 @@ for nm in ("FinR", "FinL"):
 m.add("Fins", fast_union([dorsal, anal]), FIN, role="detail", tris=800, voxel=0.028 * VX)
 m.add("TailFin", tail_fin, FIN, role="detail", tris=550, voxel=0.028 * VX, group="Tail", pivot=TAIL_PIVOT)
 m.add("TailRays", fast_union(tail_rays), ARMOR, material="Metal", role="detail", tris=400, voxel=0.026 * VX, group="Tail",
+      pivot=TAIL_PIVOT)
+m.add("TailGlow", fast_union(tail_tips), BIOLUM, material="Neon", role="glow", tris=200, voxel=0.016 * VX, group="Tail",
       pivot=TAIL_PIVOT)
 m.add("WindKey", fast_union(key), BRASS, material="Metal", role="detail", tris=600, voxel=0.02 * VX)
 

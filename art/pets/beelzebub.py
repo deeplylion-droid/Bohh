@@ -770,6 +770,15 @@ for x in np.linspace(-0.7, 0.7, 21):
     Y = 0.36 + 0.3 * uu - (0.95 - 0.45 * uu) * x * x
     col_edge.append((x, Y, zz))
 gold.append(tube(col_edge, 0.024))
+# bordino d'oro lungo i lati del mantello
+for sx in (1, -1):
+    side_pts = []
+    for z in np.linspace(Z_TOP - 0.02, 0.36, 12):
+        u = (Z_TOP - z) / (Z_TOP - Z_BOT)
+        W = 0.6 + 0.32 * u - 0.012
+        Y, _ = cape_geom(np.array([sx * W]), np.array([z]))
+        side_pts.append((sx * W, float(Y[0]), z))
+    gold.append(tube(side_pts, 0.022))
 clasp_pts, _ = project_many(core0, [(0, 0.0, 1.8)] * 9,
                             [np.array([x, -1.0, 1.98 - 0.12 * (1 - (x / 0.5) ** 2)]) - np.array([0, 0.0, 1.8])
                              for x in np.linspace(-0.5, 0.5, 9)])
@@ -828,7 +837,7 @@ WING_M = wing_matrix(1)
 flies = []
 ORBITS = [  # (centro, raggio x, raggio y, inclinazione (gradi attorno a X, attorno a Y), angoli delle mosche)
     ((0, 0.05, 1.3), 1.25, 1.02, (14, -10), (-150, -112, -68, -24, 18, 62, 118, 160)),
-    ((0, -0.05, 2.52), 0.9, 0.8, (-18, 16), (-140, -84, -36, 12, 60, 106, 152)),
+    ((0, 0.05, 2.78), 1.02, 0.86, (-16, 14), (-150, -100, -30, 14, 58, 104, 150)),
     ((0, 0.0, 0.62), 0.95, 0.85, (6, 12), (-128, -60, 4, 70, 136)),
 ]
 
@@ -853,6 +862,8 @@ for (c, rx, ry, (tx, ty), angs) in ORBITS:
         loc = np.array([rx * math.cos(a), ry * math.sin(a), 0.03 * math.sin(3 * a)])
         tan = np.array([-rx * math.sin(a), ry * math.cos(a), 0.0])
         pos = c + Mo @ loc
+        if pos[1] < -0.3 and 2.0 < pos[2] < 3.15 and abs(pos[0]) < 0.8:   # niente mosche davanti alla faccia
+            continue
         flies.append(fly(pos, Mo @ tan + np.array([0, 0, frng.uniform(-0.25, 0.25)]), frng.uniform(1.65, 2.05),
                          frng.uniform(-35, 35)))
 
@@ -915,7 +926,7 @@ for i in range(4):
 m.add("Body", core0, CHITIN, tris=2600, voxel=0.03 * VX, reflectance=0.08)
 m.add("Head", head_w, CHITIN, role="skin", tris=1200, voxel=0.022 * VX, reflectance=0.08)
 m.add("Eyes", fast_union([Hd(e) for e in eye_parts]), EYE_RED, role="eye", tris=1500, voxel=0.016 * VX,
-      reflectance=0.18, smooth=False)
+      reflectance=0.25, smooth=False)
 m.add("EyeShine", fast_union([Hd(e) for e in eye_shine]), WHITE, role="shine", tris=140, voxel=0.01 * VX)
 m.add("Mouth", Hd(mouth_dark), MOUTH, role="eye", tris=240, voxel=0.014 * VX)
 m.add("Teeth", Hd(fast_union(teeth)), TOOTH, role="shine", tris=380, voxel=0.011 * VX)
