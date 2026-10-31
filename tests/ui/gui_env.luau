@@ -87,6 +87,7 @@ for _, n in
 		"RenderStepped",
 		"Heartbeat",
 		"Stepped",
+		"PreSimulation",
 		"CharacterAdded",
 		"CharacterRemoving",
 		"PlayerAdded",
@@ -462,7 +463,9 @@ mt.__index = function(self, key)
 		end
 	end
 	if EVENTS[key] then
-		local s = newSignal(key == "RenderStepped" or key == "Heartbeat" or key == "Stepped")
+		local s = newSignal(
+			key == "RenderStepped" or key == "Heartbeat" or key == "Stepped" or key == "PreSimulation"
+		)
 		props[key] = s
 		return s
 	end

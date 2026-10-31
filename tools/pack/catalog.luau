@@ -21,7 +21,7 @@ local Variants = req("ReplicatedStorage/Shared/Config/Variants")
 local Zones = req("ReplicatedStorage/Shared/Config/Zones")
 
 -- parti che emettono particelle (PET_FX in src/shared/Visuals.luau)
-local EFFECT_PARTS = { "Aura", "Mane", "Flames", "Rage", "Venom", "Frost", "Shadow" }
+local EFFECT_PARTS = { "Aura", "Mane", "Flames", "Rage", "Venom", "Frost", "Shadow", "Stars", "Nebula", "Bubbles" }
 
 local function rgb(c): { number }
 	return { math.floor(c.R * 255 + 0.5), math.floor(c.G * 255 + 0.5), math.floor(c.B * 255 + 0.5) }

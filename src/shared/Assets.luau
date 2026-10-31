@@ -7122,6 +7122,7 @@ return {
 		StitchH = "rbxassetid://72345152770914",
 		StitchRing = "rbxassetid://112929867137563",
 		StitchV = "rbxassetid://82621918127578",
+		WaterFlow = "rbxassetid://73676788179399",
 		WheelFace = "rbxassetid://128665285270479",
 	} :: { [string]: string },
 	Sounds = {

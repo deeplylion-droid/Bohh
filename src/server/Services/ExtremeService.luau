@@ -437,9 +437,10 @@ local function onHit(player: Player, id: any)
 	local power = p.power or 60
 	local push: Vector3
 	if p.kind == "Swing" then
-		-- verso del moto del peso (oscilla attorno all'asse X del perno: spinge lungo z)
+		-- verso del moto del peso: oscilla attorno all'asse X del perno e, quando l'angolo cresce
+		-- (coseno positivo), il peso va verso -Z; la spinta segue il moto
 		local a = math.pi * 2 * (st / (p.period or 3) + (p.phase or 0))
-		local dir = if math.cos(a) > 0 then 1 else -1
+		local dir = if math.cos(a) > 0 then -1 else 1
 		push = Vector3.new(0, 26, dir * power)
 	elseif p.kind == "Sweeper" then
 		local hub = p.cframe.Position

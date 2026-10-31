@@ -401,6 +401,40 @@ SCENES.hatch_primal = {
 	advance = 5.6,
 }
 
+-- Percorso Estremo: riga dell'album con i 12 pet Estremi e cronometro della corsa sotto le monete
+SCENES.index_extreme = {
+	data = function(d)
+		d.Index.GlassHead = { Normal = true }
+		d.Index.AnubisGuard = { Normal = true }
+		d.Index.Beelzebub = { Normal = true, Gold = true }
+	end,
+	run = function(ctx)
+		ctx.C.UI.Open("Index")
+		for _, sf in ctx.gui("Panels"):GetDescendants() do
+			if sf:IsA("ScrollingFrame") and sf.Parent and sf.Parent.Name == "Body" then
+				sf.CanvasPosition = roblox.Vector2.new(0, 1930)
+			end
+		end
+	end,
+}
+SCENES.hud_extreme = {
+	run = function(ctx)
+		local X = ctx.req(CLIENT .. "/Controllers/Extreme")
+		ctx.C.Effects.On = function() end
+		ctx.C.Effects.CameraShake = function() end
+		X.Init(ctx.C)
+		G.task.spawn(X.Start)
+		G.advance(0.6)
+		ctx.req("ReplicatedStorage/Shared/Net").Event("ExtremeRun").OnClientEvent:Fire({
+			active = true,
+			checkpoint = 1,
+			started = NOW - 194,
+			best = 512,
+		})
+	end,
+	advance = 1,
+}
+
 SCENES.loading = {
 	loading = true,
 	workspace = { ServerReady = false },

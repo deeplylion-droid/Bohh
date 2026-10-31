@@ -210,12 +210,23 @@ local function updateEntry(e: Entry, t: number, hrp: BasePart?, hrpPos: Vector3?
 	end
 end
 
+local flows: { Texture } = {}
+
 local function update()
 	local t = workspace:GetServerTimeNow()
 	local cam = workspace.CurrentCamera
 	local camPos = cam and cam.CFrame.Position or Vector3.zero
 	if camPos.X > Extreme.StartX + RANGE or math.abs(camPos.Z - Extreme.Z) > 400 then
 		return
+	end
+	-- corrente delle rapide: la texture di schiuma scorre (U verso -X sull'acqua, V in giu' sulle cascate)
+	if camPos.X > Extreme.Sections[2].x0 - 200 then
+		for _, tex in flows do
+			local u = tex:GetAttribute("FlowU") or 0
+			local v = tex:GetAttribute("FlowV") or 0
+			tex.OffsetStudsU = (t * u) % tex.StudsPerTileU
+			tex.OffsetStudsV = (t * v) % tex.StudsPerTileV
+		end
 	end
 	local char = player.Character
 	local hrp = char and char:FindFirstChild("HumanoidRootPart") :: BasePart?
@@ -334,6 +345,15 @@ function ExtremeController.Start()
 		register(inst)
 	end
 	CollectionService:GetInstanceAddedSignal("ExtremePiece"):Connect(register)
+	local function addFlow(inst: Instance)
+		if inst:IsA("Texture") then
+			table.insert(flows, inst)
+		end
+	end
+	for _, inst in CollectionService:GetTagged("ExtremeFlow") do
+		addFlow(inst)
+	end
+	CollectionService:GetInstanceAddedSignal("ExtremeFlow"):Connect(addFlow)
 	Net.Event("ExtremeRun").OnClientEvent:Connect(function(state)
 		local was = run ~= nil
 		run = state

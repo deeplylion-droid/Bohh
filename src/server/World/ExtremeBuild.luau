@@ -7,6 +7,7 @@
 local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local Assets = require(ReplicatedStorage.Shared.Assets)
 local Extreme = require(ReplicatedStorage.Shared.Extreme)
 local MapLayout = require(ReplicatedStorage.Shared.MapLayout)
 local Pets = require(ReplicatedStorage.Shared.Config.Pets)
@@ -501,10 +502,38 @@ end
 ---------------------------------------------------------------------------------------------
 -- Effetti per tema: nebbia delle cascate, lava, luci del laboratorio
 ---------------------------------------------------------------------------------------------
-local function themeFx(folder: Instance)
+-- Corrente: texture di schiuma che il client fa scorrere (tag "ExtremeFlow", attributo FlowSpeed)
+local function flowTexture(part: BasePart, face: Enum.NormalId, speedU: number, speedV: number, tile: number)
+	local id = Assets.Images.WaterFlow
+	if not id then
+		return
+	end
+	local tex = Instance.new("Texture")
+	tex.Name = "Flow"
+	tex.Texture = id
+	tex.Face = face
+	tex.StudsPerTileU = tile
+	tex.StudsPerTileV = tile
+	tex.Transparency = 0.15
+	tex:SetAttribute("FlowU", speedU)
+	tex:SetAttribute("FlowV", speedV)
+	tex.Parent = part
+	CollectionService:AddTag(tex, "ExtremeFlow")
+end
+
+local function themeFx(folder: Instance, partsById: { [string]: BasePart })
 	for _, p in Extreme.Pieces do
 		if not p.deco then
 			continue
+		end
+		local part = partsById[p.id]
+		if part and p.section == 1 and p.material == "SmoothPlastic" and p.size.Z > Extreme.HalfWidth * 2 then
+			-- superficie delle rapide: la corrente scorre verso valle (-X); la texture ha U lungo x
+			flowTexture(part, Enum.NormalId.Top, 14, 0, 18)
+		elseif part and p.section == 1 and p.material == "Glass" then
+			-- cascata: due facce verticali, la schiuma scende
+			flowTexture(part, Enum.NormalId.Right, 0, 22, 12)
+			flowTexture(part, Enum.NormalId.Left, 0, 22, 12)
 		end
 		if p.section == 1 and p.material == "Glass" then
 			-- cascata: nebbia alla base
@@ -746,12 +775,16 @@ function ExtremeBuild.Build(parent: Instance)
 	local pieces = Instance.new("Folder")
 	pieces.Name = "Pieces"
 	pieces.Parent = folder
+	local partsById: { [string]: BasePart } = {}
 	for _, p in Extreme.Pieces do
-		piecePart(p, pieces)
+		local part = piecePart(p, pieces)
+		if part then
+			partsById[p.id] = part
+		end
 	end
 	approach(folder)
 	canyon(folder)
-	themeFx(folder)
+	themeFx(folder, partsById)
 	shrines(folder)
 	return folder
 end
