@@ -604,6 +604,14 @@ do
 		worst = math.max(worst, off)
 	end
 	add("extreme_branch", string.format("holes %d, worst %.2f", holes, worst))
+	-- il client trova gli elementi da animare per nome con Extreme.Get: nessuno deve mancare
+	local missing = {}
+	for _, inst in game:GetService("CollectionService"):GetTagged("ExtremePiece") do
+		if not Extreme.Get(inst.Name) then
+			table.insert(missing, inst.Name)
+		end
+	end
+	add("extreme_get_missing", if #missing == 0 then "none" else table.concat(missing, " "))
 	add("extreme_reach_start", reach(Vector3.new(0, 334, 120), Extreme.StartSpawn.Position))
 	local count = #(Pets.ByRarity.Extreme or {})
 	add("extreme_pets", count)

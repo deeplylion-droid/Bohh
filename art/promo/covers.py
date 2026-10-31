@@ -1,7 +1,8 @@
 """Copertine del gioco (miniature 16:9 della pagina Roblox, 1920x1080): scene 3D vere renderizzate in Blender
 (Cycles CPU), con lo stesso stile della miniatura quadrata della vetta (promo/icon_scenes.py: AgX "Punchy",
 montagne sfaccettate, neve e roccia con foschia, mare di nuvole, cielo a gradiente, passata di bagliore + bloom e
-vignettatura in numpy) e il Bacon Hair costruito in promo/avatar.py. I titoli li aggiunge promo/cover_compose.py.
+vignettatura in numpy) e il Bacon Hair vero (promo/bacon.py: Pal Hair, maglia e jeans di Roblox sui blocchi R6).
+I titoli li aggiunge promo/cover_compose.py.
 
 Scene:
 - steal:   il Bacon Hair corre su una cresta innevata con un uovo Ultra luminoso sopra la testa, inseguito dal
@@ -35,7 +36,7 @@ import numpy as np
 from mathutils import Matrix, Vector, noise
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import avatar as A  # noqa: E402
+import bacon as B  # noqa: E402
 import icon_scenes as S  # noqa: E402
 from icon_scenes import env, lin  # noqa: E402
 
@@ -322,30 +323,52 @@ def cam_basis(cam_loc, target):
 
 
 # =================================================================================== avatar con l'uovo
-def carry_egg(rig, egg_name="EggUltra", width=2.3, glow=1.6, sink=0.18):
-    """Mette un uovo sopra la testa del Bacon Hair, appoggiato fra le mani (in gioco gli oggetti rubati si
+def descendants(o):
+    out = []
+    for c in o.children:
+        out.append(c)
+        out += descendants(c)
+    return out
+
+
+def bacon_player(pose: dict, face="excited"):
+    """Il Bacon Hair vero (promo/bacon.py), in posa: (radice con i piedi all'origine, mesh, {nome: oggetto})."""
+    root = B.bacon(pose, face)
+    bpy.context.view_layer.update()
+    parts = {o.name.split(".")[0]: o for o in descendants(root)}
+    return root, [o for o in parts.values() if o.type == "MESH"], parts
+
+
+def place_bacon(root, objs, x, y, ground, yaw, air=0.0):
+    """Posa gia' applicata: mette il punto piu' basso del personaggio a quota ground + air."""
+    root.location = (x, y, 0.0)
+    root.rotation_euler.z = math.radians(yaw)
+    bpy.context.view_layer.update()
+    lo, _ = S.bounds(objs)
+    root.location.z = ground - float(lo[2]) + air
+    bpy.context.view_layer.update()
+
+
+def carry_egg(root, parts, egg_name="EggUltra", width=2.3, glow=1.6, sink=0.18):
+    """Mette un uovo sopra la testa del Bacon Hair, fra le mani alzate (in gioco gli oggetti rubati si
     impilano sopra la testa). Restituisce (root, oggetti, centro)."""
     bpy.context.view_layer.update()
-    hands = []
-    for side in ("R", "L"):
-        sh = rig.joints[f"Shoulder{side}"]
-        hands.append(sh.matrix_world @ Vector((0, 0, -1.42)))
-    head_c = rig.joints["HeadCenter"].matrix_world.translation
-    root, objs = pet(egg_name, (0, 0, 0), 0.0, 1.0, kind="egg", glow=glow, prefix="Carry_")
+    hands = [parts[f"Arm{side}"].matrix_world @ Vector((0, 0, -1.45)) for side in ("R", "L")]
+    hair_top = float(S.bounds([parts["PalHair"]])[1][2])
+    egg_root, objs = pet(egg_name, (0, 0, 0), 0.0, 1.0, kind="egg", glow=glow, prefix="Carry_")
     lo, hi = S.bounds([o for o in objs if not o.name.startswith("Ring")])
     shell = [o for o in objs if o.name.split(".")[0] == "Shell"]
     slo, shi = S.bounds(shell) if shell else (lo, hi)
     sc = width / float(shi[0] - slo[0])
     mid = (hands[0] + hands[1]) / 2
-    top = max(head_c.z + A.HEAD_H, mid.z)
-    root.scale = (sc, sc, sc)
-    root.location = (mid.x, mid.y, top - sink - float(slo[2]) * sc)
+    top = max(hair_top, mid.z)
+    egg_root.scale = (sc, sc, sc)
+    egg_root.location = (mid.x, mid.y, top - sink - float(slo[2]) * sc)
     # l'uovo ruota con il personaggio
-    root.rotation_euler = (0, 0, rig.root.rotation_euler.z)
-    root.parent = None
+    egg_root.rotation_euler = (0, 0, root.rotation_euler.z)
     bpy.context.view_layer.update()
     lo, hi = S.bounds(objs)
-    return root, objs, Vector(((lo + hi) / 2).tolist())
+    return egg_root, objs, Vector(((lo + hi) / 2).tolist())
 
 
 def place_by(root, model_pt, world_pt):
@@ -358,16 +381,6 @@ def place_by(root, model_pt, world_pt):
 
 def model_pt(root, p):
     return root.matrix_world @ Vector(p)
-
-
-def place_avatar(rig, x, y, ground, yaw, air=0.0):
-    """Posa gia' applicata: mette i piedi (il punto piu' basso) a quota ground + air."""
-    rig.root.location = (x, y, 10.0)
-    rig.root.rotation_euler.z = math.radians(yaw)
-    bpy.context.view_layer.update()
-    lo, _ = A.world_bounds(rig)
-    rig.root.location.z = 10.0 - (float(lo[2]) - ground) + air
-    bpy.context.view_layer.update()
 
 
 # =================================================================================== scena 1: ruba l'uovo
@@ -402,8 +415,13 @@ def report(**pts):
     print("[covers] schermo: " + "  ".join(f"{k}={screen(v)}" for k, v in pts.items()))
 
 
-CARRY = {"Root": (9, 0, 0), "Neck": (-4, 0, 6), "ShoulderR": (-174, 11, 0), "ShoulderL": (-172, -11, 0),
-         "HipR": (-44, 0, 0), "HipL": (40, 0, 0)}
+# corsa con l'uovo sopra la testa: braccia alzate un po' verso l'uovo, falcata, busto in avanti
+CARRY = {"ArmR": -172, "ArmR_y": 9, "ArmL": -170, "ArmL_y": -9, "LegR": -42, "LegL": 38, "Lean": 8, "HeadTilt": -4,
+         "Head": 6}
+# salto sopra la lava: gambe divaricate avanti/indietro, braccia in alto e in fuori
+# (verso la camera, braccia alzate a V e gambe divaricate avanti/indietro: la faccia resta in piena vista)
+LEAP = {"ArmR": -163, "ArmR_y": -38, "ArmL": -160, "ArmL_y": 36, "LegR": -26, "LegL": 16, "Lean": 6, "HeadTilt": -8}
+LEAP_SPLAY = 24  # gambe aperte di lato (salto a stella): in volo si legge subito anche visto di fronte
 
 
 def scene_steal(w: int, samples: int, tag: str):
@@ -424,12 +442,11 @@ def scene_steal(w: int, samples: int, tag: str):
     snow.data.materials.append(S.snow_material("Snow", tint=(240, 247, 255), fog=(lin("#b4dcff"), 0.005, 25.0)))
 
     # --- Bacon Hair: corre verso la camera (un po' verso sinistra) con l'uovo Ultra sopra la testa
-    rig = A.build("Bacon", shirt=env("SHIRT", "#22d046"))
-    A.pose(rig, CARRY)
+    bac, bac_objs, bparts = bacon_player(CARRY, env("FACE", "shocked"))
     ax, ay = env("AV_XY", (-0.5, -2.5))
-    place_avatar(rig, ax, ay, gz(ax, ay), env("AV_YAW", -26.0), air=env("AIR", 0.3))
-    egg_root, egg_objs, egg_c = carry_egg(rig, env("EGG", "EggUltra"), width=env("EGG_W", 2.05), glow=env("EGG_E", 4.0),
-                                          sink=env("EGG_SINK", -0.4))
+    place_bacon(bac, bac_objs, ax, ay, gz(ax, ay), env("AV_YAW", -26.0), air=env("AIR", 0.3))
+    egg_root, egg_objs, egg_c = carry_egg(bac, bparts, env("EGG", "EggUltra"), width=env("EGG_W", 1.6),
+                                          glow=env("EGG_E", 4.0), sink=env("EGG_SINK", -0.05))
 
     # --- Titan Rex gigante che insegue (dietro, a destra), fauci spalancate verso il Bacon Hair
     rs = env("REX_S", 5.4)
@@ -446,7 +463,7 @@ def scene_steal(w: int, samples: int, tag: str):
     snout = (0.08, -2.9, 2.7)
 
     # --- neve sollevata dai passi (tanti piccoli grumi) e dalle zampe del gigante
-    bl = A.world_bounds(rig)
+    bl = S.bounds(bac_objs)
     r_lo, r_hi = S.bounds(rex_objs)
     snow_puffs("Puffs", [((ax + 0.5, ay + 1.6, gz(ax, ay + 1.6)), 0.5), ((ax - 0.4, ay + 2.6, gz(ax, ay + 2.6)), 0.4),
                          ((rx - 2.0, ry - 4.5, gz(rx - 2, ry - 4.5)), 1.6), ((rx + 2.5, ry - 2.0, gz(rx + 2.5, ry - 2)), 1.4)],
@@ -480,7 +497,7 @@ def scene_steal(w: int, samples: int, tag: str):
                  lin("#fff3e0")[:3])
     S.area_light("RimRex", tuple(rc + Vector((-6, 16, 14))), tuple(rc), env("RIMREX", 30000.0), 14.0, lin("#eef6ff")[:3])
     S.area_light("FillRex", tuple(rc + Vector((-8, -24, 6))), tuple(rc), env("FILLREX", 9000.0), 18.0, lin("#ffe6cc")[:3])
-    head_w = rig.joints["HeadCenter"].matrix_world.translation
+    head_w = bparts["Head"].matrix_world.translation
     S.area_light("FaceFill", tuple(head_w + Vector((-1.5, -5.0, 0.6))), tuple(head_w), env("FACE", 160.0), 1.5,
                  lin("#fff4e6")[:3])
     S.area_light("EggKey", tuple(egg_c + Vector((-2.5, -5.0, 2.0))), tuple(egg_c), env("EGGKEY", 260.0), 2.0,
@@ -489,15 +506,15 @@ def scene_steal(w: int, samples: int, tag: str):
     S.point_light("EggGlow2", tuple(egg_c + Vector((0, -1.6, -0.6))), env("EGGLIGHT", 300.0) * 0.6, 0.4, lin("#ffd36b")[:3])
 
     # --- camera davanti al Bacon Hair, all'altezza del petto, leggermente dal basso
-    cam_loc = env("CAM", (-2.3, -16.2, 1.9))
-    target = env("TARGET", (0.4, 3.0, 5.9))
+    cam_loc = env("CAM", (-1.9, -13.9, 2.0))
+    target = env("TARGET", (0.3, 3.0, 5.25))
     S.camera(cam_loc, target, lens=env("LENS", 25.0), dof_target=tuple(ac) if not PREVIEW else None,
              fstop=env("FSTOP", 8.0))
     flakes("Flakes", cam_loc, target, env("FLAKES", 140), 4.0, 40.0, 0.02, 0.05, seed=4, glow=0.3)
-    head = rig.joints["HeadCenter"].matrix_world.translation
-    feet = rig.parts["ShoeR"].matrix_world @ Vector((0, 0, -1.82))
+    head = bparts["Head"].matrix_world.translation
+    feet = bparts["LegR"].matrix_world @ Vector((0, 0, -2.0))
     e_lo, e_hi = S.bounds(egg_objs)
-    print("[covers] avatar (x0, y0, x1, y1):", screen_extent(rig.objects), " uovo:", screen_extent(egg_objs),
+    print("[covers] avatar (x0, y0, x1, y1):", screen_extent(bac_objs, 1), " uovo:", screen_extent(egg_objs),
           " rex:", screen_extent(rex_objs, 25))
     report(feet=feet, head=head, egg_top=(egg_c.x, egg_c.y, e_hi[2]), mouth=model_pt(rex, mouth),
            rex_eye=model_pt(rex, (0.25, -2.1, 3.1)), rex_crown=model_pt(rex, (0, -1.6, 3.6)),
@@ -506,6 +523,39 @@ def scene_steal(w: int, samples: int, tag: str):
 
 
 # =================================================================================== scena 2: giganti al tramonto
+def revolve(name, profile, seg=64, mat=None, center=(0, 0, 0)):
+    """Solido di rotazione di un profilo (rho, z) attorno all'asse verticale per center (ombreggiatura morbida)."""
+    import bmesh
+    prof = np.asarray(profile)
+    n = len(prof)
+    verts, faces = [], []
+    for k in range(seg):
+        a = 2 * math.pi * k / seg
+        ca, sa = math.cos(a), math.sin(a)
+        for rho, z in prof:
+            verts.append((center[0] + rho * ca, center[1] + rho * sa, center[2] + z))
+    for k in range(seg):
+        k2 = (k + 1) % seg
+        for i in range(n - 1):
+            faces.append((k * n + i, k * n + i + 1, k2 * n + i + 1, k2 * n + i))
+    me = bpy.data.meshes.new(name)
+    me.from_pydata(verts, [], faces)
+    me.validate()
+    bm = bmesh.new()
+    bm.from_mesh(me)
+    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-6)
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    bm.to_mesh(me)
+    bm.free()
+    for poly in me.polygons:
+        poly.use_smooth = True
+    ob = bpy.data.objects.new(name, me)
+    bpy.context.scene.collection.objects.link(ob)
+    if mat is not None:
+        ob.data.materials.append(mat)
+    return ob
+
+
 def rounded_profile(pts, r, n=6):
     """Profilo (rho, z) con gli spigoli interni raccordati da archi di raggio r (per le rivoluzioni lisce)."""
     pts = [np.array(p, float) for p in pts]
@@ -529,7 +579,7 @@ def throne(name, center, radius=4.0, height=1.6, top="#6d2bd9", rim="#ffc83d", g
     stone = S.rock_snow_material(name + "Stone", "#5a6380", "#e9eefc", "#9a7bd0", 0.0, 1e4, snow_from=0.9)
     prof = rounded_profile([(0, 0), (radius + 0.5, 0), (radius + 0.5, height * 0.35), (radius, height * 0.42),
                             (radius, height), (0, height)], 0.12)
-    base = A.revolve(name, prof, 96, stone, center=(cx, cy, cz))
+    base = revolve(name, prof, 96, stone, center=(cx, cy, cz))
     gold, nt, out = S.new_material(name + "Gold")
     b = nt.nodes.new("ShaderNodeBsdfPrincipled")
     b.inputs["Base Color"].default_value = lin(rim)
@@ -538,14 +588,14 @@ def throne(name, center, radius=4.0, height=1.6, top="#6d2bd9", rim="#ffc83d", g
     nt.links.new(b.outputs[0], out.inputs["Surface"])
     band = rounded_profile([(radius - 0.05, height * 0.62), (radius + 0.16, height * 0.62), (radius + 0.16, height * 0.86),
                             (radius - 0.05, height * 0.86)], 0.05)
-    A.revolve(name + "Band", band, 96, gold, center=(cx, cy, cz))
+    revolve(name + "Band", band, 96, gold, center=(cx, cy, cz))
     felt = S.felt_material(name + "Top", top)
     topp = rounded_profile([(0, height - 0.02), (radius - 0.25, height - 0.02), (radius - 0.25, height + 0.12),
                             (0, height + 0.12)], 0.06)
-    A.revolve(name + "TopFelt", topp, 96, felt, center=(cx, cy, cz))
+    revolve(name + "TopFelt", topp, 96, felt, center=(cx, cy, cz))
     ring = rounded_profile([(radius - 0.22, height + 0.02), (radius - 0.04, height + 0.02), (radius - 0.04, height + 0.16),
                             (radius - 0.22, height + 0.16)], 0.04)
-    A.revolve(name + "Ring", ring, 96, emission(name + "RingM", glow, 6.0), center=(cx, cy, cz))
+    revolve(name + "Ring", ring, 96, emission(name + "RingM", glow, 6.0), center=(cx, cy, cz))
     return base, cz + height + 0.12
 
 
@@ -776,7 +826,7 @@ def faceted_rock(name, center, size, mat, seed=0, sub=2, rough=0.28, flatten=1.0
 
 def pillar(name, x, y, top_z, radius, mat, cap_mat=None):
     prof = rounded_profile([(0, -3.0), (radius * 1.08, -3.0), (radius, top_z - 0.25), (radius * 0.98, top_z), (0, top_z)], 0.18)
-    ob = A.revolve(name, prof, 6, mat, center=(x, y, 0))  # colonna di basalto esagonale
+    ob = revolve(name, prof, 6, mat, center=(x, y, 0))  # colonna di basalto esagonale
     ob.rotation_euler.z = (x * 7.3 + y * 3.1) % 1.0
     for p_ in ob.data.polygons:
         p_.use_smooth = False
@@ -851,7 +901,7 @@ def scene_extreme(w: int, samples: int, tag: str):
     # --- pilastri di pietra nella lava (il percorso a salti) e massi di lava sulle rive
     pm = basalt_material("PillarRock", top="#ff8a2a", top_e=0.0, rock="#2a1d24", veins=1.5, fog=("#ff6a4a", 0.0025, 40.0))
     jumps = env("PILLARS", 0.0)
-    path = [(3.2, 7.5, 2.8, 1.4), (-1.8, 13.5, 2.5, 1.3), (3.0, 19.5, 2.9, 1.3), (-1.0, 26.0, 2.4, 1.2),
+    path = [(3.6, 7.5, 2.8, 1.4), (-5.2, 12.0, 2.5, 1.3), (3.0, 19.5, 2.9, 1.3), (-1.0, 26.0, 2.4, 1.2),
             (2.2, 33.0, 2.6, 1.2), (-1.5, 41.0, 2.5, 1.1), (1.5, 49.0, 2.8, 1.1)]
     for i, (x, y, tz, r) in enumerate(path):
         pillar(f"Pillar{i}", x, y, tz, r, pm)
@@ -886,11 +936,12 @@ def scene_extreme(w: int, samples: int, tag: str):
     bpy.context.view_layer.update()
 
     # --- il Bacon Hair a meta' salto fra due pilastri
-    rig = A.build("Bacon", shirt=env("SHIRT", "#22d046"))
-    A.pose(rig, env("LEAP_POSE", "leap"))
-    ax, ay, az = env("AV", (0.4, 5.0, 5.4))
-    rig.root.location = (ax, ay, az)
-    rig.root.rotation_euler.z = math.radians(env("AV_YAW", 50.0))
+    bac, bac_objs, bparts = bacon_player(LEAP, env("FACE", "excited"))
+    ax, ay, az = env("AV", (0.2, 2.2, 4.5))
+    bparts["LegR"].rotation_euler.y = math.radians(env("SPLAY", float(LEAP_SPLAY)))
+    bparts["LegL"].rotation_euler.y = -math.radians(env("SPLAY", float(LEAP_SPLAY)))
+    bac.location = (ax, ay, az - 2.0)  # la radice e' ai piedi, az e' la quota del bacino
+    bac.rotation_euler.z = math.radians(env("AV_YAW", 22.0))
     bpy.context.view_layer.update()
 
     # --- cielo infuocato: giallo all'orizzonte, arancio, cremisi, viola in alto
@@ -905,7 +956,7 @@ def scene_extreme(w: int, samples: int, tag: str):
     tag_glow(em_.data.materials[0], True)
 
     # --- luci: lava da sotto (arancio), cielo, luce principale bianca sul Bacon Hair (la maglia resta verde)
-    bl = A.world_bounds(rig)
+    bl = S.bounds(bac_objs)
     ac = Vector(((bl[0] + bl[1]) / 2).tolist())
     S.area_light("LavaBounce", tuple(ac + Vector((0, -2, -6))), tuple(ac), env("BOUNCE", 2500.0), 10.0, lin("#ff7a2a")[:3])
     S.area_light("KeyAv", tuple(ac + Vector((-5, -9, 6))), tuple(ac), env("KEY", 1400.0), 4.0, lin("#fff6ee")[:3])
@@ -922,9 +973,10 @@ def scene_extreme(w: int, samples: int, tag: str):
     S.point_light("ShrineGlow", tuple(Vector(((el + eh) / 2).tolist()) + Vector((0, -2, 0))), 900.0, 1.0, lin("#3ff6ff")[:3])
 
     cam_loc = env("CAM", (2.5, -10.0, 5.2))
-    target = env("TARGET", (0.0, 20.0, 5.0))
+    target = env("TARGET", (0.0, 20.0, 6.4))
     S.camera(cam_loc, target, lens=env("LENS", 24.0), dof_target=tuple(ac) if not PREVIEW else None, fstop=env("FSTOP", 8.0))
-    pts = {"av_feet": bl[0], "av_head": rig.joints["HeadCenter"].matrix_world.translation, "shrine": (sx, sy, 5.0)}
+    print("[covers] avatar (x0, y0, x1, y1):", screen_extent(bac_objs, 1))
+    pts = {"av_feet": bl[0], "av_head": bparts["Head"].matrix_world.translation, "shrine": (sx, sy, 5.0)}
     for name, objs in (("beh", beh_objs), ("aba", aba_objs), ("bee", bee_objs)):
         lo, hi = S.bounds(objs)
         pts[name] = ((lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2, hi[2])

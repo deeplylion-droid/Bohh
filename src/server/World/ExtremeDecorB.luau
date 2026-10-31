@@ -6,7 +6,8 @@
 --    telecamera non deve sbattere contro le decorazioni;
 --  * dentro il corridoio (|z - Extreme.Z| <= 21) solo dettagli sottili sulle pareti o strutture alte e irraggiungibili: niente
 --    che sembri un appoggio, un laser o un pericolo; le scenografie grandi stanno fuori dai muri e dalle sponde;
---  * niente compenetrazioni: le parti si appoggiano faccia a faccia (le sfere si siedono sul bordo di chi le regge);
+--  * niente compenetrazioni: le parti si appoggiano faccia a faccia (le sfere si siedono sul bordo di chi le regge), niente
+--    dentro le parti trasparenti, strati sottili spessi almeno 0.1 (controllo: tests/extreme_overlap.py --folder ExtremeDecorB);
 --  * niente Random (nei test offline e' diverso da quello di Roblox): le posizioni vengono da un generatore proprio, e vicino
 --    alle sponde di roccia (casuali) si leggono i loro ingombri veri da Shared.Extreme.
 
@@ -384,7 +385,7 @@ local function wallScreen(s: number, u0: number, u1: number, y0: number, y1: num
 		for k = 0, n - 1 do
 			local h = (y1 - y0 - 1.8) * r(0.3, 1)
 			local ua = u0 + 0.8 + k * w
-			onWall(s, ua + 0.2, ua + w - 0.2, y0 + 0.8, y0 + 0.8 + h, 0.3, 0.06, "ScreenBar", cols[k + 1], Mat.Neon)
+			onWall(s, ua + 0.2, ua + w - 0.2, y0 + 0.8, y0 + 0.8 + h, 0.3, 0.12, "ScreenBar", cols[k + 1], Mat.Neon)
 		end
 	else
 		local rows = math.floor((y1 - y0 - 1.4) / 1)
@@ -399,7 +400,7 @@ local function wallScreen(s: number, u0: number, u1: number, y0: number, y1: num
 				y - 0.45,
 				y,
 				0.3,
-				0.06,
+				0.12,
 				"ScreenCode",
 				cols[(k % 3) + 1],
 				Mat.Neon
@@ -426,8 +427,8 @@ local function wallLight(s: number, u0: number, u1: number, y0: number, y1: numb
 	onWall(s, u0, u1, y0, y1, 0, 0.2, "PanelFrame", WHITE, Mat.SmoothPlastic)
 	local ym = (y0 + y1) / 2
 	local glow = rgb(110, 225, 255)
-	onWall(s, u0 + 0.5, u1 - 0.5, ym + 0.3, y1 - 0.5, 0.2, 0.08, "PanelLight", glow, Mat.Neon)
-	onWall(s, u0 + 0.5, u1 - 0.5, y0 + 0.5, ym - 0.3, 0.2, 0.08, "PanelLight", glow, Mat.Neon)
+	onWall(s, u0 + 0.5, u1 - 0.5, ym + 0.3, y1 - 0.5, 0.2, 0.12, "PanelLight", glow, Mat.Neon)
+	onWall(s, u0 + 0.5, u1 - 0.5, y0 + 0.5, ym - 0.3, 0.2, 0.12, "PanelLight", glow, Mat.Neon)
 end
 
 -- tubo luminoso verticale con i due attacchi
@@ -468,12 +469,12 @@ end
 -- cartello "alta tensione": pannello giallo col fulmine nero (tre tratti a zig-zag nel piano della parete)
 local function wallBolt(s: number, uc: number, yc: number)
 	onWall(s, uc - 3, uc + 3, yc - 3, yc + 3, 0, 0.2, "WarnBorder", BLACK, Mat.SmoothPlastic)
-	onWall(s, uc - 2.6, uc + 2.6, yc - 2.6, yc + 2.6, 0.2, 0.06, "WarnPanel", YELLOW, Mat.SmoothPlastic)
+	onWall(s, uc - 2.6, uc + 2.6, yc - 2.6, yc + 2.6, 0.2, 0.12, "WarnPanel", YELLOW, Mat.SmoothPlastic)
 	local pts = { { 0.9, 1.9 }, { -0.6, 0.15 }, { 0.6, -0.15 }, { -0.9, -1.9 } }
 	for k = 1, 3 do
-		-- il tratto centrale sporge un filo di piu': nessuna faccia complanare dove i tratti si toccano
-		local t = if k == 2 then 0.09 else 0.06
-		local v = s * (WALL_IN - (if k == 2 then 0.265 else 0.26) - t / 2)
+		-- tre tratti uguali nello stesso piano (stesso colore: dove si toccano non si vede nulla)
+		local t = 0.12
+		local v = s * (WALL_IN - 0.32 - t / 2)
 		local a = at(3, uc + pts[k][1], yc + pts[k][2], v)
 		local b = at(3, uc + pts[k + 1][1], yc + pts[k + 1][2], v)
 		local up = (b - a).Unit
@@ -510,7 +511,7 @@ local function labWalls()
 			{ "light", 1.5, 11.5, 264.5, 275.5 },
 			{ "screen", 16, 24, 266, 273, "code" },
 			{ "board", 28, 36, 267, 272, "F=ma" },
-			{ "tube", 42, PINK },
+			{ "tube", 42, PURPLE },
 			{ "light", 48.5, 55.5, 264.5, 275.5 },
 			{ "tube", 62, CYAN },
 			{ "tube", 70, LIME },
@@ -556,11 +557,11 @@ local function labWalls()
 	for _, t in
 		{
 			{ -1, 268, CYAN },
-			{ -1, 292, PINK },
+			{ -1, 292, PURPLE },
 			{ -1, 328, LIME },
 			{ 1, 258, LIME },
 			{ 1, 300, CYAN },
-			{ 1, 322, PINK },
+			{ 1, 322, PURPLE },
 		}
 	do
 		wallTube(t[1], t[2], 242, 266, t[3])
@@ -604,7 +605,6 @@ local function labTanks()
 		column(3, u, 30, 291 + k, 296, 8, "TankGlass", GLASS, Mat.Glass, 0.6)
 		column(3, u, 30, 296, 298, 9, "TankCap", DARK, Mat.DiamondPlate)
 		column(3, u, 30, 298, 299.2, 4, "TankTop", STEEL, Mat.Metal)
-		-- anelli di rinforzo fra base e liquido e fra vetro e coperchio sono le flange: niente dentro il vetro
 		if k == 1 then
 			light(liquid, LIME, 22, 1.4)
 			local source = span(3, u - 1.5, u + 1.5, 279, 290, 28.5, 31.5, "BubbleSource", WHITE, Mat.SmoothPlastic, 1)
@@ -656,18 +656,18 @@ local function labCatScreen()
 	layer("CatScreen", W - 1.2, H - 1.2, 0, 0, 0, 0.1, SCREEN, Mat.SmoothPlastic)
 	-- orecchie (triangoli rettangoli col lato verticale all'esterno) con il ciuffo nero della lince sulla punta
 	for _, sx in { -1, 1 } do
-		local ear = cf * CFrame.new(sx * 2.9, 3, z - 0.1 - 0.03) * CFrame.Angles(0, sx * RAD(90), 0)
-		wedge("CatEar", Vector3.new(0.06, 2.6, 2.4), ear, FUR, Mat.SmoothPlastic)
-		local tuft = cf * CFrame.new(sx * 3.36, 3.9, z - 0.16 - 0.03) * CFrame.Angles(0, sx * RAD(90), 0)
-		wedge("CatTuft", Vector3.new(0.06, 1.6, 1.48), tuft, BLACK, Mat.SmoothPlastic)
+		local ear = cf * CFrame.new(sx * 2.9, 3, z - 0.1 - 0.06) * CFrame.Angles(0, sx * RAD(90), 0)
+		wedge("CatEar", Vector3.new(0.12, 2.6, 2.4), ear, FUR, Mat.SmoothPlastic)
+		local tuft = cf * CFrame.new(sx * 3.36, 3.9, z - 0.22 - 0.06) * CFrame.Angles(0, sx * RAD(90), 0)
+		wedge("CatTuft", Vector3.new(0.12, 1.6, 1.48), tuft, BLACK, Mat.SmoothPlastic)
 	end
-	layer("CatHead", 8, 6.6, 0, -1.6, 0.1, 0.06, FUR, Mat.SmoothPlastic)
-	layer("CatVisor", 9, 1.7, 0, -0.4, 0.16, 0.06, CYAN, Mat.Neon)
-	layer("CatMuzzle", 3.6, 2, 0, -3.3, 0.16, 0.06, CREAM, Mat.SmoothPlastic)
-	layer("CatNose", 1.2, 0.6, 0, -2.6, 0.22, 0.06, PINK, Mat.SmoothPlastic)
-	layer("CatMouth", 1.8, 0.3, 0, -3.6, 0.22, 0.06, BLACK, Mat.SmoothPlastic)
+	layer("CatHead", 8, 6.6, 0, -1.6, 0.1, 0.12, FUR, Mat.SmoothPlastic)
+	layer("CatVisor", 9, 1.7, 0, -0.4, 0.22, 0.12, CYAN, Mat.Neon)
+	layer("CatMuzzle", 3.6, 2, 0, -3.3, 0.22, 0.12, CREAM, Mat.SmoothPlastic)
+	layer("CatNose", 1.2, 0.6, 0, -2.6, 0.34, 0.12, PINK, Mat.SmoothPlastic)
+	layer("CatMouth", 1.8, 0.3, 0, -3.6, 0.34, 0.12, BLACK, Mat.SmoothPlastic)
 	for _, sx in { -1, 1 } do
-		layer("CatCheek", 1.6, 2.4, sx * 4.8, -3.4, 0.1, 0.06, CREAM, Mat.SmoothPlastic)
+		layer("CatCheek", 1.6, 2.4, sx * 4.8, -3.4, 0.1, 0.12, CREAM, Mat.SmoothPlastic)
 	end
 end
 
@@ -685,7 +685,7 @@ local function labPipeBridge(u: number, y: number)
 	end
 end
 
--- Torre delle ampolle: tre ampolle di vetro col liquido colorato su un'asta, dietro il muro sinistro
+-- Torre delle ampolle: tre ampolle di vetro colorato luminoso su un'asta, dietro il muro sinistro
 local function labFlasks()
 	annex(3, 104, 126, -23, -40, 286, -1, LIGHT, Mat.DiamondPlate)
 	local U, V = 115, -31.5
@@ -769,7 +769,7 @@ local function labCatStatue()
 			* CFrame.Angles(0, 0, -sx * RAD(8))
 			* CFrame.Angles(0, -sx * RAD(90), 0)
 		wedge("CatEar", Vector3.new(1.6, 6, 4.4), ear, FUR, Mat.SmoothPlastic)
-		wedge("CatTuft", Vector3.new(1.8, 1.6, 1.2), ear * CFrame.new(0, 2.65, 1.65), BLACK, Mat.SmoothPlastic)
+		wedge("CatTuft", Vector3.new(2, 1.6, 1.2), ear * CFrame.new(0, 2.75, 1.85), BLACK, Mat.SmoothPlastic)
 	end
 	-- coda che gira attorno al corpo e sale, con il cubo olografico in punta
 	local t0 = (L * CFrame.new(2, 1.2, 5.4)).Position
@@ -935,7 +935,7 @@ local function labShrine()
 	for k = 0, 2 do
 		local u = u0 + 12 + k * 16
 		onWall(1, u - 4, u + 4, y + 1.5, y + 13.5, 0, 0.2, "DisplayBack", WHITE, Mat.SmoothPlastic)
-		onWall(1, u - 3.4, u + 3.4, y + 12.4, y + 13.1, 0.2, 0.08, "DisplayLight", CYAN, Mat.Neon)
+		onWall(1, u - 3.4, u + 3.4, y + 12.4, y + 13.1, 0.2, 0.12, "DisplayLight", CYAN, Mat.Neon)
 	end
 	-- lato sinistro: schermo grande prima del portale e una lavagna dopo
 	wallScreen(-1, u0 + 6, u0 + 22, y + 5, y + 14, "graph", 31)
@@ -1080,12 +1080,20 @@ local function wallTopIn(u0: number, u1: number, v0: number, v1: number): number
 	return top
 end
 
+-- ossidiana: plastica liscia scura con un po' di riflesso (il materiale Glass costa di piu' sui telefoni)
+local function shiny(p: BasePart): BasePart
+	p.Reflectance = 0.18
+	return p
+end
+
 -- scheggia di ossidiana dritta (parallelepipedo e punta a cuneo), appoggiata sulla quota y
 local function shard(i: number, u: number, v: number, y: number, w: number, h: number, yaw: number, color: Color3)
 	local base = CFrame.new(at(i, u, y + h / 2, v)) * CFrame.Angles(0, yaw, 0)
-	box("ObsidianShard", Vector3.new(w, h, w), base, color, Mat.Glass)
+	shiny(box("ObsidianShard", Vector3.new(w, h, w), base, color, Mat.SmoothPlastic))
 	local tip = w * 1.7
-	wedge("ObsidianTip", Vector3.new(w, tip, w), base * CFrame.new(0, h / 2 + tip / 2, 0), color, Mat.Glass)
+	shiny(
+		wedge("ObsidianTip", Vector3.new(w, tip, w), base * CFrame.new(0, h / 2 + tip / 2, 0), color, Mat.SmoothPlastic)
+	)
 end
 
 -- cascata di lava sulla faccia interna di una rupe (vIn = |v| della faccia), dal labbro in cima fino in fondo
@@ -1195,30 +1203,33 @@ local function infernoCliffs()
 				local k = math.floor(r(1, 3.99))
 				local placed = {}
 				if n == 5 then
-					-- mucchio di teschi a blocchetti che guardano il percorso
-					local su, sv = um, vIn + 3
-					for j, sk in { { -1.3, 0 }, { 1.3, 0 }, { 0, 2.4 } } do
-						local cu, cy = su + sk[1], top + sk[2]
+					-- mucchio di teschi a blocchetti che guardano il percorso (quello in cima ha gli occhi accesi)
+					local z = 3.4 -- lato di un teschio
+					local su, sv = um, vIn + z / 2 + 1
+					for j, sk in { { -0.55, 0 }, { 0.55, 0 }, { 0, 1 } } do
+						local cu, cy = su + sk[1] * z * 1.1, top + sk[2] * z
 						span(
 							4,
-							cu - 1.2,
-							cu + 1.2,
+							cu - z / 2,
+							cu + z / 2,
 							cy,
-							cy + 2.4,
-							s * (sv - 1.2),
-							s * (sv + 1.2),
+							cy + z,
+							s * (sv - z / 2),
+							s * (sv + z / 2),
 							"SkullPile",
 							BONE,
 							Mat.SmoothPlastic
 						)
-						for _, ex in { -0.5, 0.5 } do
-							local a, b = s * (sv - 1.2), s * (sv - 1.26)
+						for _, ex in { -0.22, 0.22 } do
+							local a, b = s * (sv - z / 2), s * (sv - z / 2 - 0.12)
+							local eu = cu + ex * z
+							local ey = cy + z * 0.5
 							span(
 								4,
-								cu + ex - 0.25,
-								cu + ex + 0.25,
-								cy + 1.2,
-								cy + 1.7,
+								eu - 0.36,
+								eu + 0.36,
+								ey,
+								ey + 0.7,
 								math.min(a, b),
 								math.max(a, b),
 								"SkullPileEye",
@@ -1455,7 +1466,7 @@ local function infernoGantry()
 		for _, ev in { -0.4, 0.4 } do
 			span(
 				4,
-				cu - 0.86,
+				cu - 0.92,
 				cu - 0.8,
 				y0 + 1.2,
 				y0 + 1.6,
@@ -1478,16 +1489,16 @@ local function infernoThrone()
 	local U = uEnd + 10 -- inizio del basamento
 	span(4, U, U + 44, 214, 240, -30, 30, "ThronePlinth", ROCK_DARK, Mat.Basalt)
 	span(4, U - 0.4, U + 44.4, 236, 240.4, -30.4, 30.4, "ThronePlinthRim", rgb(255, 110, 40), Mat.CrackedLava)
-	span(4, U + 8, U + 44, 240.4, 244, -22, 22, "ThroneDais", OBSIDIAN, Mat.Glass)
-	span(4, U + 4, U + 8, 240.4, 242.2, -14, 14, "ThroneStep", OBSIDIAN, Mat.Glass)
+	shiny(span(4, U + 8, U + 44, 240.4, 244, -22, 22, "ThroneDais", OBSIDIAN, Mat.SmoothPlastic))
+	shiny(span(4, U + 4, U + 8, 240.4, 242.2, -14, 14, "ThroneStep", OBSIDIAN, Mat.SmoothPlastic))
 	local seat0, seat1 = U + 18, U + 34
-	span(4, seat0, seat1, 244, 262, -13, 13, "ThroneSeat", OBSIDIAN, Mat.Glass)
+	shiny(span(4, seat0, seat1, 244, 262, -13, 13, "ThroneSeat", OBSIDIAN, Mat.SmoothPlastic))
 	span(4, seat0 + 0.5, seat1 - 0.5, 262, 264, -11, 11, "ThroneCushion", VELVET, Mat.Fabric)
-	span(4, seat1, seat1 + 8, 244, 314, -13, 13, "ThroneBack", OBSIDIAN, Mat.Glass)
+	shiny(span(4, seat1, seat1 + 8, 244, 314, -13, 13, "ThroneBack", OBSIDIAN, Mat.SmoothPlastic))
 	span(4, seat1 - 0.4, seat1, 264, 306, -10, 10, "ThroneBackVelvet", VELVET, Mat.Fabric)
 	span(4, seat1 - 0.5, seat1 + 8.5, 314, 315.6, -13.5, 13.5, "ThroneBackCap", GOLD, Mat.Foil)
 	for _, s in { -1, 1 } do
-		span(4, seat0, seat1, 244, 268, s * 13, s * 18, "ThroneArm", OBSIDIAN, Mat.Glass)
+		shiny(span(4, seat0, seat1, 244, 268, s * 13, s * 18, "ThroneArm", OBSIDIAN, Mat.SmoothPlastic))
 		span(4, seat0 - 0.5, seat1, 268, 269.2, s * 12.6, s * 18.4, "ThroneArmCap", GOLD, Mat.Foil)
 		-- braciere sul bracciolo
 		local bu = seat0 + 3

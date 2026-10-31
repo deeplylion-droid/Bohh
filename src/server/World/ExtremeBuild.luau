@@ -179,13 +179,17 @@ local function piecePart(p: Extreme.Piece, parent: Instance): BasePart?
 				parent = parent,
 			})
 		elseif p.style == "Laser" then
-			-- emettitori sulle due pareti
+			-- emettitori sulle due pareti: dal pavimento a poco sopra il raggio, incassati nel muro (prima
+			-- erano scatolette sospese a meta' raggio)
+			local pos = p.cframe.Position
+			local floorY = Extreme.GroundBelow(Vector3.new(pos.X, pos.Y, Extreme.Z), 0, 12, 0) or (pos.Y - p.size.Y / 2)
+			local top = pos.Y + p.size.Y / 2 + 0.5
+			local inner, outer = Extreme.HalfWidth - 1.1, Extreme.HalfWidth + 0.6
 			for _, side in { -1, 1 } do
-				local pos = p.cframe.Position
 				Build.Part({
 					name = "LaserEmitter",
-					size = Vector3.new(1.4, math.min(p.size.Y, 3) + 1, 1.4),
-					cframe = CFrame.new(pos.X, pos.Y, Extreme.Z + side * (Extreme.HalfWidth - 0.4)),
+					size = Vector3.new(1.4, top - floorY, outer - inner),
+					cframe = CFrame.new(pos.X, (top + floorY) / 2, Extreme.Z + side * (inner + outer) / 2),
 					color = Color3.fromRGB(60, 64, 80),
 					material = Enum.Material.DiamondPlate,
 					collide = false,
@@ -670,9 +674,10 @@ local function shrines(folder: Instance)
 		})
 		beam:SetAttribute("Checkpoint", i)
 		CollectionService:AddTag(beam, "ExtremeCheckpoint")
+		-- cartello appoggiato sulla trave del checkpoint (prima restava sospeso sopra)
 		Build.Sign(
 			model,
-			CFrame.lookAt(Extreme.At(i, u0 + 0.6, y + 17.4, 0), Extreme.At(i, u0 - 5, y + 17.4, 0)),
+			CFrame.lookAt(Extreme.At(i, u0 + 0.6, y + 16.02, 0), Extreme.At(i, u0 - 5, y + 16.02, 0)),
 			Vector3.new(12, 2.6, 0.4),
 			"ExtremeCheckpointSign",
 			{ n = i },
@@ -793,7 +798,8 @@ local function shrines(folder: Instance)
 			SpreadAngle = Vector2.new(180, 180),
 			Rate = 30,
 		})
-		local signPos = (portal * CFrame.new(0, ringR + 2.6, -0.4)).Position
+		-- cartello appoggiato sulla pietra in cima all'anello
+		local signPos = (portal * CFrame.new(0, ringR + 1.92, -0.4)).Position
 		Build.Sign(
 			frame,
 			CFrame.lookAt(signPos, signPos + portal.LookVector),

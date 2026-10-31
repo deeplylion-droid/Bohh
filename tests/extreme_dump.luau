@@ -89,7 +89,7 @@ local function clientPoses(d: any, def: any): { { number } }
 	if kind == "Conveyor" and d:GetAttribute("Stripe") ~= nil then
 		-- strisce che scorrono: il motivo si ripete ogni lunghezza / velocita'
 		local v = def.velocity or Vector3.zero
-		per = if math.abs(v.X) > 0 then def.size.X / math.abs(v.X) else 1
+		per = if math.abs(v.X) > 0 then (def.size.X - d.Size.X) / math.abs(v.X) else 1
 	end
 	local styleTr = { Laser = 1, Fire = 1, Jet = 1 }
 	for k = 0, SAMPLES - 1 do
@@ -140,9 +140,9 @@ local function clientPoses(d: any, def: any): { { number } }
 			local stripe = d:GetAttribute("Stripe")
 			if stripe ~= nil then
 				local v = def.velocity or Vector3.zero
-				local length = def.size.X
+				local span = def.size.X - d.Size.X -- come il client: dentro il nastro
 				local n = stripeCount[def.id] or 1
-				local x = ((stripe + 0.5) / n * length + t * v.X) % length - length / 2
+				local x = ((stripe + 0.5) / n * span + t * v.X) % span - span / 2
 				add(def.cframe * CFrame.new(x, def.size.Y / 2 + 0.06, 0), d.Transparency)
 			else
 				add(def.cframe, base)

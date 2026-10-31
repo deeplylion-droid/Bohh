@@ -1,51 +1,56 @@
 #!/usr/bin/env python3
-"""Controllo automatico delle compenetrazioni del Percorso Estremo (percorso, santuari, bivio e arredo
-delle cartelle ExtremeDecorA / ExtremeDecorB).
+"""Controllo automatico delle compenetrazioni del Percorso Estremo: percorso, santuari, bivio d'ingresso e
+arredo (cartelle ExtremeDecorA / ExtremeDecorB), anche con gli elementi mobili nelle pose del client.
 
-Uso (dalla radice del progetto; basta python3 con numpy, niente server):
+Uso (dalla radice del progetto; basta python3 con numpy, niente server; 15-60 s):
     python3 tests/extreme_overlap.py                    # rifa' il dump con Lune e stampa il rapporto
     python3 tests/extreme_overlap.py --section 2        # solo la sezione 2 (1 Rapide, 2 Deserto, 3 Lab,
                                                         #   4 Inferno, 0 bivio/ingresso)
     python3 tests/extreme_overlap.py --folder ExtremeDecorA   # solo i problemi che toccano quella cartella
-    python3 tests/extreme_overlap.py --verbose          # anche i casi minori, nascosti e quelli voluti
+    python3 tests/extreme_overlap.py --verbose          # anche i casi nascosti, minori e il conto dei voluti
+    python3 tests/extreme_overlap.py --json out.json    # salva anche il rapporto completo in JSON
     python3 tests/extreme_overlap.py --dump file.json   # usa un dump gia' fatto, che deve essere di
         .tools/bin/lune run tests/extreme_dump.luau --all --poses --terrain --out file.json
-    python3 tests/extreme_overlap.py --json out.json    # salva anche il rapporto completo in JSON
 Esce con codice 1 se resta almeno un problema visibile (righe "!!" e "!"), 0 altrimenti.
 
-Cosa controlla (tutte le parti visibili, anche quelle che il client accende solo a tratti, come fiamme,
-laser e getti; le sponde e l'arredo compresi):
-  ZF  z-fighting: facce complanari (entro 0.02 stud) rivolte dalla stessa parte che si sovrappongono,
-      con colore/materiale/trasparenza diversi e non coperte da altre parti
-  TR  compenetrazioni con una parte trasparente (si vede la parte che c'e' dentro): veli d'acqua nelle
-      vasche, laser nei pavimenti... Sono normali i sassi e le pareti che escono da un liquido
-  SG  un cartello (faccia col testo) tagliato o coperto da un'altra parte
-  PK  una parte che esce di poco (< 0.6 stud) dal lato opposto di quella in cui entra (pavimento che
-      spunta dietro una sponda, palo che buca il cartello...)
-  XP  una parte che ne attraversa un'altra da parte a parte e si vede dai due lati (pali che bucano un
-      pavimento sospeso, travi che passano nei muri...)
-  MV  elementi mobili: il volume spazzato in un periodo (pose campionate come le calcola il client)
-      che entra in una parte ferma visibile (sponde, pareti, altri appoggi, arredo)
-  TE  il terreno che spunta sopra pavimenti, vasche e sponde del percorso
-Gravita': "!!" chiaramente visibile dal percorso, "!" visibile ma piccolo o lontano, "." nascosto o
-voluto (solo con --verbose). Per ogni problema: sezione, coordinate di sezione (u = distanza lungo il
-percorso dall'inizio della sezione, v = spostamento laterale, y = quota; come in Shared.Extreme),
-posizione nel mondo e le due parti (nome, cartella, materiale, misura).
+Ogni riga: gravita', codice, sezione, coordinate di sezione (u = distanza lungo il percorso dall'inizio
+della sezione, v = spostamento laterale, y = quota: come gli argomenti di slab/pillar in Shared.Extreme) e
+posizione nel mondo; poi le due parti (nome, cartella, materiale, colore, misure e ingombro u/v/y).
+Gravita': "!!" chiaramente visibile dal percorso, "!" visibile ma piccolo o lontano, "." nascosto,
+minore o voluto (solo con --verbose). Le parti ripetute (es. tutti i tronchi di una corsia) sono su una riga.
 
-Casi riconosciuti come voluti (non segnalati): parte tutta dentro un'altra opaca; parti dello stesso
-elemento (corda del tronco, strisce del nastro); blocchi con lo stesso materiale e colore (una forma
-sola); parti piantate in un'altra da una faccia sola (pali nel pavimento, sponde nel terreno, liquido
-che entra nelle sponde); coperture e bordi (muschio, cornici) che avvolgono uno spigolo; anelli e
-collari attorno a una colonna; corde e aste sottili che passano nei paletti; elementi mobili nel
-liquido (tronchi che galleggiano, piastrelle che affondano) e attorno al proprio perno.
-La visibilita' si stima con raggi dai punti di vista lungo il percorso (sopra ogni appoggio, all'altezza
-degli occhi e della telecamera) verso i punti del difetto, con le parti opache come ostacoli.
+Codici (tutte le parti visibili, anche quelle che il client accende solo a tratti: fiamme, laser, getti):
+  ZF  z-fighting: facce complanari (entro 0.02 stud) rivolte dalla stessa parte che si sovrappongono, con
+      colore/materiale/trasparenza diversi e non coperte da altre parti (da 0.02 a 0.04 stud: solo con
+      --verbose, possono sfarfallare da molto lontano; da 0.05 in su va bene)
+  TR  due parti trasparenti compenetrate (velo della cascata nella vasca, schiuma nell'acqua...) o una
+      trasparente che passa da parte a parte in una opaca e si vede dai due lati
+  SG  la faccia col testo di un cartello (faccia anteriore, -Z locale) tagliata o coperta da un'altra parte
+  PK  una parte che spunta di poco (< 0.6 stud) da un lato di un'altra in cui e' infilata (pavimento che
+      esce dietro una sponda, palo che buca il cartello)
+  XP  una parte che passa da parte a parte in un'altra e si vede da tutti e due i lati
+  MV  elementi mobili: pose campionate su un periodo con la stessa matematica del client (tests/
+      extreme_dump.luau --poses) che entrano in una parte ferma visibile (sponde, pareti, veli d'acqua,
+      altri appoggi, arredo). Le coppie di elementi mobili non si controllano fra loro.
+  TE  il terreno (colonne di voxel di Terrain.Build) che spunta in mezzo a pavimenti, vasche e sponde; le
+      parti che entrano nel terreno da un bordo (l'inizio del ponticello) sono solo con --verbose
+
+Casi riconosciuti come voluti (contati con --verbose): parte tutta dentro un'altra opaca; parti dello
+stesso elemento (corda del tronco, strisce del nastro); stesso materiale e colore (una forma sola);
+rocce delle sponde fra loro; parti opache che escono da un liquido; parti piantate o appoggiate (fuori
+dall'altra resta un pezzo solo: pali nel pavimento, sponde nel terreno, coperture e bordi che avvolgono uno
+spigolo); strati sottili stesi (vernice, muschio, schiuma); fasce e anelli attorno a una colonna; corde e
+aste che passano nei paletti; passaggi da parte a parte con un lato nascosto (obelisco che entra nella roccia
+dalla sabbia); elementi mobili nel liquido, attorno al proprio perno o che salgono e scendono dal fondo.
+La visibilita' si stima con raggi dai punti di vista lungo il percorso (occhi e telecamera sopra ogni
+appoggio) verso i punti del difetto, con le parti opache ferme e il terreno come ostacoli.
 """
 
 import argparse
 import copy
 import json
 import math
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -67,7 +72,7 @@ SECTIONS = [  # (indice, nome, x0, lunghezza + santuario)
 
 CYL_SEGMENTS = 24
 COPLANAR = 0.02  # facce piu' vicine di cosi' fanno z-fighting
-NEAR_COPLANAR = 0.06  # da 0.02 a 0.06: sfarfallano solo da lontano
+NEAR_COPLANAR = 0.04  # da 0.02 a 0.04: possono sfarfallare da lontano (solo con --verbose)
 SLIVER = 0.6  # sporgenze piu' sottili di cosi' sono quasi sempre accidentali
 SEE_THROUGH = 0.1  # parti con trasparenza da qui in su non nascondono cio' che c'e' dietro
 ROCKY = {
@@ -667,54 +672,6 @@ def windows(I, X, Y):
     return out
 
 
-def depth_beyond(Y, X, g):
-    """Quanto Y esce oltre il gruppo di facce g di X (dentro il prisma di quella faccia) e i vertici di
-    quella sporgenza. Per il lato di un cilindro: quanto esce in direzione radiale fra le due basi."""
-    if g == -2:
-        return 99.0, np.zeros((0, 3))
-    if g == -1:
-        caps = [k for k in range(len(X.poly.normals)) if X.poly.group[k] >= 0]
-        part = clip_poly(Y.poly.faces, X.poly.normals[caps], X.poly.offsets[caps])
-        if not part:
-            return 0.0, np.zeros((0, 3))
-        pts = np.concatenate(part)
-        axis = X.rot[:, 0]
-        rel = pts - X.pos
-        radial = np.linalg.norm(rel - np.outer(rel @ axis, axis), axis=1) - min(X.size[1], X.size[2]) / 2
-        return float(radial.max()), pts[radial > 1e-3]
-    nj = X.poly.normals[g]
-    keep = [k for k in range(len(X.poly.normals)) if k != g and X.poly.normals[k] @ nj > -0.999]
-    part = clip_poly(Y.poly.faces, X.poly.normals[keep], X.poly.offsets[keep])
-    if not part:
-        return 0.0, np.zeros((0, 3))
-    pts = np.concatenate(part)
-    sd = pts @ nj - X.poly.offsets[g]
-    return float(sd.max()), pts[sd > 1e-3]
-
-
-def opposite(X, a, b):
-    """Due gruppi di facce opposti (per i lati curvi: due facce del lato con normali opposte)."""
-    if a < 0 or b < 0:
-        return False
-    return float(X.poly.normals[a] @ X.poly.normals[b]) < -0.9
-
-
-def through(X, win):
-    """Coppie di facce opposte di X attraversate (Y passa da parte a parte)."""
-    out = []
-    gs = list(win)
-    for a in gs:
-        for b in gs:
-            if a < b and opposite(X, a, b):
-                out.append((a, b))
-    for g in gs:
-        if g == -1:
-            ns = np.array([X.poly.normals[j] for j, _ in win[g]])
-            if len(ns) > 1 and (ns @ ns.T).min() < -0.9:
-                out.append((g, g))
-    return out
-
-
 class PairGeom:
     """Intersezione fra due parti A e B (ferme)."""
 
@@ -725,17 +682,9 @@ class PairGeom:
         self.fb = self.vol / max(B.vol, 1e-9)
         self.winB = windows(I, B, A)  # A esce da B da queste facce di B
         self.winA = windows(I, A, B)  # B esce da A da queste facce di A
-        self._dep = {}
         pts = np.concatenate(I)
         self.center = pts.mean(axis=0)
         self.lo, self.hi = pts.min(axis=0), pts.max(axis=0)
-
-    def depth(self, which, j):
-        """Sporgenza oltre la faccia j: which="B" -> quanto A esce da B, "A" -> quanto B esce da A."""
-        key = (which, j)
-        if key not in self._dep:
-            self._dep[key] = depth_beyond(self.A, self.B, j) if which == "B" else depth_beyond(self.B, self.A, j)
-        return self._dep[key]
 
     def window_points(self, which):
         """Punti sulle cuciture (bordo delle finestre), appena fuori dalla parte attraversata."""
@@ -958,7 +907,7 @@ def classify_static(g):
         see = "(trasparente) " if X.tv >= SEE_THROUGH else ""
         if comps[0][1] < SLIVER:
             return ("PK", f"{X.name} {see}spunta di {comps[0][1]:.2f} stud dall'altro lato di {Y.name}",
-                    [groups[0]])
+                    [groups[0]], comps[0][1])
         code = "TR" if see else "XP"
         return (code, f"{X.name} {see}passa da parte a parte in {Y.name} (spunta di "
                 + " e ".join(f"{c[1]:.1f}" for c in comps) + " stud)", groups)
@@ -1051,13 +1000,15 @@ def static_pass(parts, viewer, findings, ignored):
         g = pair_geometry(A, B)
         if not g:
             continue
-        code, why, groups = classify_static(g)
+        code, why, groups, *rest = classify_static(g)
         if code is None:
             ignored[why] = ignored.get(why, 0) + 1
             continue
         groups = [(np.atleast_2d(np.asarray(q, dtype=float)), ex) for q, ex in groups if len(q)]
         f = Finding(code, why, A, B, g.center, np.concatenate([q for q, _ in groups]) if groups else [], g.vol)
         f.groups = groups
+        if rest:
+            f.depth = rest[0]
         findings.append(f)
 
 
@@ -1111,7 +1062,7 @@ def mover_pass(parts, viewer, findings, ignored):
             P = posed(M, k)
             if M.kind == "Spinner":
                 # gira su se' stesso: il volume spazzato e' la parte stessa, valgono le regole delle parti ferme
-                code, why, _ = classify_static(PairGeom(P, S, I))
+                code, why, *_ = classify_static(PairGeom(P, S, I))
                 if code is None:
                     ok(why)
                     continue
@@ -1237,9 +1188,13 @@ def grade(f, viewer):
         return
     need, dmax, smin = SEVERITY_RULES.get(f.code, (3, 60, 0))
     strong = f.seen >= need and f.dist <= dmax and f.size >= smin
-    if f.extra == "near" or (f.extra.startswith("trasparenza")):
+    if f.extra.startswith("trasparenza"):
         strong = False
     f.sev = "!!" if strong else "!"
+    if f.extra == "near":
+        f.sev = "."  # quasi complanari: al massimo sfarfallano da molto lontano
+    if f.code == "PK" and getattr(f, "depth", 1) < 0.1 and f.dist > 20:
+        f.sev = "."  # sporgenza di qualche centesimo vista solo da lontano
 
 
 def extent(P):
@@ -1253,6 +1208,13 @@ def extent(P):
             f"y {lo[1]:.1f}..{hi[1]:.1f}")
 
 
+def family(P):
+    """Nome senza numeri finali (Log1_3 -> Log): le parti ripetute dello stesso tipo."""
+    if P is None:
+        return ""
+    return re.sub(r"[_0-9]+$", "", P.name) + ("" if P.name[:1] != "X" else str(P.kind))
+
+
 def report(findings, args, ignored, stats):
     out = []
     shown = [f for f in findings if args.verbose or f.sev != "."]
@@ -1261,9 +1223,21 @@ def report(findings, args, ignored, stats):
     if args.folder:
         shown = [f for f in shown if any(p is not None and p.folder == args.folder for p in (f.A, f.B))]
     shown.sort(key=lambda f: (section_of(f.center[0]) if section_of(f.center[0]) else 0.5, f.rank()))
+    # stesso difetto ripetuto (es. tutti i tronchi di una corsia nello stesso velo d'acqua): una riga sola
+    groups, order = {}, []
+    for f in shown:
+        key = (f.code, f.sev, family(f.A), family(f.B), round(float(f.center[1])), round(float(f.center[2])))
+        if f.code != "MV":
+            key = (id(f),)
+        if key not in groups:
+            groups[key] = []
+            order.append(key)
+        groups[key].append(f)
     out.append(f"Percorso Estremo - controllo compenetrazioni: {stats}")
     last = None
-    for f in shown:
+    for key in order:
+        same = groups[key]
+        f = same[0]
         s = section_of(f.center[0])
         if s != last:
             out.append("")
@@ -1272,6 +1246,9 @@ def report(findings, args, ignored, stats):
         vis = f"visto da {f.seen} punti, il piu' vicino a {f.dist:.0f} stud" if f.seen else (f.extra or "nascosto")
         out.append(f"{f.sev:>2} {f.code} {fmt_where(f.center)}")
         out.append(f"      {f.text}  [{vis}]")
+        if len(same) > 1:
+            names = sorted({g.A.name for g in same})
+            out.append(f"      e altri {len(same) - 1} uguali: {', '.join(names)}")
         for tag, P in (("A", f.A), ("B", f.B)):
             if P is not None:
                 pose = f"  (posa {P.pose})" if hasattr(P, "pose") else ""

@@ -183,10 +183,11 @@ local function updateEntry(e: Entry, t: number, hrp: BasePart?, hrpPos: Vector3?
 	elseif kind == "Conveyor" then
 		local v = def.velocity or Vector3.zero
 		part.AssemblyLinearVelocity = v
-		local length = def.size.X
 		for _, stripe in e.stripes do
+			-- le strisce scorrono dentro il nastro: mai oltre le sue estremita'
+			local span = def.size.X - stripe.Size.X
 			local k = stripe:GetAttribute("Stripe") or 0
-			local x = ((k + 0.5) / #e.stripes * length + t * v.X) % length - length / 2
+			local x = ((k + 0.5) / #e.stripes * span + t * v.X) % span - span / 2
 			stripe.CFrame = def.cframe * CFrame.new(x, def.size.Y / 2 + 0.06, 0)
 		end
 	elseif kind == "Bounce" then
