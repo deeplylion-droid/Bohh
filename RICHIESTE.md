@@ -14,7 +14,7 @@ Legenda: ⏳ in corso · 📋 da fare · ✅ fatto (con la versione pubblicata)
 | 5 | **PERCORSO ESTREMO**: percorso alternativo che parte dalla piazza iniziale (quello standard resta). Dà **pet migliori** del percorso standard. **Davvero difficile** e **NON cheattabile**: muri invisibili, va fatto per forza per intero. Almeno un tratto ispirato alle **rapide**. | ⏳ scritto: viale fra i lotti 6 e 7, ponte, 4 sezioni (Rapide degli Abissi, Tempio del Deserto, Laboratorio dei Geni, Inferno) con santuario, checkpoint e portale; anti-cheat sul server (velocità, volo, teletrasporto, muri, salto delle sezioni); rarità Estremo e uovo. Manca: pet, test sul server, pubblicazione |
 | 6 | **12 pet nuovi** per il Percorso Estremo, **tutti molto fighi**: 3 ispirati ai **pesci abissali**, 3 agli **antichi egizi**, 3 ai **felini super intelligenti**, 3 ai **diavoli infernali biblici**, trasformati per renderli super fighi. | ⏳ modelli |
 | 8 | **Tre troni per lotto**: due da sbloccare pagando **tantissime monete** oppure **Robux**. | ⏳ in corso: isole fluttuanti dietro il lotto, altari dentro il lotto, sblocco con monete o game pass |
-| 9 | Scegliere la **miniatura** fra le 3 proposte (A guardiano, B uovo-mostro, C toppa cucita). | ⏳ in attesa della scelta |
+| 9 | **Miniatura**: piace la B (uovo-mostro) ma deve dare l'idea che sia **su un picco montuoso**, senza rimpicciolirla troppo. | ⏳ nuova versione della B in lavorazione (vetta stretta, nuvole sotto, variante con bandierina) |
 | 7 | Lavorare **in parallelo con gli agenti** e **segnare tutto quello che chiede**, senza perdere nulla. | ⏳ (questo file) |
 
 ## Fatte
