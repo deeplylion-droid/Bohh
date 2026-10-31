@@ -318,8 +318,9 @@ end
 -- SEZIONE 3: Laboratorio dei Geni
 ---------------------------------------------------------------------------------------------
 
--- strato piatto appoggiato alla faccia interna di una parete del laboratorio (off = distanza dalla parete)
-local function onWall(
+-- strato piatto appoggiato alla faccia interna di una parete (laboratorio e santuari; off = distanza dalla parete)
+local function onWallAt(
+	i: number,
 	s: number,
 	u0: number,
 	u1: number,
@@ -333,9 +334,25 @@ local function onWall(
 	tr: number?
 ): BasePart
 	local a, b = s * (WALL_IN - off), s * (WALL_IN - off - t)
-	local p = span(3, u0, u1, y0, y1, math.min(a, b), math.max(a, b), name, color, mat, tr)
+	local p = span(i, u0, u1, y0, y1, math.min(a, b), math.max(a, b), name, color, mat, tr)
 	p.CastShadow = false
 	return p
+end
+
+local function onWall(
+	s: number,
+	u0: number,
+	u1: number,
+	y0: number,
+	y1: number,
+	off: number,
+	t: number,
+	name: string,
+	color: Color3,
+	mat: Enum.Material,
+	tr: number?
+): BasePart
+	return onWallAt(3, s, u0, u1, y0, y1, off, t, name, color, mat, tr)
 end
 
 -- disco sulla parete (asse lungo z), off = distanza della faccia posteriore dalla parete
@@ -405,10 +422,13 @@ local function wallBoard(s: number, u0: number, u1: number, y0: number, y1: numb
 	)
 end
 
--- pannello luminoso con cornice
+-- pannello luminoso con cornice e traversa
 local function wallLight(s: number, u0: number, u1: number, y0: number, y1: number)
 	onWall(s, u0, u1, y0, y1, 0, 0.2, "PanelFrame", WHITE, Mat.SmoothPlastic)
-	onWall(s, u0 + 0.5, u1 - 0.5, y0 + 0.5, y1 - 0.5, 0.2, 0.08, "PanelLight", PALE, Mat.Neon)
+	local ym = (y0 + y1) / 2
+	local glow = rgb(110, 225, 255)
+	onWall(s, u0 + 0.5, u1 - 0.5, ym + 0.3, y1 - 0.5, 0.2, 0.08, "PanelLight", glow, Mat.Neon)
+	onWall(s, u0 + 0.5, u1 - 0.5, y0 + 0.5, ym - 0.3, 0.2, 0.08, "PanelLight", glow, Mat.Neon)
 end
 
 -- tubo luminoso verticale con i due attacchi
@@ -514,27 +534,30 @@ local function labWalls()
 	end
 end
 
--- Portale d'ingresso con la lampadina del genio
+-- Portale d'ingresso con la lampadina del genio: pilastri bianchi fuori dai muri, architrave alto sopra il corridoio
+-- (visibile gia' dall'uscita del santuario 2) col nome della zona
 local function labGate()
-	local u0, u1 = 3, 7
+	local u0, u1 = 7.5, 12.5
+	local um = (u0 + u1) / 2
+	local top = 292
 	for _, s in { -1, 1 } do
-		span(3, u0, u1, 232, 290, s * 24, s * 28, "GatePillar", WHITE, Mat.SmoothPlastic)
-		span(3, u0 - 1, u1 + 1, 229, 232, s * 23.5, s * 28.5, "GateFoot", DARK, Mat.DiamondPlate)
-		span(3, u0 - 0.3, u0, 240, 286, s * 25.4, s * 26.6, "GateGlow", CYAN, Mat.Neon)
+		span(3, u0, u1, 232, top - 6, s * 23.5, s * 28.5, "GatePillar", WHITE, Mat.SmoothPlastic)
+		span(3, u0 - 1, u1 + 1, 229, 232, s * 23.5, s * 29.5, "GateFoot", DARK, Mat.DiamondPlate)
+		span(3, u0 - 0.3, u0, 240, top - 8, s * 25.4, s * 26.6, "GateGlow", CYAN, Mat.Neon)
 		-- antenne con la lucina in cima
-		column(3, 5, s * 26, 296, 303, 0.4, "GateAntenna", STEEL, Mat.Metal)
-		sphere("GateBlink", 1, at(3, 5, seatedY(303, 1, 0.2), s * 26), if s < 0 then RED else LIME, Mat.Neon)
+		column(3, um, s * 26, top, top + 7, 0.4, "GateAntenna", STEEL, Mat.Metal)
+		sphere("GateBlink", 1, at(3, um, seatedY(top + 7, 1, 0.2), s * 26), if s < 0 then RED else LIME, Mat.Neon)
 	end
-	span(3, u0 - 1, u1 + 1, 290, 296, -28, 28, "GateBeam", DARK, Mat.DiamondPlate)
-	span(3, u0, u1, 289.7, 290, -24, 24, "GateUnderGlow", CYAN, Mat.Neon)
-	local pos = at(3, u0 - 1.2, 293, 0)
+	span(3, u0 - 0.5, u1 + 0.5, top - 6, top, -28.5, 28.5, "GateBeam", DARK, Mat.DiamondPlate)
+	span(3, u0, u1, top - 6.3, top - 6, -23.5, 23.5, "GateUnderGlow", CYAN, Mat.Neon)
+	local pos = at(3, u0 - 0.7, top - 3, 0)
 	sign(CFrame.lookAt(pos, pos + Vector3.new(1, 0, 0)), Vector3.new(30, 4.4, 0.4), "Zone_Lab", CYAN, DARK)
 	-- lampadina: attacco a vite e bulbo luminoso
-	column(3, 5, 0, 296, 297, 4.6, "BulbBase", DARK, Mat.DiamondPlate)
-	column(3, 5, 0, 297, 297.8, 4, "BulbThread", STEEL, Mat.Metal)
-	column(3, 5, 0, 297.8, 298.6, 4.6, "BulbThread", STEEL, Mat.Metal)
-	column(3, 5, 0, 298.6, 299.4, 4, "BulbThread", STEEL, Mat.Metal)
-	local bulb = sphere("Bulb", 8, at(3, 5, seatedY(299.4, 8, 2), 0), rgb(255, 238, 150), Mat.Neon, 0.1)
+	column(3, um, 0, top, top + 1, 4.6, "BulbBase", DARK, Mat.DiamondPlate)
+	column(3, um, 0, top + 1, top + 1.8, 4, "BulbThread", STEEL, Mat.Metal)
+	column(3, um, 0, top + 1.8, top + 2.6, 4.6, "BulbThread", STEEL, Mat.Metal)
+	column(3, um, 0, top + 2.6, top + 3.4, 4, "BulbThread", STEEL, Mat.Metal)
+	local bulb = sphere("Bulb", 8, at(3, um, seatedY(top + 3.4, 8, 2), 0), rgb(255, 238, 150), Mat.Neon, 0.1)
 	light(bulb, rgb(255, 230, 150), 30, 1.6)
 end
 
@@ -647,11 +670,11 @@ local function labFlasks()
 		local rim = math.sqrt(r * r - (r * 0.8) ^ 2)
 		column(3, u, v, ringTop - 0.5, ringTop, rim * 2, "FlaskRing", STEEL, Mat.Metal)
 		rod("FlaskArm", at(3, U, ringTop - 0.25, V), at(3, u, ringTop - 0.25, v), 0.4, STEEL, Mat.Metal)
-		sphere("Flask", f.d, at(3, u, f.y, v), f.color, Mat.Neon, 0.15)
+		sphere("Flask", f.d, at(3, u, f.y, v), f.color, Mat.Neon)
 		-- collo e tappo
 		local neckD = f.d * 0.3
 		local neckBase = f.y + math.sqrt(r * r - (neckD / 2) ^ 2)
-		column(3, u, v, neckBase, neckBase + 2, neckD, "FlaskNeck", GLASS, Mat.Glass, 0.45)
+		column(3, u, v, neckBase, neckBase + 2, neckD, "FlaskNeck", GLASS, Mat.SmoothPlastic)
 		column(3, u, v, neckBase + 2, neckBase + 2.6, neckD + 0.4, "FlaskCork", rgb(196, 140, 90), Mat.Wood)
 	end
 end
@@ -664,55 +687,47 @@ local function labCatStatue()
 	local O = at(3, 140, 290.6, 36)
 	local F = Vector3.new(0.65, 0, -1).Unit -- guarda il corridoio e chi arriva
 	local L = CFrame.lookAt(O, O + F)
-	local function vcylL(
-		name: string,
-		x: number,
-		y0: number,
-		y1: number,
-		z: number,
-		d: number,
-		color: Color3,
-		mat: Enum.Material
-	)
-		cyl(name, y1 - y0, d, L * CFrame.new(x, (y0 + y1) / 2, z) * CFrame.Angles(0, 0, RAD(90)), color, mat)
-	end
-	local function ballL(
-		name: string,
-		x: number,
-		y: number,
-		z: number,
-		d: number,
-		color: Color3,
-		mat: Enum.Material,
-		tr: number?
-	)
-		sphere(name, d, (L * CFrame.new(x, y, z)).Position, color, mat, tr)
-	end
-	-- corpo seduto, petto, zampe e cosce
-	vcylL("CatBody", 0, 0, 14, 1, 12, FUR, Mat.SmoothPlastic)
-	ballL("CatChest", 0, 9.5, -3.4, 9, CREAM, Mat.SmoothPlastic)
-	for _, sx in { -1, 1 } do
-		vcylL("CatLeg", sx * 2.6, 0, 8.2, -6.1, 3.2, FUR, Mat.SmoothPlastic)
-		ballL("CatPaw", sx * 2.6, 1.75, -7, 3.8, CREAM, Mat.SmoothPlastic)
-		ballL("CatHaunch", sx * 4.6, 3.7, 3, 8, FUR, Mat.SmoothPlastic)
-	end
-	-- testa, muso, naso
-	ballL("CatHead", 0, 19.5, -1, 13, FUR, Mat.SmoothPlastic)
-	ballL("CatMuzzle", 0, 17.6, -6.4, 5.6, CREAM, Mat.SmoothPlastic)
-	ballL("CatNose", 0, 19.1, -8.9, 1.6, PINK, Mat.SmoothPlastic)
-	-- occhiali: fascia attorno alla testa e due lenti luminose che sporgono davanti
-	vcylL("CatStrap", 0, 21, 22.2, -1, 13, DARK, Mat.SmoothPlastic)
-	for _, sx in { -1, 1 } do
+	local function vcylL(name: string, x: number, y0: number, y1: number, z: number, d: number, color: Color3)
 		cyl(
-			"CatLens",
-			1.6,
-			4,
-			L * CFrame.new(sx * 2.5, 21.6, -7.2) * CFrame.Angles(0, RAD(90), 0),
-			CYAN,
-			Mat.Neon,
-			0.15
+			name,
+			y1 - y0,
+			d,
+			L * CFrame.new(x, (y0 + y1) / 2, z) * CFrame.Angles(0, 0, RAD(90)),
+			color,
+			Mat.SmoothPlastic
 		)
 	end
+	local function ballL(name: string, x: number, y: number, z: number, d: number, color: Color3)
+		sphere(name, d, (L * CFrame.new(x, y, z)).Position, color, Mat.SmoothPlastic)
+	end
+	-- corpo seduto: busto, cosce larghe, petto chiaro, zampe davanti
+	vcylL("CatBody", 0, 0, 14, 1.5, 9.6, FUR)
+	ballL("CatChest", 0, 9.6, -2.2, 8.6, CREAM)
+	for _, sx in { -1, 1 } do
+		ballL("CatHaunch", sx * 3.6, 4.2, 2.4, 9, FUR)
+		vcylL("CatLeg", sx * 2.2, 0, 8.4, -5, 2.8, FUR)
+		ballL("CatPaw", sx * 2.2, 1.55, -6.2, 3.4, CREAM)
+	end
+	-- testa: cuscinetti dei baffi, mento e naso
+	ballL("CatHead", 0, 19.5, -1, 13, FUR)
+	for _, sx in { -1, 1 } do
+		ballL("CatWhiskerPad", sx * 1.4, 17.6, -6.5, 3.6, CREAM)
+	end
+	ballL("CatChin", 0, 16.1, -6.1, 2.4, CREAM)
+	ballL("CatNose", 0, 18.9, -8.1, 1.6, PINK)
+	-- occhiali: due lenti luminose piantate nel muso, con la montatura e il ponticello
+	for _, sx in { -1, 1 } do
+		cyl(
+			"CatLensRim",
+			0.5,
+			4.6,
+			L * CFrame.new(sx * 2.5, 21.6, -6.35) * CFrame.Angles(0, RAD(90), 0),
+			DARK,
+			Mat.SmoothPlastic
+		)
+		cyl("CatLens", 1.2, 4, L * CFrame.new(sx * 2.5, 21.6, -7.2) * CFrame.Angles(0, RAD(90), 0), CYAN, Mat.Neon)
+	end
+	box("CatLensBridge", Vector3.new(1.2, 0.8, 0.8), L * CFrame.new(0, 21.8, -7.3), DARK, Mat.SmoothPlastic)
 	-- orecchie a punta (lato verticale verso l'interno) col ciuffo nero che ne copre la punta
 	for _, sx in { -1, 1 } do
 		local ear = L
@@ -723,21 +738,15 @@ local function labCatStatue()
 		wedge("CatTuft", Vector3.new(1.8, 1.6, 1.2), ear * CFrame.new(0, 2.65, 1.65), BLACK, Mat.SmoothPlastic)
 	end
 	-- coda che gira attorno al corpo e sale, con il cubo olografico in punta
-	local t0 = (L * CFrame.new(2, 1.2, 5.6)).Position
+	local t0 = (L * CFrame.new(2, 1.2, 5.4)).Position
 	local t1 = (L * CFrame.new(7.4, 1.2, 3.6)).Position
 	local t2 = (L * CFrame.new(8.6, 9, 2.4)).Position
 	rod("CatTail", t0, t1, 2.4, FUR, Mat.SmoothPlastic)
 	sphere("CatTailJoint", 2.4, t1, FUR, Mat.SmoothPlastic)
 	rod("CatTail", t1, t2, 2.4, FUR, Mat.SmoothPlastic)
 	sphere("CatTailTip", 2.4, t2, BLACK, Mat.SmoothPlastic)
-	box(
-		"CatHoloCube",
-		Vector3.new(2.6, 2.6, 2.6),
-		CFrame.new(t2 + Vector3.new(0, 2.4, 0)) * CFrame.Angles(RAD(35), RAD(45), 0),
-		CYAN,
-		Mat.Neon,
-		0.35
-	)
+	local cube = CFrame.new(t2 + Vector3.new(0, 2.6, 0)) * CFrame.Angles(RAD(35), RAD(45), 0)
+	box("CatHoloCube", Vector3.new(2.6, 2.6, 2.6), cube, CYAN, Mat.Neon, 0.35)
 end
 
 -- Bobine di Tesla ai lati della sala rotonda, con le scintille
@@ -790,9 +799,7 @@ local function labHolo()
 	end
 	ring(301, 13, 10, CYAN, 0)
 	ring(305, 8.5, 8, PURPLE, RAD(16))
-	for _, dv in { -1.1, 1.1 } do
-		sphere("HoloBrain", 3.6, at(3, U, 305, dv), PINK, Mat.Neon, 0.3)
-	end
+	sphere("HoloBrain", 4.2, at(3, U, 305, 0), PINK, Mat.Neon, 0.3)
 	sphere("HoloPlanet", 1.6, at(3, U + 13 * math.cos(RAD(40)), 302.6, 13 * math.sin(RAD(40))), PINK, Mat.Neon)
 	sphere("HoloPlanet", 1.2, at(3, U - 8.5, 307.4, -1), CYAN, Mat.Neon)
 end
@@ -810,7 +817,7 @@ local function labBrainJar()
 	for k = 0, 7 do
 		local a = k * math.pi / 4
 		local cf = CFrame.new(c.X, (y0 + y1) / 2, c.Z) * CFrame.Angles(0, a, 0) * CFrame.new(0, 0, -R)
-		box("JarGlass", Vector3.new(w, y1 - y0, t), cf, rgb(220, 120, 255), Mat.Glass, 0.45)
+		box("JarGlass", Vector3.new(w, y1 - y0, t), cf, rgb(220, 120, 255), Mat.Glass, 0.55)
 	end
 	-- cervello a due lobi sul suo sostegno
 	column(3, U, V, 271.6, 276, 3, "BrainStand", STEEL, Mat.Metal)
@@ -922,12 +929,556 @@ end
 ---------------------------------------------------------------------------------------------
 -- SEZIONE 4: Inferno
 ---------------------------------------------------------------------------------------------
+-- rocce rosso scuro, ossidiana, lava, ossa e oro
+local ROCK = rgb(126, 42, 34)
+local ROCK_DARK = rgb(88, 30, 28)
+local OBSIDIAN = rgb(46, 26, 62)
+local LAVA = rgb(255, 128, 32)
+local LAVA_HOT = rgb(255, 205, 90)
+local BONE = rgb(242, 230, 204)
+local IRON = rgb(78, 70, 72)
+local VELVET = rgb(196, 26, 46)
+local EMBER = rgb(255, 84, 30)
+local EYE = rgb(255, 40, 40)
+
+-- quota del percorso dell'Inferno lungo u (come floorLine in Shared.Extreme), poi il pavimento del santuario
+local INF_FLOOR = { { 0, 246 }, { 96, 245 }, { 172, 244 }, { 262, 242 }, { 272, 240 }, { 360, 231 } }
+local function infFloor(u: number): number
+	if u <= INF_FLOOR[1][1] then
+		return INF_FLOOR[1][2]
+	end
+	for k = 1, #INF_FLOOR - 1 do
+		local a, b = INF_FLOOR[k], INF_FLOOR[k + 1]
+		if u <= b[1] then
+			return a[2] + (b[2] - a[2]) * (u - a[1]) / (b[1] - a[1])
+		end
+	end
+	return Extreme.Sections[4].floor
+end
+
+-- Ingombri dei pezzi di muro della sezione 4 (sponde di roccia casuali, pareti e tetto del santuario), dai vertici veri
+type Bounds = { u0: number, u1: number, v0: number, v1: number, y0: number, y1: number }
+local infWalls: { Bounds } = {}
+local function readWalls()
+	table.clear(infWalls)
+	local x0 = Extreme.Sections[4].x0
+	for _, p in Extreme.Pieces do
+		if p.section == 4 and p.wall then
+			local h = p.size / 2
+			local b =
+				{ u0 = math.huge, u1 = -math.huge, v0 = math.huge, v1 = -math.huge, y0 = math.huge, y1 = -math.huge }
+			for _, sx in { -1, 1 } do
+				for _, sy in { -1, 1 } do
+					for _, sz in { -1, 1 } do
+						local w = p.cframe * Vector3.new(sx * h.X, sy * h.Y, sz * h.Z)
+						local u, v = x0 - w.X, w.Z - Extreme.Z
+						b.u0, b.u1 = math.min(b.u0, u), math.max(b.u1, u)
+						b.v0, b.v1 = math.min(b.v0, v), math.max(b.v1, v)
+						b.y0, b.y1 = math.min(b.y0, w.Y), math.max(b.y1, w.Y)
+					end
+				end
+			end
+			table.insert(infWalls, b)
+		end
+	end
+end
+
+-- |v| esterna massima e quota massima dei muri sul lato side fra u0 e u1
+local function wallReach(side: number, u0: number, u1: number): (number, number)
+	local reach, top = 0, -math.huge
+	for _, b in infWalls do
+		if b.u1 > u0 and b.u0 < u1 then
+			local out = if side > 0 then b.v1 else -b.v0
+			if out > 0 then
+				reach = math.max(reach, out)
+				top = math.max(top, b.y1)
+			end
+		end
+	end
+	return reach, top
+end
+
+-- quota massima dei muri dentro il rettangolo (u0..u1, v0..v1)
+local function wallTopIn(u0: number, u1: number, v0: number, v1: number): number
+	local top = -math.huge
+	for _, b in infWalls do
+		if b.u1 > u0 and b.u0 < u1 and b.v1 > v0 and b.v0 < v1 then
+			top = math.max(top, b.y1)
+		end
+	end
+	return top
+end
+
+-- scheggia di ossidiana dritta (parallelepipedo e punta a cuneo), appoggiata sulla quota y
+local function shard(i: number, u: number, v: number, y: number, w: number, h: number, yaw: number, color: Color3)
+	local base = CFrame.new(at(i, u, y + h / 2, v)) * CFrame.Angles(0, yaw, 0)
+	box("ObsidianShard", Vector3.new(w, h, w), base, color, Mat.Glass)
+	local tip = w * 1.7
+	wedge("ObsidianTip", Vector3.new(w, tip, w), base * CFrame.new(0, h / 2 + tip / 2, 0), color, Mat.Glass)
+end
+
+-- cascata di lava sulla faccia interna di una rupe (vIn = |v| della faccia), dal labbro in cima fino in fondo
+local function lavafall(s: number, um: number, w: number, top: number, bottom: number, vIn: number, glow: boolean)
+	local a, b = s * (vIn - 0.6), s * vIn
+	local sheet =
+		span(4, um - w / 2, um + w / 2, bottom, top, math.min(a, b), math.max(a, b), "Lavafall", LAVA, Mat.Neon)
+	local c, d = s * (vIn - 0.9), s * (vIn - 0.6)
+	span(
+		4,
+		um - w * 0.18,
+		um + w * 0.18,
+		bottom,
+		top,
+		math.min(c, d),
+		math.max(c, d),
+		"LavafallCore",
+		LAVA_HOT,
+		Mat.Neon
+	)
+	-- labbro: la lava scorre sulla cima della rupe e si affaccia
+	local e, f = s * (vIn - 0.9), s * (vIn + 5)
+	span(4, um - w / 2, um + w / 2, top, top + 0.5, math.min(e, f), math.max(e, f), "LavaLip", LAVA, Mat.Neon)
+	if glow then
+		light(sheet, rgb(255, 120, 40), 34, 1.6)
+		emitter(sheet, {
+			Texture = SPARKLE,
+			Color = ColorSequence.new(LAVA_HOT, EMBER),
+			LightEmission = 1,
+			Size = seq(0.5, 0.1),
+			Transparency = seq(0, 1),
+			Lifetime = NumberRange.new(1.5, 2.6),
+			Speed = NumberRange.new(3, 6),
+			EmissionDirection = if s > 0 then Enum.NormalId.Right else Enum.NormalId.Left,
+			SpreadAngle = Vector2.new(30, 30),
+			Acceleration = Vector3.new(0, 5, 0),
+			Rate = 10,
+		})
+	end
+end
+
+-- Rupi esterne del canyon (oltre le sponde): blocchi rosso scuro di altezza diversa, con creste a cuneo, cascate di
+-- lava che colano dalla cima e schegge di ossidiana. Lasciano liberi i posti del portale e dei piloni degli uncini.
+local function infernoCliffs()
+	local r = rng(66613)
+	local s4 = Extreme.Sections[4]
+	local uEnd = s4.length + s4.shrineLength
+	local reserved = { { 6, 20 }, { 172, 184 }, { 252, 264 } } -- portale e piloni del ponte degli uncini
+	local lavaAt = { [-1] = { 64, 214, 334 }, [1] = { 128, 292, 404 } }
+	for _, s in { -1, 1 } do
+		local u = if s > 0 then -2 else -2 + 9
+		local n = 0
+		local uStop = uEnd + 58 -- inizio della rupe di fondo
+		while u < uStop - 6 do
+			local L = r(22, 34)
+			local ua, ub = u, math.min(u + L, uStop)
+			-- salta i tratti riservati
+			for _, res in reserved do
+				if ub > res[1] and ua < res[2] then
+					if ua < res[1] - 6 then
+						ub = res[1]
+					else
+						ua, ub = res[2], math.max(res[2] + 14, ub)
+					end
+				end
+			end
+			n += 1
+			local um = (ua + ub) / 2
+			local f = infFloor(um)
+			local reach = wallReach(s, ua - 1, ub + 1)
+			local vIn = math.max(reach + r(2, 3.5), if ua > uEnd + 4 then 33 elseif ua > s4.length + 4 then 31 else 35)
+			local D = r(16, 24)
+			local H = r(20, 32) + math.clamp(um / uEnd, 0, 1) * 12
+			local top = f + H
+			local bottom = f - 54 - (n % 3) * 0.7
+			local isLava = false
+			for _, lu in lavaAt[s] do
+				if lu >= ua and lu < ub then
+					isLava = true
+				end
+			end
+			local cracked = n % 3 == 0
+			local color = if cracked then ROCK_DARK else ROCK
+			local a, b = s * vIn, s * (vIn + D)
+			span(
+				4,
+				ua,
+				ub,
+				bottom,
+				top,
+				math.min(a, b),
+				math.max(a, b),
+				"Cliff",
+				color,
+				if cracked then Mat.CrackedLava else Mat.Basalt
+			)
+			if isLava then
+				lavafall(s, um, math.min(L * 0.35, 9), top, bottom, vIn, um < 140 or (um > 280 and um < 340))
+			elseif n % 2 == 0 then
+				-- cresta a cuneo che sale verso una delle due estremita'
+				local hh = r(6, 14)
+				local rot = if n % 4 == 0 then CFrame.Angles(0, RAD(90), 0) else CFrame.Angles(0, RAD(-90), 0)
+				local c = at(4, um, top + hh / 2, s * (vIn + D / 2))
+				wedge("CliffCrest", Vector3.new(D - 0.1, hh, ub - ua - 0.3), CFrame.new(c) * rot, color, Mat.Basalt)
+			else
+				-- schegge di ossidiana sulla cima piatta
+				local k = math.floor(r(1, 3.99))
+				local placed = {}
+				for j = 1, k do
+					local w = r(2.4, 4)
+					local margin = w + 0.5
+					for _ = 1, 8 do
+						local su = r(ua + margin, ub - margin)
+						local sv = r(vIn + margin, vIn + D - margin)
+						local free = true
+						for _, q in placed do
+							if
+								math.abs(q[1] - su) < (q[3] + w) * 0.75 + 0.4
+								and math.abs(q[2] - sv) < (q[3] + w) * 0.75 + 0.4
+							then
+								free = false
+							end
+						end
+						if free then
+							table.insert(placed, { su, sv, w })
+							local color = if j == 2 then rgb(70, 30, 90) else OBSIDIAN
+							shard(4, su, s * sv, top, w, r(8, 20), r(0, math.pi), color)
+							break
+						end
+					end
+				end
+			end
+			-- venatura di lava sulla faccia verso il percorso (sopra le sponde)
+			if not isLava and n % 3 == 1 then
+				local vy = top - r(5, 9)
+				local vv = s * (vIn - 0.15)
+				for j, ang in { 28, -24 } do
+					local len = r(6, 9)
+					local cu = um + (j - 1.5) * 3
+					local cf = CFrame.new(at(4, cu, vy - (j - 1) * 4.5, vv)) * CFrame.Angles(0, 0, RAD(ang))
+					box("LavaVein", Vector3.new(0.7, len, 0.3), cf, LAVA, Mat.Neon)
+				end
+			end
+			u = ub
+		end
+	end
+end
+
+-- corno ricurvo d'osso: segmenti sempre piu' sottili con i giunti arrotondati e la punta luminosa
+local function horn(name: string, pts: { Vector3 }, ds: { number }): BasePart
+	for k = 1, #ds do
+		local tip = k == #ds
+		rod(name, pts[k], pts[k + 1], ds[k], if tip then LAVA else BONE, if tip then Mat.Neon else Mat.SmoothPlastic)
+		if not tip then
+			sphere(name .. "Joint", ds[k], pts[k + 1], BONE, Mat.SmoothPlastic)
+		end
+	end
+	return sphere(name .. "Tip", ds[#ds], pts[#pts], LAVA_HOT, Mat.Neon)
+end
+
+-- teschio: occhi rossi nelle orbite, naso nero e mascella (dir = verso dove guarda)
+local function skull(prefix: string, c: Vector3, d: number, dir: Vector3)
+	sphere(prefix, d, c, BONE, Mat.SmoothPlastic)
+	local r = d / 2
+	local side = dir:Cross(Vector3.yAxis).Unit
+	for _, sv in { -1, 1 } do
+		local e = (dir + Vector3.new(0, 0.18, 0) + side * sv * 0.42).Unit
+		local p = c + e * r
+		cyl(
+			prefix .. "Socket",
+			0.05 * d,
+			0.3 * d,
+			CFrame.lookAt(p, p + e) * CFrame.Angles(0, RAD(90), 0),
+			BLACK,
+			Mat.SmoothPlastic
+		)
+		local q = c + e * (r + 0.0375 * d)
+		cyl(prefix .. "Eye", 0.025 * d, 0.15 * d, CFrame.lookAt(q, q + e) * CFrame.Angles(0, RAD(90), 0), EYE, Mat.Neon)
+	end
+	local n = (dir + Vector3.new(0, -0.12, 0)).Unit
+	local np = c + n * (r + 0.02 * d)
+	box(
+		prefix .. "Nose",
+		Vector3.new(0.12 * d, 0.12 * d, 0.04 * d),
+		CFrame.lookAt(np, np + n) * CFrame.Angles(0, 0, RAD(45)),
+		BLACK,
+		Mat.SmoothPlastic
+	)
+end
+
+-- Portale dell'Inferno all'uscita del laboratorio: pilastri neri oltre le sponde, architrave appena sopra le sponde
+-- (si vede gia' dal santuario 3) col nome della zona, teschio in cima e due corna di Behemoth con la punta in fiamme
+local function infernoGate()
+	local u0, u1 = 9, 16
+	local um = (u0 + u1) / 2
+	local reachL = wallReach(-1, u0 - 2, u1 + 2)
+	local reachR = wallReach(1, u0 - 2, u1 + 2)
+	local vg = math.max(36, reachL + 2, reachR + 2)
+	local yb = math.max(268, wallTopIn(u0 - 1.5, u1 + 1.5, -(vg + 8), vg + 8) + 1.5) -- fondo dell'architrave
+	local GATE = rgb(54, 30, 40)
+	for _, s in { -1, 1 } do
+		span(4, u0, u1, 198, yb, s * vg, s * (vg + 7), "GatePillar", GATE, Mat.Basalt)
+		span(4, um - 0.6, um + 0.6, 236, yb - 3, s * (vg - 0.3), s * vg, "GateInlay", EMBER, Mat.Neon)
+	end
+	span(4, u0 - 1, u1 + 1, yb, yb + 8, -(vg + 8), vg + 8, "GateBeam", GATE, Mat.Basalt)
+	span(4, u0, u1, yb - 0.3, yb, -vg, vg, "GateUnderGlow", EMBER, Mat.Neon)
+	local pos = at(4, u0 - 1.2, yb + 4, 0)
+	sign(
+		CFrame.lookAt(pos, pos + Vector3.new(1, 0, 0)),
+		Vector3.new(26, 4.6, 0.4),
+		"Zone_Inferno",
+		rgb(120, 18, 22),
+		LAVA_HOT
+	)
+	-- corna di toro sulle estremita' dell'architrave, con il fuoco in punta
+	for _, s in { -1, 1 } do
+		local top = yb + 8
+		local tip = horn("GateHorn", {
+			at(4, um, top - 1, s * (vg + 3)),
+			at(4, um, top + 3, s * (vg + 8)),
+			at(4, um, top + 10, s * (vg + 12)),
+			at(4, um, top + 18, s * (vg + 13)),
+			at(4, um, top + 24, s * (vg + 10.5)),
+		}, { 4.4, 3.6, 2.8, 2.1 })
+		fire(tip, 5, 9, rgb(255, 170, 60), rgb(255, 60, 20))
+		light(tip, rgb(255, 140, 60), 30, 1.6)
+	end
+	-- teschio sull'architrave che guarda chi arriva, con la mascella appoggiata
+	local skullC = at(4, um, seatedY(yb + 8, 8, 2.6), 0)
+	skull("GateSkull", skullC, 8, Vector3.new(1, 0, 0))
+	local jaw = at(4, u0 + 1.6, yb + 8 + 0.9, 0)
+	box("SkullJaw", Vector3.new(4.4, 1.8, 4.6), CFrame.new(jaw), BONE, Mat.SmoothPlastic)
+	box("SkullMouth", Vector3.new(0.1, 0.5, 3.4), CFrame.new(jaw + Vector3.new(2.25, 0.1, 0)), BLACK, Mat.SmoothPlastic)
+end
+
+-- Ponte degli uncini: due portali di ferro arrugginito oltre le sponde reggono la trave da cui pendono gli uncini
+-- (forcelle attorno al perno di ognuno); dai portali pendono due gabbie sopra le sponde
+local function infernoGantry()
+	local pivots = {}
+	for _, p in Extreme.Pieces do
+		if p.section == 4 and p.kind == "Swing" then
+			table.insert(pivots, p)
+		end
+	end
+	if #pivots == 0 then
+		return
+	end
+	local x0 = Extreme.Sections[4].x0
+	local umin, umax, py = math.huge, -math.huge, 0
+	for _, p in pivots do
+		local u = x0 - p.cframe.Position.X
+		umin, umax = math.min(umin, u), math.max(umax, u)
+		py = p.cframe.Position.Y
+	end
+	local ua, ub = umin - 8, umax + 8
+	local _, topL = wallReach(-1, ua - 6, ub + 6)
+	local _, topR = wallReach(1, ua - 6, ub + 6)
+	local beamY = math.max(py + 12, topL + 10, topR + 10)
+	local girderBottom = py + 1.4
+	for _, u in { ua, ub } do
+		local reach = math.max(wallReach(-1, u - 3, u + 3), wallReach(1, u - 3, u + 3))
+		local vp = math.max(36, reach + 2)
+		for _, s in { -1, 1 } do
+			span(4, u - 2, u + 2, 200, beamY, s * vp, s * (vp + 4), "GantryPillar", IRON, Mat.CorrodedMetal)
+			span(4, u - 0.5, u + 0.5, beamY - 14, beamY - 2, s * (vp - 0.3), s * vp, "GantryGlow", EMBER, Mat.Neon)
+		end
+		span(4, u - 2, u + 2, beamY, beamY + 4, -(vp + 4), vp + 4, "GantryBeam", IRON, Mat.CorrodedMetal)
+		span(4, u - 0.5, u + 0.5, girderBottom + 2.6, beamY, -0.5, 0.5, "GantryHanger", IRON, Mat.Metal)
+		-- punte sulla trave
+		for _, sv in { -0.6, 0, 0.6 } do
+			local c = at(4, u, beamY + 4 + 2, sv * vp)
+			wedge("GantrySpike", Vector3.new(1.6, 4, 3), CFrame.new(c), BONE, Mat.SmoothPlastic)
+		end
+	end
+	span(4, ua - 2, ub + 2, girderBottom, girderBottom + 2.6, -0.9, 0.9, "HookGirder", IRON, Mat.CorrodedMetal)
+	-- forcella attorno al perno di ogni uncino (la corda gira fra le due piastre)
+	for _, p in pivots do
+		local u = x0 - p.cframe.Position.X
+		for _, d in { -1, 1 } do
+			local a, b = u + d * 0.35, u + d * 0.55
+			span(4, math.min(a, b), math.max(a, b), py - 0.6, girderBottom, -0.6, 0.6, "HookClevis", IRON, Mat.Metal)
+		end
+	end
+	-- gabbie appese sopra le sponde, con un teschio dentro
+	for k, u in { ua, ub } do
+		local s = if k == 1 then -1 else 1
+		local v = s * 28
+		local bankTop = wallTopIn(u - 3, u + 3, math.min(v, s * 25) - 3, math.max(v, s * 25) + 3)
+		local y0 = math.max(bankTop + 1.5, py)
+		local y1 = y0 + 6.5
+		local cu = u
+		column(4, cu, v, y0, y0 + 0.5, 4.6, "CageFloor", IRON, Mat.Metal)
+		column(4, cu, v, y1 - 0.5, y1, 4.6, "CageTop", IRON, Mat.Metal)
+		for j = 0, 5 do
+			local a = j / 6 * math.pi * 2
+			local c = at(4, cu + math.cos(a) * 1.95, (y0 + y1) / 2, v + math.sin(a) * 1.95)
+			box("CageBar", Vector3.new(0.3, y1 - y0 - 1, 0.3), CFrame.new(c), IRON, Mat.Metal)
+		end
+		span(4, cu - 0.2, cu + 0.2, y1, beamY, v - 0.2, v + 0.2, "CageChain", IRON, Mat.DiamondPlate)
+		-- teschio a blocchetti sul fondo della gabbia
+		span(4, cu - 0.8, cu + 0.8, y0 + 0.5, y0 + 2.1, v - 0.8, v + 0.8, "CageSkull", BONE, Mat.SmoothPlastic)
+		for _, ev in { -0.4, 0.4 } do
+			span(
+				4,
+				cu - 0.86,
+				cu - 0.8,
+				y0 + 1.2,
+				y0 + 1.6,
+				v + ev - 0.2,
+				v + ev + 0.2,
+				"CageSkullEye",
+				EMBER,
+				Mat.Neon
+			)
+		end
+	end
+end
+
+-- Trono del re dei diavoli in fondo all'Inferno (dietro la parete del santuario 4): basamento, seggio e schienale
+-- d'ossidiana, cuscino di velluto, teschio cornuto, corona d'oro, bracieri; dietro la rupe di fondo con due
+-- cascate di lava. E' il punto di riferimento di tutta la sezione.
+local function infernoThrone()
+	local s4 = Extreme.Sections[4]
+	local uEnd = s4.length + s4.shrineLength -- 430: poi la parete di fondo (4 stud)
+	local U = uEnd + 10 -- inizio del basamento
+	span(4, U, U + 44, 214, 240, -30, 30, "ThronePlinth", ROCK_DARK, Mat.Basalt)
+	span(4, U - 0.4, U + 44.4, 236, 240.4, -30.4, 30.4, "ThronePlinthRim", rgb(255, 110, 40), Mat.CrackedLava)
+	span(4, U + 8, U + 44, 240.4, 244, -22, 22, "ThroneDais", OBSIDIAN, Mat.Glass)
+	span(4, U + 4, U + 8, 240.4, 242.2, -14, 14, "ThroneStep", OBSIDIAN, Mat.Glass)
+	local seat0, seat1 = U + 18, U + 34
+	span(4, seat0, seat1, 244, 262, -13, 13, "ThroneSeat", OBSIDIAN, Mat.Glass)
+	span(4, seat0 + 0.5, seat1 - 0.5, 262, 264, -11, 11, "ThroneCushion", VELVET, Mat.Fabric)
+	span(4, seat1, seat1 + 8, 244, 314, -13, 13, "ThroneBack", OBSIDIAN, Mat.Glass)
+	span(4, seat1 - 0.4, seat1, 264, 306, -10, 10, "ThroneBackVelvet", VELVET, Mat.Fabric)
+	span(4, seat1 - 0.5, seat1 + 8.5, 314, 315.6, -13.5, 13.5, "ThroneBackCap", GOLD, Mat.Foil)
+	for _, s in { -1, 1 } do
+		span(4, seat0, seat1, 244, 268, s * 13, s * 18, "ThroneArm", OBSIDIAN, Mat.Glass)
+		span(4, seat0 - 0.5, seat1, 268, 269.2, s * 12.6, s * 18.4, "ThroneArmCap", GOLD, Mat.Foil)
+		-- braciere sul bracciolo
+		local bu = seat0 + 3
+		column(4, bu, s * 15.5, 269.2, 271.6, 4.4, "Brazier", IRON, Mat.Metal)
+		local coals = column(4, bu, s * 15.5, 271.6, 271.9, 3.6, "BrazierCoals", LAVA, Mat.Neon)
+		fire(coals, 4, 7, rgb(255, 170, 60), rgb(255, 60, 20))
+	end
+	-- corona d'oro sullo schienale: tre punte (ognuna due cunei a specchio)
+	for k, sv in { -7, 0, 7 } do
+		local h = if k == 2 then 10 else 7
+		for _, m in { -1, 1 } do
+			local c = at(4, seat1 + 4, 315.6 + h / 2, sv + m * 1.5)
+			local rot = if m < 0 then CFrame.new() else CFrame.Angles(0, math.pi, 0)
+			wedge("CrownSpike", Vector3.new(3, h, 3), CFrame.new(c) * rot, GOLD, Mat.Foil)
+		end
+	end
+	-- teschio cornuto sullo schienale (guarda il percorso), mascella appoggiata al velluto
+	local skullC = at(4, seat1 - 3, 296, 0)
+	skull("ThroneSkull", skullC, 12, Vector3.new(1, 0, 0))
+	span(4, seat1 - 8.4, seat1 - 0.4, 286, 290.4, -3.8, 3.8, "ThroneSkullJaw", BONE, Mat.SmoothPlastic)
+	span(4, seat1 - 8.5, seat1 - 8.4, 287.6, 288.4, -2.8, 2.8, "ThroneSkullMouth", BLACK, Mat.SmoothPlastic)
+	for _, s in { -1, 1 } do
+		horn("ThroneHorn", {
+			skullC + Vector3.new(0, 2.5, s * 4.4),
+			at(4, seat1 - 3, 299.5, s * 10.5),
+			at(4, seat1 - 3, 305, s * 15.5),
+			at(4, seat1 - 3, 312, s * 17),
+			at(4, seat1 - 3, 318, s * 15),
+		}, { 4.4, 3.6, 2.8, 2.1 })
+	end
+	local glow = span(4, U - 6, U - 5, 270, 271, -0.5, 0.5, "ThroneGlow", WHITE, Mat.SmoothPlastic, 1)
+	light(glow, rgb(255, 120, 60), 50, 2)
+	-- rupe di fondo con due cascate di lava ai lati del trono
+	local B0 = U + 48
+	span(4, B0, B0 + 20, 196, 322, -66, 66, "BackCliff", ROCK, Mat.Basalt)
+	for k, sv in { -50, -12, 12, 50 } do
+		local hh = 10 + (k % 2) * 8
+		local rot = if k % 2 == 0 then CFrame.Angles(0, 0, 0) else CFrame.Angles(0, math.pi, 0)
+		wedge(
+			"BackCrest",
+			Vector3.new(20, hh, 16),
+			CFrame.new(at(4, B0 + 10, 322 + hh / 2, sv)) * rot,
+			ROCK,
+			Mat.Basalt
+		)
+	end
+	for _, s in { -1, 1 } do
+		local vv = s * 26
+		local a, b = B0 - 0.6, B0
+		span(4, a, b, 196, 322, vv - 3.5, vv + 3.5, "Lavafall", LAVA, Mat.Neon)
+		span(4, a - 0.3, a, 196, 322, vv - 1.2, vv + 1.2, "LavafallCore", LAVA_HOT, Mat.Neon)
+		local lip = span(4, a - 0.3, B0 + 6, 322, 322.5, vv - 3.5, vv + 3.5, "LavaLip", LAVA, Mat.Neon)
+		if s > 0 then
+			emitter(lip, {
+				Texture = SPARKLE,
+				Color = ColorSequence.new(LAVA_HOT, EMBER),
+				LightEmission = 1,
+				Size = seq(0.8, 0.1),
+				Transparency = seq(0, 1),
+				Lifetime = NumberRange.new(2, 3.5),
+				Speed = NumberRange.new(4, 8),
+				SpreadAngle = Vector2.new(60, 60),
+				Acceleration = Vector3.new(0, 4, 0),
+				Rate = 14,
+			})
+		end
+	end
+end
+
+-- Santuario 4 (sala del trono): stendardi di velluto dietro i trofei e sulla parete del portale, bracieri a muro e
+-- un lampadario di ferro con le candele sopra l'altare
+local function infernoShrine()
+	local s4 = Extreme.Sections[4]
+	local u0 = s4.length
+	local y = s4.floor
+	local ceil = y + 26
+	local function banner(s: number, u: number)
+		onWallAt(4, s, u - 3, u + 3, y + 3, y + 16, 0, 0.2, "Banner", VELVET, Mat.Fabric)
+		onWallAt(4, s, u - 1, u + 1, y + 11, y + 13, 0.2, 0.1, "BannerEmblem", GOLD, Mat.Foil)
+		local rodV = s * (WALL_IN - 0.3)
+		local p = runbar(4, u - 3.6, u + 3.6, y + 16.3, rodV, 0.6, "BannerRod", GOLD, Mat.Foil)
+		p.CastShadow = false
+	end
+	for k = 0, 2 do
+		banner(1, u0 + 12 + k * 16)
+	end
+	banner(-1, u0 + 8)
+	banner(-1, u0 + 62)
+	-- bracieri a muro (alti, fuori portata)
+	local function sconce(s: number, u: number)
+		onWallAt(4, s, u - 0.6, u + 0.6, y + 15, y + 16, 0, 1.4, "SconceArm", IRON, Mat.Metal)
+		local cv = s * (WALL_IN - 0.7)
+		column(4, u, cv, y + 16, y + 17, 1.4, "SconceBowl", IRON, Mat.Metal)
+		column(4, u, cv, y + 17, y + 17.25, 1, "SconceFlame", LAVA, Mat.Neon)
+	end
+	for _, u in { u0 + 4, u0 + 20, u0 + 36, u0 + 52, u0 + 66 } do
+		sconce(1, u)
+	end
+	for _, u in { u0 + 18, u0 + 28, u0 + 54 } do
+		sconce(-1, u)
+	end
+	-- lampadario sopra l'altare
+	local uc = u0 + s4.shrineLength / 2
+	local ring = ceil - 5
+	column(4, uc, 0, ring, ring + 0.6, 10, "ChandelierRing", IRON, Mat.Metal)
+	for k = 0, 2 do
+		local a = k / 3 * math.pi * 2
+		local cu, cv = uc + math.cos(a) * 3.6, math.sin(a) * 3.6
+		span(4, cu - 0.2, cu + 0.2, ring + 0.6, ceil, cv - 0.2, cv + 0.2, "ChandelierChain", IRON, Mat.DiamondPlate)
+	end
+	for k = 0, 5 do
+		local a = (k + 0.5) / 6 * math.pi * 2
+		local cu, cv = uc + math.cos(a) * 4.3, math.sin(a) * 4.3
+		column(4, cu, cv, ring + 0.6, ring + 1.8, 0.5, "Candle", BONE, Mat.SmoothPlastic)
+		column(4, cu, cv, ring + 1.8, ring + 2.3, 0.35, "CandleFlame", LAVA_HOT, Mat.Neon)
+	end
+end
+
 local function buildInferno(folder: Instance)
 	local model = Build.Model("Inferno", folder)
 	target = model
-	local _ = rng
-	local _f = fire
-	local _t = FIRE_TEX
+	readWalls()
+	infernoCliffs()
+	infernoGate()
+	infernoGantry()
+	infernoThrone()
+	infernoShrine()
 end
 
 function ExtremeDecorB.Build(folder: Instance)

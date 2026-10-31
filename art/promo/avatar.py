@@ -624,8 +624,8 @@ POSES = {
     "run_carry": {"Root": (8, 0, 0), "Waist": (0, 0, 0), "Neck": (-6, 0, 0),
                   "ShoulderR": (-172, 8, 0), "ShoulderL": (-168, -8, 0), "HipR": (-42, 0, 0), "HipL": (38, 0, 0)},
     # salto: gambe divaricate avanti/indietro, braccia in alto e in fuori
-    "leap": {"Root": (-6, 0, 0), "Waist": (0, 0, 0), "Neck": (-8, 0, 0),
-             "ShoulderR": (-150, 30, 0), "ShoulderL": (-160, -26, 0), "HipR": (-62, 0, 0), "HipL": (44, 0, 0)},
+    "leap": {"Root": (14, 0, 0), "Waist": (0, 0, 0), "Neck": (-10, 0, 0),
+             "ShoulderR": (-160, -32, 0), "ShoulderL": (-150, 30, 0), "HipR": (-72, 0, 0), "HipL": (52, 0, 0)},
     # corsa normale (braccia che oscillano)
     "run": {"Root": (10, 0, 0), "Neck": (-6, 0, 0), "ShoulderR": (50, 0, 0), "ShoulderL": (-60, 0, 0),
             "HipR": (-45, 0, 0), "HipL": (40, 0, 0)},

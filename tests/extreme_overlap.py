@@ -43,6 +43,7 @@ degli occhi e della telecamera) verso i punti del difetto, con le parti opache c
 """
 
 import argparse
+import copy
 import json
 import math
 import subprocess
@@ -466,7 +467,7 @@ class Viewer:
     """Punti di vista lungo il percorso: occhi e telecamera sopra ogni appoggio, e raggi verso i difetti
     con le parti opache (ferme) come ostacoli."""
 
-    CAMS = [(0, 4.5, 0), (10, 9, 0), (-8, 8, 0), (0, 9, 9), (0, 9, -9), (18, 13, 0)]
+    CAMS = [(0, 4.5, 0), (12, 9, 0), (0, 9, 9), (0, 9, -9)]
 
     def __init__(self, parts, terrain):
         self.parts = parts
@@ -495,8 +496,8 @@ class Viewer:
                     spots.append(p.pos + p.rot @ np.array([lx, hy, lz]))
         spots = np.array(spots)
         spots = spots[np.abs(spots[:, 2] - COURSE_Z) <= HALF_WIDTH + 1]
-        # un punto ogni 3 stud basta
-        key = np.round(spots / 3).astype(int)
+        # un punto ogni 5 stud basta
+        key = np.round(spots / 5).astype(int)
         _, keep = np.unique(key, axis=0, return_index=True)
         self.spots = spots[np.sort(keep)]
         cams = []
@@ -527,66 +528,74 @@ class Viewer:
     def terrain_height(self, x, z):
         return terrain_height(self.terrain, x, z)
 
-    def visible_from(self, points, exclude=(), max_dist=160.0):
-        """Quanti punti del percorso vedono almeno uno dei punti (e la distanza minima)."""
+    def _tables(self):
+        """Piani di tutti gli ostacoli impilati (per i raggi vettorizzati)."""
+        if hasattr(self, "_N"):
+            return
+        N, D, own = [], [], []
+        for k, p in enumerate(self.occ):
+            N.append(p.poly.normals)
+            D.append(p.poly.offsets)
+            own.append(np.full(len(p.poly.offsets), k))
+        self._N = np.concatenate(N)
+        self._D = np.concatenate(D)
+        self._own = np.concatenate(own)
+
+    def visible_from(self, points, exclude=(), max_dist=150.0, enough=8, chunk=64):
+        """Quanti punti del percorso vedono almeno uno dei punti (si ferma a 'enough') e la distanza
+        minima. Le telecamere si provano dalla piu' vicina."""
         points = np.atleast_2d(np.asarray(points, dtype=float))
         if len(points) == 0 or len(self.cams) == 0:
             return 0, math.inf
-        lo = points.min(axis=0) - max_dist
-        hi = points.max(axis=0) + max_dist
-        cm = np.all((self.cams >= lo) & (self.cams <= hi), axis=1)
-        cams = self.cams[cm]
-        owners = self.owner[cm]
-        if len(cams) == 0:
-            return 0, math.inf
-        seen_owner = set()
-        best = math.inf
-        excl = set(exclude)
-        for pt in points:
-            d = np.linalg.norm(cams - pt, axis=1)
-            sel = d <= max_dist
-            if not sel.any():
-                continue
-            o = cams[sel]
-            ow = owners[sel]
-            dd = d[sel]
-            vis = self._clear(o, pt, excl)
+        if len(points) > 10:
+            points = points[np.linspace(0, len(points) - 1, 10).astype(int)]
+        self._tables()
+        c = points.mean(axis=0)
+        d = np.linalg.norm(self.cams - c, axis=1)
+        order = np.argsort(d)
+        order = order[d[order] <= max_dist]
+        excl_occ = np.array([p.i in set(exclude) for p in self.occ])
+        seen, best = set(), math.inf
+        for a in range(0, len(order), chunk):
+            idx = order[a:a + chunk]
+            cams = self.cams[idx]
+            R = len(cams) * len(points)
+            org = np.repeat(cams, len(points), axis=0)
+            tgt = np.tile(points, (len(cams), 1))
+            vis = self._clear_many(org, tgt, excl_occ).reshape(len(cams), len(points)).any(axis=1)
             if vis.any():
-                seen_owner.update(ow[vis].tolist())
-                best = min(best, dd[vis].min())
-        return len(seen_owner), best
+                seen.update(self.owner[idx[vis]].tolist())
+                best = min(best, float(np.linalg.norm(cams[vis] - c, axis=1).min()))
+                if len(seen) >= enough:
+                    break
+            del R
+        return len(seen), best
 
-    def _clear(self, origins, target, excl):
-        """Raggi liberi dalle origini al bersaglio (fermandosi 0.03 stud prima)."""
-        seg = target - origins
+    def _clear_many(self, org, tgt, excl_occ):
+        seg = tgt - org
         ln = np.linalg.norm(seg, axis=1)
         tmax = 1 - 0.03 / np.maximum(ln, 1e-6)
-        lo = np.minimum(origins.min(axis=0), target)
-        hi = np.maximum(origins.max(axis=0), target)
-        m = np.all((self.occ_lo <= hi) & (self.occ_hi >= lo), axis=1)
-        clear = np.ones(len(origins), dtype=bool)
-        for k in np.where(m)[0]:
-            p = self.occ[k]
-            if p.i in excl:
-                continue
-            n, d = p.poly.normals, p.poly.offsets
-            num = d[None, :] - origins @ n.T
-            den = seg @ n.T
+        lo = np.minimum(org.min(axis=0), tgt.min(axis=0))
+        hi = np.maximum(org.max(axis=0), tgt.max(axis=0))
+        cand = np.all((self.occ_lo <= hi) & (self.occ_hi >= lo), axis=1) & ~excl_occ
+        clear = np.ones(len(org), dtype=bool)
+        if cand.any():
+            sel = cand[self._own]
+            N, D, own = self._N[sel], self._D[sel], self._own[sel]
+            starts = np.concatenate([[0], np.where(np.diff(own) != 0)[0] + 1])
+            num = D[None, :] - org @ N.T
+            den = seg @ N.T
             with np.errstate(divide="ignore", invalid="ignore"):
                 t = num / den
-            enter = np.where(den < -1e-12, t, -np.inf).max(axis=1)
-            leave = np.where(den > 1e-12, t, np.inf).min(axis=1)
-            par_out = np.any((np.abs(den) <= 1e-12) & (num < 0), axis=1)
-            t0 = np.maximum(enter, 0)
-            t1 = np.minimum(leave, tmax)
-            hit = (t0 <= t1) & ~par_out
-            clear &= ~hit
-            if not clear.any():
-                break
+            enter = np.maximum.reduceat(np.where(den < -1e-12, t, -np.inf), starts, axis=1)
+            leave = np.minimum.reduceat(np.where(den > 1e-12, t, np.inf), starts, axis=1)
+            par = np.logical_or.reduceat((np.abs(den) <= 1e-12) & (num < 0), starts, axis=1)
+            hit = (np.maximum(enter, 0) <= np.minimum(leave, tmax[:, None])) & ~par
+            clear = ~hit.any(axis=1)
         if self.terrain is not None and clear.any():
             # il terreno (dove c'e') nasconde cio' che ha sotto
             for f in (0.15, 0.3, 0.5, 0.7, 0.85, 0.97):
-                q = origins + seg * f
+                q = org + seg * f
                 h = terrain_height(self.terrain, q[:, 0], q[:, 2])
                 clear &= ~(q[:, 1] < h - 0.5)
         return clear
@@ -792,9 +801,9 @@ def same_look(A, B, tol=8):
 
 
 def is_layer(P):
-    """Strato sottile appoggiato (vernice, muschio, schiuma, strisce): spesso al massimo 0.25 stud."""
+    """Strato sottile appoggiato (vernice, muschio, schiuma, strisce): spesso al massimo 0.5 stud."""
     s = np.sort(P.size)
-    return s[0] <= 0.25 and s[1] >= 1.0
+    return s[0] <= 0.5 and s[1] >= 1.0
 
 
 def is_rod(P):
@@ -803,74 +812,145 @@ def is_rod(P):
     return s[1] <= 0.6 and s[2] >= 4 * s[1]
 
 
-def wraps(g, X, a):
-    """La parte Y avvolge la sezione di X (attraversata lungo la normale della faccia a di Y): le facce di X
-    perpendicolari a quella direzione sono tutte attraversate da Y (anelli, collari, piastre forate)."""
-    Y = g.B if X is g.A else g.A
-    win = g.winA if X is g.A else g.winB
-    n = Y.poly.normals[a] if a >= 0 else None
-    if n is None:
+def exit_components(X, Y):
+    """Pezzi di X fuori da Y: X meno Y e' l'unione dei pezzi convessi X ∩ {oltre la faccia j di Y}; due
+    pezzi che si toccano sono lo stesso pezzo. Restituisce le componenti: [(facce di Y, sporgenza, punti)].
+    Una sola componente = X piantata/appoggiata in Y; due o piu' = X spunta in punti separati (passa da
+    parte a parte, o esce dietro)."""
+    pieces = {}
+    for j in range(len(Y.poly.normals)):
+        n, d = Y.poly.normals[j], Y.poly.offsets[j]
+        part = clip_faces(X.poly.faces, -n, -d - CONTACT)
+        if part and volume(part) > 1e-4:
+            pts = np.concatenate(part)
+            pieces[j] = (part, float((pts @ n - d).max()), pts)
+    keys = list(pieces)
+    parent = {k: k for k in keys}
+
+    def root(k):
+        while parent[k] != k:
+            parent[k] = parent[parent[k]]
+            k = parent[k]
+        return k
+
+    for a in range(len(keys)):
+        for b in range(a + 1, len(keys)):
+            ja, jb = keys[a], keys[b]
+            if root(ja) == root(jb):
+                continue
+            both = clip_faces(pieces[ja][0], -Y.poly.normals[jb], -Y.poly.offsets[jb] - CONTACT)
+            if both and volume(both) > 1e-5:
+                parent[root(ja)] = root(jb)
+    comps = {}
+    for k in keys:
+        comps.setdefault(root(k), []).append(k)
+    out = []
+    for ks in comps.values():
+        depth = max(pieces[k][1] for k in ks)
+        pts = np.concatenate([pieces[k][2] for k in ks])
+        out.append((ks, depth, pts))
+    return out
+
+
+def hugs(X, Y, comps):
+    """Y e' una fascia/anello attorno a X (collare di una colonna, cornice): sottile lungo la direzione in
+    cui X la attraversa e poco piu' larga di X tutt'attorno."""
+    j = comps[0][0][0]
+    n = Y.poly.normals[j]
+    proj = Y.poly.verts @ n
+    if proj.max() - proj.min() > 1.6:
         return False
-    need = []
-    for j in range(len(X.poly.normals)):
-        if abs(X.poly.normals[j] @ n) < 0.2:
-            need.append(group_of(X, j))
-    need = set(need)
-    return bool(need) and need <= set(win)
+    u, w = plane_basis(n)
+    for axis in (u, w, (u + w) / math.sqrt(2), (u - w) / math.sqrt(2)):
+        xa, ya = X.poly.verts @ axis, Y.poly.verts @ axis
+        if ya.min() > xa.min() + 0.05 or ya.max() < xa.max() - 0.05:
+            return False
+        if ya.min() < xa.min() - 1.2 or ya.max() > xa.max() + 1.2:
+            return False
+    return True
+
+
+def inner_points(faces):
+    """Punti dentro un poliedro (centro, centri delle facce e punti verso i vertici): i soli vertici di una
+    sovrapposizione lunga e sottile possono stare tutti dentro qualcos'altro."""
+    verts = np.concatenate(faces)
+    c = verts.mean(axis=0)
+    fc = np.array([f.mean(axis=0) for f in faces])
+    out = [c]
+    for q in np.concatenate([verts, fc]):
+        out.extend([c + (q - c) * 0.4, c + (q - c) * 0.85])
+    return out
+
+
+def window_points_for(g, which, faces):
+    """Punti sulle cuciture delle finestre di quelle facce (appena fuori dalla parte attraversata)."""
+    X = g.B if which == "B" else g.A
+    win = g.winB if which == "B" else g.winA
+    out = []
+    for polys in win.values():
+        for j, f in polys:
+            if j in faces:
+                n = X.poly.normals[j]
+                c = f.mean(axis=0)
+                out.append(c + n * 0.05)
+                out.extend(v + (c - v) * 0.1 + n * 0.05 for v in f)
+                out.extend(v + (c - v) * 0.5 + n * 0.05 for v in f)
+    return out
 
 
 def classify_static(g):
-    """(codice, testo) di un difetto fra due parti ferme, oppure (None, motivo) se e' voluto/nascosto."""
+    """(codice, testo, gruppi di punti) di un difetto fra due parti ferme, oppure (None, motivo, None) se e'
+    voluto o nascosto. Il difetto conta solo se si vede ogni gruppo di punti (es. tutti e due i lati di un
+    palo che passa da parte a parte)."""
     A, B = g.A, g.B
     if A.piece and A.piece == B.piece:
-        return None, "stesso elemento"
+        return None, "stesso elemento", None
     if g.fa > 0.995 and B.opaque:
-        return None, "dentro un'altra parte"
+        return None, "dentro un'altra parte", None
     if g.fb > 0.995 and A.opaque:
-        return None, "dentro un'altra parte"
+        return None, "dentro un'altra parte", None
     # cartelli: la faccia col testo tagliata o coperta
-    for S, O, win in ((A, B, g.winA), (B, A, g.winB)):
+    for S, O, win, which in ((A, B, g.winA, "A"), (B, A, g.winB, "B")):
         if S.is_sign and O.visible:
             f = S.front_face()
             if f in win:
-                area = sum(poly_area(p, S.poly.normals[j]) for j, p in win[f])
-                return "SG", f"{S.name} ha la faccia col testo tagliata da {O.name} ({area:.2f} stud²)"
+                area = sum(poly_area(q, S.poly.normals[j]) for j, q in win[f])
+                return ("SG", f"{S.name} ha la faccia col testo tagliata da {O.name} ({area:.2f} stud²)",
+                        [(window_points_for(g, which, {f}), {O.i})])
     a_see, b_see = A.tv >= SEE_THROUGH, B.tv >= SEE_THROUGH
     if a_see and b_see:
-        return "TR", f"due parti trasparenti compenetrate ({g.vol:.2f} stud³): si vedono una dentro l'altra"
+        if is_layer(A) and is_layer(B):
+            return None, "strati sottili sovrapposti", None
+        return ("TR", f"due parti trasparenti compenetrate ({g.vol:.2f} stud³): si vede una dentro l'altra",
+                [(inner_points(g.I), {A.i, B.i})])
     if A.is_liquid or B.is_liquid:
         L, O = (A, B) if A.is_liquid else (B, A)
         if O.tv < SEE_THROUGH:
-            return None, "esce dal liquido"
-    if a_see or b_see:
-        L, O = (A, B) if a_see else (B, A)
-        winO = g.winB if O is B else g.winA  # facce di O attraversate da L
-        if through(O, winO):
-            return "TR", f"{L.name} (trasparente) attraversa {O.name} da parte a parte"
-        return None, "parte trasparente piantata in una opaca"
+            return None, "esce dal liquido", None
     if same_look(A, B):
-        return None, "stessa forma (stesso materiale e colore)"
+        return None, "stessa forma (stesso materiale e colore)", None
     if A.wall and B.wall:
-        return None, "rocce delle sponde"
+        return None, "rocce delle sponde", None
     if is_layer(A) or is_layer(B):
-        return None, "strato sottile appoggiato"
-    for X, Y, winY in ((A, B, g.winB), (B, A, g.winA)):
-        thr = through(Y, winY)
-        if not thr:
+        return None, "strato sottile appoggiato", None
+    for X, Y, which in ((A, B, "B"), (B, A, "A")):
+        comps = exit_components(X, Y)
+        if len(comps) < 2:
             continue
         if is_rod(X):
-            return None, "corda/asta che passa nei paletti"
-        which = "B" if Y is B else "A"
-        for a, b in thr:
-            da = g.depth(which, a)[0]
-            db = g.depth(which, b)[0] if b != a else da
-            thin = min(da, db)
-            if thin < SLIVER:
-                return "PK", f"{X.name} esce di {thin:.2f} stud dall'altro lato di {Y.name}"
-            if wraps(g, X, a):
-                continue  # anello/collare/piastra attorno a X
-            return "XP", f"{X.name} attraversa {Y.name} da parte a parte (esce di {da:.1f} e {db:.1f} stud)"
-    return None, "piantata o appoggiata"
+            return None, "corda/asta che passa nei paletti", None
+        if hugs(X, Y, comps):
+            return None, "fascia/anello attorno a una colonna", None
+        comps.sort(key=lambda c: c[1])
+        groups = [(window_points_for(g, which, set(c[0])) or list(c[2]), {X.i}) for c in comps]
+        see = "(trasparente) " if X.tv >= SEE_THROUGH else ""
+        if comps[0][1] < SLIVER:
+            return ("PK", f"{X.name} {see}spunta di {comps[0][1]:.2f} stud dall'altro lato di {Y.name}",
+                    [groups[0]])
+        code = "TR" if see else "XP"
+        return (code, f"{X.name} {see}passa da parte a parte in {Y.name} (spunta di "
+                + " e ".join(f"{c[1]:.1f}" for c in comps) + " stud)", groups)
+    return None, "piantata o appoggiata", None
 
 
 def zfight_kind(A, B, gap):
@@ -918,15 +998,14 @@ def hidden_points(points, parts_near, exclude):
     return hid
 
 
-class Posed:
-    """Una parte mobile in una delle sue pose (per le stesse funzioni delle parti ferme)."""
-
-    def __init__(self, P, k):
-        pos, rot, tr = P.poses[k]
-        self.__dict__.update(P.__dict__)
-        self.pos, self.rot, self.tv, self.t = pos, rot, tr, tr
-        self.poly = make_poly(P.local, pos, rot)
-        self.pose = k
+def posed(P, k):
+    """Copia di una parte mobile nella sua posa k (per le stesse funzioni delle parti ferme)."""
+    Q = copy.copy(P)
+    Q.pos, Q.rot, tr = P.poses[k]
+    Q.tv = Q.t = tr
+    Q.poly = make_poly(P.local, Q.pos, Q.rot)
+    Q.pose = k
+    return Q
 
 
 def static_pass(parts, viewer, findings, ignored):
@@ -948,6 +1027,7 @@ def static_pass(parts, viewer, findings, ignored):
             what = "facce complanari" if kind == "ZF" else f"facce quasi complanari ({gap:.3f} stud)"
             f = Finding("ZF", f"{what} sovrapposte per {area:.2f} stud² (largo {width:.2f}): {A.name} / {B.name}",
                         A, B, c, exposed, area, extra="near" if kind == "ZF~" else "")
+            f.groups = [(exposed, set())]
             if len(exposed) == 0:
                 f.sev = "."
                 f.extra = "coperte da altre parti"
@@ -956,14 +1036,14 @@ def static_pass(parts, viewer, findings, ignored):
         g = pair_geometry(A, B)
         if not g:
             continue
-        code, why = classify_static(g)
+        code, why, groups = classify_static(g)
         if code is None:
             ignored[why] = ignored.get(why, 0) + 1
             continue
-        pts = g.window_points("A") + g.window_points("B")
-        if code == "TR" or not pts:
-            pts = list(np.concatenate(g.I))
-        findings.append(Finding(code, why, A, B, g.center, pts, g.vol))
+        groups = [(np.atleast_2d(np.asarray(q, dtype=float)), ex) for q, ex in groups if len(q)]
+        f = Finding(code, why, A, B, g.center, np.concatenate([q for q, _ in groups]) if groups else [], g.vol)
+        f.groups = groups
+        findings.append(f)
 
 
 def mover_pass(parts, viewer, findings, ignored):
@@ -977,7 +1057,7 @@ def mover_pass(parts, viewer, findings, ignored):
         for k in range(len(M.poses)):
             if M.poses[k][2] >= 0.98:
                 continue
-            P = Posed(M, k)
+            P = posed(M, k)
             cand = np.where(np.all((lo <= P.poly.hi) & (hi >= P.poly.lo), axis=1))[0]
             for c in cand:
                 S = static[c]
@@ -994,23 +1074,43 @@ def mover_pass(parts, viewer, findings, ignored):
                     worst[S.i] = (vol, k, I, (w[3] if w else 0) + 1)
                 else:
                     worst[S.i] = (w[0], w[1], w[2], w[3] + 1)
+        vertical = all(abs(q[0][0] - M.poses[0][0][0]) < 0.3 and abs(q[0][2] - M.poses[0][0][2]) < 0.3
+                       and np.abs(q[1] - M.poses[0][1]).max() < 1e-3 for q in M.poses)
         for si, (vol, k, I, count) in worst.items():
             S = parts[si]
             pv = np.array(M.e.get("pv", M.pos), dtype=float)
+
+            def ok(why):
+                ignored[why] = ignored.get(why, 0) + 1
+
             if S.is_liquid:
-                ignored["mobile nel liquido"] = ignored.get("mobile nel liquido", 0) + 1
+                ok("mobile nel liquido")
+                continue
+            if is_layer(S):
+                ok("mobile che passa in uno strato sottile (schiuma, vernice)")
                 continue
             if M.kind in ("Swing", "Sweeper", "Spinner") and np.all(
                     S.poly.normals @ pv - S.poly.offsets <= 0.6):
-                ignored["perno/mozzo dell'elemento"] = ignored.get("perno/mozzo dell'elemento", 0) + 1
+                ok("perno/mozzo dell'elemento")
                 continue
-            P = Posed(M, k)
+            P = posed(M, k)
+            if M.kind == "Spinner":
+                # gira su se' stesso: il volume spazzato e' la parte stessa, valgono le regole delle parti ferme
+                code, why, _ = classify_static(PairGeom(P, S, I))
+                if code is None:
+                    ok(why)
+                    continue
+            if vertical:
+                comps = exit_components(P, S)
+                if len(comps) == 1 and all(S.poly.normals[j][1] > 0.7 for j in comps[0][0]):
+                    ok("sale e scende dal fondo (piantato dall'alto)")
+                    continue
             g = PairGeom(P, S, I)
             frac = k / len(M.poses)
             tr = M.poses[k][2]
             text = (f"{M.name} ({M.kind}{'/' + M.role if M.role else ''}) entra in {S.name} per {vol:.2f} stud³ "
                     f"in {count} pose su {len(M.poses)} (la peggiore a {frac:.0%} del periodo)")
-            pts = g.window_points("A") + g.window_points("B") or list(np.concatenate(I))
+            pts = g.window_points("A") + g.window_points("B") + inner_points(I)
             f = Finding("MV", text, P, S, g.center, pts, vol)
             if tr >= 0.6:
                 f.extra = f"trasparenza {tr:g} in quella posa"
@@ -1077,8 +1177,15 @@ SEVERITY_RULES = {
 def grade(f, viewer):
     if f.sev == "." and f.extra:
         return
-    excl = {p.i for p in (f.A, f.B) if p is not None}
-    f.seen, f.dist = viewer.visible_from(f.points, exclude=excl) if len(f.points) else (0, math.inf)
+    both = {p.i for p in (f.A, f.B) if p is not None}
+    groups = getattr(f, "groups", None) or [(f.points, both)]
+    f.seen, f.dist = math.inf, math.inf
+    for q, excl in groups:
+        seen, dist = viewer.visible_from(q, exclude=excl) if len(q) else (0, math.inf)
+        f.seen = min(f.seen, seen)
+        f.dist = min(f.dist, dist) if seen else f.dist
+    if f.seen == math.inf:
+        f.seen = 0
     if f.seen == 0:
         f.sev = "."
         f.extra = f.extra or "non si vede dal percorso"

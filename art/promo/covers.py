@@ -32,7 +32,7 @@ from pathlib import Path
 
 import bpy
 import numpy as np
-from mathutils import Vector
+from mathutils import Vector, noise
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import avatar as A  # noqa: E402
@@ -403,23 +403,24 @@ def scene_steal(w: int, samples: int, tag: str):
     # --- Bacon Hair: corre verso la camera (un po' verso sinistra) con l'uovo Ultra sopra la testa
     rig = A.build("Bacon", shirt=env("SHIRT", "#22d046"))
     A.pose(rig, CARRY)
-    ax, ay = env("AV_XY", (0.0, 0.0))
+    ax, ay = env("AV_XY", (-0.5, -2.5))
     place_avatar(rig, ax, ay, gz(ax, ay), env("AV_YAW", -26.0), air=env("AIR", 0.3))
-    egg_root, egg_objs, egg_c = carry_egg(rig, env("EGG", "EggUltra"), width=env("EGG_W", 1.95), glow=env("EGG_E", 2.2),
-                                          sink=env("EGG_SINK", -0.12))
+    egg_root, egg_objs, egg_c = carry_egg(rig, env("EGG", "EggUltra"), width=env("EGG_W", 2.05), glow=env("EGG_E", 4.0),
+                                          sink=env("EGG_SINK", -0.4))
 
     # --- Titan Rex gigante che insegue (dietro, a destra), fauci spalancate verso il Bacon Hair
-    rs = env("REX_S", 3.2)
-    rex, rex_objs = pet("TitanRex", (0, 0, 0), env("REX_YAW", -30.0), rs, glow=env("REX_E", 1.8))
-    rex.rotation_euler.x = math.radians(env("REX_PITCH", 14.0))  # si sbilancia in avanti: carica
-    # il muso (davanti, in alto nel modello) va dietro e sopra il Bacon Hair; poi i piedi sulla neve
-    snout = (0.0, -2.96, 2.6)
-    place_by(rex, snout, env("REX_SNOUT", (3.0, 5.0, 8.0)))
+    rs = env("REX_S", 5.4)
+    rex, rex_objs = pet("TitanRex", (0, 0, 0), env("REX_YAW", -42.0), rs, glow=env("REX_E", 1.8))
+    rex.rotation_euler.x = math.radians(env("REX_PITCH", 12.0))  # si sbilancia in avanti: carica
+    # la bocca (centro delle fauci nel modello) va dietro il Bacon Hair, poi le zampe sulla neve
+    mouth = (0.08, -2.4, 2.2)
+    mx, my = env("REX_MOUTH", (2.4, 5.5))
+    place_by(rex, mouth, (mx, my, 0.0))
     rx, ry = rex.location.x, rex.location.y
-    if env("REX_GROUND", 1.0) > 0:
-        r_lo, _ = S.bounds(rex_objs)
-        rex.location.z += gz(rx, ry) - float(r_lo[2]) - 0.08 * rs
+    r_lo, _ = S.bounds(rex_objs)
+    rex.location.z += gz(rx, ry) - float(r_lo[2]) - env("REX_SINK", 0.6)
     bpy.context.view_layer.update()
+    snout = (0.08, -2.9, 2.7)
 
     # --- neve sollevata dai passi (tanti piccoli grumi) e dalle zampe del gigante
     bl = A.world_bounds(rig)
@@ -456,25 +457,453 @@ def scene_steal(w: int, samples: int, tag: str):
                  lin("#fff3e0")[:3])
     S.area_light("RimRex", tuple(rc + Vector((-6, 16, 14))), tuple(rc), env("RIMREX", 30000.0), 14.0, lin("#eef6ff")[:3])
     S.area_light("FillRex", tuple(rc + Vector((-8, -24, 6))), tuple(rc), env("FILLREX", 9000.0), 18.0, lin("#ffe6cc")[:3])
+    head_w = rig.joints["HeadCenter"].matrix_world.translation
+    S.area_light("FaceFill", tuple(head_w + Vector((-1.5, -5.0, 0.6))), tuple(head_w), env("FACE", 160.0), 1.5,
+                 lin("#fff4e6")[:3])
+    S.area_light("EggKey", tuple(egg_c + Vector((-2.5, -5.0, 2.0))), tuple(egg_c), env("EGGKEY", 260.0), 2.0,
+                 lin("#ffffff")[:3])
     S.point_light("EggGlow", tuple(egg_c), env("EGGLIGHT", 300.0), 0.6, lin("#ff7ad9")[:3])
     S.point_light("EggGlow2", tuple(egg_c + Vector((0, -1.6, -0.6))), env("EGGLIGHT", 300.0) * 0.6, 0.4, lin("#ffd36b")[:3])
 
     # --- camera davanti al Bacon Hair, all'altezza del petto, leggermente dal basso
-    cam_loc = env("CAM", (4.5, -14.0, 3.6))
-    target = env("TARGET", (4.6, 4.0, 6.4))
-    S.camera(cam_loc, target, lens=env("LENS", 32.0), dof_target=tuple(ac) if not PREVIEW else None,
-             fstop=env("FSTOP", 6.0))
+    cam_loc = env("CAM", (-2.0, -14.0, 1.7))
+    target = env("TARGET", (0.4, 3.0, 5.9))
+    S.camera(cam_loc, target, lens=env("LENS", 25.0), dof_target=tuple(ac) if not PREVIEW else None,
+             fstop=env("FSTOP", 8.0))
     flakes("Flakes", cam_loc, target, env("FLAKES", 140), 4.0, 40.0, 0.02, 0.05, seed=4, glow=0.3)
     head = rig.joints["HeadCenter"].matrix_world.translation
     feet = rig.parts["ShoeR"].matrix_world @ Vector((0, 0, -1.82))
     e_lo, e_hi = S.bounds(egg_objs)
-    report(feet=feet, head=head, egg_top=(egg_c.x, egg_c.y, e_hi[2]), snout=model_pt(rex, snout),
-           rex_crown=model_pt(rex, (0, -1.6, 3.72)), rex_tail=model_pt(rex, (0, 1.93, 1.5)),
-           rex_foot=model_pt(rex, (0.8, -0.5, 0.0)))
+    report(feet=feet, head=head, egg_top=(egg_c.x, egg_c.y, e_hi[2]), mouth=model_pt(rex, mouth),
+           rex_eye=model_pt(rex, (0.25, -2.1, 3.1)), rex_crown=model_pt(rex, (0, -1.6, 3.6)),
+           rex_tail=model_pt(rex, (0.3, 1.9, 2.6)), rex_foot=model_pt(rex, (0.8, -0.5, 0.0)))
     return render_all("steal", tag, w, bloom=0.55)
 
 
-SCENES = {"steal": scene_steal}
+# =================================================================================== scena 2: giganti al tramonto
+def rounded_profile(pts, r, n=6):
+    """Profilo (rho, z) con gli spigoli interni raccordati da archi di raggio r (per le rivoluzioni lisce)."""
+    pts = [np.array(p, float) for p in pts]
+    out = [pts[0]]
+    for i in range(1, len(pts) - 1):
+        a, b, c = pts[i - 1], pts[i], pts[i + 1]
+        u = (a - b) / np.linalg.norm(a - b)
+        v = (c - b) / np.linalg.norm(c - b)
+        rr = min(r, np.linalg.norm(a - b) * 0.45, np.linalg.norm(c - b) * 0.45)
+        p0, p1 = b + u * rr, b + v * rr
+        for t in np.linspace(0, 1, n):
+            # Bezier quadratica con controllo nello spigolo (approssima l'arco)
+            out.append((1 - t) ** 2 * p0 + 2 * (1 - t) * t * b + t * t * p1)
+    out.append(pts[-1])
+    return np.array(out)
+
+
+def throne(name, center, radius=4.0, height=1.6, top="#6d2bd9", rim="#ffc83d", glow="#d86bff"):
+    """Trono dei giganti: piedistallo rotondo di pietra a gradini, fascia d'oro, piano colorato e anello luminoso."""
+    cx, cy, cz = center
+    stone = S.rock_snow_material(name + "Stone", "#5a6380", "#e9eefc", "#9a7bd0", 0.0, 1e4, snow_from=0.9)
+    prof = rounded_profile([(0, 0), (radius + 0.5, 0), (radius + 0.5, height * 0.35), (radius, height * 0.42),
+                            (radius, height), (0, height)], 0.12)
+    base = A.revolve(name, prof, 96, stone, center=(cx, cy, cz))
+    gold, nt, out = S.new_material(name + "Gold")
+    b = nt.nodes.new("ShaderNodeBsdfPrincipled")
+    b.inputs["Base Color"].default_value = lin(rim)
+    b.inputs["Metallic"].default_value = 1.0
+    b.inputs["Roughness"].default_value = 0.22
+    nt.links.new(b.outputs[0], out.inputs["Surface"])
+    band = rounded_profile([(radius - 0.05, height * 0.62), (radius + 0.16, height * 0.62), (radius + 0.16, height * 0.86),
+                            (radius - 0.05, height * 0.86)], 0.05)
+    A.revolve(name + "Band", band, 96, gold, center=(cx, cy, cz))
+    felt = S.felt_material(name + "Top", top)
+    topp = rounded_profile([(0, height - 0.02), (radius - 0.25, height - 0.02), (radius - 0.25, height + 0.12),
+                            (0, height + 0.12)], 0.06)
+    A.revolve(name + "TopFelt", topp, 96, felt, center=(cx, cy, cz))
+    ring = rounded_profile([(radius - 0.22, height + 0.02), (radius - 0.04, height + 0.02), (radius - 0.04, height + 0.16),
+                            (radius - 0.22, height + 0.16)], 0.04)
+    A.revolve(name + "Ring", ring, 96, emission(name + "RingM", glow, 6.0), center=(cx, cy, cz))
+    return base, cz + height + 0.12
+
+
+def scene_giants(w: int, samples: int, tag: str):
+    S.reset()
+    # Standard (non AgX): i colori saturi del tramonto e delle fiamme restano accesi invece di sbiadire
+    setup(w, samples, vt="Standard", look="None", exposure=-0.4)
+
+    def ground(gx, gy):
+        r = np.hypot(gx * 0.8, gy - 6)
+        z = -0.012 * np.clip(r - 16, 0, None) ** 2
+        z += 0.3 * S.fbm(gx, gy, 0.08, 3, 7) + 0.06 * S.fbm(gx, gy, 0.9, 2, 3)
+        return z
+
+    def gz(x, y):
+        return float(ground(np.array([[x]]), np.array([[y]]))[0, 0])
+
+    snow = S.grid_object("Snow", -60, 60, -30, 70, 260, 220, ground)
+    snow.data.materials.append(S.snow_material("Snow", tint=(226, 220, 246), fog=(lin("#ff9d8a"), 0.003, 40.0)))
+
+    # --- trono al centro con il Penta Drago
+    tx, ty = env("THRONE_XY", (0.0, 9.0))
+    _, top_z = throne("Throne", (tx, ty, gz(tx, ty) - 0.3), radius=env("THRONE_R", 4.6), height=env("THRONE_H", 2.2))
+    ds = env("DRAGON_S", 2.5)
+    dragon, d_objs = pet("PentaDragon", (tx, ty + 0.3, top_z - 0.05), env("DRAGON_YAW", 0.0), ds, glow=env("DRAGON_E", 2.2))
+
+    # --- altri giganti attorno (sinistra -> destra nel fotogramma)
+    cast = [
+        ("InfernoKomodo", env("KOMODO", (-14.5, 1.5, 40.0)), env("KOMODO_S", 2.5), 2.0),
+        ("Cerberus", env("CERB", (-8.6, 6.5, 16.0)), env("CERB_S", 2.8), 1.6),
+        ("ThunderGriffin", env("GRIF", (8.8, 7.0, -14.0)), env("GRIF_S", 2.6), 2.0),
+        ("FrostWyvern", env("WYV", (14.5, 2.5, -32.0)), env("WYV_S", 2.4), 2.0),
+    ]
+    giants = {"PentaDragon": d_objs}
+    for name, (x, y, rot), s_, g in cast:
+        root, objs = pet(name, (x, y, 0), rot, s_, glow=g)
+        lo, _ = S.bounds(objs)
+        root.location.z = gz(x, y) - float(lo[2]) - 0.15
+        giants[name] = objs
+    bpy.context.view_layer.update()
+
+    # --- la Balena Cosmica vola nel cielo (senza la sua nuvoletta)
+    wx, wy, wz = env("WHALE", (15.0, 34.0, 16.5))
+    whale, w_objs = pet("CosmicWhale", (wx, wy, wz), env("WHALE_YAW", -78.0), env("WHALE_S", 4.0), glow=2.4)
+    for o in w_objs:
+        if o.name.split(".")[0] == "Cloud":
+            o.hide_render = True
+    whale.rotation_euler.x = math.radians(env("WHALE_PITCH", 0.0))
+    whale.rotation_euler.y = math.radians(env("WHALE_ROLL", 0.0))
+
+    # --- uova luminose sulla neve, davanti
+    eggs = []
+    for i, (name, x, y, rot, s_) in enumerate((("EggLegendary", -5.6, -5.5, 15, 0.95), ("EggUltra", 5.6, -6.0, -20, 0.8))):
+        root, objs = pet(name, (x, y, 0), rot, s_, kind="egg", glow=2.6, prefix=f"E{i}_")
+        root.location.z = gz(x, y) - 0.12
+        eggs.append(objs)
+    bpy.context.view_layer.update()
+
+    # --- cielo del tramonto: oro all'orizzonte, rosa, viola, indaco in alto; il sole basso dietro i giganti
+    sun_dir = Vector(env("SUN", (0.32, 1.0, 0.1))).normalized()
+    sky_gradient([(0.0, lin("#ffd36e")), (0.05, lin("#ff9d5c")), (0.13, lin("#ff6a8e")), (0.3, lin("#c04fd8")),
+                  (0.55, lin("#6a3fd0")), (1.0, lin("#33289a"))], light_color=lin("#b49cff"),
+                 light_strength=env("AMB", 0.35), sun_dir=tuple(sun_dir), sun_size=0.0005, sun_strength=20.0,
+                 halo=1.2, halo_color="#ffb070", stars=env("STARS", 0.0))
+    fogc = "#ff9d8a"
+    m1 = S.rock_snow_material("Mnt1", "#5a3f86", "#ffd1dc", fogc, 0.0045, 30, snow_from=0.5)
+    m2 = S.rock_snow_material("Mnt2", "#5a3f86", "#ffc6d6", fogc, 0.0065, 30, snow_from=0.45)
+    S.mountain_layer("Far1", 120, 60, 280, [(-110, 150, 30, 0.55, 0.5), (-45, 160, 40, 0.5, 0.5), (50, 145, 36, 0.55, 0.5),
+                                           (120, 156, 28, 0.5, 0.5)], m1, nx=200, ny=50, seed=41, rough=5.0, z_off=env("FARZ", -36.0))
+    S.mountain_layer("Far2", 240, 80, 460, [(-180, 280, 46, 0.45, 0.4), (-70, 300, 56, 0.42, 0.4), (70, 285, 50, 0.45, 0.4),
+                                           (190, 300, 44, 0.42, 0.4)], m2, nx=220, ny=50, seed=43, rough=6.0, z_off=env("FARZ", -36.0) - 6)
+    cloud_sea(env("ZCLOUD", -30.0), "#ff9d8a", color=(255, 200, 196), glow=0.45, density=0.0011)
+    # nuvole del tramonto (rosa sopra, viola sotto)
+    cmat = S.cloud_material("Puffy", (255, 186, 196), "#ff9d8a", 0.0008, 80.0, glow=0.55)
+    tag_glow(cmat, False)
+    for i, (c, s_) in enumerate((((-95, 190, 38), 13), ((-40, 230, 50), 10), ((60, 260, 64), 12), ((-130, 260, 70), 9))):
+        puffy_cloud(f"Cumulus{i}", c, s_, cmat, seed=10 + i)
+
+    # --- luci: sole basso di controluce (contorni caldi), riempimento freddo da davanti, luci delle uova
+    S.sun_light("Sun", tuple(sun_dir), env("SUNL", 5.0), lin("#ffa65c")[:3], angle=2.0)
+    for name, objs in giants.items():
+        lo, hi = S.bounds(objs)
+        c = Vector(((lo + hi) / 2).tolist())
+        size = float(hi[2] - lo[2])
+        # controluce caldo da dietro a destra (come il sole) e da dietro a sinistra (piu' rosa)
+        S.area_light(f"Rim{name}", tuple(c + Vector((1.0 * size, 1.5 * size, 0.8 * size))), tuple(c),
+                     env("RIM", 300.0) * size ** 2, 0.5 * size, lin("#ffb066")[:3])
+        S.area_light(f"Rim2{name}", tuple(c + Vector((-1.2 * size, 1.3 * size, 0.7 * size))), tuple(c),
+                     env("RIM", 300.0) * 0.6 * size ** 2, 0.5 * size, lin("#ff7fb0")[:3])
+        # luce principale calda da davanti a sinistra
+        S.area_light(f"Key{name}", tuple(c + Vector((-1.3 * size, -1.8 * size, 1.1 * size))), tuple(c),
+                     env("KEY", 55.0) * size ** 2, 0.8 * size, lin("#fff0dc")[:3])
+    S.area_light("FillCam", tuple(Vector(env("CAM", (0.0, -26.0, 3.2))) + Vector((6, 0, 4))), (0, 6, 5),
+                 env("FILL", 2500.0), 20.0, lin("#9fb0ff")[:3])
+    wl, wh = S.bounds(w_objs)
+    wc = Vector(((wl + wh) / 2).tolist())
+    S.area_light("WhaleKey", tuple(wc + Vector((-8, -14, 6))), tuple(wc), env("WHALEKEY", 9000.0), 8.0, lin("#ffe6f0")[:3])
+    S.area_light("WhaleRim", tuple(wc + Vector((6, 10, 8))), tuple(wc), env("WHALERIM", 9000.0), 8.0, lin("#ffb066")[:3])
+    for i, objs in enumerate(eggs):
+        lo, hi = S.bounds(objs)
+        c = Vector(((lo + hi) / 2).tolist())
+        S.point_light(f"EggL{i}", tuple(c + Vector((0, -1.2, 0.2))), env("EGGLIGHT", 220.0), 0.5, lin("#ffcf7a")[:3])
+
+    cam_loc = env("CAM", (0.0, -28.0, 3.4))
+    target = env("TARGET", (0.0, 6.0, 8.2))
+    dlo, dhi = S.bounds(d_objs)
+    S.camera(cam_loc, target, lens=env("LENS", 30.0), dof_target=(0, ty, 5) if not PREVIEW else None, fstop=env("FSTOP", 8.0))
+    flakes("Sparkles", cam_loc, target, env("FLAKES", 90), 6.0, 50.0, 0.025, 0.06, seed=9, color="#ffe9c4", glow=2.0)
+    pts = {"dragon_top": ((dlo[0] + dhi[0]) / 2, ty, dhi[2]), "dragon_l": (dlo[0], ty, dhi[2] * 0.6),
+           "dragon_r": (dhi[0], ty, dhi[2] * 0.6)}
+    for name, objs in giants.items():
+        lo, hi = S.bounds(objs)
+        pts[name[:6]] = ((lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2, hi[2])
+    wl, wh = S.bounds(w_objs)
+    pts["whale"] = tuple((wl + wh) / 2)
+    pts["whale_l"] = (wl[0], (wl[1] + wh[1]) / 2, (wl[2] + wh[2]) / 2)
+    report(**pts)
+    return render_all("giants", tag, w, bloom=0.5, sat=1.1)
+
+
+# =================================================================================== scena 3: Percorso Estremo (Inferno)
+def lava_material(name="Lava", strength=6.0, scale=0.18):
+    """Lava: crosta scura a placche con crepe incandescenti (giallo -> arancio), molto luminosa."""
+    mat, nt, out = S.new_material(name)
+    tc = nt.nodes.new("ShaderNodeTexCoord")
+    mp = nt.nodes.new("ShaderNodeMapping")
+    mp.inputs["Scale"].default_value = (1.0, 0.45, 1.0)  # placche allungate nel verso della corrente
+    nt.links.new(tc.outputs["Object"], mp.inputs["Vector"])
+    vor = nt.nodes.new("ShaderNodeTexVoronoi")
+    vor.feature = "DISTANCE_TO_EDGE"
+    vor.inputs["Scale"].default_value = scale
+    nz = S.node(nt, "ShaderNodeTexNoise", Scale=scale * 2.5, Detail=4.0, Roughness=0.6)
+    nt.links.new(mp.outputs["Vector"], nz.inputs["Vector"])
+    # distorsione del voronoi con il rumore (crepe irregolari)
+    add = nt.nodes.new("ShaderNodeVectorMath")
+    add.operation = "ADD"
+    nt.links.new(mp.outputs["Vector"], add.inputs[0])
+    sc_ = nt.nodes.new("ShaderNodeVectorMath")
+    sc_.operation = "SCALE"
+    sc_.inputs["Scale"].default_value = 2.5
+    nt.links.new(nz.outputs["Color"], sc_.inputs[0])
+    nt.links.new(sc_.outputs[0], add.inputs[1])
+    nt.links.new(add.outputs[0], vor.inputs["Vector"])
+    # bordo delle placche = crepa luminosa; il centro delle placche resta crosta un po' scura
+    crack = S.ramp(nt, vor.outputs["Distance"], [(0.0, (1, 1, 1, 1)), (0.06, (0.85, 0.85, 0.85, 1)), (0.2, (0.18, 0.18, 0.18, 1)),
+                                                 (0.45, (0.05, 0.05, 0.05, 1))])
+    k = S.math_node(nt, "MAXIMUM", crack, S.math_node(nt, "MULTIPLY", nz.outputs["Fac"], 0.55))
+    col = S.ramp(nt, k, [(0.0, lin("#3a0d06")), (0.22, lin("#b3260a")), (0.45, lin("#ff5a0a")), (0.7, lin("#ff9a1a")),
+                         (1.0, lin("#fff07a"))])
+    em = nt.nodes.new("ShaderNodeEmission")
+    nt.links.new(col, em.inputs["Color"])
+    nt.links.new(S.math_node(nt, "MULTIPLY", S.math_node(nt, "POWER", k, 1.4), strength), em.inputs["Strength"])
+    b = nt.nodes.new("ShaderNodeBsdfPrincipled")
+    b.inputs["Base Color"].default_value = lin("#2a0c06")
+    b.inputs["Roughness"].default_value = 0.6
+    addsh = nt.nodes.new("ShaderNodeAddShader")
+    nt.links.new(b.outputs[0], addsh.inputs[0])
+    nt.links.new(em.outputs[0], addsh.inputs[1])
+    nt.links.new(addsh.outputs[0], out.inputs["Surface"])
+    return tag_glow(mat)
+
+
+def basalt_material(name, top="#ff7a1e", top_e=2.2, rock="#2a1d24", veins=1.0, fog=("#ff8a4a", 0.004, 30.0)):
+    """Roccia vulcanica sfaccettata: pareti scure, le facce in piano diventano crosta arancio incandescente (come i
+    muri dell'Inferno in gioco), vene luminose vicino alla lava; foschia calda con la distanza."""
+    mat, nt, out = S.new_material(name)
+    geo = nt.nodes.new("ShaderNodeNewGeometry")
+    sep = nt.nodes.new("ShaderNodeSeparateXYZ")
+    nt.links.new(geo.outputs["True Normal"], sep.inputs[0])
+    tc = nt.nodes.new("ShaderNodeTexCoord")
+    nz = S.node(nt, "ShaderNodeTexNoise", Scale=0.5, Detail=3.0)
+    nt.links.new(tc.outputs["Object"], nz.inputs["Vector"])
+    k = S.math_node(nt, "ADD", sep.outputs["Z"], S.math_node(nt, "MULTIPLY", S.math_node(nt, "SUBTRACT", nz.outputs["Fac"], 0.5), 0.3))
+    topk = S.ramp(nt, k, [(0.7, (0, 0, 0, 1)), (0.78, (1, 1, 1, 1))])
+    b = nt.nodes.new("ShaderNodeBsdfPrincipled")
+    b.inputs["Base Color"].default_value = lin(rock)
+    b.inputs["Roughness"].default_value = 0.75
+    # vene: crepe luminose dal basso (quota) con un voronoi
+    vor = nt.nodes.new("ShaderNodeTexVoronoi")
+    vor.feature = "DISTANCE_TO_EDGE"
+    vor.inputs["Scale"].default_value = 0.35
+    nt.links.new(tc.outputs["Object"], vor.inputs["Vector"])
+    vein = S.ramp(nt, vor.outputs["Distance"], [(0.0, (1, 1, 1, 1)), (0.035, (0, 0, 0, 1))])
+    pos = nt.nodes.new("ShaderNodeSeparateXYZ")
+    nt.links.new(geo.outputs["Position"], pos.inputs[0])
+    low = S.ramp(nt, pos.outputs["Z"], [(0.0, (1, 1, 1, 1)), (4.0, (0, 0, 0, 1))])
+    vk = S.math_node(nt, "MULTIPLY", S.math_node(nt, "MULTIPLY", vein, low), veins)
+    em_k = S.math_node(nt, "MAXIMUM", topk, vk)
+    em = node_emission = nt.nodes.new("ShaderNodeEmission")
+    em.inputs["Color"].default_value = lin(top)
+    nt.links.new(S.math_node(nt, "MULTIPLY", em_k, top_e), em.inputs["Strength"])
+    addsh = nt.nodes.new("ShaderNodeAddShader")
+    nt.links.new(b.outputs[0], addsh.inputs[0])
+    nt.links.new(node_emission.outputs[0], addsh.inputs[1])
+    sh = addsh.outputs[0]
+    if fog:
+        sh = S.fog_mix(nt, sh, lin(fog[0]), fog[1], fog[2])
+    nt.links.new(sh, out.inputs["Surface"])
+    return tag_glow(mat, False)
+
+
+def faceted_rock(name, center, size, mat, seed=0, sub=2, rough=0.28, flatten=1.0):
+    """Masso sfaccettato (icosfera deformata, ombreggiatura piatta)."""
+    import bmesh
+    from mathutils import Matrix
+    rng = np.random.default_rng(seed)
+    bm = bmesh.new()
+    bmesh.ops.create_icosphere(bm, subdivisions=sub, radius=1.0)
+    off = rng.uniform(0, 100, 3)
+    for v in bm.verts:
+        n = noise.noise(Vector(v.co) * 1.3 + Vector(off))
+        v.co *= 1.0 + rough * n
+    me = bpy.data.meshes.new(name)
+    bm.to_mesh(me)
+    bm.free()
+    ob = bpy.data.objects.new(name, me)
+    bpy.context.scene.collection.objects.link(ob)
+    ob.location = center
+    sx, sy, sz = size if isinstance(size, tuple) else (size, size, size * flatten)
+    ob.scale = (sx, sy, sz)
+    ob.rotation_euler.z = rng.uniform(0, 6.28)
+    ob.data.materials.append(mat)
+    return ob
+
+
+def pillar(name, x, y, top_z, radius, mat, cap_mat=None):
+    prof = rounded_profile([(0, -3.0), (radius * 1.08, -3.0), (radius, top_z - 0.25), (radius * 0.98, top_z), (0, top_z)], 0.18)
+    ob = A.revolve(name, prof, 28, mat, center=(x, y, 0))
+    for p_ in ob.data.polygons:
+        p_.use_smooth = False
+    return ob
+
+
+def portal(name, center, radius, yaw_deg, color="#32f0ff"):
+    """Portale del santuario: anello di pietra + vortice luminoso."""
+    import bmesh
+    from mathutils import Matrix
+    cx, cy, cz = center
+    rot = Matrix.Rotation(math.radians(yaw_deg), 4, "Z") @ Matrix.Rotation(math.radians(90), 4, "X")
+    bm = bmesh.new()
+    bmesh.ops.create_circle(bm, cap_ends=True, segments=64, radius=radius, matrix=Matrix.Translation(center) @ rot)
+    me = bpy.data.meshes.new(name)
+    bm.to_mesh(me)
+    bm.free()
+    disc = bpy.data.objects.new(name, me)
+    bpy.context.scene.collection.objects.link(disc)
+    mat, nt, out = S.new_material(name)
+    tc = nt.nodes.new("ShaderNodeTexCoord")
+    grad = nt.nodes.new("ShaderNodeTexGradient")
+    grad.gradient_type = "SPHERICAL"
+    vm = nt.nodes.new("ShaderNodeVectorMath")
+    vm.operation = "SCALE"
+    vm.inputs["Scale"].default_value = 1.0 / radius
+    nt.links.new(tc.outputs["Object"], vm.inputs[0])
+    nt.links.new(vm.outputs[0], grad.inputs["Vector"])
+    wave = S.node(nt, "ShaderNodeTexWave", Scale=1.2, Distortion=6.0, Detail=3.0)
+    wave.wave_type = "RINGS"
+    nt.links.new(vm.outputs[0], wave.inputs["Vector"])
+    k = S.math_node(nt, "ADD", S.math_node(nt, "MULTIPLY", wave.outputs["Fac"], 0.5), S.math_node(nt, "SUBTRACT", 1.0, grad.outputs["Fac"]))
+    col = S.ramp(nt, k, [(0.2, lin("#1a2cff")), (0.6, lin(color)), (1.0, lin("#e8ffff"))])
+    em = nt.nodes.new("ShaderNodeEmission")
+    em.inputs["Strength"].default_value = env("PORTAL_E", 1.6)
+    nt.links.new(col, em.inputs["Color"])
+    nt.links.new(em.outputs[0], out.inputs["Surface"])
+    disc.data.materials.append(tag_glow(mat))
+    bm = bmesh.new()
+    bmesh.ops.create_cone(bm, cap_ends=False, segments=64, radius1=radius * 1.12, radius2=radius * 1.12, depth=0.6,
+                          matrix=Matrix.Translation(center) @ rot)
+    me = bpy.data.meshes.new(name + "Frame")
+    bm.to_mesh(me)
+    bm.free()
+    fr = bpy.data.objects.new(name + "Frame", me)
+    bpy.context.scene.collection.objects.link(fr)
+    sol = fr.modifiers.new("s", "SOLIDIFY")
+    sol.thickness = 0.5
+    return disc, fr
+
+
+def scene_extreme(w: int, samples: int, tag: str):
+    S.reset()
+    setup(w, samples, vt="Standard", look="None", exposure=-0.3)
+
+    # --- canyon: letto del fiume sotto la lava, pareti sfaccettate ai lati che si stringono in lontananza
+    def canyon(gx, gy):
+        half = 10.0 + 0.03 * np.clip(-gy, 0, None) ** 2 - 0.03 * np.clip(gy - 20, 0, None)
+        half = np.maximum(half, 5.0)
+        d = np.abs(gx - 1.5 * np.sin(gy * 0.05)) - half
+        hgt = env("WALL_H", 6.5) + 2.5 * S.fbm(gx, gy, 0.06, 2, 3)
+        z = np.where(d < 0, -1.5, -1.5 + np.clip(d * 1.6, 0, 1) * hgt)
+        z += np.clip(d - 6, 0, None) * 0.35
+        z += 0.9 * S.fbm(gx, gy, 0.22, 2, 11) * (d > 0)
+        return z
+
+    walls = S.grid_object("Canyon", -60, 60, -30, 140, 96, 110, canyon, smooth=False)
+    walls.data.materials.append(basalt_material("Basalt", rock="#1c1318", fog=("#ff6a4a", 0.0025, 40.0)))
+    lava = S.grid_object("Lava", -60, 60, -30, 160, 120, 160, lambda gx, gy: 0.12 * S.fbm(gx, gy, 0.1, 2, 5))
+    lava.data.materials.append(lava_material(strength=env("LAVA_E", 2.6), scale=env("LAVA_SC", 0.12)))
+
+    # --- pilastri di pietra nella lava (il percorso a salti) e massi di lava sulle rive
+    pm = basalt_material("PillarRock", top="#ff8a2a", top_e=0.0, rock="#2a1d24", veins=1.5, fog=("#ff6a4a", 0.0025, 40.0))
+    jumps = env("PILLARS", 0.0)
+    path = [(-3.6, 0.5, 2.4, 1.5), (3.2, 7.5, 2.8, 1.4), (-1.8, 13.5, 2.5, 1.3), (3.0, 19.5, 2.9, 1.3), (-1.0, 26.0, 2.4, 1.2),
+            (2.2, 33.0, 2.6, 1.2), (-1.5, 41.0, 2.5, 1.1), (1.5, 49.0, 2.8, 1.1)]
+    for i, (x, y, tz, r) in enumerate(path):
+        pillar(f"Pillar{i}", x, y, tz, r, pm)
+    lr = basalt_material("LavaRockM", top="#ff6a1a", top_e=0.0, rock="#2e2228", veins=2.5)
+    rng = np.random.default_rng(4)
+    for i in range(16):
+        side = -1 if i % 2 == 0 else 1
+        y = -4 + i * 5.5 + rng.uniform(-2, 2)
+        half = 9.0 - 0.02 * max(y - 20, 0)
+        x = side * (max(half, 4.0) - rng.uniform(0.5, 2.0))
+        faceted_rock(f"Boulder{i}", (x, y, rng.uniform(-0.6, 0.0)), (rng.uniform(1.0, 2.0),) * 2 + (rng.uniform(0.7, 1.4),),
+                     lr, seed=i)
+
+    # --- santuario in fondo: piedistallo azzurro, uovo Estremo, portale
+    sx, sy = env("SHRINE", (0.5, 70.0))
+    throne("Shrine", (sx, sy, -0.2), radius=3.0, height=2.6, top="#1fb6c9", rim="#ffd23a", glow="#3ff6ff")
+    egg, egg_objs = pet("EggExtreme", (sx, sy, 2.6), 15.0, 1.1, kind="egg", glow=3.0)
+    portal("Portal", (sx + 7.5, sy + 4.0, 5.0), 4.2, -25.0)
+
+    # --- diavoli giganti sulle sporgenze ai lati (destra: Behemoth, sinistra: Abaddon) e Belzebu' in volo
+    beh, beh_objs = pet("Behemoth", env("BEH", (8.6, 11.0, 1.3)), env("BEH_YAW", 42.0), env("BEH_S", 2.7), glow=2.2)
+    aba, aba_objs = pet("Abaddon", env("ABA", (-8.8, 17.0, 1.3)), env("ABA_YAW", -40.0), env("ABA_S", 2.7), glow=2.2)
+    bee, bee_objs = pet("Beelzebub", env("BEE", (-3.5, 30.0, 8.0)), env("BEE_YAW", -10.0), env("BEE_S", 2.3), glow=2.2)
+    for i, (root, objs) in enumerate(((beh, beh_objs), (aba, aba_objs))):
+        lo, hi = S.bounds(objs)
+        x, y = root.location.x, root.location.y
+        foot = root.location.z
+        root.location.z += foot - float(lo[2]) - 0.15 - foot
+        # sporgenza di roccia sotto le zampe
+        faceted_rock(f"Ledge{i}", (x, y, foot - 1.6), (float(hi[0] - lo[0]) * 0.75, float(hi[1] - lo[1]) * 0.75, 1.75), lr,
+                     seed=40 + i, rough=0.18)
+    bpy.context.view_layer.update()
+
+    # --- il Bacon Hair a meta' salto fra due pilastri
+    rig = A.build("Bacon", shirt=env("SHIRT", "#22d046"))
+    A.pose(rig, env("LEAP_POSE", "leap"))
+    ax, ay, az = env("AV", (0.0, 4.2, 4.6))
+    rig.root.location = (ax, ay, az)
+    rig.root.rotation_euler.z = math.radians(env("AV_YAW", 50.0))
+    bpy.context.view_layer.update()
+
+    # --- cielo infuocato: giallo all'orizzonte, arancio, cremisi, viola in alto
+    sky_gradient([(0.0, lin("#ffd25a")), (0.06, lin("#ff8a2a")), (0.16, lin("#ff3d4a")), (0.35, lin("#b0207a")),
+                  (0.6, lin("#5a1a7a")), (1.0, lin("#2a0f4a"))], light_color=lin("#ff9a6a"), light_strength=env("AMB", 0.45))
+    vm = basalt_material("Volcano", top="#ff7a1e", top_e=1.0, rock="#3a2230", veins=0.0, fog=("#ff7a4a", 0.006, 40.0))
+    S.mountain_layer("Volcanoes", 150, 60, 260, [(-60, 175, 48, 0.75, 0.7), (30, 185, 60, 0.7, 0.7), (110, 170, 42, 0.8, 0.7)],
+                     vm, nx=160, ny=40, seed=51, rough=5.0, z_off=-12.0)
+
+    # --- braci che salgono
+    em_ = flakes("Embers", (0, -14, 3), (0, 20, 6), env("EMBERS", 140), 5.0, 60.0, 0.03, 0.08, seed=12, color="#ffb03a", glow=6.0)
+    tag_glow(em_.data.materials[0], True)
+
+    # --- luci: lava da sotto (arancio), cielo, luce principale bianca sul Bacon Hair (la maglia resta verde)
+    bl = A.world_bounds(rig)
+    ac = Vector(((bl[0] + bl[1]) / 2).tolist())
+    S.area_light("LavaBounce", tuple(ac + Vector((0, -2, -6))), tuple(ac), env("BOUNCE", 2500.0), 10.0, lin("#ff7a2a")[:3])
+    S.area_light("KeyAv", tuple(ac + Vector((-5, -9, 6))), tuple(ac), env("KEY", 1400.0), 4.0, lin("#fff6ee")[:3])
+    S.area_light("RimAv", tuple(ac + Vector((4, 8, 4))), tuple(ac), env("RIM", 1800.0), 3.0, lin("#ffd0a0")[:3])
+    for name, objs in (("Beh", beh_objs), ("Aba", aba_objs), ("Bee", bee_objs)):
+        lo, hi = S.bounds(objs)
+        c = Vector(((lo + hi) / 2).tolist())
+        size = float(hi[2] - lo[2])
+        S.area_light(f"Key{name}", tuple(c + Vector((-0.6 * size, -1.8 * size, 1.0 * size))), tuple(c),
+                     env("PKEY", 60.0) * size ** 2, 0.8 * size, lin("#ffe8d6")[:3])
+        S.area_light(f"Rim{name}", tuple(c + Vector((0.4 * size, 1.6 * size, 0.8 * size))), tuple(c),
+                     env("PRIM", 160.0) * size ** 2, 0.5 * size, lin("#ff9a4a")[:3])
+    el, eh = S.bounds(egg_objs)
+    S.point_light("ShrineGlow", tuple(Vector(((el + eh) / 2).tolist()) + Vector((0, -2, 0))), 900.0, 1.0, lin("#3ff6ff")[:3])
+
+    cam_loc = env("CAM", (3.0, -12.0, 1.6))
+    target = env("TARGET", (0.0, 14.0, 6.0))
+    S.camera(cam_loc, target, lens=env("LENS", 26.0), dof_target=tuple(ac) if not PREVIEW else None, fstop=env("FSTOP", 8.0))
+    pts = {"av_feet": bl[0], "av_head": rig.joints["HeadCenter"].matrix_world.translation, "shrine": (sx, sy, 5.0)}
+    for name, objs in (("beh", beh_objs), ("aba", aba_objs), ("bee", bee_objs)):
+        lo, hi = S.bounds(objs)
+        pts[name] = ((lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2, hi[2])
+    report(**pts)
+    return render_all("extreme", tag, w, bloom=0.5, sat=1.08)
+
+
+SCENES = {"steal": scene_steal, "giants": scene_giants, "extreme": scene_extreme}
 
 if __name__ == "__main__":
     which = sys.argv[1]
