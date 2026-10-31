@@ -52,4 +52,7 @@ Game.EventFirstDelay = 5 * 60
 -- Tutorial: il nuovo giocatore riceve un uovo comune gia' in incubazione
 Game.StarterEggHatch = 10
 
+-- Troni dei giganti: il secondo e il terzo si sbloccano con tantissime monete (o con un game pass)
+Game.ThroneUnlock = { [2] = 5000000000, [3] = 50000000000 }
+
 return Game

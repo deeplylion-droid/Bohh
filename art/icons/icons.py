@@ -903,6 +903,35 @@ def Barrier(m):
 
 # ====================================================================== pass e prodotti del negozio
 @icon()
+def Throne(m):
+    """Trono d'oro dei giganti: seduta e schienale di velluto viola, braccioli, corona e rubino in cima."""
+    PURPLE_VELVET = (150, 92, 255)
+    PURPLE_DARK = (96, 52, 200)
+    legs = union(*[cyl((sx * 0.62, sy * 0.48, 0.0), (sx * 0.62, sy * 0.48, 0.55), 0.09, round=0.03)
+                   for sx in (1, -1) for sy in (1, -1)])
+    seat = box((0.78, 0.62, 0.11), (0, 0, 0.62), round=0.06)
+    back = box((0.8, 0.13, 0.82), (0, 0.5, 1.42), round=0.1)
+    arms = union(*[box((0.1, 0.5, 0.07), (sx * 0.78, 0.04, 1.0), round=0.06) for sx in (1, -1)])
+    posts = union(*[cyl((sx * 0.78, -0.4, 0.62), (sx * 0.78, -0.4, 1.0), 0.07) for sx in (1, -1)])
+    knobs = union(*[sphere(0.12, (sx * 0.78, -0.46, 1.04)) for sx in (1, -1)])
+    frame_gold = union(legs, seat, back, arms, posts, knobs, k=0.03)
+    cushion = box((0.66, 0.5, 0.1), (0, -0.02, 0.8), round=0.08)
+    velvet_back = box((0.62, 0.05, 0.64), (0, 0.36, 1.42), round=0.08)
+    # corona sopra lo schienale
+    crown = union(box((0.42, 0.1, 0.1), (0, 0.5, 2.3), round=0.04),
+                  *[round_cone((x, 0.5, 2.36), (x, 0.5, 2.62 + (0.1 if x == 0 else 0)), 0.09, 0.03) for x in (-0.32, 0.0, 0.32)])
+    balls = union(*[sphere(0.07, (x, 0.5, 2.66 + (0.1 if x == 0 else 0))) for x in (-0.32, 0.0, 0.32)])
+    ruby = ellipsoid((0.15, 0.08, 0.19), (0, 0.4, 1.88))
+    add(m, "Frame", frame_gold, GOLD, tris=12000, gloss=0.3, role="skin")
+    add(m, "Cushion", cushion, PURPLE_VELVET, tris=5000)
+    add(m, "Velvet", velvet_back, PURPLE_DARK, tris=4000)
+    add(m, "Crown", union(crown, balls), GOLD_LIGHT, tris=5000, gloss=0.3, voxel=0.014)
+    add(m, "Ruby", ruby, RED, tris=1500, gloss=0.35, voxel=0.012)
+    sparks = union(tf(sparkle(0.22), (0.98, -0.3, 2.2)), tf(sparkle(0.16), (-0.96, -0.3, 1.5)))
+    add(m, "Sparkles", sparks, WHITE, tris=2000, voxel=0.012)
+
+
+@icon()
 def VIP(m):
     """Corona d'oro a cinque punte con gemme e velluto rosso."""
     Ro, Ri, zl, zh, k, fl = 0.98, 0.84, 0.62, 1.32, 5, 0.12

@@ -45,14 +45,15 @@ MapLayout.Plot = {
 		end
 		return list
 	end)(),
-	-- 20 piedistalli 5x4 nella parte posteriore (in ordine di sblocco: dalla prima fila). Il posto
-	-- centrale dell'ultima fila e' dell'altare del trono Ultra: quel piedistallo sta davanti a destra.
+	-- 20 piedistalli 5x4 nella parte posteriore (in ordine di sblocco: dalla prima fila). I tre posti
+	-- centrali dell'ultima fila sono degli altari dei troni: quei piedistalli stanno davanti a destra.
 	Pedestals = (function()
 		local list = {}
+		local moved = { [1] = Vector3.new(24, 0, -14), [2] = Vector3.new(12, 0, -14), [3] = Vector3.new(14, 0, -27) }
 		for row = 0, 3 do
 			for col = 0, 4 do
-				if row == 3 and col == 2 then
-					table.insert(list, Vector3.new(12, 0, -14))
+				if row == 3 and moved[col] then
+					table.insert(list, moved[col])
 				else
 					table.insert(list, Vector3.new(-22 + col * 11, 0, -4 + row * 10))
 				end
@@ -68,6 +69,16 @@ MapLayout.Plot = {
 		TowerRadius = 10,
 		TowerTop = 14, -- quota della piattaforma sopra il pavimento del lotto
 	},
+	-- Tre troni per i giganti (Ultra e Galattici). Il primo (la torre) e' di tutti; il secondo e il
+	-- terzo sono isole fluttuanti dietro il lotto, ai lati e piu' in alto, e si sbloccano con tantissime
+	-- monete o con un game pass. slot = posto del pet (0, -1, -2); altar = altare dentro il lotto
+	-- (vendi, ruba, raccogli, scambia, sblocca); seat = dove sta il gigante
+	Thrones = {
+		{ slot = 0, altar = Vector3.new(0, 0, 26), seat = Vector3.new(0, 14, 47) },
+		{ slot = -1, altar = Vector3.new(-11, 0, 26), seat = Vector3.new(-27, 30, 62), island = true },
+		{ slot = -2, altar = Vector3.new(11, 0, 26), seat = Vector3.new(27, 30, 62), island = true },
+	},
+	IslandRadius = 11,
 	-- pedana di raccolta: disco verde appoggiato davanti a ogni piedistallo (raggio del piedistallo 3.2)
 	CollectPadOffset = Vector3.new(0, 0, -4.5),
 	CollectPadDiameter = 2.6,

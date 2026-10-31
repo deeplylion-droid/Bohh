@@ -5,7 +5,9 @@ local PhysicsService = game:GetService("PhysicsService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local GameConfig = require(ReplicatedStorage.Shared.Config.Game)
 local MapLayout = require(ReplicatedStorage.Shared.MapLayout)
+local Products = require(ReplicatedStorage.Shared.Config.Products)
 local Signal = require(ReplicatedStorage.Shared.Util.Signal)
 local Upgrades = require(ReplicatedStorage.Shared.Config.Upgrades)
 local Build = require(script.Parent.Parent.World.Build)
@@ -70,6 +72,8 @@ export type Plot = {
 		swapPrompt: ProximityPrompt,
 		tower: BasePart,
 	},
+	-- i tre troni dei giganti (il primo e' 'throne'); il 2 e il 3 hanno anche l'isola e lo sblocco
+	thrones: { any },
 	gateBarrier: BasePart,
 	console: BasePart,
 	consolePrompt: ProximityPrompt,
@@ -578,6 +582,187 @@ local function buildPlot(index: number, parent: Instance): Plot
 		tower = tower,
 	}
 
+	-- troni 2 e 3: altare viola nel lotto (al posto di due piedistalli) e isola di roccia fluttuante
+	-- dietro il lotto, collegati da un raggio di luce. Da sbloccare: finche' sono chiusi sembrano di vetro.
+	local GALACTIC = Color3.fromRGB(150, 100, 255)
+	local thrones = { throne }
+	for k = 2, #L.Thrones do
+		local def = L.Thrones[k]
+		local altarCfK = at(def.altar)
+		local altarK = Build.Part({
+			name = `ThroneAltar{k}`,
+			size = Vector3.new(2.6, 6.4, 6.4),
+			cframe = altarCfK * CFrame.new(0, 1.3, 0) * CFrame.Angles(0, 0, math.rad(90)),
+			color = Color3.fromRGB(60, 52, 70),
+			material = Enum.Material.Slate,
+			shape = Enum.PartType.Cylinder,
+			parent = model,
+		})
+		Build.Part({
+			name = "Top",
+			size = Vector3.new(0.3, 6.8, 6.8),
+			cframe = altarCfK * CFrame.new(0, 2.65, 0) * CFrame.Angles(0, 0, math.rad(90)),
+			color = GOLD_TRIM,
+			shape = Enum.PartType.Cylinder,
+			collide = false,
+			parent = altarK,
+		})
+		Build.Part({
+			name = "Ring",
+			size = Vector3.new(0.4, 6.9, 6.9),
+			cframe = altarCfK * CFrame.new(0, 0.5, 0) * CFrame.Angles(0, 0, math.rad(90)),
+			color = GALACTIC,
+			material = Enum.Material.Neon,
+			shape = Enum.PartType.Cylinder,
+			collide = false,
+			parent = altarK,
+		})
+		local signK = Build.Part({
+			name = "ThroneSign",
+			size = Vector3.new(6, 1.4, 0.2),
+			cframe = altarCfK * CFrame.new(0, 4.2, 0),
+			color = theme.trim,
+			collide = false,
+			transparency = 1,
+			parent = altarK,
+		})
+		do
+			local gui = Instance.new("SurfaceGui")
+			gui.Name = "SignGui"
+			gui.Face = Enum.NormalId.Front
+			gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+			gui.PixelsPerStud = 40
+			gui.LightInfluence = 0
+			gui.Parent = signK
+			local label = Instance.new("TextLabel")
+			label.Name = "Label"
+			label.BackgroundTransparency = 1
+			label.Size = UDim2.fromScale(1, 1)
+			label.Font = Enum.Font.LuckiestGuy
+			label.TextScaled = true
+			label.TextColor3 = Color3.fromRGB(214, 190, 255)
+			label.TextStrokeTransparency = 0
+			label.TextStrokeColor3 = Color3.fromRGB(29, 22, 48)
+			label.Text = `THRONE {k}`
+			label:SetAttribute("Key", "ThroneSignN")
+			label:SetAttribute("Arg_n", k)
+			label.Parent = gui
+			CollectionService:AddTag(label, "LocalizedSign")
+		end
+		-- isola fluttuante: disco di roccia col bordo luminoso e un cono di rocce sotto
+		local seatCf = at(def.seat)
+		local island = Build.Model(`ThroneIsland{k}`, model)
+		local R = L.IslandRadius
+		local top = Build.Part({
+			name = "IslandTop",
+			size = Vector3.new(5, R * 2, R * 2),
+			cframe = seatCf * CFrame.new(0, -2.5, 0) * CFrame.Angles(0, 0, math.rad(90)),
+			color = STONE_GATE,
+			material = Enum.Material.Slate,
+			shape = Enum.PartType.Cylinder,
+			parent = island,
+		})
+		island.PrimaryPart = top
+		for j, r in { R - 2.5, R - 5, R - 7.4, R - 9.2 } do
+			Build.Part({
+				name = "IslandRock",
+				size = Vector3.new(3.4, r * 2, r * 2),
+				cframe = seatCf
+					* CFrame.new(math.sin(j * 2.1) * 0.9, -5.4 - j * 2.9, math.cos(j * 2.1) * 0.9)
+					* CFrame.Angles(0, 0, math.rad(90)),
+				color = if j % 2 == 0 then STONE else STONE_GATE,
+				material = Enum.Material.Slate,
+				shape = Enum.PartType.Cylinder,
+				parent = island,
+			})
+		end
+		Build.Part({
+			name = "IslandRim",
+			size = Vector3.new(0.9, R * 2 + 1.2, R * 2 + 1.2),
+			cframe = seatCf * CFrame.new(0, -0.7, 0) * CFrame.Angles(0, 0, math.rad(90)),
+			color = GALACTIC,
+			material = Enum.Material.Neon,
+			shape = Enum.PartType.Cylinder,
+			collide = false,
+			castShadow = false,
+			parent = island,
+		})
+		Build.Part({
+			name = "IslandCap",
+			size = Vector3.new(0.3, R * 2 - 1.4, R * 2 - 1.4),
+			cframe = seatCf * CFrame.new(0, 0.1, 0) * CFrame.Angles(0, 0, math.rad(90)),
+			color = theme.wall,
+			shape = Enum.PartType.Cylinder,
+			collide = false,
+			parent = island,
+		})
+		for _, d in island:GetDescendants() do
+			if d:IsA("BasePart") then
+				d:SetAttribute("BaseMaterial", d.Material.Name)
+			end
+		end
+		-- raggio di luce dall'altare all'isola
+		local a0 = Instance.new("Attachment")
+		a0.Name = "BeamFrom"
+		a0.Parent = altarK
+		a0.WorldPosition = altarCfK.Position + Vector3.new(0, 2.8, 0)
+		local a1 = Instance.new("Attachment")
+		a1.Name = "BeamTo"
+		a1.Parent = top
+		a1.WorldPosition = seatCf.Position + Vector3.new(0, -16, 0)
+		local beam = Instance.new("Beam")
+		beam.Name = "ThroneBeam"
+		beam.Attachment0 = a0
+		beam.Attachment1 = a1
+		beam.FaceCamera = true
+		beam.Width0 = 1.1
+		beam.Width1 = 2.4
+		beam.LightEmission = 1
+		beam.LightInfluence = 0
+		beam.Color = ColorSequence.new(GALACTIC, Color3.fromRGB(120, 230, 255))
+		beam.Transparency = NumberSequence.new(0.45, 0.75)
+		beam.Enabled = false
+		beam.Parent = altarK
+		local point = Instance.new("Attachment")
+		point.Name = "PetPoint"
+		point.Parent = altarK
+		point.WorldCFrame = seatCf * CFrame.new(0, 0.3, 0)
+		local padK = collectPad(altarCfK * CFrame.new(L.CollectPadOffset - Vector3.new(0, 0, 0.35)), altarK)
+		padK:SetAttribute("Slot", def.slot)
+		CollectionService:AddTag(padK, "CollectPad")
+		local sellK = prompt(altarK, "SellPrompt", "SELL", 1, "Owner")
+		local stealK = prompt(altarK, "StealPrompt", "STEAL", 2, "Others")
+		local swapK = prompt(altarK, "SwapPrompt", "SWAP", 0.6, "Owner")
+		swapK.KeyboardKeyCode = Enum.KeyCode.F
+		swapK.UIOffset = Vector2.new(0, -70)
+		local unlockK = prompt(altarK, "ThroneUnlockPrompt", "UNLOCK", 1, "Owner")
+		unlockK.ObjectText = tostring(GameConfig.ThroneUnlock[k] or 0)
+		local buyK = prompt(altarK, "ThroneBuyPrompt", "BUY", 0.2, "Owner")
+		buyK.KeyboardKeyCode = Enum.KeyCode.F
+		buyK.UIOffset = Vector2.new(0, -70)
+		local pass = Products.Passes[`Throne{k}`]
+		buyK.ObjectText = tostring(if pass then pass.price else 0)
+		buyK:SetAttribute("Pass", `Throne{k}`)
+		altarK:SetAttribute("Slot", def.slot)
+		altarK:SetAttribute("Throne", true)
+		altarK:SetAttribute("ThroneIndex", k)
+		altarK:SetAttribute("Locked", true)
+		CollectionService:AddTag(altarK, "Pedestal")
+		thrones[k] = {
+			base = altarK,
+			pad = padK,
+			slot = def.slot,
+			prompt = sellK,
+			stealPrompt = stealK,
+			swapPrompt = swapK,
+			unlockPrompt = unlockK,
+			buyPrompt = buyK,
+			island = island,
+			beam = beam,
+			index = k,
+		}
+	end
+
 	-- console della barriera
 	local consoleCf = at(L.BarrierConsole)
 	local console = Build.Part({
@@ -626,6 +811,7 @@ local function buildPlot(index: number, parent: Instance): Plot
 		incubators = incubators,
 		pedestals = pedestals,
 		throne = throne,
+		thrones = thrones,
 		gateBarrier = barrier,
 		console = console,
 		consolePrompt = consolePrompt,
@@ -661,6 +847,11 @@ function PlotService.Init(services)
 	folder.Parent = workspace
 	for i = 1, MapLayout.PlotCount do
 		PlotService.Plots[i] = buildPlot(i, folder)
+		for k, t in PlotService.Plots[i].thrones do
+			if k > 1 then
+				PlotService.ShowThroneLock(t, true)
+			end
+		end
 	end
 end
 
@@ -713,12 +904,82 @@ function PlotService.RefreshLocks(player: Player)
 			end
 		end
 	end
+	for k, t in plot.thrones do
+		if k > 1 then
+			PlotService.ShowThroneLock(t, not PlotService.ThroneUnlocked(player, k))
+		end
+	end
 end
 
--- Posto di un pet: piedistallo 1..20 oppure il trono Ultra (slot 0)
+-- Aspetto di un trono chiuso (vetro) o aperto, e prompt di sblocco
+function PlotService.ShowThroneLock(t, locked: boolean)
+	t.base:SetAttribute("Locked", locked)
+	t.base.Transparency = if locked then 0.6 else 0
+	for _, d in t.base:GetChildren() do
+		if d:IsA("BasePart") and d ~= t.pad then
+			d.Transparency = if locked then 0.75 else 0
+		end
+	end
+	t.pad.Transparency = if locked then 1 else 0
+	for _, d in t.pad:GetChildren() do
+		if d:IsA("BasePart") then
+			d.Transparency = if locked then 1 else 0
+		end
+	end
+	for _, d in t.island:GetDescendants() do
+		if d:IsA("BasePart") then
+			d.Transparency = if locked then 0.72 else 0
+			local baseMaterial = d:GetAttribute("BaseMaterial")
+			d.Material = if locked
+				then Enum.Material.Glass
+				elseif type(baseMaterial) == "string" then (Enum.Material :: any)[baseMaterial]
+				else d.Material
+		end
+	end
+	t.beam.Enabled = not locked
+	t.unlockPrompt.Enabled = locked
+	local pass = Products.Passes[`Throne{t.index}`]
+	t.buyPrompt.Enabled = locked and pass ~= nil and pass.id ~= 0
+end
+
+-- Vero se il trono k (1..3) del giocatore e' sbloccato (il primo lo e' sempre)
+function PlotService.ThroneUnlocked(player: Player, k: number): boolean
+	if k <= 1 then
+		return true
+	end
+	local data = S.DataService.Get(player)
+	if data and data.Unlocks and data.Unlocks[`Throne{k}`] then
+		return true
+	end
+	return S.MonetizationService.HasPass(player, `Throne{k}`)
+end
+
+-- Sblocco di un trono con le monete (il terzo dopo il secondo)
+function PlotService.UnlockThrone(player: Player, k: number)
+	if PlotService.ThroneUnlocked(player, k) or not S.DataService.Get(player) then
+		return
+	end
+	if k > 2 and not PlotService.ThroneUnlocked(player, k - 1) then
+		S.StateService.Notify(player, "ThroneNeedPrevious", { n = k - 1 }, "Bad")
+		return
+	end
+	local price = GameConfig.ThroneUnlock[k]
+	if not price or not S.DataService.SpendCoins(player, price, "ThroneUnlock") then
+		S.StateService.Notify(player, "NotEnoughCoins", nil, "Bad")
+		return
+	end
+	S.StateService.Set(player, { "Unlocks", `Throne{k}` }, true)
+	PlotService.RefreshLocks(player)
+	S.PetService.FillThrones(player)
+	S.StateService.Notify(player, "ThroneUnlocked", { n = k }, "Gold")
+	S.StateService.Effect(player, "Purchase", { big = true })
+	S.AnalyticsService.Custom(player, "ThroneUnlock", k)
+end
+
+-- Posto di un pet: piedistallo 1..20 oppure uno dei troni dei giganti (slot 0, -1, -2)
 function PlotService.Stand(plot: Plot, slot: number)
-	if slot == 0 then
-		return plot.throne
+	if slot <= 0 then
+		return plot.thrones[1 - slot]
 	end
 	return plot.pedestals[slot]
 end
@@ -726,7 +987,9 @@ end
 -- Tutti i posti per i pet (piedistalli e trono), per i cicli che li trattano allo stesso modo
 function PlotService.Stands(plot: Plot): { any }
 	local list = table.clone(plot.pedestals) :: { any }
-	table.insert(list, plot.throne)
+	for _, t in plot.thrones do
+		table.insert(list, t)
+	end
 	return list
 end
 
@@ -809,12 +1072,28 @@ local function release(player: Player)
 		ped.base:SetAttribute("Income", nil)
 		ped.pad:SetAttribute("Bank", 0)
 	end
+	for k, t in plot.thrones do
+		if k > 1 then
+			PlotService.ShowThroneLock(t, true)
+		end
+	end
 end
 
 function PlotService.Start()
 	S.DataService.Loaded:Connect(function(player)
 		assign(player)
 	end)
+	for _, plot in PlotService.Plots do
+		for k, t in plot.thrones do
+			if t.unlockPrompt then
+				t.unlockPrompt.Triggered:Connect(function(who)
+					if plot.owner == who then
+						PlotService.UnlockThrone(who, k)
+					end
+				end)
+			end
+		end
+	end
 	Players.PlayerRemoving:Connect(release)
 	local function watchCharacter(player: Player)
 		player.CharacterAdded:Connect(function(character)

@@ -67,6 +67,11 @@ local function onPassGranted(player: Player, key: string)
 	if key == "ExtraIncubator" then
 		S.PlotService.RefreshLocks(player)
 		S.HatchService.FillPending(player)
+	elseif key == "Throne2" or key == "Throne3" then
+		-- trono dei giganti sbloccato: ci va subito il primo gigante del deposito
+		S.PlotService.RefreshLocks(player)
+		S.PetService.FillThrones(player)
+		S.StateService.Notify(player, "ThroneUnlocked", { n = if key == "Throne2" then 2 else 3 }, "Gold")
 	elseif key == "BigBackpack" then
 		S.CharacterService.UpdateSpeed(player)
 	elseif key == "VIP" then

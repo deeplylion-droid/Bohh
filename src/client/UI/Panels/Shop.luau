@@ -26,6 +26,8 @@ local PASS_COLORS = {
 	BigBackpack = "Blue",
 	FastHatch = "Pink",
 	SuperBarrier = "Red",
+	Throne2 = "Purple",
+	Throne3 = "Purple",
 }
 
 function Panel.Build(parent: Instance, C)

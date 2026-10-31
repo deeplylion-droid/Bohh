@@ -7,7 +7,8 @@ export type Product = { key: string, id: number, price: number, icon: string }
 
 local Products = {}
 
-Products.PassOrder = { "VIP", "DoubleCoins", "ExtraIncubator", "BigBackpack", "FastHatch", "SuperBarrier" }
+Products.PassOrder =
+	{ "VIP", "DoubleCoins", "ExtraIncubator", "BigBackpack", "FastHatch", "SuperBarrier", "Throne2", "Throne3" }
 Products.Passes = {
 	VIP = { key = "VIP", id = 2022170349, price = 249, icon = "VIP" },
 	DoubleCoins = { key = "DoubleCoins", id = 2021672356, price = 399, icon = "DoubleCoins" },
@@ -15,6 +16,9 @@ Products.Passes = {
 	BigBackpack = { key = "BigBackpack", id = 2022788361, price = 199, icon = "Backpack" },
 	FastHatch = { key = "FastHatch", id = 2021684355, price = 299, icon = "HatchSpeed" },
 	SuperBarrier = { key = "SuperBarrier", id = 2022500356, price = 149, icon = "Barrier" },
+	-- troni dei giganti 2 e 3 (si sbloccano anche con tantissime monete: Config.Game.ThroneUnlock)
+	Throne2 = { key = "Throne2", id = 0, price = 399, icon = "Throne" },
+	Throne3 = { key = "Throne3", id = 0, price = 799, icon = "Throne" },
 } :: { [string]: Pass }
 
 Products.ProductOrder = {

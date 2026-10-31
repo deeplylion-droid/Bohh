@@ -5,6 +5,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local GameConfig = require(ReplicatedStorage.Shared.Config.Game)
+local MapLayout = require(ReplicatedStorage.Shared.MapLayout)
 local Pets = require(ReplicatedStorage.Shared.Config.Pets)
 local Rarities = require(ReplicatedStorage.Shared.Config.Rarities)
 local Variants = require(ReplicatedStorage.Shared.Config.Variants)
@@ -72,7 +73,12 @@ function PetService.FreeSlot(player: Player, petId: string?): number?
 		used[pet.Slot] = true
 	end
 	if petId and Pets.Get(petId).giant then
-		return if used[0] then nil else 0
+		for k, def in MapLayout.Plot.Thrones do
+			if not used[def.slot] and S.PlotService.ThroneUnlocked(player, k) then
+				return def.slot
+			end
+		end
+		return nil
 	end
 	for i = 1, S.PlotService.PedestalCount(player) do
 		if not used[i] then
@@ -119,7 +125,7 @@ local function updatePedestal(player: Player, slot: number)
 	ped.base:SetAttribute("PetUid", uid)
 	ped.base:SetAttribute("PetId", if pet then pet.Id else nil)
 	ped.base:SetAttribute("Bought", bought)
-	if slot == 0 then
+	if slot <= 0 then
 		local data = S.DataService.Get(player)
 		local vault = if data and data.Vault then #data.Vault else 0
 		ped.base:SetAttribute("Vault", vault)
@@ -154,6 +160,10 @@ local function showPet(player: Player, uid: string)
 		return
 	end
 	local model = Visuals.MakePet(pet.Id, pet.Mutation, pet.Size)
+	if pet.Slot < 0 then
+		-- troni 2 e 3 (isole fluttuanti ai lati): il gigante e' un po' piu' piccolo e non copre il primo
+		model:ScaleTo(model:GetScale() * 0.85)
+	end
 	model.Name = "Pet_" .. uid
 	local point = ped.base:FindFirstChild("PetPoint") :: Attachment?
 	model:PivotTo(if point then point.WorldCFrame else ped.base.CFrame)
@@ -224,11 +234,40 @@ local function fromVault(player: Player): string?
 	return PetService.AddPet(player, { Id = v.Id, Mutation = v.Mutation, Size = v.Size, Bought = v.Bought })
 end
 
--- Acquisto di un gigante galattico: sul trono subito, il gigante che c'era va nel deposito
+-- Mette sui troni liberi (sbloccati) i giganti del deposito
+function PetService.FillThrones(player: Player)
+	local placed = false
+	while fromVault(player) do
+		placed = true
+	end
+	if placed then
+		S.StateService.Push(player, { "Vault" })
+	end
+	for _, def in MapLayout.Plot.Thrones do
+		updatePedestal(player, def.slot)
+	end
+end
+
+-- Acquisto di un gigante galattico: sul primo trono libero; se sono tutti occupati va sul primo trono
+-- e il gigante che c'era passa nel deposito
 function PetService.GrantBought(player: Player, petId: string): boolean
 	local data = S.DataService.Get(player)
 	if not data then
 		return false
+	end
+	if PetService.FreeSlot(player, petId) then
+		local placedUid = PetService.AddPet(player, { Id = petId, Mutation = "None", Size = "Normal", Bought = true })
+		if placedUid then
+			pushVault(player)
+			S.IndexService.Record(player, petId, "None")
+			S.StateService.Notify(player, "GalacticArrivedFree", { pet = "Pet_" .. petId }, "Gold")
+			S.StateService.Announce(
+				"AnnounceGalactic",
+				{ name = player.DisplayName, pet = "Pet_" .. petId },
+				"Galactic"
+			)
+			return true
+		end
 	end
 	local ped = pedestal(player, 0)
 	if ped and ped.base:GetAttribute("BeingStolen") then
@@ -259,23 +298,42 @@ function PetService.GrantBought(player: Player, petId: string): boolean
 	return true
 end
 
--- Scambio del gigante sul trono col primo del deposito (prompt dell'altare)
-function PetService.SwapGiant(player: Player)
+-- Scambio del gigante di un trono col primo del deposito (prompt dell'altare)
+function PetService.SwapGiant(player: Player, slot: number?)
+	local throneSlot = slot or 0
 	local data = S.DataService.Get(player)
 	if not data or not data.Vault or #data.Vault == 0 then
 		return
 	end
-	local ped = pedestal(player, 0)
+	if not S.PlotService.ThroneUnlocked(player, 1 - throneSlot) then
+		return
+	end
+	local ped = pedestal(player, throneSlot)
 	if ped and ped.base:GetAttribute("BeingStolen") then
 		return
 	end
-	local uid = petAt(player, 0)
+	local uid = petAt(player, throneSlot)
 	local next = table.remove(data.Vault, 1)
 	if uid then
 		toVault(player, uid)
 	end
-	PetService.AddPet(player, { Id = next.Id, Mutation = next.Mutation, Size = next.Size, Bought = next.Bought })
+	-- il gigante va proprio su questo trono (non sul primo libero)
+	local newUid = S.DataService.NewUid(player)
+	S.StateService.Set(player, { "Pets", newUid }, {
+		Id = next.Id,
+		Mutation = next.Mutation or "None",
+		Size = next.Size or "Normal",
+		Slot = throneSlot,
+		Bank = 0,
+		Got = os.time(),
+		Bought = next.Bought,
+	})
+	showPet(player, newUid)
+	PetService.PublishIncome(player)
 	pushVault(player)
+	for _, def in MapLayout.Plot.Thrones do
+		updatePedestal(player, def.slot)
+	end
 	S.StateService.Notify(player, "GiantSwapped", { pet = "Pet_" .. next.Id }, "Gold")
 end
 
@@ -298,7 +356,7 @@ function PetService.RemovePet(player: Player, uid: string, keepEmpty: boolean?)
 	end
 	updatePedestal(player, pet.Slot)
 	PetService.PublishIncome(player)
-	if pet.Slot == 0 and not keepEmpty then
+	if pet.Slot <= 0 and not keepEmpty then
 		task.defer(function()
 			if fromVault(player) then
 				pushVault(player)
@@ -381,7 +439,12 @@ function PetService.Start()
 		local seen = {}
 		for _, pet in data.Pets do
 			local giant = Pets.Get(pet.Id).giant == true
-			if seen[pet.Slot] or pet.Slot > S.PlotService.PedestalCount(player) or (pet.Slot == 0) ~= giant then
+			if
+				seen[pet.Slot]
+				or pet.Slot > S.PlotService.PedestalCount(player)
+				or pet.Slot < 1 - #MapLayout.Plot.Thrones
+				or (pet.Slot <= 0) ~= giant
+			then
 				pet.Slot = 999
 			else
 				seen[pet.Slot] = true
@@ -390,7 +453,17 @@ function PetService.Start()
 		for uid, pet in data.Pets do
 			if pet.Slot == 999 then
 				local free = PetService.FreeSlot(player, pet.Id)
-				pet.Slot = free or 999
+				if free then
+					pet.Slot = free
+				elseif Pets.Get(pet.Id).giant then
+					-- nessun trono libero: il gigante aspetta nel deposito
+					data.Vault = data.Vault or {}
+					table.insert(
+						data.Vault,
+						{ Id = pet.Id, Mutation = pet.Mutation, Size = pet.Size, Bought = pet.Bought }
+					)
+					data.Pets[uid] = nil
+				end
 			end
 			if pet.Slot ~= 999 then
 				showPet(player, uid)
@@ -399,18 +472,17 @@ function PetService.Start()
 		for _, ped in S.PlotService.Stands(plot) do
 			updatePedestal(player, ped.slot)
 		end
-		fromVault(player)
-		updatePedestal(player, 0)
+		PetService.FillThrones(player)
 		S.StateService.Push(player, { "Pets" })
 		PetService.PublishIncome(player)
 	end)
 	-- pulsanti collegati una sola volta: il proprietario si legge al momento dell'uso
 	for _, plot in S.PlotService.Plots do
-		local swap = plot.throne.swapPrompt
-		if swap then
-			swap.Triggered:Connect(function(who)
+		for _, t in plot.thrones do
+			local throneSlot = t.slot
+			t.swapPrompt.Triggered:Connect(function(who)
 				if plot.owner == who then
-					PetService.SwapGiant(who)
+					PetService.SwapGiant(who, throneSlot)
 				end
 			end)
 		end

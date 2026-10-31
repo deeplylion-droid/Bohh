@@ -192,6 +192,7 @@ local T: { [string]: Entry } = {
 		it = "{pet} è sul tuo trono! Il gigante che c'era è nel deposito",
 	},
 	GiantSwapped = { en = "{pet} is on the throne", it = "{pet} è sul trono" },
+	GalacticArrivedFree = { en = "{pet} is on your throne!", it = "{pet} è sul tuo trono!" },
 	GalacticStored = {
 		en = "{pet} is waiting in your storage: use SWAP GIANT on the throne",
 		it = "{pet} ti aspetta nel deposito: usa CAMBIA GIGANTE sul trono",
@@ -208,6 +209,14 @@ local T: { [string]: Entry } = {
 	Prompt_Steal = { en = "STEAL", it = "RUBA" },
 	Prompt_Sell = { en = "SELL {price}", it = "VENDI {price}" },
 	Prompt_Swap = { en = "SWAP GIANT", it = "CAMBIA GIGANTE" },
+	Prompt_ThroneUnlock = { en = "UNLOCK {price}", it = "SBLOCCA {price}" },
+	Prompt_ThroneBuy = { en = "BUY R$ {robux}", it = "COMPRA R$ {robux}" },
+	ThroneSignN = { en = "THRONE {n}", it = "TRONO {n}" },
+	ThroneUnlocked = {
+		en = "Throne {n} unlocked: one more giant pet!",
+		it = "Trono {n} sbloccato: un pet gigante in più!",
+	},
+	ThroneNeedPrevious = { en = "Unlock Throne {n} first", it = "Prima sblocca il Trono {n}" },
 	Prompt_Barrier = { en = "LOCK BASE", it = "BLOCCA BASE" },
 	Prompt_Traps = { en = "TRAPS", it = "TRAPPOLE" },
 	Prompt_Upgrades = { en = "UPGRADES", it = "POTENZIAMENTI" },
@@ -342,6 +351,8 @@ local T: { [string]: Entry } = {
 	Pass_BigBackpack = { en = "Big Backpack", it = "Zaino Grande" },
 	Pass_FastHatch = { en = "Fast Hatch", it = "Schiusa Veloce" },
 	Pass_SuperBarrier = { en = "Super Barrier", it = "Super Barriera" },
+	Pass_Throne2 = { en = "Throne 2", it = "Trono 2" },
+	Pass_Throne3 = { en = "Throne 3", it = "Trono 3" },
 	PassDesc_VIP = {
 		en = "+20% coins, Golden Mallet, VIP tag, 2x offline",
 		it = "+20% monete, Martello d'Oro, tag VIP, offline x2",
@@ -359,6 +370,14 @@ local T: { [string]: Entry } = {
 	PassDesc_SuperBarrier = {
 		en = "Barrier lasts 60s longer and recharges faster",
 		it = "La barriera dura 60s in più e si ricarica prima",
+	},
+	PassDesc_Throne2 = {
+		en = "A second throne for one more giant pet",
+		it = "Un secondo trono per un altro pet gigante",
+	},
+	PassDesc_Throne3 = {
+		en = "A third throne for one more giant pet",
+		it = "Un terzo trono per un altro pet gigante",
 	},
 	Product_SkipHatchSmall = { en = "Skip Hatch · Rare", it = "Salta Schiusa · Raro" },
 	Product_SkipHatchMedium = { en = "Skip Hatch · Legendary", it = "Salta Schiusa · Leggendario" },

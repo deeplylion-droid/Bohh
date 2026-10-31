@@ -635,6 +635,33 @@ do
 	add("galactic", table.concat(out, " "))
 	local plot = S.PlotService.ByIndex(1)
 	add("throne_swap_prompt", plot ~= nil and plot.throne.swapPrompt ~= nil)
+	-- tre troni per lotto: il 2 e il 3 con l'isola fluttuante e i prompt di sblocco
+	local thr = {}
+	for k, t in (plot and plot.thrones or {}) do
+		table.insert(
+			thr,
+			`{k}:slot{t.slot}:{if t.island then "island" else "tower"}:{if t.unlockPrompt then "unlock" else "-"}:{t.base:GetAttribute(
+				"Locked"
+			) and "locked" or "open"}`
+		)
+	end
+	add("thrones", table.concat(thr, " "))
+	-- i piedistalli non devono sovrapporsi agli altari dei troni ne' fra loro
+	local MapLayoutPlot = require(ReplicatedStorage.Shared.MapLayout).Plot
+	local spots = {}
+	for _, v in MapLayoutPlot.Pedestals do
+		table.insert(spots, v)
+	end
+	for _, def in MapLayoutPlot.Thrones do
+		table.insert(spots, def.altar)
+	end
+	local tight = 99
+	for i = 1, #spots do
+		for j = i + 1, #spots do
+			tight = math.min(tight, (spots[i] - spots[j]).Magnitude)
+		end
+	end
+	add("pedestal_min_gap", string.format("%.1f", tight))
 end
 
 -- avvisi raccolti durante l'avvio

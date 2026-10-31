@@ -27,6 +27,8 @@ PASSES = {
     "BigBackpack": ("Big Backpack", "Carry one more egg at a time up the mountain.", 199, "IconBackpack"),
     "FastHatch": ("Fast Hatch", "Every egg hatches twice as fast.", 299, "IconHatchSpeed"),
     "SuperBarrier": ("Super Barrier", "Your laser barrier lasts 60 seconds longer and recharges faster.", 149, "IconBarrier"),
+    "Throne2": ("Throne 2", "A second throne in your base for one more giant pet (Ultra or Galactic).", 399, "IconThrone"),
+    "Throne3": ("Throne 3", "A third throne in your base for one more giant pet (Ultra or Galactic).", 799, "IconThrone"),
 }
 PRODUCTS = {
     "SkipHatchSmall": ("Skip Hatch (up to Rare)", "Instantly finishes the incubator egg that needs the most time (Common to Rare eggs).", 19, "IconSkipHatch"),

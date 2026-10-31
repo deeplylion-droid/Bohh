@@ -2,6 +2,7 @@
 -- caricamento), tradotti e filtrati: il proprietario vede "Schiudi/Vendi", gli altri "Ruba".
 
 local CollectionService = game:GetService("CollectionService")
+local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
 local ProximityPromptService = game:GetService("ProximityPromptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -9,6 +10,7 @@ local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 
 local Format = require(ReplicatedStorage.Shared.Util.Format)
+local Products = require(ReplicatedStorage.Shared.Config.Products)
 local Rarities = require(ReplicatedStorage.Shared.Config.Rarities)
 
 local Prompts = {}
@@ -23,6 +25,8 @@ local STYLE = {
 	StealPrompt = { key = "Prompt_Steal", color = "Red" },
 	SellPrompt = { key = "Prompt_Sell", color = "Orange" },
 	SwapPrompt = { key = "Prompt_Swap", color = "Purple" },
+	ThroneUnlockPrompt = { key = "Prompt_ThroneUnlock", color = "Orange" },
+	ThroneBuyPrompt = { key = "Prompt_ThroneBuy", color = "Green" },
 	BarrierPrompt = { key = "Prompt_Barrier", color = "Red" },
 	DenPrompt = { key = "Prompt_DenUnlock", color = "Red" },
 	WheelPrompt = { key = "Prompt_Wheel", color = "Orange" },
@@ -65,10 +69,19 @@ local function intended(prompt: ProximityPrompt): boolean
 	if not base then
 		return false
 	end
+	local name = prompt.Name
+	-- troni chiusi: si vedono solo i prompt per sbloccarli
+	if name == "ThroneUnlockPrompt" then
+		return base:GetAttribute("Locked") == true
+	elseif name == "ThroneBuyPrompt" then
+		-- solo se il game pass esiste davvero
+		local key = prompt:GetAttribute("Pass")
+		local pass = if type(key) == "string" then Products.Passes[key] else nil
+		return base:GetAttribute("Locked") == true and pass ~= nil and pass.id ~= 0
+	end
 	if base:GetAttribute("Locked") then
 		return false
 	end
-	local name = prompt.Name
 	if name == "HatchPrompt" then
 		return base:GetAttribute("Ready") == true
 	elseif name == "SellPrompt" then
@@ -114,7 +127,7 @@ local function promptTexts(prompt: ProximityPrompt): (string, string)
 	local T = C.Lang.T
 	local style = STYLE[prompt.Name]
 	local action = if style
-		then T(style.key, { price = Format.Money(tonumber(prompt.ObjectText) or 0) })
+		then T(style.key, { price = Format.Money(tonumber(prompt.ObjectText) or 0), robux = prompt.ObjectText })
 		else prompt.ActionText
 	local object = ""
 	local rarity = prompt:GetAttribute("Rarity")
@@ -287,6 +300,17 @@ end
 function Prompts.Start()
 	Kit = C.UI.Kit
 	local active: { [ProximityPrompt]: () -> () } = {}
+	-- trono chiuso: "COMPRA R$" apre l'acquisto del game pass (lo sblocco con le monete e' sul server)
+	ProximityPromptService.PromptTriggered:Connect(function(prompt)
+		if prompt.Name ~= "ThroneBuyPrompt" then
+			return
+		end
+		local key = prompt:GetAttribute("Pass")
+		local pass = if type(key) == "string" then Products.Passes[key] else nil
+		if pass and pass.id ~= 0 then
+			MarketplaceService:PromptGamePassPurchase(player, pass.id)
+		end
+	end)
 	ProximityPromptService.PromptShown:Connect(function(prompt, inputType)
 		if prompt.Style ~= Enum.ProximityPromptStyle.Custom then
 			return
