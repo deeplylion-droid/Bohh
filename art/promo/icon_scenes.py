@@ -8,17 +8,24 @@ Scene:
   neve che cade.
 - toppa:     solo il soggetto (uovo-mostro) su sfondo trasparente, con luce da "giocattolo" per la
   toppa di feltro composta in HTML (promo/icon_compose.py).
+- vetta / vetta_bandiera: revisione di "uovo": l'uovo-mostro sulla punta di un picco aguzzo (roccia
+  sfaccettata, creste con cornici di neve), camera in bolla piu' bassa della vetta (l'orizzonte resta sotto
+  la base dell'uovo), mare di nuvole con altre cime molto piu' in basso; con o senza bandierina di vetta.
 
 Uso (dalla cartella art/; prima promo/egg_monster.py per l'uovo-mostro):
     nice -n 10 ../.tools/venv/bin/python promo/icon_scenes.py guardiano 1024 80 final
     nice -n 10 ../.tools/venv/bin/python promo/icon_scenes.py uovo 1024 96 final
     nice -n 10 ../.tools/venv/bin/python promo/icon_scenes.py toppa 1024 64 final
+    nice -n 10 ../.tools/venv/bin/python promo/icon_scenes.py vetta 1024 64 final
+    nice -n 10 ../.tools/venv/bin/python promo/icon_scenes.py vetta_bandiera 1024 64 final
 Uscita in art/out/promo/icon_proposals/work/: <scena>_<tag>.png (render), _glow.png (passata delle superfici
 luminose), _post.png (con bagliore e vignettatura), _512.png e _150.png (ridotte); per "toppa" solo il render
 RGBA, che icon_compose.py mette sulla toppa di feltro.
 Variabili d'ambiente per iterare: PREVIEW=1 (niente suddivisione delle mesh, niente profondita' di campo),
 VT/LOOK/EXPO (gestione del colore), CAM e TARGET ("x,y,z"), LENS, EGG (Legendary/Primal) ed EGG_SCALE per il
-guardiano, EGGCOL (red/cream/teal/orange/pink/mint) per l'uovo-mostro, KEY/FILL/RIM/GLOSS (luci), BLOOM.
+guardiano, EGGCOL (red/cream/teal/orange/pink/mint) per l'uovo-mostro, KEY/FILL/RIM/GLOSS (luci), BLOOM;
+per la vetta FEGG/MTOP/GAP (inquadratura), CAP/STEEP/RIDGE_A/RIDGE_LIFT/CORNICE (forma del picco), ZCLOUD,
+FARZ, FLAG_SIDE/FLAG_POS/FLAG_LEN (bandierina).
 """
 from __future__ import annotations
 
@@ -779,6 +786,288 @@ def scene_uovo(res: int, samples: int, tag: str):
     finish(beauty, glow, WORK / f"{name}_512.png", bloom=env("BLOOM", 0.5), radii=(0.012, 0.04, 0.1))
 
 
+# =================================================================================== scena B, variante "vetta"
+def turb(x, y, scale, octaves=4, seed=0):
+    """Rumore 'a nuvola' (turbolenza morbida: somma di |rumore|, gonfia e tondeggiante)."""
+    off = Vector((seed * 13.1, seed * 7.7, seed * 2.9))
+    vals = np.array([noise.turbulence(Vector((a * scale, b * scale, 0.0)) + off, octaves, False)
+                     for a, b in zip(x.ravel(), y.ravel())])
+    return vals.reshape(x.shape)
+
+
+def level_camera(egg_xy, az_deg, lens, h_top, f_egg, m_top, gap, dof_target=None, fstop=3.2, shift_x=0.0):
+    """Camera in bolla (verticali dritte) piu' bassa della base dell'uovo, con decentramento verticale.
+
+    f_egg = altezza dell'uovo in frazione del fotogramma, m_top = margine sopra la calotta, gap = di quanto
+    (frazione del fotogramma) la base dell'uovo sta sopra la linea dell'orizzonte. La base e' a z = 0."""
+    F = 36.0 / lens
+    d = h_top / (f_egg * F)
+    z_cam = -gap * F * d
+    t_top = (h_top - z_cam) / d + m_top * F
+    shift = t_top / F - 0.5
+    a = math.radians(az_deg)
+    loc = Vector((egg_xy[0] + math.sin(a) * d, egg_xy[1] - math.cos(a) * d, z_cam))
+    tgt = Vector((egg_xy[0], egg_xy[1], z_cam))
+    cam = camera(tuple(loc), tuple(tgt), lens=lens, dof_target=dof_target, fstop=fstop, shift=(shift_x, shift))
+    print(f"[vetta] camera: distanza {d:.2f}, quota {z_cam:.2f}, shift {shift:.3f}, orizzonte al {100 * (0.5 + shift):.0f}%")
+    return cam, loc, tgt, shift, F
+
+
+def cloud_material(name, color, fog_color, density, start, glow=0.08):
+    mat, nt, out = new_material(name)
+    b = nt.nodes.new("ShaderNodeBsdfPrincipled")
+    b.inputs["Base Color"].default_value = lin(color)
+    b.inputs["Roughness"].default_value = 1.0
+    b.inputs["Sheen Weight"].default_value = 0.6
+    b.inputs["Sheen Tint"].default_value = (0.8, 0.86, 1.0, 1)
+    b.inputs["Emission Color"].default_value = lin(color)
+    b.inputs["Emission Strength"].default_value = glow  # nuvole al chiaro di luna: un filo di luce propria
+    sh = fog_mix(nt, b.outputs[0], lin(fog_color), density, start)
+    nt.links.new(sh, out.inputs["Surface"])
+    return mat
+
+
+def felt_material(name, color, sheen=0.6):
+    mat, nt, out = new_material(name)
+    b = nt.nodes.new("ShaderNodeBsdfPrincipled")
+    tc = nt.nodes.new("ShaderNodeTexCoord")
+    nz = node(nt, "ShaderNodeTexNoise", Scale=180.0, Detail=4.0)
+    nt.links.new(tc.outputs["Object"], nz.inputs["Vector"])
+    bump = node(nt, "ShaderNodeBump", Strength=0.25, Distance=0.004)
+    nt.links.new(nz.outputs["Fac"], bump.inputs["Height"])
+    nt.links.new(bump.outputs["Normal"], b.inputs["Normal"])
+    b.inputs["Base Color"].default_value = lin(color)
+    b.inputs["Roughness"].default_value = 0.9
+    b.inputs["Sheen Weight"].default_value = sheen
+    nt.links.new(b.outputs[0], out.inputs["Surface"])
+    return mat
+
+
+def summit_flag(foot, side, height=2.2, lean=(0.0, 0.0), length=0.82, width=0.5, color=(255, 46, 77)):
+    """Bandierina di vetta: asta di legno piantata nella neve, pomello dorato e stendardo triangolare di feltro
+    rosso che sventola verso 'side', con i punti di cucitura bianchi lungo i bordi (come l'interfaccia)."""
+    import bmesh
+    from mathutils import Euler, Matrix
+    rot = Euler((math.radians(lean[0]), math.radians(lean[1]), 0.0)).to_matrix()
+    axis = rot @ Vector((0, 0, 1))
+    side = Vector(side).normalized()
+    side = (side - axis * side.dot(axis)).normalized()
+    nrm = axis.cross(side).normalized()
+    p0 = Vector(foot) - axis * 0.3
+    p1 = Vector(foot) + axis * height
+
+    def obj_from(bm, name, mat, smooth=True):
+        me = bpy.data.meshes.new(name)
+        bm.to_mesh(me)
+        bm.free()
+        for poly in me.polygons:
+            poly.use_smooth = smooth
+        ob = bpy.data.objects.new(name, me)
+        bpy.context.scene.collection.objects.link(ob)
+        ob.data.materials.append(mat)
+        return ob
+
+    # asta e pomello
+    basis = Matrix((side, nrm, axis)).transposed().to_4x4()
+    bm = bmesh.new()
+    bmesh.ops.create_cone(bm, cap_ends=True, segments=20, radius1=0.042, radius2=0.034, depth=(p1 - p0).length,
+                          matrix=Matrix.Translation((p0 + p1) / 2) @ basis)
+    wood, nt, out = new_material("Wood")
+    bw = nt.nodes.new("ShaderNodeBsdfPrincipled")
+    bw.inputs["Base Color"].default_value = lin((150, 98, 52))
+    bw.inputs["Roughness"].default_value = 0.55
+    nt.links.new(bw.outputs[0], out.inputs["Surface"])
+    obj_from(bm, "FlagPole", wood)
+    bm = bmesh.new()
+    bmesh.ops.create_uvsphere(bm, u_segments=20, v_segments=12, radius=0.075, matrix=Matrix.Translation(p1 + axis * 0.05))
+    gold, nt, out = new_material("Gold")
+    bg = nt.nodes.new("ShaderNodeBsdfPrincipled")
+    bg.inputs["Base Color"].default_value = lin((255, 196, 60))
+    bg.inputs["Metallic"].default_value = 1.0
+    bg.inputs["Roughness"].default_value = 0.25
+    nt.links.new(bg.outputs[0], out.inputs["Surface"])
+    obj_from(bm, "FlagKnob", gold)
+
+    # stendardo: triangolo ondulato (base lungo l'asta, punta verso 'side', un po' cadente)
+    top = p1 - axis * 0.07
+
+    def cloth(u, v):
+        wave = 0.075 * u * math.sin(2 * math.pi * 1.25 * u + 0.5)
+        return (top - axis * (width * 0.5) + axis * (width * (1 - u) * (v - 0.5)) + side * (length * u)
+                - axis * (0.13 * u * u) + nrm * wave)
+
+    nu, nv = 28, 8
+    verts = [cloth(i / nu, j / nv) for i in range(nu + 1) for j in range(nv + 1)]
+    faces = [(i * (nv + 1) + j, (i + 1) * (nv + 1) + j, (i + 1) * (nv + 1) + j + 1, i * (nv + 1) + j + 1)
+             for i in range(nu) for j in range(nv)]
+    me = bpy.data.meshes.new("Pennant")
+    me.from_pydata([tuple(v) for v in verts], [], faces)
+    me.validate()
+    for poly in me.polygons:
+        poly.use_smooth = True
+    pen = bpy.data.objects.new("Pennant", me)
+    bpy.context.scene.collection.objects.link(pen)
+    sol = pen.modifiers.new("spessore", "SOLIDIFY")
+    sol.thickness = 0.018
+    sol.offset = 0.0
+    pen.data.materials.append(felt_material("FeltRed", color))
+
+    # punti di cucitura bianchi lungo i tre bordi, sul lato verso la camera (-nrm)
+    bm = bmesh.new()
+    inset = 0.07
+
+    def dash_line(pts):
+        acc = 0.0
+        for a, b in zip(pts[:-1], pts[1:]):
+            seg = (b - a).length
+            t = 0.0
+            while t < seg:
+                if (acc % 0.085) < 0.045:
+                    c = a + (b - a) * (t / seg)
+                    tang = (b - a).normalized()
+                    bin_ = nrm.cross(tang).normalized()
+                    m = Matrix((tang * 0.042, bin_ * 0.016, nrm * 0.008)).transposed().to_4x4()
+                    m.translation = c - nrm * 0.016
+                    bmesh.ops.create_cube(bm, size=1.0, matrix=m)
+                step = 0.012
+                t += step
+                acc += step
+
+    edge_top = [cloth(i / nu, 1.0) - axis * inset * (1 - i / nu) * 0.9 for i in range(nu - 3)]
+    edge_bot = [cloth(i / nu, 0.0) + axis * inset * (1 - i / nu) * 0.9 for i in range(nu - 3)]
+    edge_pole = [cloth(0.06, j / nv) for j in range(1, nv)]
+    for line in (edge_top, edge_bot, edge_pole):
+        dash_line(line)
+    thread, nt, out = new_material("Thread")
+    bt = nt.nodes.new("ShaderNodeBsdfPrincipled")
+    bt.inputs["Base Color"].default_value = lin((255, 252, 246))
+    bt.inputs["Roughness"].default_value = 0.8
+    nt.links.new(bt.outputs[0], out.inputs["Surface"])
+    obj_from(bm, "PennantStitches", thread, smooth=False)
+
+
+def scene_vetta(res: int, samples: int, tag: str, flag: bool = False):
+    """Variante di B: l'uovo-mostro sulla punta di un picco aguzzo, sopra un mare di nuvole al chiaro di luna."""
+    reset()
+    setup_render(res, samples, vt=env("VT", "AgX"), look=env("LOOK", "AgX - Punchy"), exposure=env("EXPO", -0.1))
+    egg_rot = env("EGG_ROT", 10.0)
+    egg, objs = append_model(ART / "out/promo/EggMonster/EggMonster.blend", (0, 0, -0.08), rot_z=egg_rot)
+    if not PREVIEW:
+        subdivide([o for o in objs if o.name.split(".")[0] in ("Shell", "Teeth", "Inside", "Eyes", "Creature")], 1)
+    style_egg_monster(objs, env("EGGCOL", "red"), env("EYE_E", 3.4))
+    lo, hi = bounds(objs)
+    eyes_lo, eyes_hi = bounds([part(objs, "Eyes")])
+    eye_c = (eyes_lo + eyes_hi) / 2
+    c = (lo + hi) / 2
+
+    world_sky([(0.0, lin("#34579a")), (0.06, lin("#1f3b76")), (0.22, lin("#12265a")), (0.5, lin("#0a1840")),
+               (1.0, lin("#060e2a"))], light_color=lin("#3d5a9e"), light_strength=0.35, stars=env("STARS", 4.0),
+              star_scale=120.0)
+
+    # --- camera in bolla, piu' bassa della vetta: l'orizzonte (e le altre cime) restano sotto la base dell'uovo
+    az = env("CAM_AZ", 10.5)
+    lens = env("LENS", 70.0)
+    cam, cam_loc, _, shift, F = level_camera(
+        (0.0, 0.0), az, lens, float(hi[2]), env("FEGG", 0.67), env("MTOP", 0.06), env("GAP", 0.07),
+        dof_target=tuple(c) if not PREVIEW else None, fstop=env("FSTOP", 4.0), shift_x=env("SHIFTX", 0.0))
+    fwd = Vector((-math.sin(math.radians(az)), math.cos(math.radians(az)), 0.0))
+    right = Vector((math.cos(math.radians(az)), math.sin(math.radians(az)), 0.0))
+    up = Vector((0, 0, 1))
+    mu, mv = env("MOON", (-0.16, 0.2))
+    mdir = (fwd + right * ((mu - env("SHIFTX", 0.0)) * F) + up * ((mv + shift) * F)).normalized()
+    mdist = 600.0
+    _, mc = moon_disc("Moon", tuple(cam_loc), tuple(mdir), mdist, env("MOON_R", 0.2) * F * mdist,
+                      strength=env("MOON_E", 1.25))
+
+    # --- il picco: roccia sfaccettata che precipita su tutti i lati, con creste verso la camera e dietro
+    cap = env("CAP", 0.95)
+    steep = env("STEEP", 1.6)
+
+    def rock(gx, gy):
+        r = np.hypot(gx, gy)
+        th = np.arctan2(gx, -gy)  # 0 = davanti (-Y), positivo verso +X
+        z = -0.15 * r - steep * np.clip(r - cap, 0, None) ** 1.2
+        ra_l, ra_r = az - env("RIDGE_A", 55.0), az + env("RIDGE_A", 55.0) - 4
+        rl = env("RIDGE_LIFT", 0.52)
+        for ra, lift, w in ((ra_l, rl, 0.3), (ra_r, rl * 0.94, 0.3), (az + 180, 0.4, 0.45), (az + 115, 0.3, 0.4)):
+            dth = np.angle(np.exp(1j * (th - math.radians(ra))))
+            across = r * np.sin(dth)
+            ridge = np.exp(-(across / (w + 0.12 * r)) ** 2) * (np.cos(dth) > 0)
+            z += lift * steep * ridge * np.clip(r - cap * 0.75, 0, None) ** 1.18
+        z += 0.6 * np.abs(fbm(gx, gy, 0.55, 3, 21)) * np.clip((r - cap) / 2.0, 0, 1)
+        return z
+
+    def snow_cap(gx, gy):
+        r = np.hypot(gx, gy)
+        th = np.arctan2(gx, -gy)
+        thick = 0.24 * np.exp(-(r / env("CAPR", 1.3)) ** 4) - 0.06
+        # neve anche sul filo delle creste davanti (cornici)
+        for ra in (az - env("RIDGE_A", 55.0), az + env("RIDGE_A", 55.0) - 4):
+            dth = np.angle(np.exp(1j * (th - math.radians(ra))))
+            across = r * np.sin(dth)
+            thick += env("CORNICE", 0.08) * np.exp(-(across / (0.16 + 0.05 * r)) ** 2) * (np.cos(dth) > 0) * (r > 0.9)
+        return rock(gx, gy) + thick + 0.04 * fbm(gx, gy, 1.3, 2, 5)
+
+    z0 = float(snow_cap(np.array([[0.0]]), np.array([[0.0]]))[0, 0])
+    off = 0.0 - z0  # la neve in cima sta a z = 0 (l'uovo affonda di 8 cm)
+    rk = grid_object("Summit", -24, 24, -24, 24, 150, 150, lambda gx, gy: rock(gx, gy) + off, smooth=False)
+    rk.data.materials.append(rock_snow_material("SummitRock", "#232c48", "#dbe6fa", "#1f3b76", 0.004, 12, snow_from=0.66))
+    sn = grid_object("SummitSnow", -7, 7, -7, 7, 230, 230, lambda gx, gy: snow_cap(gx, gy) + off)
+    sn.data.materials.append(snow_material("Snow", tint=(228, 238, 255), fog=(lin("#1f3b76"), 0.01, 12.0)))
+
+    # --- mare di nuvole molto piu' in basso, con altre cime che ne spuntano
+    zc = env("ZCLOUD", -14.0)
+    cl = grid_object("Clouds", -420, 420, -60, 900, 260, 260,
+                     lambda gx, gy: zc + 4.5 * turb(gx, gy, 0.022, 4, 3) + 3.5 * fbm(gx, gy, 0.006, 2, 9))
+    cl.data.materials.append(cloud_material("Clouds", (214, 226, 248), "#3a5ea2", env("CLOUDFOG", 0.0018), 40.0,
+                                            glow=env("CLOUDGLOW", 0.24)))
+    fogc = "#34579a"
+    m1 = rock_snow_material("Far1", "#1a2440", "#b4c6ea", fogc, env("FARFOG", 0.0055), 30, snow_from=0.5)
+    m2 = rock_snow_material("Far2", "#1a2440", "#a8bce4", fogc, env("FARFOG", 0.0055) * 1.4, 30, snow_from=0.48)
+    # le punte restano qualche metro sotto la nostra vetta (z = 0): basi nascoste nelle nuvole
+    fz = env("FARZ", -27.0)
+    # (la camera guarda un po' verso -X: a 200 m il fotogramma va da x = -87 a x = 17, a 340 m da -148 a 28)
+    mountain_layer("FarPeaks1", 160, 70, 260, [(-82, 196, 20, 0.6, 0.5), (-60, 206, 15, 0.55, 0.5), (4, 190, 18, 0.6, 0.5),
+                                              (24, 204, 14, 0.55, 0.5), (-140, 200, 19, 0.55, 0.5)], m1, nx=200, ny=50,
+                   seed=31, rough=4.0, z_off=fz)
+    mountain_layer("FarPeaks2", 300, 90, 420, [(-132, 340, 23, 0.45, 0.4), (-104, 352, 19, 0.42, 0.4), (-40, 336, 24, 0.45, 0.4),
+                                              (12, 346, 22, 0.42, 0.4), (40, 340, 20, 0.45, 0.4)], m2, nx=220, ny=50, seed=37,
+                   rough=5.0, z_off=fz - 4)
+
+    # --- neve che cade (stesso fiocco della versione B)
+    fl_mat, nt, out = new_material("Flake")
+    b = nt.nodes.new("ShaderNodeBsdfPrincipled")
+    b.inputs["Base Color"].default_value = (0.9, 0.94, 1.0, 1)
+    b.inputs["Emission Color"].default_value = lin("#cfe0ff")
+    b.inputs["Emission Strength"].default_value = 0.35
+    nt.links.new(b.outputs[0], out.inputs["Surface"])
+    view_c = cam_loc + fwd + up * (shift * F)
+    flakes("Flakes", tuple(cam_loc), tuple(view_c), env("FLAKES", 240), 4.5, 40.0, 0.014, 0.042, seed=4, mat=fl_mat, spread=0.42)
+
+    # --- bandierina di vetta (variante)
+    if flag:
+        fside = env("FLAG_SIDE", 1.0)  # +1 = a destra dell'uovo (bilancia la luna a sinistra), -1 = a sinistra
+        fx, fy = env("FLAG_POS", (1.18, -0.12))
+        foot = right * (fside * fx) + fwd * fy
+        fz_ = float(snow_cap(np.array([[foot.x]]), np.array([[foot.y]]))[0, 0]) + off
+        summit_flag((foot.x, foot.y, fz_), right * fside, height=env("FLAG_H", 2.15), lean=(0.0, fside * env("FLAG_LEAN", 6.0)),
+                    length=env("FLAG_LEN", 0.72), width=env("FLAG_W", 0.46))
+
+    # --- luci: come la versione B
+    sun_light("MoonLight", tuple(mc - cam_loc), env("MOONL", 2.6), lin("#d6e4ff")[:3], angle=1.0)
+    area_light("Fill", (-4.5, -6.5, 4.0), (c[0], c[1], c[2]), env("FILL", 520.0), 6.0, lin("#9bb6ff")[:3])
+    area_light("KeyR", (5.0, -5.0, 3.5), (c[0], c[1], c[2] + 0.3), env("KEY", 450.0), 4.0, lin("#dfe8ff")[:3])
+    area_light("Gloss", (-2.2, -6.0, 5.2), (c[0], c[1], c[2] + 0.4), env("GLOSS", 550.0), 1.6, lin("#f4f7ff")[:3])
+    area_light("RimB", (-2.5, 5.0, 4.5), (c[0], c[1], c[2] + 0.4), env("RIM", 900.0), 3.0, lin("#cfe0ff")[:3])
+    area_light("SummitFill", (1.0, -9.0, -2.5), (0.0, 0.0, -0.8), env("SUMMITFILL", 650.0), 6.0, lin("#a9bfff")[:3])
+    point_light("Inner", (eye_c[0], eye_c[1] - 0.12, eye_c[2] - 0.05), env("INNER", 18.0), 0.12, lin("#ffc34a")[:3])
+
+    name = ("vetta_bandiera" if flag else "vetta") + (f"_{tag}" if tag else "")
+    beauty = render_to(WORK / f"{name}.png")
+    glow = glow_pass(WORK / f"{name}_glow.png", max(256, res // 3), {"Eyes", "Moon"})
+    finish(beauty, glow, WORK / f"{name}_512.png", bloom=env("BLOOM", 0.5), radii=(0.012, 0.04, 0.1))
+
+
 # =================================================================================== scena C (solo soggetto)
 def style_egg_monster(objs, shell="red", eye_e=3.0):
     shell_c, spot_c, spot2_c, thread_c = SHELL_COLORS[shell]
@@ -842,7 +1131,8 @@ def principled_emits(o) -> bool:
         return False
 
 
-SCENES = {"guardiano": scene_guardiano, "uovo": scene_uovo, "toppa": scene_toppa}
+SCENES = {"guardiano": scene_guardiano, "uovo": scene_uovo, "toppa": scene_toppa, "vetta": scene_vetta,
+          "vetta_bandiera": lambda res, samples, tag: scene_vetta(res, samples, tag, flag=True)}
 
 if __name__ == "__main__":
     which = sys.argv[1]

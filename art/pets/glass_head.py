@@ -17,8 +17,7 @@ import numpy as np
 from scipy.spatial import cKDTree
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from lib.sdf import (SDF, bezier, capsule, ellipsoid, euler, prism, round_cone, smin, sphere, torus,  # noqa: E402
-                     tube, union)
+from lib.sdf import SDF, ellipsoid, euler, prism, round_cone, smin, sphere, union  # noqa: E402
 from lib.sdf import tube as _tube  # noqa: E402
 from lib.toy import Model  # noqa: E402
 
@@ -33,7 +32,6 @@ def tube(points, radii, k=0.0):
 DRAFT = os.environ.get("DRAFT", "") == "1"
 VX = 1.35 if DRAFT else 1.0
 T0 = time.time()
-rng = np.random.default_rng(7)
 
 
 def log(msg):
@@ -44,11 +42,6 @@ def log(msg):
 def norm(v):
     v = np.asarray(v, dtype=np.float64)
     return v / np.linalg.norm(v)
-
-
-def smoothstep(a, b, x):
-    t = np.clip((x - a) / (b - a), 0.0, 1.0)
-    return t * t * (3.0 - 2.0 * t)
 
 
 def fast_union(shapes, k=0.0, base=None, margin=0.06):
@@ -156,16 +149,6 @@ def place(shape, M, origin):
 
 def taper(n, r0, r1, power=1.0):
     return [r0 + (r1 - r0) * (i / (n - 1)) ** power for i in range(n)]
-
-
-def spike(a, b, r0, r1=0.008, bend=None, n=8):
-    """Spina/dente affusolato da a verso b, eventualmente piegato (bend = spostamento del punto medio)."""
-    a, b = np.asarray(a, float), np.asarray(b, float)
-    if bend is None:
-        return round_cone(tuple(a), tuple(b), r0, r1)
-    bend = np.asarray(bend, float)
-    pts = bezier(tuple(a), tuple(a + (b - a) / 3 + bend), tuple(a + (b - a) * 2 / 3 + bend), tuple(b), n)
-    return tube(pts, taper(n + 1, r0, r1, 0.9))
 
 
 class Spine:
@@ -493,7 +476,7 @@ ribbons = []
 
 
 # coda a velo: una grande membrana increspata nel piano del pesce che scende all'indietro e finisce in tre nastri
-TC, TT, TD, TLa = sp.frame(L)
+TT = sp.frame(L)[1]
 V0 = sp.world(L + 0.08, 0.0, 0.0)
 veil_sp = Spine([tuple(V0), tuple(V0 + TT * 0.42 - np.array([0, 0, 0.04])), tuple(V0 + np.array([-0.14, 0.8, -0.32])),
                  tuple(V0 + np.array([-0.3, 1.12, -0.56])), tuple(V0 + np.array([-0.38, 1.3, -0.78]))], step=0.01, n_per=14)

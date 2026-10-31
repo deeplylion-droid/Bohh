@@ -17,8 +17,8 @@ Products.Passes = {
 	FastHatch = { key = "FastHatch", id = 2021684355, price = 299, icon = "HatchSpeed" },
 	SuperBarrier = { key = "SuperBarrier", id = 2022500356, price = 149, icon = "Barrier" },
 	-- troni dei giganti 2 e 3 (si sbloccano anche con tantissime monete: Config.Game.ThroneUnlock)
-	Throne2 = { key = "Throne2", id = 0, price = 399, icon = "Throne" },
-	Throne3 = { key = "Throne3", id = 0, price = 799, icon = "Throne" },
+	Throne2 = { key = "Throne2", id = 2061817771, price = 399, icon = "Throne" },
+	Throne3 = { key = "Throne3", id = 2062267565, price = 799, icon = "Throne" },
 } :: { [string]: Pass }
 
 Products.ProductOrder = {
@@ -47,9 +47,9 @@ Products.Products = {
 	WheelSpin1 = { key = "WheelSpin1", id = 3718229338, price = 29, icon = "Wheel" },
 	WheelSpins5 = { key = "WheelSpins5", id = 3718229344, price = 119, icon = "Wheel" },
 	-- giganti galattici (vanno subito sul trono)
-	GalacticLion = { key = "GalacticLion", id = 0, price = 399, icon = "NebulaLion" },
-	GalacticKraken = { key = "GalacticKraken", id = 0, price = 599, icon = "StarKraken" },
-	GalacticWhale = { key = "GalacticWhale", id = 0, price = 799, icon = "CosmicWhale" },
+	GalacticLion = { key = "GalacticLion", id = 3725117642, price = 399, icon = "NebulaLion" },
+	GalacticKraken = { key = "GalacticKraken", id = 3725117671, price = 599, icon = "StarKraken" },
+	GalacticWhale = { key = "GalacticWhale", id = 3725117701, price = 799, icon = "CosmicWhale" },
 } :: { [string]: Product }
 
 -- Pet galattici: prodotto -> pet

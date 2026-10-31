@@ -4,10 +4,10 @@ Una rana pescatrice colossale che nuota verso chi guarda con la bocca spalancata
 lucido come un giocattolo di vinile, che si assottiglia in una coda piegata a S. La mandibola enorme sporge in
 avanti (prognatismo) ed e' piena di denti ad ago storti e vetrosi; dalla fronte sale un'antenna lunga e curva
 che porta davanti alla faccia una grande esca luminosa bianco-ciano (parte Neon "Bubbles": il gioco ci attacca le
-bollicine). Strisce e puntini bioluminescenti ciano sui fianchi, pinne corazzate a raggi appuntiti, occhietti
+bollicine). L'antenna ha anelli luminosi come una canna da pesca. Branchie, strisce,
+puntini, gengive e punte delle spine bioluminescenti ciano; pinne corazzate a raggi di metallo appuntiti; occhietti
 piccoli e cattivi che brillano color ambra sotto arcate di metallo chiodate.
-Tocco "toy horror": una grossa chiave da carica d'ottone piantata nella schiena e una toppa cucita a punti
-incrociati sulla pinna della coda.
+Tocco "toy horror": una grossa chiave da carica d'ottone piantata nella schiena, come un pesce a molla.
 """
 import math
 import os
@@ -20,7 +20,7 @@ from scipy.spatial import cKDTree
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from lib.sdf import (SDF, bezier, capsule, ellipsoid, euler, prism, round_cone, smin, sphere, torus,  # noqa: E402
-                     tube, union)
+                     union)
 from lib.sdf import tube as _tube  # noqa: E402
 from lib.toy import Model  # noqa: E402
 
@@ -46,11 +46,6 @@ def log(msg):
 def norm(v):
     v = np.asarray(v, dtype=np.float64)
     return v / np.linalg.norm(v)
-
-
-def smoothstep(a, b, x):
-    t = np.clip((x - a) / (b - a), 0.0, 1.0)
-    return t * t * (3.0 - 2.0 * t)
 
 
 def fast_union(shapes, k=0.0, base=None, margin=0.06):
@@ -546,7 +541,7 @@ for sx in (1, -1):
         v = jaw_local((o[None, :] + ts[:, None] * d[None, :]).astype(np.float32))
         idx = np.nonzero(v > 0)[0]
         if len(idx) and v[0] < 0:
-            q = o + ts[idx[0]] * norm(d) * np.linalg.norm(d) - norm(d) * 0.02
+            q = o + ts[idx[0]] * d - norm(d) * 0.02
             jaw_dots.append(M(J(sphere(0.052 - 0.004 * k_, tuple(q)))))
 glow += jaw_dots
 log("bioluminescenza pronta")
@@ -633,7 +628,7 @@ log("pinne pronte")
 
 # ============================================================ chiave da carica d'ottone nella schiena
 KEY_S = 0.76 * L
-kc, kT, kD, kL = sp.frame(KEY_S)
+_, kT, kD, kL = sp.frame(KEY_S)
 key_base = sp.world(KEY_S, 0.06, BT(KEY_S) - 0.1)
 key_dir = norm(kD * 1.0 + kL * 0.5)
 key_top = key_base + key_dir * 0.4

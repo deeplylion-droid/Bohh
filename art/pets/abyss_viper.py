@@ -19,8 +19,8 @@ import numpy as np
 from scipy.spatial import cKDTree
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from lib.sdf import (SDF, bezier, box, capsule, ellipsoid, euler, prism, project, round_cone, smin, sphere, torus,  # noqa: E402
-                     tube, union)
+from lib.sdf import (SDF, bezier, box, capsule, ellipsoid, euler, prism, project, round_cone, smin, sphere,  # noqa: E402
+                     union)
 from lib.sdf import tube as _tube  # noqa: E402
 from lib.toy import Model  # noqa: E402
 
@@ -35,7 +35,6 @@ def tube(points, radii, k=0.0):
 DRAFT = os.environ.get("DRAFT", "") == "1"
 VX = 1.35 if DRAFT else 1.0
 T0 = time.time()
-rng = np.random.default_rng(7)
 
 
 def log(msg):
@@ -46,11 +45,6 @@ def log(msg):
 def norm(v):
     v = np.asarray(v, dtype=np.float64)
     return v / np.linalg.norm(v)
-
-
-def smoothstep(a, b, x):
-    t = np.clip((x - a) / (b - a), 0.0, 1.0)
-    return t * t * (3.0 - 2.0 * t)
 
 
 def fast_union(shapes, k=0.0, base=None, margin=0.06):

@@ -8,6 +8,10 @@ Prima i render 3D (dalla cartella art/):
 poi (dalla radice del repo): .tools/venv/bin/python art/promo/icon_compose.py [variante della toppa]
 Uscita: art/out/promo/icon_proposals/icon_A_guardiano.png, icon_B_uovo.png, icon_C_toppa.png, sheet.png
 (le varianti della toppa provate restano in icon_proposals/work/).
+
+Revisione di B (uovo sulla vetta): icon_scenes.py vetta / vetta_bandiera 1024 64 final, poi
+    .tools/venv/bin/python art/promo/icon_compose.py vetta
+Uscita: icon_B_vetta.png, icon_B_vetta_bandiera.png e sheet_B.png (con la B attuale per confronto).
 """
 from __future__ import annotations
 
@@ -158,7 +162,8 @@ def make_toppa(variant: str, hero_png: Path) -> Path:
 
 
 # ------------------------------------------------------------------------------------------ foglio di confronto
-def sheet(icons: list[tuple[str, str, Path]]) -> Path:
+def sheet(icons: list[tuple[str, str, Path]], name: str = "sheet",
+          title: str = "Climb &amp; Steal Eggs &mdash; proposte di icona") -> Path:
     cols = []
     for code, title, p in icons:
         cols.append(f"""<div class='col'><div class='h'>{code} &middot; {title}</div>
@@ -181,9 +186,9 @@ body{{width:{W}px;height:{H}px;background:#ece7df;font-family:'Patrick Hand';col
 .sm img{{width:150px;height:150px;display:block;border-radius:14px}}
 .tiny img{{width:64px;height:64px;border-radius:8px}}
 .light{{background:#ffffff}}.dark{{background:#191b1d;color:#bbb}}
-</style></head><body><div class='t'>Climb &amp; Steal Eggs &mdash; proposte di icona</div><div class='note'>Ogni icona a 512 px (file vero) e ridotta a 150 px e 64 px con gli angoli arrotondati come nelle schede di Roblox, su sfondo chiaro e scuro.</div><div class='wrap'>{''.join(cols)}</div></body></html>"""
-    shot = shoot(html, WORK / "sheet.png", W, H)
-    out = OUT / "sheet.png"
+</style></head><body><div class='t'>{title}</div><div class='note'>Ogni icona a 512 px (file vero) e ridotta a 150 px e 64 px con gli angoli arrotondati come nelle schede di Roblox, su sfondo chiaro e scuro.</div><div class='wrap'>{''.join(cols)}</div></body></html>"""
+    shot = shoot(html, WORK / f"{name}.png", W, H)
+    out = OUT / f"{name}.png"
     shutil.copy(shot, out)
     return out
 
@@ -198,6 +203,17 @@ def downscale(src: Path, dst: Path):
 def main(argv: list[str]) -> int:
     OUT.mkdir(parents=True, exist_ok=True)
     variant = argv[0] if argv else "teal"
+    if variant == "vetta":
+        # revisione di B: l'uovo-mostro sulla punta di un picco (con e senza bandierina di vetta)
+        finals = [("B", "attuale", OUT / "icon_B_uovo.png", None),
+                  ("B", "vetta", OUT / "icon_B_vetta.png", WORK / "vetta_final_512.png"),
+                  ("B", "vetta con bandierina", OUT / "icon_B_vetta_bandiera.png", WORK / "vetta_bandiera_final_512.png")]
+        for _, _, dst, src in finals:
+            if src is not None:
+                downscale(src, dst)
+        print("[icone]", sheet([(code, title, dst) for code, title, dst, _ in finals], name="sheet_B",
+                               title="Chi c'&egrave; dentro? &mdash; revisione: l'uovo sulla vetta"))
+        return 0
     hero = WORK / (argv[1] if len(argv) > 1 else "toppa_hero_final.png")
     if variant == "all":
         for name in VARIANTS:
