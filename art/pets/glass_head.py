@@ -1,11 +1,12 @@
 """Testa di Vetro (GlassHead) - pet del Percorso Estremo (pesci abissali).
 
 Un pesce barile (barreleye) che risale dagli abissi in diagonale, con il corpo affusolato scuro piegato a S: sopra la
-testa ha una cupola di vetro trasparente, fissata con un collare di metallo chiodato come un barattolo da
-collezione, e dentro si vedono i due grandi occhi a tubo verdi e luminosi che guardano in alto (le lenti sono la parte
-Neon "Bubbles": il gioco ci attacca le bollicine, come in un acquario). Sotto la cupola il muso ha due narici che
-sembrano occhietti e una boccuccia imbronciata. Grandi pinne pettorali a ventaglio aperte come ali, pinne con il
-bordo verde luminoso e lunghe code a nastro che ondeggiano sotto di lui. Misterioso e alieno.
+testa ha una grande cupola di vetro trasparente fissata con un collare di rame chiodato, come un casco da palombaro
+giocattolo, e dentro si vedono i due grandi occhi a tubo verdi e luminosi che guardano in alto (le lenti sono la parte
+Neon "Bubbles": il gioco ci attacca le bollicine, come in un acquario). Sul muso, sotto la cupola, le due narici sono
+occhietti finti bianchi che guardano storto chi passa, sotto sopracciglia aggrottate, e la boccuccia e' imbronciata.
+Pinne traslucide verde acqua con il bordo verde luminoso: grandi pettorali a ventaglio aperte come ali e una coda a
+velo increspata che scende all'indietro e finisce in tre lunghi nastri. Misterioso e alieno.
 """
 import math
 import os

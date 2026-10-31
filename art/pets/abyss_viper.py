@@ -3,9 +3,9 @@
 Un pesce vipera lunghissimo, sospeso nel buio come un serpente marino: il corpo blu-nero iridescente si avvolge
 in una grande S verticale, con la testa in alto protesa verso chi guarda e la coda a forbice in basso. Le fauci sono
 spalancate e le zanne, enormi e ricurve come sciabole, non ci stanno in bocca: le punte brillano di magenta (parte Neon
-"Aura": il gioco ci attacca le scintille rosa-viola); brillano anche le punte delle pinne. Una fila
-di fotofori magenta corre lungo tutto il ventre seguendo la S, una banda viola metallizzata (il riflesso iridescente)
-segue il fianco, le pinne sono lame affilate. Dal mento pende un barbiglio sottile con un bulbo luminoso in fondo
+"Aura": il gioco ci attacca le scintille rosa-viola); brillano anche le punte delle pinne. Due file
+di fotofori magenta corrono lungo tutto il ventre seguendo la S, una banda viola metallizzata (il riflesso iridescente)
+segue il fianco e la testa, le pinne sono lame viola metallizzate e sul cranio c'e' una cresta di lame. Dal mento pende un barbiglio sottile con un bulbo luminoso in fondo
 (parte Neon "Bubbles": il gioco ci attacca le bollicine). Occhi grandi e luminosi sotto sopracciglia aggrottate.
 Tocco "toy horror": una cicatrice ricucita a punti incrociati attraversa la testa.
 """
