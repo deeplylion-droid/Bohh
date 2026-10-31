@@ -8,6 +8,7 @@ local RunService = game:GetService("RunService")
 
 local Assets = require(ReplicatedStorage.Shared.Assets)
 local AvalancheTiming = require(ReplicatedStorage.Shared.Avalanche)
+local Extreme = require(ReplicatedStorage.Shared.Extreme)
 local MapLayout = require(ReplicatedStorage.Shared.MapLayout)
 local Net = require(ReplicatedStorage.Shared.Net)
 
@@ -297,7 +298,8 @@ local function tick(t: number)
 	local hrp = rootPart()
 	local pos = hrp and hrp.Position
 	local sheltered = pos ~= nil and MapLayout.IsSheltered(pos)
-	local onSummit = pos ~= nil and MapLayout.ZoneAt(pos) == "Summit"
+	-- in vetta e nel Percorso Estremo la valanga non arriva: niente musica di pericolo
+	local onSummit = pos ~= nil and (MapLayout.ZoneAt(pos) == "Summit" or Extreme.InCourse(pos))
 	local front = AvalancheTiming.FrontY(at, t)
 	local newPhase = "none"
 	if front then

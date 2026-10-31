@@ -380,6 +380,10 @@ end
 
 -- Vero se la posizione e' dentro un rifugio (o in vetta/cratere, dove la valanga non arriva)
 function MapLayout.IsSheltered(pos: Vector3): boolean
+	-- il Percorso Estremo e' un canyon a parte: la valanga del sentiero non ci arriva
+	if Extreme.InCourse(pos) then
+		return true
+	end
 	local zone = MapLayout.ZoneAt(pos)
 	if zone == "Summit" then
 		return true
