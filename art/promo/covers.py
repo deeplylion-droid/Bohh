@@ -1,28 +1,37 @@
 """Copertine del gioco (miniature 16:9 della pagina Roblox, 1920x1080): scene 3D vere renderizzate in Blender
-(Cycles CPU), con lo stesso stile della miniatura quadrata della vetta (promo/icon_scenes.py: AgX "Punchy",
-montagne sfaccettate, neve e roccia con foschia, mare di nuvole, cielo a gradiente, passata di bagliore + bloom e
-vignettatura in numpy) e il Bacon Hair vero (promo/bacon.py: Pal Hair, maglia e jeans di Roblox sui blocchi R6).
-I titoli li aggiunge promo/cover_compose.py.
+(Cycles CPU), con gli strumenti della miniatura quadrata della vetta (promo/icon_scenes.py: montagne sfaccettate,
+neve e roccia con foschia, mare di nuvole, cielo a gradiente, passata di bagliore + bloom e vignettatura in numpy),
+vista "Standard" per avere colori accesi, e il Bacon Hair vero (promo/bacon.py: Pal Hair, maglia e jeans di Roblox
+sui blocchi R6). I titoli li aggiunge promo/cover_compose.py.
 
-Scene:
-- steal:   il Bacon Hair corre su una cresta innevata con un uovo Ultra luminoso sopra la testa, inseguito dal
-           Titan Rex gigante che ruggisce; cielo azzurro, sole, vette e mare di nuvole.
-- giants:  i giganti piu' fighi in fila sulla vetta al tramonto (Penta Drago al centro, Cerbero, Titan Rex,
-           Grifone del Tuono, Komodo Infernale...), controluce caldo, la Balena Cosmica che vola nel cielo.
-- extreme: il Bacon Hair salta sopra un fiume di lava nell'Inferno del Percorso Estremo, con i diavoli
-           (Behemoth, Abaddon, Belzebu') attorno; uovo Estremo sul santuario.
+Scene (tutti i pet sono quelli veri del gioco, art/out/pet e art/out/egg):
+- steal:   il Bacon Hair (faccia spaventata) corre su una cresta innevata con l'uovo Ultra sopra la testa (in gioco
+           le uova rubate si impilano sopra la testa) e il Titan Rex gigante gli spalanca le fauci alle spalle (le
+           mamme guardiane inseguono chi ruba); cielo azzurro, vette e mare di nuvole.
+- giants:  i cinque giganti Ultra (nascono dall'uovo Ultra e stanno sui troni) in fila sulla vetta al tramonto:
+           Penta Drago sul trono al centro, Komodo Infernale, Titan Rex, Grifone del Tuono, Vedova Velenosa; la
+           Balena Cosmica (gigante del negozio) che vola nel cielo, uova Leggendaria e Ultra davanti.
+- extreme: il Bacon Hair (faccia felice) salta a stella sopra il fiume di lava dell'Inferno del Percorso Estremo,
+           fra colonne di basalto; Behemoth e Abaddon sulle sponde, Belzebu' in volo, in fondo il santuario con
+           l'uovo Estremo e il portale.
 - hatch:   un uovo Primordiale che si crepa con raggi di luce dorata e il Cobra Reale che ne esce (nasce
            davvero da quell'uovo), la calotta del guscio che vola via; notte stellata sulla vetta.
 
 Uso (dalla cartella art/):
     PREVIEW=1 nice -n 10 ../.tools/venv/bin/python promo/covers.py steal 640 16 prova   # bozza veloce
+    NORENDER=1 PREVIEW=1 ... promo/covers.py steal 640 16 x   # solo le posizioni nel fotogramma, senza render
     nice -n 10 ../.tools/venv/bin/python promo/covers.py steal 1920 160 final          # finale
     ../.tools/venv/bin/python promo/cover_compose.py                                   # titoli + foglio
-Uscita in art/out/promo/covers/work/: <scena>_<tag>.png (render), _glow.png (superfici luminose), _post.png
-(bagliore, vignettatura, saturazione: e' l'immagine che usa cover_compose.py).
-Variabili d'ambiente comuni: PREVIEW=1 (niente suddivisione delle mesh ne' profondita' di campo), CAM/TARGET
-("x,y,z"), LENS, FSTOP, EXPO, SAT (saturazione in post), BLOOM, VIG; quelle di ogni scena sono nel suo codice
-(env("NOME", predefinito)).
+Uscita in art/out/promo/covers/work/: <scena>_<tag>.png (render), _glow.png (superfici luminose), _mask.png (il
+Bacon Hair, per tenergli lontano il bagliore e misurare la pelle), _post.png (l'immagine che usa cover_compose.py).
+
+Luce sul Bacon Hair: la sua pelle (248, 248, 250) e le scarpe bianche si bruciano subito. Le luci di ogni gigante
+e dell'uovo illuminano solo loro (light linking di Cycles, only_lights), il personaggio ha le sue luci basse e un
+fattore PLAYER_K (riflettanza scalata = meno luce solo su di lui); dopo il render skin_report stampa i percentili
+della pelle (testa e braccia devono restare sotto ~235, con le ombre leggibili).
+Variabili d'ambiente comuni: PREVIEW=1 (niente profondita' di campo, meno rimbalzi), SUBDIV=1 (suddivide i modelli:
+attenzione alla memoria), CAM/TARGET ("x,y,z"), LENS, FSTOP, EXPO, SAT (saturazione in post), BLOOM, VIG,
+PLAYER_K; quelle di ogni scena sono nel suo codice (env("NOME", predefinito)).
 """
 from __future__ import annotations
 
@@ -268,8 +277,56 @@ def glow_pass(path: Path, width: int, extra=()):
     return S.render_to(path)
 
 
+def mask_pass(path: Path, width: int, groups: dict):
+    """Maschera del personaggio (dopo la passata glow): ogni gruppo di oggetti in un canale (R, G, B) emissivo puro,
+    tutto il resto holdout. Serve a tenere il bagliore fuori dal Bacon Hair e a misurare la sua pelle."""
+    sc = bpy.context.scene
+    hold = bpy.data.materials.get("Holdout")
+    chans = {}
+    for ch, (key, objs) in zip(("#ff0000", "#00ff00", "#0000ff"), groups.items()):
+        m = emission(f"Mask{key}", ch, 1.0)
+        for o in objs:
+            chans[o.name] = m
+    for o in sc.objects:
+        if o.type != "MESH":
+            continue
+        o.data.materials.clear()
+        o.data.materials.append(chans.get(o.name, hold))
+        for poly in o.data.polygons:
+            poly.material_index = 0
+    sc.view_settings.view_transform = "Standard"
+    sc.view_settings.look = "None"
+    sc.view_settings.exposure = 0.0
+    sc.render.resolution_x = width
+    sc.render.resolution_y = width * 9 // 16
+    sc.cycles.samples = 6
+    sc.cycles.use_denoising = False
+    sc.cycles.max_bounces = 0
+    sc.camera.data.dof.use_dof = False
+    return S.render_to(path)
+
+
+def skin_report(post: Path, mask: Path):
+    """Pelle del Bacon Hair nell'immagine finale: percentili del canale piu' alto sulla testa (rosso nella
+    maschera) e sulle braccia (verde), frazione di pixel bruciati (>= 250)."""
+    from PIL import Image
+    im = np.asarray(Image.open(post).convert("RGB"), dtype=np.float32)
+    mk = Image.open(mask).convert("RGBA").resize((im.shape[1], im.shape[0]), Image.NEAREST)
+    mk = np.asarray(mk, dtype=np.float32) / 255.0
+    a = mk[..., 3]
+    out = {}
+    for i, part in enumerate(("testa", "braccia", "corpo")):
+        sel = (mk[..., i] * a) > 0.8
+        if sel.sum() < 20:
+            continue
+        mx = im[sel].max(axis=1)
+        out[part] = (int(sel.sum()), [int(np.percentile(mx, q)) for q in (50, 90, 99)], round(float((mx >= 250).mean()) * 100, 2))
+    print("[covers] pelle (pixel, percentili 50/90/99 del canale max, % bruciati):", out)
+    return out
+
+
 def finish(beauty: Path, glow: Path | None, bloom=0.5, radii=(0.01, 0.03, 0.08), vignette=0.16, sat=1.12,
-           contrast=1.04, lift=0.0, sharpen=0.0):
+           contrast=1.04, lift=0.0, sharpen=0.0, mask: Path | None = None):
     """Bagliore (somma di sfocature gaussiane della passata luminosa, in 'screen'), saturazione e contrasto
     leggeri, vignettatura. Scrive <render>_post.png."""
     from PIL import Image
@@ -286,6 +343,10 @@ def finish(beauty: Path, glow: Path | None, bloom=0.5, radii=(0.01, 0.03, 0.08),
             for ch in range(3):
                 acc[..., ch] += gaussian_filter(g[..., ch], r * w) * (1.0 / (i + 1)) ** 0.5
         acc *= bloom
+        if mask is not None and mask.exists():
+            mk = Image.open(mask).convert("RGBA").resize((w, h), Image.BILINEAR)
+            mk = np.asarray(mk, dtype=np.float32)[..., 3:4] / 255.0
+            acc *= 1.0 - 0.92 * gaussian_filter(mk[..., 0], 1.5)[..., None]  # niente bagliore sul Bacon Hair
         im = 1.0 - (1.0 - im) * (1.0 - np.clip(acc, 0, 1))
     if sat != 1.0:
         lum = (im * np.array([0.2126, 0.7152, 0.0722])).sum(-1, keepdims=True)
@@ -307,14 +368,19 @@ def finish(beauty: Path, glow: Path | None, bloom=0.5, radii=(0.01, 0.03, 0.08),
 
 
 def render_all(name: str, tag: str, width: int, bloom=0.5, sat=1.12, vignette=0.16, extra_glow=(), radii=(0.01, 0.03, 0.08),
-               contrast=1.04, sharpen=0.0):
+               contrast=1.04, sharpen=0.0, player=None):
+    """Render, passata glow, (maschera del Bacon Hair se player = {gruppo: oggetti}), post e controllo della pelle."""
     if os.environ.get("NORENDER") == "1":
         return None
     stem = name + (f"_{tag}" if tag else "")
     beauty = S.render_to(WORK / f"{stem}.png")
     glow = glow_pass(WORK / f"{stem}_glow.png", max(320, width // 3), extra_glow)
-    return finish(beauty, glow, bloom=env("BLOOM", bloom), sat=env("SAT", sat), vignette=env("VIG", vignette),
-                  radii=radii, contrast=env("CONTRAST", contrast), sharpen=env("SHARPEN", sharpen))
+    mask = mask_pass(WORK / f"{stem}_mask.png", width, player) if player else None
+    post = finish(beauty, glow, bloom=env("BLOOM", bloom), sat=env("SAT", sat), vignette=env("VIG", vignette),
+                  radii=radii, contrast=env("CONTRAST", contrast), sharpen=env("SHARPEN", sharpen), mask=mask)
+    if mask is not None:
+        skin_report(post, mask)
+    return post
 
 
 def cam_basis(cam_loc, target):
@@ -339,6 +405,44 @@ def bacon_player(pose: dict, face="excited"):
     bpy.context.view_layer.update()
     parts = {o.name.split(".")[0]: o for o in descendants(root)}
     return root, [o for o in parts.values() if o.type == "MESH"], parts
+
+
+def only_lights(light_obj, objs, name: str):
+    """Light linking di Cycles: la luce illumina solo questi oggetti (per esempio il riempimento del gigante non deve
+    bruciare il Bacon Hair che gli sta davanti)."""
+    coll = bpy.data.collections.get(name) or bpy.data.collections.new(name)
+    for o in objs:
+        if o.name not in coll.objects:
+            coll.objects.link(o)
+    light_obj.light_linking.receiver_collection = coll
+    return light_obj
+
+
+def dim_player(objs, k: float):
+    """Meno luce sul Bacon Hair: la sua pelle (248, 248, 250), le scarpe e le maniche bianche si bruciano subito in
+    una scena di neve al sole. In un render lineare scalare la riflettanza diffusa di k equivale a fargli arrivare k
+    volte la luce, senza toccare il resto della scena (cielo, giganti, neve). Le texture restano quelle di Roblox."""
+    done = set()
+    for o in objs:
+        for m in o.data.materials:
+            if m is None or m.name in done or not m.use_nodes:
+                continue
+            done.add(m.name)
+            nt = m.node_tree
+            b = nt.nodes.get("Principled BSDF")
+            if b is None:
+                continue
+            inp = b.inputs["Base Color"]
+            if inp.is_linked:
+                src = inp.links[0].from_socket
+                vm = nt.nodes.new("ShaderNodeVectorMath")
+                vm.operation = "SCALE"
+                vm.inputs["Scale"].default_value = k
+                nt.links.new(src, vm.inputs[0])
+                nt.links.new(vm.outputs[0], inp)
+            else:
+                c = inp.default_value
+                inp.default_value = (c[0] * k, c[1] * k, c[2] * k, c[3])
 
 
 def place_bacon(root, objs, x, y, ground, yaw, air=0.0):
@@ -446,6 +550,7 @@ def scene_steal(w: int, samples: int, tag: str):
 
     # --- Bacon Hair: corre verso la camera (un po' verso sinistra) con l'uovo Ultra sopra la testa
     bac, bac_objs, bparts = bacon_player(CARRY, env("FACE", "shocked"))
+    dim_player(bac_objs, env("PLAYER_K", 0.58))
     ax, ay = env("AV_XY", (-0.5, -2.5))
     place_bacon(bac, bac_objs, ax, ay, gz(ax, ay), env("AV_YAW", -26.0), air=env("AIR", 0.3))
     egg_root, egg_objs, egg_c = carry_egg(bac, bparts, env("EGG", "EggUltra"), width=env("EGG_W", 1.6),
@@ -474,7 +579,7 @@ def scene_steal(w: int, samples: int, tag: str):
 
     # --- cielo azzurro luminoso, vette lontane e mare di nuvole (siamo in alto)
     sky_gradient([(0.0, lin("#eefaff")), (0.07, lin("#bfe6ff")), (0.22, lin("#74c2ff")), (0.45, lin("#3d9bff")),
-                  (1.0, lin("#2a7df5"))], light_color=lin("#a8ccff"), light_strength=env("AMB", 1.0))
+                  (1.0, lin("#2a7df5"))], light_color=lin("#a8ccff"), light_strength=env("AMB", 0.8))
     fogc = "#b4dcff"
     m1 = S.rock_snow_material("Mnt1", "#41548a", "#f4f8ff", fogc, 0.004, 30, snow_from=0.5)
     m2 = S.rock_snow_material("Mnt2", "#41548a", "#eef4ff", fogc, 0.006, 30, snow_from=0.45)
@@ -493,20 +598,24 @@ def scene_steal(w: int, samples: int, tag: str):
     S.sun_light("Sun", tuple(sun_dir), env("SUNL", 3.6), lin("#fff1dc")[:3], angle=3.0)
     ac = Vector(((bl[0] + bl[1]) / 2).tolist())
     rc = Vector(((r_lo + r_hi) / 2).tolist())
-    S.area_light("FillFront", tuple(ac + Vector((5, -12, 3))), tuple(ac), env("FILL", 1200.0), 10.0, lin("#d6e8ff")[:3])
-    S.area_light("RimAv", tuple(ac + Vector((4, 7, 5))), tuple(ac + Vector((0, 0, 1))), env("RIM", 2600.0), 4.0,
+    # (luci sul Bacon Hair tenute basse: pelle e scarpe bianche si bruciano subito)
+    # (niente riempimento frontale: basta il rimbalzo della neve; contorni morbidi)
+    S.area_light("RimAv", tuple(ac + Vector((4, 7, 5))), tuple(ac + Vector((0, 0, 1))), env("RIM", 400.0), 4.0,
                  lin("#eef6ff")[:3])
-    S.area_light("RimAvL", tuple(ac + Vector((-6, 5, 4))), tuple(ac + Vector((0, 0, 1))), env("RIM", 2600.0) * 0.8, 4.0,
+    S.area_light("RimAvL", tuple(ac + Vector((-6, 5, 4))), tuple(ac + Vector((0, 0, 1))), env("RIM", 400.0) * 0.8, 4.0,
                  lin("#fff3e0")[:3])
-    S.area_light("RimRex", tuple(rc + Vector((-6, 16, 14))), tuple(rc), env("RIMREX", 30000.0), 14.0, lin("#eef6ff")[:3])
-    S.area_light("FillRex", tuple(rc + Vector((-8, -24, 6))), tuple(rc), env("FILLREX", 9000.0), 18.0, lin("#ffe6cc")[:3])
+    only_lights(S.area_light("RimRex", tuple(rc + Vector((-6, 16, 14))), tuple(rc), env("RIMREX", 30000.0), 14.0,
+                             lin("#eef6ff")[:3]), rex_objs, "RexLights")
+    only_lights(S.area_light("FillRex", tuple(rc + Vector((-8, -24, 6))), tuple(rc), env("FILLREX", 9000.0), 18.0,
+                             lin("#ffe6cc")[:3]), rex_objs, "RexLights")
     head_w = bparts["Head"].matrix_world.translation
-    S.area_light("FaceFill", tuple(head_w + Vector((-1.5, -5.0, 0.6))), tuple(head_w), env("FACE", 160.0), 1.5,
+    S.area_light("FaceFill", tuple(head_w + Vector((-1.5, -5.0, 0.6))), tuple(head_w), env("FACE", 35.0), 1.5,
                  lin("#fff4e6")[:3])
-    S.area_light("EggKey", tuple(egg_c + Vector((-2.5, -5.0, 2.0))), tuple(egg_c), env("EGGKEY", 260.0), 2.0,
-                 lin("#ffffff")[:3])
-    S.point_light("EggGlow", tuple(egg_c), env("EGGLIGHT", 300.0), 0.6, lin("#ff7ad9")[:3])
-    S.point_light("EggGlow2", tuple(egg_c + Vector((0, -1.6, -0.6))), env("EGGLIGHT", 300.0) * 0.6, 0.4, lin("#ffd36b")[:3])
+    only_lights(S.area_light("EggKey", tuple(egg_c + Vector((-2.0, -4.0, 3.5))), tuple(egg_c), env("EGGKEY", 220.0), 1.5,
+                             lin("#ffffff")[:3]), egg_objs, "EggLights")
+    only_lights(S.point_light("EggGlow", tuple(egg_c), env("EGGLIGHT", 200.0), 0.6, lin("#ff7ad9")[:3]), egg_objs, "EggLights")
+    only_lights(S.point_light("EggGlow2", tuple(egg_c + Vector((0, -1.4, 1.0))), env("EGGLIGHT", 200.0) * 0.5, 0.4,
+                              lin("#ffd36b")[:3]), egg_objs, "EggLights")
 
     # --- camera davanti al Bacon Hair, all'altezza del petto, leggermente dal basso
     cam_loc = env("CAM", (-1.9, -13.9, 2.0))
@@ -522,7 +631,9 @@ def scene_steal(w: int, samples: int, tag: str):
     report(feet=feet, head=head, egg_top=(egg_c.x, egg_c.y, e_hi[2]), mouth=model_pt(rex, mouth),
            rex_eye=model_pt(rex, (0.25, -2.1, 3.1)), rex_crown=model_pt(rex, (0, -1.6, 3.6)),
            rex_tail=model_pt(rex, (0.3, 1.9, 2.6)), rex_foot=model_pt(rex, (0.8, -0.5, 0.0)))
-    return render_all("steal", tag, w, bloom=0.55)
+    return render_all("steal", tag, w, bloom=0.4, radii=(0.006, 0.02, 0.05), sharpen=0.4,
+                      player={"head": [bparts["Head"]], "arms": [bparts["ArmBlockR"], bparts["ArmBlockL"]],
+                              "body": [bparts[k] for k in ("Torso", "LegBlockR", "LegBlockL", "PalHair")]})
 
 
 # =================================================================================== scena 2: giganti al tramonto
@@ -622,6 +733,7 @@ def scene_giants(w: int, samples: int, tag: str):
     # --- trono al centro con il Penta Drago
     tx, ty = env("THRONE_XY", (0.0, 9.0))
     _, top_z = throne("Throne", (tx, ty, gz(tx, ty) - 0.3), radius=env("THRONE_R", 4.6), height=env("THRONE_H", 2.2))
+    throne_objs = [o for o in bpy.data.objects if o.name.startswith("Throne")]
     ds = env("DRAGON_S", 2.5)
     dragon, d_objs = pet("PentaDragon", (tx, ty + 0.3, top_z - 0.05), env("DRAGON_YAW", 0.0), ds, glow=env("DRAGON_E", 2.2))
 
@@ -684,16 +796,18 @@ def scene_giants(w: int, samples: int, tag: str):
         lo, hi = S.bounds(objs)
         c = Vector(((lo + hi) / 2).tolist())
         size = float(hi[2] - lo[2])
+        # (ogni gigante ha le sue luci, collegate solo a lui: la neve resta nell'ombra del tramonto, non si brucia)
+        recv = objs + (throne_objs if name == "PentaDragon" else [])
         # controluce caldo da dietro a destra (come il sole) e da dietro a sinistra (piu' rosa)
-        S.area_light(f"Rim{name}", tuple(c + Vector((1.0 * size, 1.5 * size, 0.8 * size))), tuple(c),
-                     env("RIM", 300.0) * size ** 2, 0.5 * size, lin("#ffb066")[:3])
-        S.area_light(f"Rim2{name}", tuple(c + Vector((-1.2 * size, 1.3 * size, 0.7 * size))), tuple(c),
-                     env("RIM", 300.0) * 0.6 * size ** 2, 0.5 * size, lin("#ff7fb0")[:3])
+        only_lights(S.area_light(f"Rim{name}", tuple(c + Vector((1.0 * size, 1.5 * size, 0.8 * size))), tuple(c),
+                                 env("RIM", 450.0) * size ** 2, 0.5 * size, lin("#ffb066")[:3]), recv, f"L{name}")
+        only_lights(S.area_light(f"Rim2{name}", tuple(c + Vector((-1.2 * size, 1.3 * size, 0.7 * size))), tuple(c),
+                                 env("RIM", 450.0) * 0.6 * size ** 2, 0.5 * size, lin("#ff7fb0")[:3]), recv, f"L{name}")
         # luce principale calda da davanti a sinistra
-        S.area_light(f"Key{name}", tuple(c + Vector((-1.3 * size, -1.8 * size, 1.1 * size))), tuple(c),
-                     env("KEY", 55.0) * size ** 2, 0.8 * size, lin("#fff0dc")[:3])
+        only_lights(S.area_light(f"Key{name}", tuple(c + Vector((-1.3 * size, -1.8 * size, 1.1 * size))), tuple(c),
+                                 env("KEY", 95.0) * size ** 2, 0.8 * size, lin("#fff0dc")[:3]), recv, f"L{name}")
     S.area_light("FillCam", tuple(Vector(env("CAM", (0.0, -26.0, 3.2))) + Vector((6, 0, 4))), (0, 6, 5),
-                 env("FILL", 1200.0), 20.0, lin("#9fb0ff")[:3])
+                 env("FILL", 3500.0), 20.0, lin("#9fb0ff")[:3])
     wl, wh = S.bounds(w_objs)
     wc = Vector(((wl + wh) / 2).tolist())
     S.area_light("WhaleKey", tuple(wc + Vector((-8, -14, 6))), tuple(wc), env("WHALEKEY", 9000.0), 8.0, lin("#ffe6f0")[:3])
@@ -701,7 +815,13 @@ def scene_giants(w: int, samples: int, tag: str):
     for i, objs in enumerate(eggs):
         lo, hi = S.bounds(objs)
         c = Vector(((lo + hi) / 2).tolist())
-        S.point_light(f"EggL{i}", tuple(c + Vector((0, -1.2, 0.2))), env("EGGLIGHT", 220.0), 0.5, lin("#ffcf7a")[:3])
+        S.point_light(f"EggL{i}", tuple(c + Vector((0, -1.2, 0.2))), env("EGGLIGHT", 160.0), 0.5, lin("#ffcf7a")[:3])
+        # luce da vetrina sull'uovo (solo sull'uovo): l'oro deve brillare
+        only_lights(S.area_light(f"EggKey{i}", tuple(c + Vector((-3.0, -5.0, 3.5))), tuple(c), env("EGGKEY", 700.0), 2.5,
+                                 lin("#fff6e8")[:3]), objs, f"LEgg{i}")
+    # la neve: un riempimento basso e morbido solo per lei (chiara ma con le sue ombre, non bruciata)
+    only_lights(S.area_light("SnowFill", (0.0, -40.0, 14.0), (0.0, 0.0, 0.0), env("SNOWFILL", 26000.0), 30.0,
+                             lin("#ffd9e6")[:3]), [snow], "LSnow")
 
     cam_loc = env("CAM", (0.0, -28.0, 3.4))
     target = env("TARGET", (0.0, 6.0, 8.2))
@@ -940,6 +1060,7 @@ def scene_extreme(w: int, samples: int, tag: str):
 
     # --- il Bacon Hair a meta' salto fra due pilastri
     bac, bac_objs, bparts = bacon_player(LEAP, env("FACE", "excited"))
+    dim_player(bac_objs, env("PLAYER_K", 0.6))
     ax, ay, az = env("AV", (0.2, 2.2, 4.5))
     bparts["LegR"].rotation_euler.y = math.radians(env("SPLAY", float(LEAP_SPLAY)))
     bparts["LegL"].rotation_euler.y = -math.radians(env("SPLAY", float(LEAP_SPLAY)))
@@ -961,17 +1082,21 @@ def scene_extreme(w: int, samples: int, tag: str):
     # --- luci: lava da sotto (arancio), cielo, luce principale bianca sul Bacon Hair (la maglia resta verde)
     bl = S.bounds(bac_objs)
     ac = Vector(((bl[0] + bl[1]) / 2).tolist())
-    S.area_light("LavaBounce", tuple(ac + Vector((0, -2, -6))), tuple(ac), env("BOUNCE", 2500.0), 10.0, lin("#ff7a2a")[:3])
-    S.area_light("KeyAv", tuple(ac + Vector((-5, -9, 6))), tuple(ac), env("KEY", 1400.0), 4.0, lin("#fff6ee")[:3])
-    S.area_light("RimAv", tuple(ac + Vector((4, 8, 4))), tuple(ac), env("RIM", 1800.0), 3.0, lin("#ffd0a0")[:3])
+    # luci del Bacon Hair collegate solo a lui (e tenute basse: pelle e scarpe bianche si bruciano subito)
+    only_lights(S.area_light("LavaBounce", tuple(ac + Vector((0, -2, -6))), tuple(ac), env("BOUNCE", 260.0), 10.0,
+                             lin("#ff7a2a")[:3]), bac_objs, "LBacon")
+    only_lights(S.area_light("KeyAv", tuple(ac + Vector((-5, -9, 6))), tuple(ac), env("KEY", 1000.0), 4.0,
+                             lin("#eef2ff")[:3]), bac_objs, "LBacon")
+    only_lights(S.area_light("RimAv", tuple(ac + Vector((4, 8, 4))), tuple(ac), env("RIM", 350.0), 3.0,
+                             lin("#ffd0a0")[:3]), bac_objs, "LBacon")
     for name, objs in (("Beh", beh_objs), ("Aba", aba_objs), ("Bee", bee_objs)):
         lo, hi = S.bounds(objs)
         c = Vector(((lo + hi) / 2).tolist())
         size = float(hi[2] - lo[2])
-        S.area_light(f"Key{name}", tuple(c + Vector((-0.6 * size, -1.8 * size, 1.0 * size))), tuple(c),
-                     env("PKEY", 60.0) * size ** 2, 0.8 * size, lin("#ffe8d6")[:3])
-        S.area_light(f"Rim{name}", tuple(c + Vector((0.4 * size, 1.6 * size, 0.8 * size))), tuple(c),
-                     env("PRIM", 160.0) * size ** 2, 0.5 * size, lin("#ff9a4a")[:3])
+        only_lights(S.area_light(f"Key{name}", tuple(c + Vector((-0.6 * size, -1.8 * size, 1.0 * size))), tuple(c),
+                                 env("PKEY", 60.0) * size ** 2, 0.8 * size, lin("#ffe8d6")[:3]), objs, f"L{name}")
+        only_lights(S.area_light(f"Rim{name}", tuple(c + Vector((0.4 * size, 1.6 * size, 0.8 * size))), tuple(c),
+                                 env("PRIM", 160.0) * size ** 2, 0.5 * size, lin("#ff9a4a")[:3]), objs, f"L{name}")
     el, eh = S.bounds(egg_objs)
     S.point_light("ShrineGlow", tuple(Vector(((el + eh) / 2).tolist()) + Vector((0, -2, 0))), 900.0, 1.0, lin("#3ff6ff")[:3])
 
@@ -986,7 +1111,9 @@ def scene_extreme(w: int, samples: int, tag: str):
         lo, hi = S.bounds(objs)
         pts[name] = ((lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2, hi[2])
     report(**pts)
-    return render_all("extreme", tag, w, bloom=0.5, sat=1.08)
+    return render_all("extreme", tag, w, bloom=0.5, sat=1.08,
+                      player={"head": [bparts["Head"]], "arms": [bparts["ArmBlockR"], bparts["ArmBlockL"]],
+                              "body": [bparts[k] for k in ("Torso", "LegBlockR", "LegBlockL", "PalHair")]})
 
 
 # =================================================================================== scena 4: l'uovo si schiude
