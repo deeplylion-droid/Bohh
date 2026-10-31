@@ -438,7 +438,9 @@ do
 
 	-- B) Tronchi: corsie di tronchi che scorrono verso valle; si sale a sinistra, si scende a destra
 	liquid(1, 116, 232, 304, WATER, "SmoothPlastic", 0.2)
-	slab(1, 116 + FALL_THICK, 124, -Extreme.HalfWidth, -15, 307, 6, ROCK, "Slate") -- riva d'ingresso (sinistra)
+	-- riva d'ingresso (sinistra): dopo il velo della cascata e un po' dopo l'inizio della schiuma (le due
+	-- facce a filo facevano z-fighting)
+	slab(1, 116 + FALL_THICK + 0.1, 124, -Extreme.HalfWidth, -15, 307, 6, ROCK, "Slate")
 	slab(1, 220, 231.9, 9, Extreme.HalfWidth, 307.5, 6, ROCK, "Slate") -- riva d'uscita (destra)
 	local lanes = {
 		{ v = -12, speed = 7, gap = 26, logLength = 13 },
@@ -478,7 +480,7 @@ do
 
 	-- C) Vortici: dischi che girano sull'acqua, con qualche scoglio fra uno e l'altro
 	liquid(1, 232, 336, 290, WATER, "SmoothPlastic", 0.2)
-	slab(1, 232 + FALL_THICK, 240, 9, Extreme.HalfWidth, 292, 6, ROCK, "Slate")
+	slab(1, 232 + FALL_THICK + 0.1, 240, 9, Extreme.HalfWidth, 292, 6, ROCK, "Slate")
 	local discs = {
 		{ 248, 10, 5.5, 6 },
 		{ 262, -2, 5.0, -7 },
@@ -514,7 +516,9 @@ do
 		power = 70,
 		color = rgb(220, 240, 255),
 	})
-	slab(1, 326, 335.9, -5, 5, 292, 4, ROCK, "Slate")
+	-- sporgenza prima della cascata: il fondo appena dentro la lastra d'acqua (a filo col fondo
+	-- dell'acqua faceva z-fighting, e da sotto la cascata si vede)
+	slab(1, 326, 335.9, -5, 5, 292, 3.9, ROCK, "Slate")
 	fall(1, 336, 290, 276)
 
 	-- D) Rapide finali: dorsale di sassi stretta fra tronchi appesi che oscillano

@@ -1128,7 +1128,7 @@ def terrain_pass(parts, terrain, findings):
             continue
         if abs(P.pos[2] - COURSE_Z) > HALF_WIDTH + 30 and P.folder == "Pieces":
             continue
-        bad = []
+        bad, edge = [], []
         for j, f in enumerate(P.poly.faces):
             n = P.poly.normals[j]
             if n[1] < 0.3:
@@ -1136,29 +1136,59 @@ def terrain_pass(parts, terrain, findings):
             u, w = plane_basis(n)
             p2 = f @ np.stack([u, w], axis=1)
             lo2, hi2 = p2.min(axis=0), p2.max(axis=0)
-            nu = max(2, int((hi2[0] - lo2[0]) / 1.5) + 1)
-            nw = max(2, int((hi2[1] - lo2[1]) / 1.5) + 1)
+            step = 1.0
+            nu = max(2, int((hi2[0] - lo2[0]) / step) + 1)
+            nw = max(2, int((hi2[1] - lo2[1]) / step) + 1)
             gu, gw = np.meshgrid(np.linspace(lo2[0], hi2[0], nu), np.linspace(lo2[1], hi2[1], nw))
-            cand = np.stack([gu.ravel(), gw.ravel()], axis=1)
             base = f[0] - (f[0] @ u) * u - (f[0] @ w) * w
-            pts3 = base + np.outer(cand[:, 0], u) + np.outer(cand[:, 1], w)
-            # solo i punti dentro la faccia
-            inside = np.all(pts3 @ P.poly.normals.T - P.poly.offsets <= 1e-3, axis=1)
-            pts3 = pts3[inside]
-            if len(pts3) == 0:
-                continue
+            pts3 = base + np.outer(gu.ravel(), u) + np.outer(gw.ravel(), w)
+            inside = np.all(pts3 @ P.poly.normals.T - P.poly.offsets <= 1e-3, axis=1).reshape(gu.shape)
             h = terrain_height(T, pts3[:, 0], pts3[:, 2])
-            over = h - pts3[:, 1]
-            m = over > 0.3
-            if m.any():
-                bad.extend([(pts3[q], over[q]) for q in np.where(m)[0]])
-        if bad:
-            pts = np.array([b[0] for b in bad])
-            worst = max(b[1] for b in bad)
+            over = (h - pts3[:, 1]).reshape(gu.shape)
+            buried = inside & (over > 0.3)
+            if not buried.any():
+                continue
+            # zone sepolte collegate al bordo della faccia: la parte entra nel terreno (inizio del ponte,
+            # pali, sponde); quelle chiuse in mezzo sono il terreno che buca la superficie
+            lab = np.zeros(gu.shape, dtype=int)
+            nxt = 0
+            for a0, b0 in zip(*np.where(buried)):
+                if lab[a0, b0]:
+                    continue
+                nxt += 1
+                stack = [(a0, b0)]
+                lab[a0, b0] = nxt
+                touches = False
+                cells = []
+                while stack:
+                    a, b = stack.pop()
+                    cells.append((a, b))
+                    for da, db in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                        aa, bb = a + da, b + db
+                        if not (0 <= aa < gu.shape[0] and 0 <= bb < gu.shape[1]) or not inside[aa, bb]:
+                            touches = True
+                            continue
+                        if buried[aa, bb] and not lab[aa, bb]:
+                            lab[aa, bb] = nxt
+                            stack.append((aa, bb))
+                flat = pts3.reshape(gu.shape + (3,))
+                (edge if touches else bad).extend((flat[a, b], over[a, b]) for a, b in cells)
+        for group, kind in ((bad, "in mezzo"), (edge, "bordo")):
+            if not group:
+                continue
+            pts = np.array([b[0] for b in group])
+            worst = max(b[1] for b in group)
             top = pts.copy()
             top[:, 1] = terrain_height(T, pts[:, 0], pts[:, 2]) + 0.1  # sulla superficie del terreno
-            findings.append(Finding("TE", f"il terreno spunta sopra {P.name} fino a {worst:.1f} stud ({len(bad)} punti)",
-                                    P, None, pts.mean(axis=0), top, float(worst)))
+            if kind == "in mezzo":
+                text = f"il terreno spunta in mezzo a {P.name} fino a {worst:.1f} stud ({len(group)} punti)"
+            else:
+                text = f"{P.name} entra nel terreno dal bordo (fino a {worst:.1f} stud, {len(group)} punti)"
+            f = Finding("TE", text, P, None, pts.mean(axis=0), top, float(worst))
+            if kind == "bordo":
+                f.sev = "."
+                f.extra = "voluto se la parte deve uscire dal terreno (es. l'inizio del ponte)"
+            findings.append(f)
 
 
 # --------------------------------------------------------------------------------------- rapporto

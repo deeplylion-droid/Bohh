@@ -877,8 +877,15 @@ local function labShrine()
 	-- lato sinistro: schermo grande prima del portale e una lavagna dopo
 	wallScreen(-1, u0 + 6, u0 + 22, y + 5, y + 14, "graph", 31)
 	wallBoard(-1, u1 - 14, u1 - 8, y + 7, y + 12, "π")
-	-- torre di Tesla sul tetto (punto di riferimento da tutto il laboratorio)
+	-- facciata: fascia gialla sul fronte del tetto, bordo luminoso e due condizionatori col ventilatore
 	local roof = wallTop(3, (u0 + u1) / 2, 1)
+	span(3, u0 - 0.2, u0, roof - 2, roof, -25, 25, "RoofStripe", YELLOW, Mat.SmoothPlastic)
+	span(3, u0, u0 + 0.6, roof, roof + 0.4, -25, 25, "RoofGlow", CYAN, Mat.Neon)
+	for _, s in { -1, 1 } do
+		span(3, u1 - 14, u1 - 6, roof, roof + 3.5, s * 13, s * 21, "RoofUnit", LIGHT, Mat.DiamondPlate)
+		column(3, u1 - 10, s * 17, roof + 3.5, roof + 3.8, 5, "RoofFan", DARK, Mat.Metal)
+	end
+	-- torre di Tesla sul tetto (punto di riferimento da tutto il laboratorio)
 	local U = (u0 + u1) / 2 + 2
 	span(3, U - 7, U + 7, roof, roof + 3, -7, 7, "TowerBase", DARK, Mat.DiamondPlate)
 	local yy = roof + 3
@@ -1240,11 +1247,12 @@ local function infernoGate()
 	-- corna di toro sulle estremita' dell'architrave, con il fuoco in punta
 	for _, s in { -1, 1 } do
 		local top = yb + 8
+		column(4, um, s * (vg + 3), top, top + 2, 5.2, "HornSocket", GOLD, Mat.Foil)
 		local tip = horn(
 			"GateHorn",
-			at(4, um, top - 1, s * (vg + 3)),
-			at(4, um, top, s * (vg + 16)),
-			at(4, um, top + 20, s * (vg + 13)),
+			at(4, um, top + 1.6, s * (vg + 3)),
+			at(4, um - 5, top + 3, s * (vg + 15)),
+			at(4, um - 7, top + 21, s * (vg + 12)),
 			4.4
 		)
 		fire(tip, 5, 9, rgb(255, 170, 60), rgb(255, 60, 20))
@@ -1298,7 +1306,20 @@ local function infernoGantry()
 			span(4, u - 0.5, u + 0.5, beamY - 14, beamY - 2, s * (vp - 0.3), s * vp, "GantryGlow", EMBER, Mat.Neon)
 		end
 		span(4, u - 2, u + 2, beamY, beamY + 4, -(vp + 4), vp + 4, "GantryBeam", IRON, Mat.CorrodedMetal)
-		span(4, u - 0.5, u + 0.5, girderBottom + 2.6, beamY, -0.5, 0.5, "GantryHanger", IRON, Mat.Metal)
+		for _, sv in { -0.6, 0.6 } do
+			span(
+				4,
+				u - 0.2,
+				u + 0.2,
+				girderBottom + 2.6,
+				beamY,
+				sv - 0.2,
+				sv + 0.2,
+				"GantryChain",
+				IRON,
+				Mat.DiamondPlate
+			)
+		end
 		-- punte sulla trave
 		for _, sv in { -0.6, 0, 0.6 } do
 			local c = at(4, u, beamY + 4 + 2, sv * vp)
@@ -1406,8 +1427,8 @@ local function infernoThrone()
 		horn(
 			"ThroneHorn",
 			skullC + Vector3.new(0, 2.5, s * 4.4),
-			at(4, seat1 - 3, 298.5, s * 17),
-			at(4, seat1 - 3, 317, s * 15),
+			at(4, seat1 - 9, 298.5, s * 17),
+			at(4, seat1 - 11, 317, s * 14),
 			4.4
 		)
 	end
@@ -1481,6 +1502,17 @@ local function infernoShrine()
 	end
 	for _, u in { u0 + 18, u0 + 28, u0 + 54 } do
 		sconce(-1, u)
+	end
+	-- facciata della sala del trono: cornice d'oro sul fronte del tetto e una fila di zanne d'osso sul bordo
+	local roofTop = ceil + 2
+	span(4, u0 - 0.2, u0, ceil, roofTop, -25, 25, "RoofTrim", GOLD, Mat.Foil)
+	for _, sv in { -21, -14, -7, 7, 14, 21 } do
+		local h = if math.abs(sv) == 14 then 7 else 5
+		for _, m in { -1, 1 } do
+			local c = at(4, u0 + 2, roofTop + h / 2, sv + m * 1.2)
+			local rot = if m < 0 then CFrame.new() else CFrame.Angles(0, math.pi, 0)
+			wedge("RoofFang", Vector3.new(2.4, h, 2.4), CFrame.new(c) * rot, BONE, Mat.SmoothPlastic)
+		end
 	end
 	-- lampadario sopra l'altare
 	local uc = u0 + s4.shrineLength / 2
