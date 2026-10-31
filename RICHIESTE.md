@@ -15,6 +15,7 @@ Legenda: ⏳ in corso · 📋 da fare · ✅ fatto (con la versione pubblicata)
 | 12 | **Controllo automatico delle compenetrazioni** su tutto il Percorso Estremo (es. nel deserto): "fai un controllo tu, non posso correggerti ogni punto". | ⏳ agente: esportazione offline + verifica geometrica + correzioni |
 | 13 | Percorso Estremo **più dettagliato**: "aggiungi un po' di cura!!!" | ⏳ due agenti (sezioni 1-2 e 3-4) |
 | 14 | Interfaccia **più moderna** ("troppo antiquata"), **anche il font**, fatta da un agente. | ⏳ agente |
+| 15 | **Copertine** rifatte meglio, **in Blender** (scene 3D vere), con un **Bacon Hair** almeno in una e i **pet più fighi**. | ⏳ agente |
 
 ## Fatte
 
