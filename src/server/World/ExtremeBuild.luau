@@ -662,6 +662,18 @@ local function shrines(folder: Instance)
 			{ n = i },
 			{ bg = Color3.fromRGB(30, 30, 36), text = sh.glow }
 		)
+		if i == #Extreme.Shrines then
+			-- in fondo all'ultimo santuario: parete di roccia (oltre c'e' solo il muro invisibile)
+			local u1 = s.length + s.shrineLength
+			Build.Part({
+				name = "ShrineEndWall",
+				size = Vector3.new(4, 40, hw * 2 + 12),
+				cframe = CFrame.new(Extreme.At(i, u1 + 2, y + 10, 0)),
+				color = Color3.fromRGB(70, 20, 18),
+				material = Enum.Material.Basalt,
+				parent = model,
+			})
+		end
 		-- luce sull'altare
 		local altarGlow = Build.Part({
 			name = "AltarGlow",

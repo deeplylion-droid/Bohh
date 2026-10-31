@@ -1047,7 +1047,12 @@ local function supportFrame(p: Piece, t: number): CFrame?
 		return (Extreme.MoverState(p, t))
 	elseif p.kind == "Faller" then
 		-- conta anche se e' sparito da poco o sta per riapparire (ritardo di rete)
-		if Extreme.FallerSolid(p, t) or Extreme.FallerSolid(p, t - 0.5) or Extreme.FallerSolid(p, t + 0.3) then
+		if
+			Extreme.FallerSolid(p, t)
+			or Extreme.FallerSolid(p, t - 0.45)
+			or Extreme.FallerSolid(p, t - 0.9)
+			or Extreme.FallerSolid(p, t + 0.3)
+		then
 			return p.cframe
 		end
 		return nil
@@ -1073,7 +1078,7 @@ function Extreme.GroundBelow(pos: Vector3, t: number, depth: number, margin: num
 			local c = p.cframe.Position
 			if math.abs(c.X - pos.X) <= reach and math.abs(c.Z - pos.Z) <= reach then
 				-- le piattaforme mobili si controllano anche un po' indietro nel tempo (ritardo di rete)
-				local times: { number } = if p.kind == "Mover" then { t, t - 0.3 } else { t }
+				local times: { number } = if p.kind == "Mover" then { t, t - 0.25, t - 0.5, t - 0.8 } else { t }
 				for _, tt in times do
 					local cf = supportFrame(p, tt)
 					if cf then

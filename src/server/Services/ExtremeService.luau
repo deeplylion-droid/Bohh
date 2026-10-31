@@ -27,7 +27,7 @@ local S
 type Run = {
 	checkpoint: number,
 	started: number, -- tempo del server all'inizio della corsa
-	samples: { { t: number, x: number } }, -- posizioni recenti (controllo della velocita')
+	samples: { { t: number, x: number, y: number } }, -- posizioni recenti (velocita' e sospensione)
 	airSince: number?,
 	grace: number, -- fino a quando (os.clock) i controlli sono sospesi: appena rinato
 	knockGrace: number, -- spinta di un ostacolo in corso: velocita' piu' alta consentita
@@ -45,6 +45,8 @@ local runEvent: RemoteEvent
 
 local TICK = 0.1
 local AIR_LIMIT = 2.4 -- secondi senza appoggi sotto i piedi
+local HOVER_TIME = 0.6 -- senza appoggi e alla stessa quota per tanto cosi': si sta "in piedi sul nulla"
+local HOVER_RANGE = 1.5
 local SPEED_WINDOW = 1 -- secondi su cui si misura l'avanzamento
 local FORWARD_LIMIT = Extreme.WalkSpeed * 1.35 + 5 -- stud/s di avanzamento (verso -X)
 local KNOCK_LIMIT = 80
@@ -308,7 +310,7 @@ local function checkRunner(player: Player, run: Run, pos: Vector3, prev: Vector3
 		return
 	end
 	-- velocita' in avanti (verso -X) misurata sull'ultimo secondo
-	table.insert(run.samples, { t = t, x = pos.X })
+	table.insert(run.samples, { t = t, x = pos.X, y = pos.Y })
 	while #run.samples > 0 and t - run.samples[1].t > SPEED_WINDOW + 0.25 do
 		table.remove(run.samples, 1)
 	end
@@ -326,9 +328,25 @@ local function checkRunner(player: Player, run: Run, pos: Vector3, prev: Vector3
 		run.airSince = nil
 	else
 		run.airSince = run.airSince or t
-		if t - (run.airSince :: number) > AIR_LIMIT then
+		local air = t - (run.airSince :: number)
+		if air > AIR_LIMIT then
 			violation(player, "Air")
 			return
+		end
+		-- chi non ha appoggi cade o salta: restare alla stessa quota vuol dire stare su qualcosa che
+		-- per il server non c'e' (mattonelle crollate "congelate", piattaforme create dal client)
+		if air >= HOVER_TIME and not S.RagdollService.IsRagdolled(player) then
+			local lo, hi = math.huge, -math.huge
+			for _, smp in run.samples do
+				if t - smp.t <= HOVER_TIME then
+					lo = math.min(lo, smp.y)
+					hi = math.max(hi, smp.y)
+				end
+			end
+			if hi - lo < HOVER_RANGE then
+				violation(player, "Hover")
+				return
+			end
 		end
 	end
 	-- volumi mortali (piedi) ed elementi mortali accesi
