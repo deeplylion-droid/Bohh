@@ -766,32 +766,33 @@ for tip, fwd, sz in TOES:
                       t0 + fwd * 0.13 * sz + (0, 0, -0.04 * sz), 0.04 * sz, 0.012, n=7))
 
 # ============================================================ parti
-GS = float(os.environ.get("GS", 1.0))   # scala finale del modello
+GS = float(os.environ.get("GS", 0.92))   # scala finale del modello (altezza ~3.45)
 
 
 def add(name, sdf, color, voxel, **kw):
     m.add(name, sdf.scale(GS) if GS != 1.0 else sdf, color, voxel=voxel * GS * VX, **kw)
 
 
-add("Body", body0.subtract(CARVE), BLACK, 0.03, tris=3100)
+add("Body", body0.subtract(CARVE), BLACK, 0.03, tris=2900)
 neck_top = round_cone((0, -0.0, 2.34), (0, -0.05, 2.47), 0.17, 0.15)
 add("Head", SDF(fast_union([head_w], k=0.08, base=neck_top).f, head_w.lo - 0.1, np.maximum(head_w.hi, neck_top.hi) + 0.1),
-    BLACK, 0.022, role="skin", tris=2200)
+    BLACK, 0.022, role="skin", tris=2100)
 add("Fists", fast_union(FISTS), BLACK, 0.013, role="skin", tris=700)
 print("[anubis] pelle pronta", flush=True)
 add("Plinth", plinth, STONE, 0.03, role="detail", tris=400, smooth=False)
-add("Glyphs", fast_union(glyphs), BLUE_GLOW, 0.0095, material="Neon", role="glow", tris=600)
+staff_gem = union(*[sphere(0.017, (STAFF_X + sx * 0.034, STAFF_Y - 0.13, STAFF_TOP + 0.02)) for sx in (1, -1)])   # occhi dello scettro
+add("Glyphs", fast_union(glyphs + [staff_gem]), BLUE_GLOW, 0.0095, material="Neon", role="glow", tris=650)
 add("EyeGlow", Hd(union(*eyes)), BLUE_GLOW, 0.012, material="Neon", role="glow", tris=250)
 add("Collar", fast_union(collar_rods + beads), GOLD, 0.013, material="Foil", role="detail", tris=1600)
 gold = cuffs_gold + [belt, hem, apron, tail_ring] + [KH(fittings_l)] + staff_gold + claws
 add("Gold", fast_union(gold), GOLD, 0.02, material="Foil", role="detail", tris=1900)
 add("HeadGold", Hd(fast_union(ear_gold + liners)), GOLD, 0.011, material="Foil", role="detail", tris=600)
 lapis = [collar_base] + cuffs_lapis + APRON_STRIPES + [Hd(x) for x in ear_lapis] + [KH(grip_l), staff_shaft]
-add("Lapis", fast_union(lapis), LAPIS, 0.02, role="detail", tris=1300)
+add("Lapis", fast_union(lapis), LAPIS, 0.02, role="detail", tris=1200)
 add("Kilt", kilt, LAPIS, 0.025, role="detail", tris=700)
 add("Khopesh", KH(blade_body_l), BRONZE, 0.014, material="Metal", role="detail", tris=450)
 add("Mane", KH(edge_l), EDGE_GLOW, 0.011, material="Neon", role="glow", tris=350)
-add("Bandages", fast_union(bandage_parts), LINEN, 0.013, material="Fabric", role="detail", tris=1100)
+add("Bandages", fast_union(bandage_parts), LINEN, 0.013, material="Fabric", role="detail", tris=1000)
 add("Stitches", fast_union(stitches), THREAD, 0.011, role="detail", tris=250)
 add("Mouth", Hd(fast_union(dark)), MOUTH, 0.014, role="eye", tris=350)
 add("Teeth", Hd(fast_union(teeth)), TOOTH, 0.011, role="shine", tris=450)
