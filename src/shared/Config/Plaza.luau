@@ -142,6 +142,8 @@ Plaza.Quests = {
 			icon = "Backpack",
 			reward = { kind = "Spin", amount = 2 },
 		},
+		-- Percorso Estremo: santuari raggiunti (ognuno conta una volta per corsa)
+		{ id = "ExtremeW", stat = "ExtremeShrine", target = 2, icon = "Egg", reward = { kind = "Egg", tier = 2 } },
 	} :: { Quest },
 	DailyBonus = { kind = "Spin", amount = 1 } :: Reward,
 	WeeklyBonus = { kind = "Primal", amount = 30 } :: Reward,

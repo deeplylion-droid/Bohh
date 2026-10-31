@@ -38,6 +38,9 @@ PRODUCTS = {
     "CoinsLarge": ("Coin Mountain", "A mountain of coins (4 hours of your income, at least 40,000).", 399, "IconCoinsLarge"),
     "WheelSpin1": ("Wheel Spin", "One extra spin of the Wheel of Fortune in the summit plaza.", 29, "IconWheel"),
     "WheelSpins5": ("5 Wheel Spins", "Five extra spins of the Wheel of Fortune in the summit plaza.", 119, "IconWheel"),
+    "GalacticLion": ("Nebula Lion - Galactic Giant", "A galactic giant for your throne: earns 650K coins per second. It can't be stolen.", 399, "NebulaLion"),
+    "GalacticKraken": ("Star Kraken - Galactic Giant", "A galactic giant for your throne: earns 800K coins per second. It can't be stolen.", 599, "StarKraken"),
+    "GalacticWhale": ("Cosmic Whale - Galactic Giant", "A galactic giant for your throne: earns 1M coins per second. It can't be stolen.", 799, "CosmicWhale"),
 }
 
 

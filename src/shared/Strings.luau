@@ -560,6 +560,10 @@ local T: { [string]: Entry } = {
 	Quest_Wheel = { en = "Spin the Wheel of Fortune", it = "Gira la Ruota della Fortuna" },
 	Quest_PickupPrimal = { en = "Pick up a Primal egg", it = "Raccogli un uovo Primordiale" },
 	Quest_HatchPrimal = { en = "Hatch {n} Primal eggs", it = "Schiudi {n} uova Primordiali" },
+	Quest_ExtremeShrine = {
+		en = "Reach {n} shrines of the Extreme Trail",
+		it = "Raggiungi {n} santuari del Percorso Estremo",
+	},
 	Quest_DeliverDeep = {
 		en = "Deliver {n} eggs from the Canyon or deeper",
 		it = "Consegna {n} uova dal Canyon in giù",

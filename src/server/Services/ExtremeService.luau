@@ -226,6 +226,7 @@ local function reached(player: Player, run: Run, k: number)
 	local s = Extreme.Sections[k]
 	S.StateService.Effect(player, "ExtremeCheckpoint", { n = k })
 	S.AnalyticsService.Custom(player, "ExtremeCheckpoint", k)
+	S.QuestService.Add(player, "ExtremeShrine", 1)
 	local data = S.DataService.Get(player)
 	if k < #Extreme.Sections then
 		S.StateService.Notify(player, "ExtremeCheckpoint", { n = k, zone = "Zone_" .. s.id }, "Gold")

@@ -610,6 +610,21 @@ do
 	add("extreme_zone_at_start", MapLayout.ZoneAt(Extreme.StartSpawn.Position))
 end
 
+-- Giganti galattici: pet del negozio, giganti, prodotti collegati e prompt di scambio sul trono
+do
+	local Pets = require(ReplicatedStorage.Shared.Config.Pets)
+	local Products = require(ReplicatedStorage.Shared.Config.Products)
+	local out = {}
+	for _, key in Products.GalacticOrder do
+		local petId = Products.Galactic[key]
+		local def = Pets.ById[petId]
+		table.insert(out, `{key}:{petId}:{def and def.giant and "giant" or "?"}:{Products.Products[key].id}`)
+	end
+	add("galactic", table.concat(out, " "))
+	local plot = S.PlotService.ByIndex(1)
+	add("throne_swap_prompt", plot ~= nil and plot.throne.swapPrompt ~= nil)
+end
+
 -- avvisi raccolti durante l'avvio
 add("warnings", #warnings)
 for i = 1, math.min(#warnings, 25) do
