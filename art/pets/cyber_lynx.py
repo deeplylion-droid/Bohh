@@ -462,7 +462,7 @@ m_tail_tech = union(tech_shape, fast_union(staples))
 
 # ologramma: cono di luce e tesseratto (due cubi annidati collegati agli spigoli)
 LENS = TIP + HOLO_UP * 0.1
-CUBE_C = TIP + HOLO_UP * 0.62
+CUBE_C = TIP + HOLO_UP * 0.66
 _e3 = norm((1.0, 1.0, 1.0))
 _e1 = norm((1.0, -1.0, 0.0))
 R_CUBE = (euler(0.0, 0.0, 20.0) @ np.stack([_e1, np.cross(_e3, _e1), _e3])).astype(np.float64)  # cubo su uno spigolo
@@ -484,11 +484,11 @@ def cp(a):
 
 
 holo = [cylinder(LENS - HOLO_UP * 0.03, LENS + HOLO_UP * 0.012, 0.08)] + tail_glow
-outer_c, outer_e = cube_edges(0.42)
-inner_c, inner_e = cube_edges(0.2)
+outer_c, outer_e = cube_edges(0.48)
+inner_c, inner_e = cube_edges(0.23)
 holo += [capsule(cp(a), cp(b), 0.026) for a, b in outer_e]
 holo += [capsule(cp(a), cp(b), 0.023) for a, b in inner_e]
-beam = capped_cone(tuple(LENS), tuple(CUBE_C - HOLO_UP * 0.13), 0.06, 0.2, round=0.01)
+beam = capped_cone(tuple(LENS), tuple(CUBE_C - HOLO_UP * 0.15), 0.06, 0.23, round=0.01)
 
 # ============================================================ visore olografico (vetro ciano avvolto sul muso)
 VC = np.array([0.0, -0.02, 0.08])
@@ -573,8 +573,8 @@ for sx in (1, -1):
 
 # ============================================================ parti: pelle
 HEAD_ZONE = H(ellipsoid((0.66, 0.62, 0.7), (0.0, -0.05, 0.12)))
-m.add("Body", core0.subtract(HEAD_ZONE.offset(-0.03)), FUR, tris=2400, voxel=0.0427)
-m.add("Head", core0.intersect(HEAD_ZONE.offset(0.03)), FUR, tris=2800, voxel=0.0303)
+m.add("Body", core0.subtract(HEAD_ZONE.offset(-0.03)), FUR, tris=2250, voxel=0.0427)
+m.add("Head", core0.intersect(HEAD_ZONE.offset(0.03)), FUR, tris=2700, voxel=0.0303)
 m.add("Tail", tail_fur, FUR, tris=350, voxel=0.0327, group="Tail", pivot=TAIL_PIVOT)
 
 # ============================================================ pelo chiaro: gorgiera (ciuffi pieni), muso, pettorina, orecchie interne
@@ -669,7 +669,8 @@ def pad_at(p, nr, r=0.05):
     return cylinder(tuple(p - nr * 0.03), tuple(p + nr * 0.014), r, round=0.012)
 
 
-FLANK = [[(-0.48, 1.18), (-0.25, 1.18), (-0.12, 1.05), (0.3, 1.05), (0.42, 0.94), (0.58, 0.94)]]
+FLANK = [[(-0.48, 1.18), (-0.25, 1.18), (-0.12, 1.05), (0.3, 1.05), (0.42, 0.94), (0.58, 0.94)],
+         [(-0.02, 0.86), (0.12, 0.86), (0.22, 0.78), (0.4, 0.78)]]
 circuits = []
 CR = 0.03
 for sx in (1, -1):
@@ -699,6 +700,11 @@ for sx in (1, -1):
     q2, n2 = project_many(body_only, [p - nr * 0.08 for p, nr in zip(dense, nn)], list(nn))
     circuits.append(tube([tuple(p) for p in q2], CR))
     circuits += [pad_at(q2[0], n2[0]), pad_at(q2[-1], n2[-1])]
+# linea sulla schiena dal garrese alla coda, con le piazzole
+pts, nrs = surface_line(body_only, lambda y, z: ((0.0, y, 0.85), (0.0, y, 2.0)), [(-0.42, 0.0), (0.76, 0.0)])
+circuits.append(tube([tuple(p) for p in pts], CR))
+for i in (0, len(pts) // 3, 2 * len(pts) // 3, len(pts) - 1):
+    circuits.append(pad_at(pts[i], nrs[i], 0.056))
 # fronte: chip esagonale sopra il visore e tre tracce verso la nuca
 chip_hp, chip_hn = surf(head0, (0, 0, 0.0), (0, -0.25, 0.42))
 head_circ = [cylinder(tuple(chip_hp - chip_hn * 0.03), tuple(chip_hp + chip_hn * 0.012), 0.05, round=0.008)]
@@ -710,7 +716,7 @@ for tr in (((0.0, -0.2, 0.4), (0.0, 0.05, 0.45), (0.0, 0.26, 0.38)),
     head_circ.append(tube([tuple(p) for p in q], 0.02))
     head_circ.append(cylinder(tuple(q[-1] - nq[-1] * 0.03), tuple(q[-1] + nq[-1] * 0.01), 0.038, round=0.008))
 circuits.append(H(union(*head_circ)))
-m.add("Mane", fast_union(circuits), GLOW, material="Neon", role="glow", tris=1300, voxel=0.0237)
+m.add("Mane", fast_union(circuits), GLOW, material="Neon", role="glow", tris=1650, voxel=0.0237)
 
 # ============================================================ occhi, pupille, bocca, naso
 whites, irises, slits, shines = [], [], [], []
