@@ -10,17 +10,19 @@ Legenda: ⏳ in corso · 📋 da fare · ✅ fatto (con la versione pubblicata)
 | # | Richiesta | Stato |
 |---|---|---|
 | 3 | La **miniatura quadrata** (icona del gioco) non piace: proporne una diversa. | ⏳ (3 proposte) |
-| 4 | **3 pet nuovi da vendere nel negozio**, livello ULTRA ma ancora più belli: "mozzafiato, animali fantastici di stazza mega galattica". | ✅ pronto (da pubblicare): rarità Galattico, i 3 modelli caricati, prodotti Robux creati (Leone 399, Kraken 599, Balena 799 R$); vanno nel primo trono libero, non si rubano né si vendono |
-| 5 | **PERCORSO ESTREMO**: percorso alternativo che parte dalla piazza iniziale (quello standard resta). Dà **pet migliori** del percorso standard. **Davvero difficile** e **NON cheattabile**: muri invisibili, va fatto per forza per intero. Almeno un tratto ispirato alle **rapide**. | ⏳ scritto: viale fra i lotti 6 e 7, ponte, 4 sezioni (Rapide degli Abissi, Tempio del Deserto, Laboratorio dei Geni, Inferno) con santuario, checkpoint e portale; anti-cheat sul server (velocità, volo, teletrasporto, muri, salto delle sezioni); rarità Estremo e uovo. Manca: pet, test sul server, pubblicazione |
-| 6 | **12 pet nuovi** per il Percorso Estremo, **tutti molto fighi**: 3 ispirati ai **pesci abissali**, 3 agli **antichi egizi**, 3 ai **felini super intelligenti**, 3 ai **diavoli infernali biblici**, trasformati per renderli super fighi. | ⏳ modelli |
-| 8 | **Tre troni per lotto**: due da sbloccare pagando **tantissime monete** oppure **Robux**. | ✅ pronto (da pubblicare): isole fluttuanti dietro il lotto, altari nel lotto; Trono 2 = 5 miliardi o 399 R$, Trono 3 = 50 miliardi o 799 R$ (game pass creati) |
-| 9 | **Miniatura**: piace la B (uovo-mostro) ma deve dare l'idea che sia **su un picco montuoso**, senza rimpicciolirla troppo. | ⏳ nuova versione della B in lavorazione (vetta stretta, nuvole sotto, variante con bandierina) |
+| 9 | **Miniatura**: piace la B (uovo-mostro) ma deve dare l'idea che sia **su un picco montuoso**, senza rimpicciolirla troppo. | ⏳ pronte due versioni (con e senza bandierina) in `art/promo/final/`: si carica a mano su Creator Hub (le API non lo permettono) |
 | 7 | Lavorare **in parallelo con gli agenti** e **segnare tutto quello che chiede**, senza perdere nulla. | ⏳ (questo file) |
 
 ## Fatte
 
 | Richiesta | Versione |
 |---|---|
+| PERCORSO ESTREMO: 4 sezioni (Rapide degli Abissi, Tempio del Deserto, Laboratorio dei Geni, Inferno), santuari con uovo Estremo e portale, muri invisibili, anti-cheat sul server, cronometro, missione settimanale | v40 |
+| 12 pet Estremi (3 pesci degli abissi, 3 egizi, 3 felini geniali, 3 diavoli) e rarità Estremo con schiusa per sezione | v40 |
+| 3 giganti galattici nel negozio (Leone Nebulosa 399, Kraken Stellare 599, Balena Cosmica 799 R$), non si rubano né si vendono | v40 |
+| Tre troni per lotto: Trono 2 = 5 miliardi o 399 R$, Trono 3 = 50 miliardi o 799 R$ (isole fluttuanti) | v40 |
+| Interni dell'interfaccia bianchi puri (niente crema) | v41 |
+| Colori dell'interfaccia ancora più brillanti | v42 |
 | Interfaccia meno "da AI": stile **"cucito"** (feltro dai colori accesi, cucitura bianca attaccata al contorno scuro, interni quasi bianchi, Denk One + Patrick Hand) | v36 |
 | Popup (VALANGA, furti, annunci, nome della zona) spostati in alto sotto le monete; messaggi in basso a destra | v36 |
 | Piazza della vetta: ruota della fortuna, missioni giornaliere e settimanali, re della collina | v35 |
