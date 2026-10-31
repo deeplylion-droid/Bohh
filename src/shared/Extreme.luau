@@ -567,7 +567,8 @@ do
 	local SAND = rgb(222, 186, 118)
 	local STONE = rgb(198, 160, 98)
 	local STONE_DARK = rgb(150, 112, 64)
-	local QUICK = rgb(176, 136, 72)
+	local PLATFORM = rgb(240, 212, 156) -- pietra chiara: dove si salta (si stacca dalle sponde)
+	local QUICK = rgb(150, 104, 52) -- sabbie mobili piu' scure
 	local GOLD = rgb(255, 196, 60)
 	local s2 = sec(2)
 
@@ -581,7 +582,7 @@ do
 		SAND,
 		"Sand"
 	)
-	slab(2, -2, 8, -8, 8, 278, 8, STONE, "Sandstone")
+	slab(2, -2, 8, -8, 8, 278, 8, PLATFORM, "Sandstone")
 
 	-- A) Pilastri sulle sabbie mobili, due presse che schiacciano a tempo
 	liquid(2, 8, 92, 266, QUICK, "Sand", 0)
@@ -599,7 +600,7 @@ do
 	}
 	for _, c in cols do
 		local u, v, top, h = c[1], c[2], c[3], c[4]
-		slab(2, u - h, u + h, v - h, v + h, top, 16, STONE, "Sandstone")
+		slab(2, u - h, u + h, v - h, v + h, top, 16, PLATFORM, "Sandstone")
 		slab(2, u - h - 0.3, u + h + 0.3, v - h - 0.3, v + h + 0.3, top - 0.6, 0.8, STONE_DARK, "Sandstone", {
 			deco = true,
 			collide = false,
@@ -626,7 +627,7 @@ do
 
 	-- B) Corridoio delle lame: passerella stretta, ai lati sabbie mobili
 	liquid(2, 92, 172, 268, QUICK, "Sand", 0)
-	slab(2, 92, 172, -5, 5, 278, 10, STONE, "Sandstone")
+	slab(2, 92, 172, -5, 5, 278, 10, PLATFORM, "Sandstone")
 	for k, u in { 104, 120, 136, 152, 166 } do
 		pillar(2, u, 0, 279.6, 0.9, 1.6, GOLD, "Foil")
 		sweeper(
@@ -644,7 +645,7 @@ do
 
 	-- C) Mattonelle che sprofondano a ondate
 	liquid(2, 172, 262, 262, QUICK, "Sand", 0)
-	slab(2, 172, 176, -6, 6, 272, 6, STONE, "Sandstone")
+	slab(2, 172, 176, -6, 6, 272, 6, PLATFORM, "Sandstone")
 	for row = 0, 11 do
 		for lane = -1, 1 do
 			local u = 180 + row * 7
@@ -656,7 +657,7 @@ do
 			t.phase = row * 0.11 + (lane + 1) * 0.29
 		end
 	end
-	slab(2, 258, 264, -6, 6, 272, 6, STONE, "Sandstone")
+	slab(2, 258, 264, -6, 6, 272, 6, PLATFORM, "Sandstone")
 
 	-- D) Piattaforme di pietra che vanno avanti e indietro sopra il vuoto (salti di 6 stud)
 	kill(2, 264, 360, 254)
@@ -669,7 +670,7 @@ do
 			{ 338, 263, 9, 4 },
 		}
 	do
-		local p = slab(2, m[1] - 5, m[1] + 5, -4, 4, m[2], 2.4, STONE, "Sandstone")
+		local p = slab(2, m[1] - 5, m[1] + 5, -4, 4, m[2], 2.4, PLATFORM, "Sandstone")
 		p.id = `Shuttle2_{k}`
 		p.kind = "Mover"
 		p.mode = "sine"
@@ -677,7 +678,7 @@ do
 		p.period = m[4]
 		p.phase = k * 0.23
 	end
-	slab(2, 348, 362, -6, 6, 262.5, 4, STONE, "Sandstone")
+	slab(2, 348, 362, -6, 6, 262.5, 4, PLATFORM, "Sandstone")
 	-- obelischi decorativi fuori dal percorso
 	for k, u in { 40, 130, 220, 310 } do
 		for _, side in { -1, 1 } do
