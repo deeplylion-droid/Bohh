@@ -4,7 +4,7 @@
 local Theme = {}
 
 -- Stile "cucito": feltro dai colori accesi con la cucitura bianca attaccata al contorno scuro,
--- interni quasi bianchi, titoli in Denk One e testi in Patrick Hand (scritto a mano)
+-- interni bianchi, titoli in Denk One e testi in Patrick Hand (scritto a mano)
 Theme.Outline = Color3.fromRGB(42, 22, 14)
 Theme.Text = Color3.fromRGB(255, 255, 255)
 Theme.Ink = Color3.fromRGB(58, 34, 22) -- testo scuro sugli interni chiari
@@ -18,10 +18,10 @@ Theme.RedInk = Color3.fromRGB(226, 32, 62)
 Theme.Muted = Color3.fromRGB(226, 244, 255) -- testo secondario sul feltro colorato
 Theme.PanelTop = Color3.fromRGB(0, 194, 174)
 Theme.PanelBottom = Color3.fromRGB(0, 194, 174)
-Theme.Card = Color3.fromRGB(255, 252, 246) -- interni quasi bianchi
-Theme.CardLight = Color3.fromRGB(238, 230, 218) -- interni gia' usati / riscattati
+Theme.Card = Color3.fromRGB(255, 255, 255) -- interni bianchi
+Theme.CardLight = Color3.fromRGB(234, 234, 238) -- interni gia' usati / riscattati (grigio chiaro)
 Theme.Stitch = Color3.fromRGB(255, 255, 255)
-Theme.StitchCard = Color3.fromRGB(220, 211, 196)
+Theme.StitchCard = Color3.fromRGB(212, 212, 218)
 
 Theme.TitleFont = Enum.Font.DenkOne
 Theme.BodyFont = Enum.Font.PatrickHand
@@ -42,7 +42,7 @@ Theme.Buttons = {
 	Grey = { Color3.fromRGB(154, 163, 184), Color3.fromRGB(108, 116, 138) },
 	Dark = { Color3.fromRGB(86, 66, 120), Color3.fromRGB(56, 40, 86) },
 	Cyan = { Color3.fromRGB(0, 194, 174), Color3.fromRGB(0, 140, 126) },
-	White = { Color3.fromRGB(255, 252, 246), Color3.fromRGB(220, 211, 196) },
+	White = { Color3.fromRGB(255, 255, 255), Color3.fromRGB(212, 212, 218) },
 }
 
 -- Icone di riserva (emoji) quando l'immagine dedicata non e' ancora disponibile
