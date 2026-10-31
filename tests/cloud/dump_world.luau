@@ -51,6 +51,16 @@ do
 			giant.Parent = p.model
 		end
 	end
+	-- lotto 1 con i troni 2 e 3 aperti: i giganti galattici sulle isole fluttuanti
+	for k, petId in { [2] = "CosmicWhale", [3] = "StarKraken" } do
+		local t = plot.thrones[k]
+		S.PlotService.ShowThroneLock(t, false)
+		local giant = Visuals.MakePet(petId, "None", "Normal")
+		giant:ScaleTo(giant:GetScale() * 0.85)
+		local point = t.base:FindFirstChild("PetPoint") :: Attachment
+		giant:PivotTo(point.WorldCFrame)
+		giant.Parent = plot.model
+	end
 	for i, rarity in { "Common", "Epic", "Legendary" } do
 		local inc = plot.incubators[i]
 		local egg = Visuals.MakeEgg(rarity)

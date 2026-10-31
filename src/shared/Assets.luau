@@ -7534,6 +7534,7 @@ return {
 		IconStar = "rbxassetid://99600701305322",
 		IconStrength = "rbxassetid://122467738951022",
 		IconThief = "rbxassetid://76008074958182",
+		IconThrone = "rbxassetid://126202928512687",
 		IconTrap = "rbxassetid://136802229080571",
 		IconUpgrades = "rbxassetid://138849743472100",
 		IconVIP = "rbxassetid://126447849633466",
