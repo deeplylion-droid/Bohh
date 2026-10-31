@@ -32,7 +32,15 @@ for j = 1, #rows do
 		local hd = rows[math.max(j - 1, 1)][i]
 		local hu = rows[math.min(j + 1, #rows)][i]
 		local slope = math.sqrt(((hr - hl) / (2 * STEP)) ^ 2 + ((hu - hd) / (2 * STEP)) ^ 2)
-		local m = Terrain.SurfaceMaterial(rows[j][i], kinds[j][i], zones[j][i], slope, X0 + (i - 1) * STEP, Z0 + (j - 1) * STEP, edges[j][i])
+		local m = Terrain.SurfaceMaterial(
+			rows[j][i],
+			kinds[j][i],
+			zones[j][i],
+			slope,
+			X0 + (i - 1) * STEP,
+			Z0 + (j - 1) * STEP,
+			edges[j][i]
+		)
 		table.insert(mrow, m.Name)
 	end
 	table.insert(mats, mrow)
@@ -42,4 +50,7 @@ for m, c in Terrain.Colors do
 	colors[m.Name] = { c.R, c.G, c.B }
 end
 print("heights in", os.clock() - t0, "s", ok)
-fs.writeFile("art/out/terrain.json", serde.encode("json", { x0 = X0, z0 = Z0, step = STEP, rows = rows, mats = mats, colors = colors }))
+fs.writeFile(
+	"art/out/terrain.json",
+	serde.encode("json", { x0 = X0, z0 = Z0, step = STEP, rows = rows, mats = mats, colors = colors })
+)

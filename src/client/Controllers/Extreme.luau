@@ -1,6 +1,6 @@
 -- Percorso Estremo lato client: anima gli elementi del percorso col tempo del server (le stesse
 -- funzioni di Shared.Extreme usate dal server per i controlli), fa funzionare molle e nastri,
--- segnala al server colpi e cadute e mostra il cronometro della corsa sotto le monete.
+-- segnala al server colpi e cadute e fa il lampo a tutto schermo quando si rinasce.
 
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
@@ -9,7 +9,6 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
 local Extreme = require(ReplicatedStorage.Shared.Extreme)
-local Format = require(ReplicatedStorage.Shared.Util.Format)
 local Net = require(ReplicatedStorage.Shared.Net)
 
 local ExtremeController = {}
@@ -33,13 +32,8 @@ local lastAnyReport = 0
 local lastBounce = 0
 local lastWarn = 0
 local run: { [string]: any }? = nil
-local card: Frame? = nil
-local cardTitle: TextLabel? = nil
-local cardLine: TextLabel? = nil
-local cardBest: TextLabel? = nil
 local flash: Frame? = nil
 
-local HAZARD_YELLOW = Color3.fromRGB(255, 210, 0)
 local BODY_UP = 2 -- dal centro del HumanoidRootPart alla testa
 local RANGE = 520 -- elementi animati solo se la telecamera e' entro questa distanza (in x)
 
@@ -249,60 +243,12 @@ local function update()
 end
 
 ---------------------------------------------------------------------------------------------
--- Cronometro della corsa e lampo quando si rinasce
+-- Lampo a tutto schermo quando si rinasce, si passa un checkpoint o si entra in un portale
 ---------------------------------------------------------------------------------------------
-local function buildCard()
-	local hud = C.UI.Hud
-	if not hud or not hud.TopStack then
-		return
-	end
-	local Kit = C.UI.Kit
-	local New = Kit.New
-	local frame = New("Frame", {
-		Name = "ExtremeRun",
-		BackgroundColor3 = Color3.fromRGB(40, 36, 44),
-		Size = UDim2.fromOffset(380, 70),
-		Visible = false,
-		LayoutOrder = 4,
-		Parent = hud.TopStack,
-	}, {
-		Kit.Corner(UDim.new(0, 16)),
-		Kit.Stroke(4),
-	})
-	Kit.Felt(frame)
-	Kit.Stitch(frame, 16)
-	cardTitle = Kit.Text({
-		Size = UDim2.new(1, -24, 0, 30),
-		Position = UDim2.fromOffset(14, 6),
-		TextXAlignment = Enum.TextXAlignment.Left,
-		TextColor3 = HAZARD_YELLOW,
-		ZIndex = 2,
-		Parent = frame,
-	})
-	cardLine = Kit.Text({
-		Font = C.UI.Kit.Theme.BodyFont,
-		Size = UDim2.new(0.6, -14, 0, 26),
-		Position = UDim2.fromOffset(14, 38),
-		TextXAlignment = Enum.TextXAlignment.Left,
-		TextColor3 = Color3.new(1, 1, 1),
-		Stroke = 2,
-		ZIndex = 2,
-		Parent = frame,
-	})
-	cardBest = Kit.Text({
-		Font = C.UI.Kit.Theme.BodyFont,
-		Size = UDim2.new(0.4, -14, 0, 26),
-		Position = UDim2.new(0.6, 0, 0, 38),
-		TextXAlignment = Enum.TextXAlignment.Right,
-		TextColor3 = Color3.fromRGB(200, 255, 120),
-		Stroke = 2,
-		ZIndex = 2,
-		Parent = frame,
-	})
-	card = frame
+local function buildFlash()
 	local overlay = C.UI.Gui("Overlay")
 	if overlay then
-		flash = New("Frame", {
+		flash = C.UI.Kit.New("Frame", {
 			Name = "ExtremeFlash",
 			BackgroundColor3 = Color3.new(1, 1, 1),
 			BackgroundTransparency = 1,
@@ -311,24 +257,6 @@ local function buildCard()
 			Parent = overlay,
 		})
 	end
-end
-
-local function refreshCard()
-	if not card then
-		return
-	end
-	card.Visible = run ~= nil
-	local r = run
-	if not r or not cardTitle or not cardLine or not cardBest then
-		return
-	end
-	local T = C.Lang.T
-	cardTitle.Text = T("ExtremeHudTitle")
-	local elapsed = workspace:GetServerTimeNow() - (r.started or 0)
-	local total = #Extreme.Sections
-	local section = math.min(total, (r.checkpoint or 0) + 1)
-	cardLine.Text = T("ExtremeHudSection", { n = section, total = total }) .. "  ·  " .. Format.Clock(elapsed)
-	cardBest.Text = if (r.best or 0) > 0 then T("ExtremeHudBest", { time = Format.Clock(r.best) }) else ""
 end
 
 local function flashScreen(color: Color3)
@@ -357,12 +285,7 @@ function ExtremeController.Start()
 	end
 	CollectionService:GetInstanceAddedSignal("ExtremeFlow"):Connect(addFlow)
 	Net.Event("ExtremeRun").OnClientEvent:Connect(function(state)
-		local was = run ~= nil
 		run = state
-		if card and run and not was then
-			C.UI.Kit.Pop(card)
-		end
-		refreshCard()
 	end)
 	C.Effects.On("ExtremeRespawn", function(params)
 		local style = RESPAWN_STYLE[params.kind] or RESPAWN_STYLE.Water
@@ -398,16 +321,10 @@ function ExtremeController.Start()
 	end)
 	task.spawn(function()
 		C.State.WaitReady()
-		while not (C.UI.Hud and C.UI.Hud.TopStack) do
+		while not C.UI.Gui("Overlay") do
 			task.wait(0.5)
 		end
-		buildCard()
-		while true do
-			if run then
-				refreshCard()
-			end
-			task.wait(0.25)
-		end
+		buildFlash()
 	end)
 	RunService.PreSimulation:Connect(function()
 		local ok, err = pcall(update)

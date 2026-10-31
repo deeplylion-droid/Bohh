@@ -12,6 +12,11 @@ Legenda: ⏳ in corso · 📋 da fare · ✅ fatto (con la versione pubblicata)
 | 3 | La **miniatura quadrata** (icona del gioco) non piace: proporne una diversa. | ⏳ (3 proposte) |
 | 9 | **Miniatura**: piace la B (uovo-mostro) ma deve dare l'idea che sia **su un picco montuoso**, senza rimpicciolirla troppo. | ⏳ pronte due versioni (con e senza bandierina) in `art/promo/final/`: si carica a mano su Creator Hub (le API non lo permettono) |
 | 7 | Lavorare **in parallelo con gli agenti** e **segnare tutto quello che chiede**, senza perdere nulla. | ⏳ (questo file) |
+| 10 | Percorso Estremo: le **cascate** delle rapide si compenetravano con l'acqua e scorrevano al contrario; l'**ingresso era nascosto** → metterlo come **bivio all'inizio del sentiero normale**. | ⏳ cascate rifatte (lastre sottili fra i livelli, schiuma che scende); bivio con ponticello e arco sulla rampa del sentiero |
+| 11 | Togliere lo striscione valanga **"qui sei al sicuro"** (si sovrappone a quello della pioggia di meteore) e il riquadro **"Percorso Estremo 1/4"**. | ⏳ fatto nel codice, da pubblicare |
+| 12 | **Controllo automatico delle compenetrazioni** su tutto il Percorso Estremo (es. nel deserto): "fai un controllo tu, non posso correggerti ogni punto". | ⏳ agente: esportazione offline + verifica geometrica + correzioni |
+| 13 | Percorso Estremo **più dettagliato**: "aggiungi un po' di cura!!!" | ⏳ due agenti (sezioni 1-2 e 3-4) |
+| 14 | Interfaccia **più moderna** ("troppo antiquata"), **anche il font**, fatta da un agente. | ⏳ agente |
 
 ## Fatte
 

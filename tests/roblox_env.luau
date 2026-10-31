@@ -2,8 +2,29 @@
 local roblox = require("@lune/roblox")
 
 local env = {}
-for _, name in { "Vector3", "Vector2", "CFrame", "Color3", "ColorSequence", "ColorSequenceKeypoint", "NumberSequence",
-	"NumberSequenceKeypoint", "NumberRange", "UDim", "UDim2", "Rect", "BrickColor", "Enum" } do
+for _, name in
+	{
+		"Vector3",
+		"Vector2",
+		"CFrame",
+		"Color3",
+		"ColorSequence",
+		"ColorSequenceKeypoint",
+		"NumberSequence",
+		"NumberSequenceKeypoint",
+		"NumberRange",
+		"UDim",
+		"UDim2",
+		"Rect",
+		"BrickColor",
+		"Enum",
+		"Instance",
+		"Font",
+		"PhysicalProperties",
+		"Faces",
+		"Axes",
+	}
+do
 	env[name] = (roblox :: any)[name]
 end
 

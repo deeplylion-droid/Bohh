@@ -1,5 +1,5 @@
--- Percorso Estremo: percorso alternativo, molto difficile, che parte dalla piazza della vetta
--- (fra i lotti 6 e 7, verso ovest) e attraversa un canyon sospeso sopra le nuvole in quattro
+-- Percorso Estremo: percorso alternativo, molto difficile. Parte con un bivio all'inizio del sentiero
+-- normale (a destra della discesa dalla piazza, verso ovest) e attraversa un canyon sospeso in quattro
 -- sezioni: Rapide degli Abissi, Tempio del Deserto, Laboratorio dei Geni, Inferno. In fondo a ogni
 -- sezione c'e' un santuario con un uovo Estremo della sezione, un checkpoint e un portale di ritorno.
 --
@@ -10,12 +10,15 @@
 
 local Extreme = {}
 
-Extreme.Z = -34.7 -- asse del percorso (si procede verso -X)
+Extreme.Z = 215 -- asse del percorso (si procede verso -X)
 Extreme.HalfWidth = 19 -- meta' larghezza interna del canyon (fra i muri invisibili)
-Extreme.GateAngle = math.rad(260) -- direzione dell'ingresso dalla piazza (fra i lotti 6 e 7)
-Extreme.StartX = -200 -- oltre questa x comincia il percorso (parte la corsa)
+Extreme.StartX = -60 -- oltre questa x comincia il percorso (parte la corsa)
+-- ponticello del bivio: dal bordo ovest della discesa del sentiero (quota del terreno) alla bocca del canyon
+Extreme.BranchFrom = Vector3.new(-20, 319, 215)
+Extreme.BranchTo = Vector3.new(-56, 331, 215)
 Extreme.WallTop = 430 -- i muri invisibili arrivano fino a qui
-Extreme.ReturnCFrame = CFrame.lookAt(Vector3.new(-78.8, 334, -13.9), Vector3.new(0, 334, 0))
+-- il portale riporta in piazza, sul viale del sentiero, rivolti verso il centro (e i lotti)
+Extreme.ReturnCFrame = CFrame.lookAt(Vector3.new(0, 334.5, 96), Vector3.new(0, 334.5, 0))
 Extreme.WalkSpeed = 18 -- velocita' fissa per tutti durante la corsa (i potenziamenti non contano)
 Extreme.BodyDown = 3 -- dal centro del HumanoidRootPart ai piedi
 
@@ -72,7 +75,7 @@ Extreme.Sections = {
 		index = 1,
 		id = "Abyss",
 		theme = "Rapids",
-		x0 = -200,
+		x0 = Extreme.StartX,
 		length = 396,
 		shrineLength = 60,
 		floor = 278,
@@ -82,7 +85,7 @@ Extreme.Sections = {
 		index = 2,
 		id = "Desert",
 		theme = "Desert",
-		x0 = -656,
+		x0 = Extreme.StartX - 456,
 		length = 360,
 		shrineLength = 60,
 		floor = 262,
@@ -92,7 +95,7 @@ Extreme.Sections = {
 		index = 3,
 		id = "Lab",
 		theme = "Lab",
-		x0 = -1076,
+		x0 = Extreme.StartX - 876,
 		length = 340,
 		shrineLength = 60,
 		floor = 246,
@@ -102,7 +105,7 @@ Extreme.Sections = {
 		index = 4,
 		id = "Inferno",
 		theme = "Inferno",
-		x0 = -1476,
+		x0 = Extreme.StartX - 1276,
 		length = 360,
 		shrineLength = 70,
 		floor = 230,
@@ -320,6 +323,45 @@ local function floorLine(points: { { number } }): (number) -> number
 	end
 end
 
+-- Cascata: velo d'acqua sottile al bordo u, dal pelo dell'acqua di sotto (low) a quello di sopra (high),
+-- senza entrare nelle due vasche, piu' una striscia di schiuma dove cade
+local function fall(i: number, u: number, high: number, low: number)
+	local sheet = slab(
+		i,
+		u - 0.3,
+		u + 0.3,
+		-Extreme.HalfWidth - 3,
+		Extreme.HalfWidth + 3,
+		high,
+		high - low,
+		rgb(120, 200, 240),
+		"Glass",
+		{
+			collide = false,
+			transparency = 0.3,
+			deco = true,
+		}
+	)
+	sheet.style = "Fall"
+	local foam = slab(
+		i,
+		u + 0.3,
+		u + 3.5,
+		-Extreme.HalfWidth - 3,
+		Extreme.HalfWidth + 3,
+		low + 0.08,
+		0.16,
+		rgb(240, 250, 255),
+		"SmoothPlastic",
+		{
+			collide = false,
+			transparency = 0.2,
+			deco = true,
+		}
+	)
+	foam.style = "Foam"
+end
+
 ---------------------------------------------------------------------------------------------
 -- Sezione 1: le Rapide degli Abissi
 ---------------------------------------------------------------------------------------------
@@ -347,8 +389,8 @@ do
 	slab(1, -4, 14, -10.5, 10.5, 331.2, 0.4, MOSS, "Grass", { deco = true, collide = false })
 
 	-- A) Sassi: pietre per saltare, alcune ondeggiano o affondano a intervalli
-	liquid(1, 14, 112, 318, WATER, "SmoothPlastic", 0.2)
-	slab(1, 14, 112, -Extreme.HalfWidth, Extreme.HalfWidth, 312, 6, DEEP, "Slate", { deco = true, collide = false })
+	liquid(1, 14, 116, 318, WATER, "SmoothPlastic", 0.2)
+	slab(1, 14, 116, -Extreme.HalfWidth, Extreme.HalfWidth, 312, 6, DEEP, "Slate", { deco = true, collide = false })
 	local stonesA = {
 		{ 20, 0, 320.6, 3.2 },
 		{ 28, -7, 321.2, 2.7 },
@@ -384,11 +426,7 @@ do
 	end
 	-- cascata 1: sporgenza in cima, poi giu' nel bacino dei tronchi
 	slab(1, 108, 116, -6, 6, 321, 4, ROCK, "Slate")
-	slab(1, 112, 116, -Extreme.HalfWidth, Extreme.HalfWidth, 320, 18, WATER, "Glass", {
-		collide = false,
-		transparency = 0.45,
-		deco = true,
-	})
+	fall(1, 116, 318, 304)
 
 	-- B) Tronchi: corsie di tronchi che scorrono verso valle; si sale a sinistra, si scende a destra
 	liquid(1, 116, 232, 304, WATER, "SmoothPlastic", 0.2)
@@ -422,14 +460,10 @@ do
 			})
 		end
 	end
-	slab(1, 228, 232, -Extreme.HalfWidth, Extreme.HalfWidth, 304, 14, WATER, "Glass", {
-		collide = false,
-		transparency = 0.45,
-		deco = true,
-	})
+	fall(1, 232, 304, 290)
 
 	-- C) Vortici: dischi che girano sull'acqua, con qualche scoglio fra uno e l'altro
-	liquid(1, 232, 334, 290, WATER, "SmoothPlastic", 0.2)
+	liquid(1, 232, 336, 290, WATER, "SmoothPlastic", 0.2)
 	slab(1, 232, 240, 9, Extreme.HalfWidth, 292, 6, ROCK, "Slate")
 	local discs = {
 		{ 248, 10, 5.5, 6 },
@@ -467,11 +501,7 @@ do
 		color = rgb(220, 240, 255),
 	})
 	slab(1, 326, 336, -5, 5, 292, 4, ROCK, "Slate")
-	slab(1, 332, 336, -Extreme.HalfWidth, Extreme.HalfWidth, 290, 14, WATER, "Glass", {
-		collide = false,
-		transparency = 0.45,
-		deco = true,
-	})
+	fall(1, 336, 290, 276)
 
 	-- D) Rapide finali: dorsale di sassi stretta fra tronchi appesi che oscillano
 	liquid(1, 336, 396, 276, WATER, "SmoothPlastic", 0.15)
@@ -1098,6 +1128,7 @@ end
 -- Vero se la posizione e' dentro il canyon del percorso (dopo l'inizio della corsa)
 function Extreme.InCourse(pos: Vector3): boolean
 	return pos.X < Extreme.StartX
+		and pos.X * pos.X + pos.Z * pos.Z > 182 * 182
 		and pos.X > Extreme.EndX - 10
 		and math.abs(pos.Z - Extreme.Z) < Extreme.HalfWidth + 12
 		and pos.Y > 150

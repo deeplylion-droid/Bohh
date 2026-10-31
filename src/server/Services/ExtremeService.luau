@@ -53,7 +53,6 @@ local KNOCK_LIMIT = 80
 local TELEPORT_STEP = 30 -- stud in un campione
 local VIOLATION_WINDOW = 60
 local VIOLATION_KICK = 5
-local DIR = Vector3.new(math.sin(Extreme.GateAngle), 0, math.cos(Extreme.GateAngle))
 
 -- morte per tipo di sezione (effetto e messaggio)
 local FALL_KIND = { Rapids = "Water", Desert = "Sand", Lab = "Zap", Inferno = "Lava" }
@@ -111,11 +110,13 @@ local function holdFrame(k: number): CFrame
 	)
 end
 
--- Sul ponte, rivolti verso la piazza (chi prova a entrare con qualcosa in mano)
+-- Sul ponticello del bivio, rivolti verso il sentiero (chi prova a entrare con qualcosa in mano)
 local function bridgeFrame(): CFrame
-	local c = Vector3.new(0, 334.5, 0)
-	local p = c + DIR * 186
-	return CFrame.lookAt(p, c + DIR * 150)
+	local a, b = Extreme.BranchFrom, Extreme.BranchTo
+	local x = a.X - 10
+	local y = a.Y + (b.Y - a.Y) * (x - a.X) / (b.X - a.X) + 3.5
+	local p = Vector3.new(x, y, Extreme.Z)
+	return CFrame.lookAt(p, p + Vector3.new(1, 0, 0))
 end
 
 local function teleport(player: Player, cf: CFrame)

@@ -587,24 +587,24 @@ do
 		table.insert(floors, `{i - 1}:{if hit then string.format("%.1f", cf.Position.Y - hit.Position.Y) else "none"}`)
 	end
 	add("extreme_spawn_floor", table.concat(floors, " "))
-	-- viale e ponte senza buchi: raggi verso il basso ogni 4 stud dalla piazza alla bocca del canyon
-	local dir = Vector3.new(math.sin(Extreme.GateAngle), 0, math.cos(Extreme.GateAngle))
-	local holes, lowest, highest = 0, math.huge, -math.huge
+	-- bivio senza buchi: raggi verso il basso ogni 4 stud lungo il ponticello, dal sentiero normale
+	-- alla bocca del canyon (la superficie deve stare sulla linea BranchFrom -> BranchTo)
+	local A, B = Extreme.BranchFrom, Extreme.BranchTo
+	local holes, worst = 0, 0
 	local all = RaycastParams.new()
 	all.FilterType = Enum.RaycastFilterType.Exclude
 	all.FilterDescendantsInstances = {}
-	for r = 96, 198, 4 do
-		local p = dir * r + Vector3.new(0, 360, 0)
-		local hit = workspace:Raycast(p, Vector3.new(0, -60, 0), all)
-		if not hit or hit.Position.Y < 328 then
+	for x = A.X - 2, B.X + 2, -4 do
+		local want = A.Y + (B.Y - A.Y) * (x - A.X) / (B.X - A.X)
+		local hit = workspace:Raycast(Vector3.new(x, want + 18, Extreme.Z), Vector3.new(0, -40, 0), all)
+		local off = if hit then math.abs(hit.Position.Y - want) else 99
+		if off > 1.5 then
 			holes += 1
-		else
-			lowest = math.min(lowest, hit.Position.Y)
-			highest = math.max(highest, hit.Position.Y)
 		end
+		worst = math.max(worst, off)
 	end
-	add("extreme_approach", string.format("holes %d, y %.2f..%.2f", holes, lowest, highest))
-	add("extreme_reach_start", reach(Vector3.new(0, 334, 0) + dir * 60, Extreme.StartSpawn.Position))
+	add("extreme_branch", string.format("holes %d, worst %.2f", holes, worst))
+	add("extreme_reach_start", reach(Vector3.new(0, 334, 120), Extreme.StartSpawn.Position))
 	local count = #(Pets.ByRarity.Extreme or {})
 	add("extreme_pets", count)
 	-- tre pet per sezione, ognuno col suo tempo di schiusa

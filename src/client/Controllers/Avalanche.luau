@@ -33,7 +33,6 @@ local SMOKE = "rbxasset://textures/particles/smoke_main.dds"
 local SPARKLE = "rbxasset://textures/particles/sparkles_main.dds"
 
 local WARN_COLORS = { Color3.fromRGB(255, 120, 70), Color3.fromRGB(216, 27, 43) }
-local SAFE_COLORS = { Color3.fromRGB(120, 230, 120), Color3.fromRGB(30, 160, 70) }
 
 function Avalanche.Init(controllers)
 	C = controllers
@@ -330,13 +329,20 @@ local function tick(t: number)
 	if phase == "none" then
 		return
 	end
-	local T = C.Lang.T
-	local title = if phase == "warn" then T("AvalancheWarn", { t = `{math.ceil(at - t)}s` }) else T("AvalancheNow")
-	local sub = if sheltered then T("SafeInShelter") else T("AvalancheWarnSub")
-	local key = title .. sub
-	if key ~= lastShown then
-		lastShown = key
-		C.UI.Hud.ShowBanner("❄️ " .. title, sub, if sheltered then SAFE_COLORS else WARN_COLORS, 2)
+	-- al sicuro (in un riparo, in vetta o nel Percorso Estremo) niente striscione: la valanga non
+	-- ti tocca e coprirebbe gli altri avvisi, come quello della pioggia di meteore
+	if sheltered or onSummit then
+		if lastShown ~= "" and lastShown ~= "safe" then
+			C.UI.Hud.ShowBanner(nil, nil, nil, 2)
+		end
+		lastShown = "safe"
+	else
+		local T = C.Lang.T
+		local title = if phase == "warn" then T("AvalancheWarn", { t = `{math.ceil(at - t)}s` }) else T("AvalancheNow")
+		if title ~= lastShown then
+			lastShown = title
+			C.UI.Hud.ShowBanner("❄️ " .. title, T("AvalancheWarnSub"), WARN_COLORS, 2)
+		end
 	end
 	if phase == "wave" and front then
 		local leadPos = moveWall(front, t)

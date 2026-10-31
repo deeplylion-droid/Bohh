@@ -110,9 +110,6 @@ function Scenery.Summit(parent: Instance, assets)
 	end
 	-- lampioni fra i cancelli dei lotti e panchine attorno al monumento (se i modelli ci sono)
 	for k = 0, 8 do
-		if (20 + 40 * k) % 360 == 260 then
-			continue -- a 260 gradi parte il viale del Percorso Estremo
-		end
 		local a = math.rad(20 + 40 * k)
 		local dir = Vector3.new(math.sin(a), 0, math.cos(a))
 		local lamp = assets.Clone("Props", "LampPost")
@@ -640,11 +637,11 @@ function Scenery.Decor(parent: Instance, assets, terrainHeight: (number, number)
 					if z > 120 and math.abs(x) < 50 then
 						continue -- lascia libero l'inizio del sentiero
 					end
-					if ExtremeBuild.NearApproach(x, z) then
-						continue -- e il ponte del Percorso Estremo
-					end
 				else
 					x, z = rng:NextNumber(-300, 300), rng:NextNumber(150, 780)
+				end
+				if ExtremeBuild.NearApproach(x, z) or ExtremeBuild.NearCourse(x, z) then
+					continue -- niente sul ponticello del bivio ne' sotto il Percorso Estremo
 				end
 				local h, kind, zn = terrainHeight(x, z)
 				if zone ~= "Summit" and zn ~= zone then
@@ -749,6 +746,10 @@ function Scenery.TrailEdges(parent: Instance, assets, terrainHeight: (number, nu
 				if model then
 					-- l'asse lungo del modello (X) segue il bordo del sentiero
 					local cf = MapLayout.EdgeFrame(at, side, 1.4)
+					if ExtremeBuild.NearApproach(cf.Position.X, cf.Position.Z) then
+						model:Destroy() -- lascia libero l'imbocco del bivio per il Percorso Estremo
+						continue
+					end
 					local y = terrainHeight(cf.Position.X, cf.Position.Z)
 					model:ScaleTo(rng:NextNumber(0.9, 1.25))
 					model:PivotTo(

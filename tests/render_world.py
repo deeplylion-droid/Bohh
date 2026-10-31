@@ -343,25 +343,31 @@ VIEWS = {
     "hill": ((34, 352, 40), (0, 336, 0), 22),
     # piedistalli del lotto 1: pet normali, un Segreto e i dieci Primordiali (Cerbero gigante)
     "primals": ((64, 352, 77), (91, 334, 108), 22),
-    # Percorso Estremo: ingresso dalla piazza, ponte, le quattro sezioni e un santuario
-    "xgate": ((-60, 341, -10.6), (-172, 337, -30.3), 24),
-    "xbridge": ((-168, 352, 14), (-204, 330, -34.7), 22),
-    "xrapids": ((-205, 362, -10), (-320, 314, -40), 22),
-    "xlogs": ((-300, 336, -14), (-380, 304, -36), 22),
-    "xwhirl": ((-425, 316, -12), (-500, 290, -36), 22),
-    "xswing": ((-520, 300, -12), (-570, 282, -36), 22),
-    "xshrine": ((-592, 292, -28), (-640, 281, -40), 20),
-    "xdesert": ((-652, 296, -18), (-740, 274, -36), 22),
-    "xtiles": ((-822, 286, -16), (-890, 270, -36), 22),
-    "xlab": ((-1072, 280, -18), (-1160, 262, -36), 22),
-    "xbeams": ((-1252, 288, -16), (-1290, 268, -36), 22),
-    "xinferno": ((-1472, 262, -16), (-1560, 240, -36), 22),
-    "xhooks": ((-1640, 256, -20), (-1700, 242, -36), 22),
+    # Percorso Estremo: bivio all'inizio del sentiero (dalla rampa, dall'alto e davanti all'arco),
+    # le quattro sezioni e un santuario
+    "xfork": ((14, 330, 178), (-34, 322, 216), 24),
+    "xforktop": ((30, 372, 150), (-40, 322, 218), 24),
+    "xforkarch": ((10, 325, 216), (-44, 330, 215), 24),
+    "xrapids": ((-65, 362, 239.7), (-180, 314, 209.7), 22),
+    "xlogs": ((-160, 336, 235.7), (-240, 304, 213.7), 22),
+    "xwhirl": ((-285, 316, 237.7), (-360, 290, 213.7), 22),
+    "xswing": ((-380, 300, 237.7), (-430, 282, 213.7), 22),
+    "xshrine": ((-452, 292, 221.7), (-500, 281, 209.7), 20),
+    "xdesert": ((-512, 296, 231.7), (-600, 274, 213.7), 22),
+    "xtiles": ((-682, 286, 233.7), (-750, 270, 213.7), 22),
+    "xlab": ((-932, 280, 231.7), (-1020, 262, 213.7), 22),
+    "xbeams": ((-1112, 288, 233.7), (-1150, 268, 213.7), 22),
+    "xinferno": ((-1332, 262, 233.7), (-1420, 240, 213.7), 22),
+    "xhooks": ((-1500, 256, 229.7), (-1560, 242, 213.7), 22),
     # lotto 1 dalla piazza: torre del primo trono e le due isole fluttuanti dei troni 2 e 3
     "islands": ((40, 376, 46), (120, 352, 142), 22),
     # lotto 2 dalla piazza: i dodici pet Estremi sui piedistalli
     "extremepets": ((72, 356, 8), (134, 333, 24), 24),
 }
+
+
+# VIEWS_JSON='{"nome": [[cx, cy, cz], [tx, ty, tz], lente]}': viste in piu' senza toccare questo file
+VIEWS.update(json.loads(os.environ.get("VIEWS_JSON", "{}")))
 
 
 def render(view, res=None):
@@ -402,7 +408,9 @@ def main():
     if os.environ.get("DEN") == "1" and den_path.exists():
         skip = add_den_voxels(den_path)
     add_terrain(json.load(open(ROOT / "art" / "out" / "terrain.json")), skip)
-    add_parts(json.load(open(ROOT / "art" / "out" / "world.json")))
+    # WORLD=a.json,b.json: unisce piu' esportazioni (es. il mondo del server + tests/extreme_dump.luau)
+    for path in os.environ.get("WORLD", "art/out/world.json").split(","):
+        add_parts(json.load(open(ROOT / path.strip())))
     for v in views:
         render(v)
         print("render", v)

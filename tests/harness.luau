@@ -75,7 +75,32 @@ Proxy.__index = function(self, key)
 end
 
 local stubServices = {
-	RunService = { IsServer = function() return true end, IsClient = function() return false end, IsStudio = function() return true end },
+	RunService = {
+		IsServer = function()
+			return true
+		end,
+		IsClient = function()
+			return false
+		end,
+		IsStudio = function()
+			return true
+		end,
+	},
+	-- tag sulle istanze vere di @lune/roblox (per costruire parti offline, es. tests/extreme_dump.luau)
+	CollectionService = {
+		AddTag = function(_, inst, tag)
+			inst:AddTag(tag)
+		end,
+		RemoveTag = function(_, inst, tag)
+			inst:RemoveTag(tag)
+		end,
+		HasTag = function(_, inst, tag)
+			return inst:HasTag(tag)
+		end,
+		GetTagged = function()
+			return {}
+		end,
+	},
 }
 
 local game = {
@@ -113,7 +138,16 @@ loadModule = function(dmPath: string)
 	g.require = requireProxy
 	g.typeof = typeof
 	g.warn = print
-	g.task = { wait = function() end, spawn = function(f, ...) f(...) end, defer = function(f, ...) f(...) end, delay = function() end }
+	g.task = {
+		wait = function() end,
+		spawn = function(f, ...)
+			f(...)
+		end,
+		defer = function(f, ...)
+			f(...)
+		end,
+		delay = function() end,
+	}
 	local fn = luau.load(fs.readFile(file), { debugName = file, environment = g })
 	local result = fn()
 	cache[dmPath] = result

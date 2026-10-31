@@ -1,6 +1,6 @@
--- Costruisce il Percorso Estremo (definito in Shared.Extreme): il viale fra i lotti 6 e 7, l'arco
--- d'ingresso, il ponte sul vuoto, il canyon con i muri invisibili, gli elementi delle quattro sezioni,
--- i santuari con il portale di ritorno e gli effetti (cascate, lava, luci).
+-- Costruisce il Percorso Estremo (definito in Shared.Extreme): il ponticello del bivio all'inizio del
+-- sentiero normale con l'arco d'ingresso, il canyon con i muri invisibili, gli elementi delle quattro
+-- sezioni, i santuari con il portale di ritorno e gli effetti (cascate, lava, luci).
 -- Gli elementi mobili restano fermi sul server: li anima ogni client in funzione del tempo del
 -- server (tag "ExtremePiece", nome = id dell'elemento).
 
@@ -13,16 +13,13 @@ local MapLayout = require(ReplicatedStorage.Shared.MapLayout)
 local Pets = require(ReplicatedStorage.Shared.Config.Pets)
 local Visuals = require(ReplicatedStorage.Shared.Visuals)
 local Build = require(script.Parent.Build)
+local Terrain = require(script.Parent.Terrain)
 
 local ExtremeBuild = {}
 
-local DIR = Vector3.new(math.sin(Extreme.GateAngle), 0, math.cos(Extreme.GateAngle)) -- dalla piazza verso il percorso
-local SIDE = Vector3.new(-DIR.Z, 0, DIR.X) -- perpendicolare, in orizzontale
-local PAVE_TOP = MapLayout.SummitY + 0.76 -- un filo sotto la piazza (330.8)
 local HAZARD_YELLOW = Color3.fromRGB(255, 200, 0)
 local HAZARD_BLACK = Color3.fromRGB(34, 30, 30)
 local STONE_DARK = Color3.fromRGB(70, 66, 72)
-local WOOD = Color3.fromRGB(150, 98, 56)
 local ROPE = Color3.fromRGB(196, 168, 120)
 
 local ANIMATED = {
@@ -221,18 +218,10 @@ local function piecePart(p: Extreme.Piece, parent: Instance): BasePart?
 end
 
 ---------------------------------------------------------------------------------------------
--- Dalla piazza al canyon: viale, arco d'ingresso e ponte
+-- Bivio all'inizio del sentiero normale: a destra della discesa dalla piazza parte un ponticello
+-- in salita con l'arco del Percorso Estremo, fino alla bocca del canyon; cartelli con la freccia sul
+-- viale e sulla discesa
 ---------------------------------------------------------------------------------------------
-local function onRay(r: number, y: number, side: number?): Vector3
-	return MapLayout.SummitCenter * Vector3.new(1, 0, 1) + DIR * r + SIDE * (side or 0) + Vector3.new(0, y, 0)
-end
-
--- CFrame con -Z lungo il viale (verso il percorso) e X di lato
-local function rayFrame(r: number, y: number, side: number?): CFrame
-	local p = onRay(r, y, side)
-	return CFrame.lookAt(p, p + DIR)
-end
-
 local function stripedPost(folder: Instance, base: CFrame, height: number, width: number)
 	local bands = math.floor(height / 3)
 	for k = 0, bands - 1 do
@@ -247,88 +236,137 @@ local function stripedPost(folder: Instance, base: CFrame, height: number, width
 	end
 end
 
-local function approach(folder: Instance)
-	local c = MapLayout.SummitCenter
-	-- viale lastricato fra i lotti 6 e 7
-	local r0, r1 = 95, 178
+-- cartello con la freccia su un palo (cf = base del palo, la faccia del cartello guarda lungo -Z)
+local function arrowSign(folder: Instance, base: CFrame)
 	Build.Part({
-		name = "ExtremeAvenue",
-		size = Vector3.new(8, 4, r1 - r0),
-		cframe = rayFrame((r0 + r1) / 2, PAVE_TOP - 2),
+		name = "ExtremeSignPost",
+		size = Vector3.new(0.8, 9, 0.8),
+		cframe = base * CFrame.new(0, 4.5, 0),
+		color = HAZARD_BLACK,
+		material = Enum.Material.Metal,
+		parent = folder,
+	})
+	Build.Sign(
+		folder,
+		base * CFrame.new(0, 8, -0.5),
+		Vector3.new(8, 2.4, 0.4),
+		"ExtremeArrow",
+		nil,
+		{ bg = HAZARD_YELLOW, text = HAZARD_BLACK }
+	)
+end
+
+local function approach(folder: Instance)
+	local A, B = Extreme.BranchFrom, Extreme.BranchTo
+	local Z = Extreme.Z
+	-- quota del ponticello nel punto x (sale da A a B)
+	local function deckY(x: number): number
+		local t = math.clamp((x - A.X) / (B.X - A.X), 0, 1)
+		return A.Y + (B.Y - A.Y) * t
+	end
+	-- ponticello in salita: la faccia superiore passa per la linea A-B
+	local a0 = Vector3.new(A.X + 2, A.Y, Z)
+	local mid = (a0 + B) / 2
+	local length = (B - a0).Magnitude
+	local deckCf = CFrame.lookAt(mid, B)
+	Build.Part({
+		name = "ExtremeBranch",
+		size = Vector3.new(10, 1.2, length),
+		cframe = deckCf * CFrame.new(0, -0.6, 0),
 		color = Color3.fromRGB(96, 90, 98),
 		material = Enum.Material.Slate,
 		parent = folder,
 	})
-	-- strisce di pericolo ai bordi del viale
 	for _, side in { -1, 1 } do
 		Build.Part({
-			name = "ExtremeAvenueEdge",
-			size = Vector3.new(0.8, 0.1, r1 - r0),
-			cframe = rayFrame((r0 + r1) / 2, PAVE_TOP + 0.03, side * 3.6),
+			name = "ExtremeBranchEdge",
+			size = Vector3.new(0.8, 0.1, length),
+			cframe = deckCf * CFrame.new(side * 4.4, 0.03, 0),
 			color = HAZARD_YELLOW,
 			material = Enum.Material.SmoothPlastic,
 			collide = false,
 			castShadow = false,
 			parent = folder,
 		})
+		-- corrimano a strisce: paletti e una corda
+		for x = A.X - 4, B.X + 2, -4 do
+			local y = deckY(x)
+			Build.Part({
+				name = "BranchPost",
+				size = Vector3.new(0.6, 3.6, 0.6),
+				cframe = CFrame.new(x, y + 1.8, Z + side * 4.7),
+				color = Color3.fromRGB(110, 72, 40),
+				material = Enum.Material.Wood,
+				parent = folder,
+			})
+		end
+		Build.Part({
+			name = "BranchRope",
+			size = Vector3.new(0.35, 0.35, length - 4),
+			cframe = deckCf * CFrame.new(side * 4.7, 3.2, 0),
+			color = ROPE,
+			material = Enum.Material.Fabric,
+			collide = false,
+			parent = folder,
+		})
 	end
-	-- cartello con la freccia sul bordo della piazza
-	local post = rayFrame(93, c.Y, 4.5)
-	Build.Part({
-		name = "ExtremeSignPost",
-		size = Vector3.new(0.8, 9, 0.8),
-		cframe = post * CFrame.new(0, 4.5, 0),
-		color = HAZARD_BLACK,
-		material = Enum.Material.Metal,
-		parent = folder,
-	})
-	local boardPos = (post * CFrame.new(0, 8, 0)).Position
-	Build.Sign(
-		folder,
-		CFrame.lookAt(boardPos, boardPos - DIR) * CFrame.new(0, 0, -0.5),
-		Vector3.new(7, 2.4, 0.4),
-		"ExtremeArrow",
-		nil,
-		{ bg = HAZARD_YELLOW, text = HAZARD_BLACK }
-	)
-	-- arco d'ingresso a strisce gialle e nere con il nome del percorso
-	local archR = 170
+	-- sostegni fino al fianco della montagna
+	Terrain.Prepare()
+	for _, x in { -30, -42, -54 } do
+		for _, side in { -1, 1 } do
+			local zz = Z + side * 3.5
+			local ground = Terrain.HeightAt(x, zz)
+			local top = deckY(x) - 1
+			if top - ground > 1 then
+				Build.Part({
+					name = "BranchLeg",
+					size = Vector3.new(1.6, top - ground + 4, 1.6),
+					cframe = CFrame.new(x, (top + ground - 4) / 2, zz),
+					color = Color3.fromRGB(110, 72, 40),
+					material = Enum.Material.Wood,
+					parent = folder,
+				})
+			end
+		end
+	end
+	-- arco a strisce gialle e nere all'imbocco, con il nome del percorso rivolto verso il sentiero
+	local archX = A.X - 6
+	local baseY = deckY(archX) - 1
 	for _, side in { -1, 1 } do
-		stripedPost(folder, rayFrame(archR, PAVE_TOP - 1, side * 6.5), 24, 3)
+		stripedPost(folder, CFrame.new(archX, baseY, Z + side * 6.5), 24, 3)
 	end
 	Build.Part({
 		name = "GateBeam",
-		size = Vector3.new(17, 3, 3),
-		cframe = rayFrame(archR, PAVE_TOP + 23.5),
+		size = Vector3.new(3, 3, 17),
+		cframe = CFrame.new(archX, baseY + 24.5, Z),
 		color = HAZARD_BLACK,
 		material = Enum.Material.Metal,
 		parent = folder,
 	})
-	local signPos = onRay(archR - 1.6, PAVE_TOP + 19.5)
+	local facing = Vector3.new(1, 0, 0) -- verso il sentiero (est)
+	local signPos = Vector3.new(archX + 1.6, baseY + 20.5, Z)
 	Build.Sign(
 		folder,
-		CFrame.lookAt(signPos, signPos - DIR),
+		CFrame.lookAt(signPos, signPos + facing),
 		Vector3.new(16, 4.6, 0.6),
 		"ExtremeSign",
 		nil,
 		{ bg = Color3.fromRGB(220, 30, 50), text = Color3.fromRGB(255, 255, 255) }
 	)
-	local subPos = onRay(archR - 1.6, PAVE_TOP + 15.6)
+	local subPos = Vector3.new(archX + 1.6, baseY + 16.6, Z)
 	Build.Sign(
 		folder,
-		CFrame.lookAt(subPos, subPos - DIR),
+		CFrame.lookAt(subPos, subPos + facing),
 		Vector3.new(12, 2.4, 0.4),
 		"ExtremeSignSub",
 		nil,
 		{ bg = HAZARD_BLACK, text = HAZARD_YELLOW }
 	)
-	-- fiaccole in cima ai pali
 	for _, side in { -1, 1 } do
-		local top = rayFrame(archR, PAVE_TOP + 23.4, side * 6.5)
 		local flame = Build.Part({
 			name = "GateFlame",
 			size = Vector3.new(1.2, 1.2, 1.2),
-			cframe = top * CFrame.new(0, 0.9, 0),
+			cframe = CFrame.new(archX, baseY + 24.9, Z + side * 6.5),
 			color = Color3.fromRGB(255, 120, 30),
 			material = Enum.Material.Neon,
 			collide = false,
@@ -341,55 +379,13 @@ local function approach(folder: Instance)
 		fire.Color = Color3.fromRGB(255, 150, 50)
 		fire.SecondaryColor = Color3.fromRGB(255, 50, 20)
 		fire.Parent = flame
-		light(flame, Color3.fromRGB(255, 150, 80), 24, 1.6)
+		light(flame, Color3.fromRGB(255, 150, 80), 28, 1.8)
 	end
-	-- ponte di legno sospeso fino alla bocca del canyon
-	local b0, b1 = 176, 199.5
-	local deckY = PAVE_TOP - 0.1
-	Build.Part({
-		name = "ExtremeBridge",
-		size = Vector3.new(8, 1, b1 - b0),
-		cframe = rayFrame((b0 + b1) / 2, deckY - 0.5),
-		color = WOOD,
-		material = Enum.Material.WoodPlanks,
-		parent = folder,
-	})
-	for r = b0 + 1, b1, 3 do
-		for _, side in { -1, 1 } do
-			Build.Part({
-				name = "BridgePost",
-				size = Vector3.new(0.6, 3.6, 0.6),
-				cframe = rayFrame(r, deckY + 1.8, side * 3.7),
-				color = Color3.fromRGB(110, 72, 40),
-				material = Enum.Material.Wood,
-				parent = folder,
-			})
-		end
-	end
-	for _, side in { -1, 1 } do
-		Build.Part({
-			name = "BridgeRope",
-			size = Vector3.new(0.35, 0.35, b1 - b0),
-			cframe = rayFrame((b0 + b1) / 2, deckY + 3.2, side * 3.7),
-			color = ROPE,
-			material = Enum.Material.Fabric,
-			collide = false,
-			parent = folder,
-		})
-	end
-	-- travi di sostegno che scendono sul fianco della montagna
-	for _, r in { 184, 192 } do
-		for _, side in { -1, 1 } do
-			Build.Part({
-				name = "BridgeLeg",
-				size = Vector3.new(1.4, 46, 1.4),
-				cframe = rayFrame(r, deckY - 24, side * 3),
-				color = Color3.fromRGB(110, 72, 40),
-				material = Enum.Material.Wood,
-				parent = folder,
-			})
-		end
-	end
+	-- cartelli con la freccia: in fondo al viale della piazza e sulla discesa, poco prima del bivio
+	local c = MapLayout.SummitCenter
+	arrowSign(folder, CFrame.lookAt(Vector3.new(-15, c.Y + 0.8, 147), Vector3.new(-15, c.Y + 0.8, 100)))
+	local onRamp = Vector3.new(-16, A.Y, Z - 12)
+	arrowSign(folder, CFrame.lookAt(onRamp, onRamp - Vector3.new(0, 0, 10)))
 end
 
 ---------------------------------------------------------------------------------------------
@@ -532,8 +528,8 @@ local function themeFx(folder: Instance, partsById: { [string]: BasePart })
 			flowTexture(part, Enum.NormalId.Top, 14, 0, 18)
 		elseif part and p.section == 1 and p.material == "Glass" then
 			-- cascata: due facce verticali, la schiuma scende
-			flowTexture(part, Enum.NormalId.Right, 0, 22, 12)
-			flowTexture(part, Enum.NormalId.Left, 0, 22, 12)
+			flowTexture(part, Enum.NormalId.Right, 0, -22, 12)
+			flowTexture(part, Enum.NormalId.Left, 0, -22, 12)
 		end
 		if p.section == 1 and p.material == "Glass" then
 			-- cascata: nebbia alla base
@@ -835,15 +831,26 @@ function ExtremeBuild.Build(parent: Instance)
 	canyon(folder)
 	themeFx(folder, partsById)
 	shrines(folder)
+	-- arredo delle sezioni, in moduli a parte: un errore li' non deve fermare la costruzione del percorso
+	for _, decor in { script.Parent.ExtremeDecorA, script.Parent.ExtremeDecorB } do
+		local ok, err = pcall(function()
+			require(decor).Build(Build.Model(decor.Name, folder))
+		end)
+		if not ok then
+			warn(`[ExtremeBuild] {decor.Name}: {err}`)
+		end
+	end
 	return folder
 end
 
--- Vero se (x, z) e' vicino al viale o al ponte (le decorazioni della vetta non ci vanno)
+-- Vero se (x, z) e' vicino al ponticello del bivio (niente decorazioni ne' sassi a bordo sentiero)
 function ExtremeBuild.NearApproach(x: number, z: number): boolean
-	local rel = Vector3.new(x, 0, z) - MapLayout.SummitCenter * Vector3.new(1, 0, 1)
-	local along = rel:Dot(DIR)
-	local across = math.abs(rel:Dot(SIDE))
-	return along > 80 and along < 215 and across < 16
+	return x < Extreme.BranchFrom.X + 10 and x > Extreme.BranchTo.X - 8 and math.abs(z - Extreme.Z) < 16
+end
+
+-- Vero se (x, z) e' sotto il Percorso Estremo o le sue sponde (gli alberi del terreno le bucherebbero)
+function ExtremeBuild.NearCourse(x: number, z: number): boolean
+	return x < Extreme.StartX + 8 and math.abs(z - Extreme.Z) < Extreme.HalfWidth + 40
 end
 
 return ExtremeBuild
