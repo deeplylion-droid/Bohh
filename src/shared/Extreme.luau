@@ -325,7 +325,8 @@ end
 ---------------------------------------------------------------------------------------------
 do
 	local ROCK = rgb(104, 98, 92)
-	local ROCK_DARK = rgb(70, 66, 64)
+	local STONE = rgb(168, 160, 146) -- sassi chiari su cui saltare (si vedono bene sull'acqua)
+	local STONE_SINK = rgb(112, 104, 96) -- quelli che affondano sono piu' scuri
 	local MOSS = rgb(86, 124, 62)
 	local WATER = rgb(38, 150, 212)
 	local DEEP = rgb(20, 70, 130)
@@ -365,20 +366,20 @@ do
 	for k, st in stonesA do
 		local u, v, top, r, mode = st[1], st[2], st[3], st[4], st[5]
 		if mode == "bob" then
-			local p = pillar(1, u, v, top, r, 12, ROCK, "Slate")
+			local p = pillar(1, u, v, top, r, 12, STONE, "Slate")
 			p.kind = "Mover"
 			p.mode = "sine"
 			p.offset = Vector3.new(0, 1.6, 0)
 			p.period = 2.4 + (k % 3) * 0.4
 			p.phase = k * 0.37
 		elseif mode == "sink" then
-			local p = pillar(1, u, v, top, r, 12, ROCK_DARK, "Slate")
+			local p = pillar(1, u, v, top, r, 12, STONE_SINK, "Slate")
 			p.kind = "Faller"
 			p.period = 4.5
 			p.solid = 2.8
 			p.phase = k * 0.21
 		else
-			pillar(1, u, v, top, r, 12, ROCK, "Slate")
+			pillar(1, u, v, top, r, 12, STONE, "Slate")
 		end
 	end
 	-- cascata 1: sporgenza in cima, poi giu' nel bacino dei tronchi
@@ -446,10 +447,10 @@ do
 		p.period = per -- negativo = senso opposto
 		p.cframe = CFrame.new(at(sec(1), u, 290, v)) * CFrame.Angles(0, 0, math.rad(90))
 	end
-	pillar(1, 255, 4, 291.6, 1.6, 10, ROCK, "Slate")
-	pillar(1, 269, -8, 291.7, 1.5, 10, ROCK, "Slate")
-	pillar(1, 284, -8, 291.8, 1.5, 10, ROCK, "Slate")
-	pillar(1, 313, 4, 291.6, 1.6, 10, ROCK, "Slate")
+	pillar(1, 255, 4, 291.6, 1.6, 10, STONE, "Slate")
+	pillar(1, 269, -8, 291.7, 1.5, 10, STONE, "Slate")
+	pillar(1, 284, -8, 291.8, 1.5, 10, STONE, "Slate")
+	pillar(1, 313, 4, 291.6, 1.6, 10, STONE, "Slate")
 	-- getto d'acqua che lancia in aria chi ci passa sopra
 	add({
 		id = "Spout1",
@@ -476,7 +477,7 @@ do
 	liquid(1, 336, 396, 276, WATER, "SmoothPlastic", 0.15)
 	local spine = { { 338, 344 }, { 349, 354 }, { 359, 363 }, { 368, 373 }, { 378, 382 }, { 387, 396 } }
 	for _, sg in spine do
-		slab(1, sg[1], sg[2], -2.6, 2.6, 278, 10, ROCK, "Slate")
+		slab(1, sg[1], sg[2], -2.6, 2.6, 278, 10, STONE, "Slate")
 	end
 	for k, u in { 352, 366, 380 } do
 		local s = sec(1)
