@@ -1,12 +1,13 @@
 """Tigre Quantica (QuantumTiger) - pet del Percorso Estremo (felini super intelligenti).
 
-Una tigre possente e regale dal pelo blu indaco "quantico", con muso, gorgiera, sopracciglia e petto bianchi, in
-piedi su un disco antigravita' che fluttua sopra un'onda di energia. Le strisce sono circuiti luminosi che si
-alternano ciano e magenta (con le piazzole saldate in fondo), anche sulla fronte, sulle guance e sulle zampe. In
-mezzo alla fronte si apre un terzo occhio verticale che brilla di rosa: le tracce dei circuiti partono da li'.
-Attorno alla testa orbitano tre anelli olografici come in un atomo, ognuno con il suo elettrone (parte Neon "Stars":
-il gioco ci aggancia scintille che brillano); i circuiti ciano sono la parte "Mane" (scintille elettriche).
-Sguardo fiero con occhi azzurro ghiaccio, mento alto e due zanne che spuntano dal sorriso sicuro. La coda a S
+Una tigre possente e regale dal pelo blu indaco "quantico", con muso, gorgiera, sopracciglia e petto bianchi, ritta
+con il petto in fuori e il mento alto su un disco antigravita' di metallo scuro (bordo ciano, anello magenta sul
+piano, propulsori sotto) che fluttua sopra un'onda di energia ciano a terra. Le strisce sono circuiti luminosi che
+si alternano ciano e magenta (con le piazzole saldate in fondo), anche sulla fronte, sulle guance e sulle zampe.
+In mezzo alla fronte si apre un terzo occhio verticale che brilla di rosa: le tracce dei circuiti partono da li' e
+attorno gli orbitano tre anelli olografici inclinati come in un atomo, ognuno con il suo elettrone (parte Neon
+"Stars": il gioco ci aggancia scintille che brillano); i circuiti ciano sono la parte "Mane" (scintille
+elettriche). Sguardo fiero con occhi azzurro ghiaccio e due zanne che spuntano dal sorriso sicuro. La coda a S
 (gruppo "Tail") ha anelli magenta e la punta luminosa. Tocco "toy horror": una toppa lavanda cucita sulla spalla
 destra con grossi punti a croce rosa.
 """

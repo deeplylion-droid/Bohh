@@ -1,11 +1,13 @@
 """Pantera Psichica (PsychicPanther) - pet del Percorso Estremo (felini super intelligenti).
 
 Una pantera nera dai riflessi viola, seduta fiera come una statua: zampe anteriori dritte e unite, petto in fuori,
-mento alto e la coda avvolta attorno alle zampe. La calotta del cranio non c'e' piu': al suo posto una cupola di
-vetro trasparente mostra un cervello rosa che brilla, tutto circonvoluzioni. Occhi viola intensi e luminosi sotto
-palpebre severe, due zanne bianche che spuntano dal muso chiuso. Dalla schiena salgono lingue di aura viola e a terra
-brilla un sigillo psichico (parte Neon "Nebula": il gioco ci aggancia la nebulosa viola-blu); attorno fluttuano tre
-sfere psichiche con un anello ciascuna (parte Neon "Aura": scintille rosa-viola) dentro gusci di vetro viola.
+mento alto, la coda avvolta attorno alle zampe e "rosette fantasma" viola scuro sul pelo nero. La calotta del
+cranio non c'e' piu': al suo posto una cupola di vetro trasparente mostra un cervello rosa luminoso (due lobi
+Neon con i solchi e la scissura centrale in magenta scuro, cosi' le pieghe si leggono anche sul Neon piatto del
+gioco). Occhi viola intensi e luminosi sotto palpebre severe, baffi lunghi che brillano di viola e due zanne che
+spuntano dal muso chiuso. Dietro la testa e le spalle sale un'aura di fiamme viola ondulate (parte Neon "Nebula":
+il gioco ci aggancia la nebulosa viola-blu); a terra brilla un sigillo psichico e attorno fluttuano tre sfere
+psichiche con un anello ciascuna (parte Neon "Aura": scintille rosa-viola) dentro gusci di vetro viola.
 Tocco "toy horror": la cupola e' cucita alla testa con grossi punti a croce rosa, tutto attorno.
 """
 import math
@@ -446,7 +448,12 @@ for sx in (1, -1):
     for th0, ph_a, ph_b in ((58, 14, 44), (96, 44, 74), (128, 14, 44), (78, 74, 102), (118, 74, 102)):
         pts = [tuple(on_lobe(th0 + 6.0 * math.sin(i * 1.3), ph)) for i, ph in enumerate(np.linspace(ph_a, ph_b, 5))]
         sulci.append(tube(pts, 0.017))
-brain = shrink(union(*lobes, k=0.03).intersect(ABOVE_CUT))
+lobes_u = union(*lobes, k=0.03)
+# scissura centrale fra i due emisferi, da davanti a dietro passando sopra
+fis_dirs = [np.array((0.0, -math.cos(math.radians(th)), math.sin(math.radians(th)))) for th in np.linspace(24, 156, 13)]
+fis_pts, _ = project_many(lobes_u, [BR_C] * len(fis_dirs), fis_dirs)
+sulci.append(tube([tuple(q) for q in fis_pts], 0.021))
+brain = shrink(lobes_u.intersect(ABOVE_CUT))
 brain_core = fast_union(sulci).intersect(ABOVE_CUT)
 
 # ============================================================ punti cuciti attorno alla cupola (+ naso rosa)
@@ -533,7 +540,7 @@ m.add("Accent", H(union(pad_solid.subtract(head0.offset(-0.09)), ear_fluff)), AC
       voxel=0.0306)
 m.add("Dome", H(DOME), GLASS, material="Glass", role="detail", tris=900, voxel=0.0340, transparency=0.55)
 m.add("Brain", H(brain), BRAIN, material="Neon", role="glow", tris=700, voxel=0.0341)
-m.add("BrainFolds", H(brain_core), BRAIN_CORE, role="detail", tris=950, voxel=0.0244)
+m.add("BrainFolds", H(brain_core), BRAIN_CORE, role="detail", tris=950, voxel=0.0254)
 m.add("Stitches", union(H(fast_union(stitches)), H(nose)), THREAD, role="detail", tris=750, voxel=0.0249)
 
 whiskers = []
