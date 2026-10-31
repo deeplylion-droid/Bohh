@@ -323,13 +323,16 @@ local function floorLine(points: { { number } }): (number) -> number
 	end
 end
 
--- Cascata: velo d'acqua sottile al bordo u, dal pelo dell'acqua di sotto (low) a quello di sopra (high),
--- senza entrare nelle due vasche, piu' una striscia di schiuma dove cade
+-- Cascata: velo d'acqua sottile appena oltre il bordo u (dove finisce la vasca di sopra), dal pelo
+-- dell'acqua di sotto (low) a quello di sopra (high), senza entrare nelle due vasche, piu' una striscia di
+-- schiuma che galleggia dove cade. Quello che c'e' al bordo (sporgenze, rive) finisce prima di u e
+-- ricomincia dopo u + FALL_THICK, per non attraversare il velo.
+local FALL_THICK = 0.6
 local function fall(i: number, u: number, high: number, low: number)
 	local sheet = slab(
 		i,
-		u - 0.3,
-		u + 0.3,
+		u,
+		u + FALL_THICK,
 		-Extreme.HalfWidth - 3,
 		Extreme.HalfWidth + 3,
 		high,
@@ -345,11 +348,11 @@ local function fall(i: number, u: number, high: number, low: number)
 	sheet.style = "Fall"
 	local foam = slab(
 		i,
-		u + 0.3,
-		u + 3.5,
+		u + FALL_THICK,
+		u + FALL_THICK + 3.2,
 		-Extreme.HalfWidth - 3,
 		Extreme.HalfWidth + 3,
-		low + 0.08,
+		low + 0.2,
 		0.16,
 		rgb(240, 250, 255),
 		"SmoothPlastic",

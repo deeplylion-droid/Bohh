@@ -1101,8 +1101,8 @@ local function infernoCliffs()
 			local a, b = s * vIn, s * (vIn + D)
 			span(
 				4,
-				ua,
-				ub,
+				ua + 0.05,
+				ub - 0.05,
 				bottom,
 				top,
 				math.min(a, b),

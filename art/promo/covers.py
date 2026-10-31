@@ -667,7 +667,9 @@ def lava_material(name="Lava", strength=6.0, scale=0.18):
     # bordo delle placche = crepa luminosa; il centro delle placche resta crosta un po' scura
     crack = S.ramp(nt, vor.outputs["Distance"], [(0.0, (1, 1, 1, 1)), (0.06, (0.85, 0.85, 0.85, 1)), (0.2, (0.18, 0.18, 0.18, 1)),
                                                  (0.45, (0.05, 0.05, 0.05, 1))])
-    k = S.math_node(nt, "MAXIMUM", crack, S.math_node(nt, "MULTIPLY", nz.outputs["Fac"], 0.55))
+    # crosta scura sulle placche, crepe incandescenti, qualche chiazza calda dal rumore
+    hot = S.ramp(nt, nz.outputs["Fac"], [(0.45, (0, 0, 0, 1)), (0.75, (0.7, 0.7, 0.7, 1))])
+    k = S.math_node(nt, "MAXIMUM", crack, hot)
     col = S.ramp(nt, k, [(0.0, lin("#3a0d06")), (0.22, lin("#b3260a")), (0.45, lin("#ff5a0a")), (0.7, lin("#ff9a1a")),
                          (1.0, lin("#fff07a"))])
     em = nt.nodes.new("ShaderNodeEmission")
@@ -680,7 +682,7 @@ def lava_material(name="Lava", strength=6.0, scale=0.18):
     nt.links.new(b.outputs[0], addsh.inputs[0])
     nt.links.new(em.outputs[0], addsh.inputs[1])
     nt.links.new(addsh.outputs[0], out.inputs["Surface"])
-    return tag_glow(mat)
+    return tag_glow(mat, False)
 
 
 def basalt_material(name, top="#ff7a1e", top_e=2.2, rock="#2a1d24", veins=1.0, fog=("#ff8a4a", 0.004, 30.0)):
@@ -845,7 +847,7 @@ def scene_extreme(w: int, samples: int, tag: str):
     # --- diavoli giganti sulle sporgenze ai lati (destra: Behemoth, sinistra: Abaddon) e Belzebu' in volo
     beh, beh_objs = pet("Behemoth", env("BEH", (8.6, 11.0, 1.3)), env("BEH_YAW", 42.0), env("BEH_S", 2.7), glow=2.2)
     aba, aba_objs = pet("Abaddon", env("ABA", (-8.8, 17.0, 1.3)), env("ABA_YAW", -40.0), env("ABA_S", 2.7), glow=2.2)
-    bee, bee_objs = pet("Beelzebub", env("BEE", (-3.5, 30.0, 8.0)), env("BEE_YAW", -10.0), env("BEE_S", 2.3), glow=2.2)
+    bee, bee_objs = pet("Beelzebub", env("BEE", (6.0, 34.0, 7.5)), env("BEE_YAW", 25.0), env("BEE_S", 2.3), glow=2.2)
     for i, (root, objs) in enumerate(((beh, beh_objs), (aba, aba_objs))):
         lo, hi = S.bounds(objs)
         x, y = root.location.x, root.location.y
@@ -859,7 +861,7 @@ def scene_extreme(w: int, samples: int, tag: str):
     # --- il Bacon Hair a meta' salto fra due pilastri
     rig = A.build("Bacon", shirt=env("SHIRT", "#22d046"))
     A.pose(rig, env("LEAP_POSE", "leap"))
-    ax, ay, az = env("AV", (0.0, 4.2, 4.6))
+    ax, ay, az = env("AV", (-0.6, 3.0, 5.4))
     rig.root.location = (ax, ay, az)
     rig.root.rotation_euler.z = math.radians(env("AV_YAW", 50.0))
     bpy.context.view_layer.update()
@@ -892,9 +894,9 @@ def scene_extreme(w: int, samples: int, tag: str):
     el, eh = S.bounds(egg_objs)
     S.point_light("ShrineGlow", tuple(Vector(((el + eh) / 2).tolist()) + Vector((0, -2, 0))), 900.0, 1.0, lin("#3ff6ff")[:3])
 
-    cam_loc = env("CAM", (3.0, -12.0, 1.6))
-    target = env("TARGET", (0.0, 14.0, 6.0))
-    S.camera(cam_loc, target, lens=env("LENS", 26.0), dof_target=tuple(ac) if not PREVIEW else None, fstop=env("FSTOP", 8.0))
+    cam_loc = env("CAM", (2.5, -10.0, 5.2))
+    target = env("TARGET", (0.0, 20.0, 3.5))
+    S.camera(cam_loc, target, lens=env("LENS", 24.0), dof_target=tuple(ac) if not PREVIEW else None, fstop=env("FSTOP", 8.0))
     pts = {"av_feet": bl[0], "av_head": rig.joints["HeadCenter"].matrix_world.translation, "shrine": (sx, sy, 5.0)}
     for name, objs in (("beh", beh_objs), ("aba", aba_objs), ("bee", bee_objs)):
         lo, hi = S.bounds(objs)
