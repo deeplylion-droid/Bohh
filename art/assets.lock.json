@@ -292,6 +292,14 @@
   }
  },
  "models": {
+  "AbyssAngler": {
+   "asset": 86373077096443,
+   "hash": "694b4c073124ee44dd78173479fd1801244b0370"
+  },
+  "AbyssViper": {
+   "asset": 76962158790417,
+   "hash": "b6ffae763d1c367f242534eeac912eab8f950880"
+  },
   "AnubisGuard": {
    "asset": 105285893738747,
    "hash": "05024715f67ff2c7846cdec7c74591a55322bfd9"
@@ -491,6 +499,10 @@
   "GelatoneMontagnone": {
    "asset": 139448583479098,
    "hash": "1f4e64a5aa053405757f3d1af66716b6e72ac3c9"
+  },
+  "GlassHead": {
+   "asset": 105618119587774,
+   "hash": "bac1196ee35a7fa1a4029796640ca0940cf7ef36"
   },
   "GlowAxolotl": {
    "asset": 76964501214214,

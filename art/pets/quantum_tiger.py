@@ -19,7 +19,7 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from lib.sdf import (SDF, bezier, box, capped_cone, capsule, cylinder, ellipsoid, euler, halfspace_z,  # noqa: E402
-                     look_matrix, round_cone, smax, smin, sphere, torus, tube, union)
+                     look_matrix, round_cone, smin, sphere, torus, tube, union)
 from lib.toy import Model  # noqa: E402
 
 
@@ -122,20 +122,6 @@ def fast_union(shapes, k=0.0, base=None, margin=0.06):
     return SDF(f, lo, hi)
 
 
-def paint(core, region, out=0.016, inn=0.035, margin=0.05, k=0.02):
-    """Strato di "vernice" sottile (guscio fra -inn e +out attorno a core) dentro 'region'."""
-    def f(p):
-        r = region(p)
-        d = np.maximum(r, margin).astype(np.float32)
-        idx = np.nonzero(r < margin)[0]
-        if len(idx):
-            c = core(p[idx])
-            d[idx] = smax(np.maximum(c - out, -c - inn), r[idx], k)
-        return d
-
-    return SDF(f, np.maximum(core.lo - out, region.lo), np.minimum(core.hi + out, region.hi))
-
-
 def shrink(s, step=0.05, pad=0.03):
     """Ricalcola un ingombro stretto (le unioni morbide annidate lo gonfiano) campionando la forma."""
     lo, hi = s.lo.astype(np.float64), s.hi.astype(np.float64)
@@ -195,35 +181,6 @@ def horn(base, d, L, r0, curl=(0, 0, 0), n=5, r1=0.006, power=1.0):
     return tube(pts, [r0 + (r1 - r0) * t ** power for t in ts])
 
 
-def poly_xz(poly, y0, y1):
-    """Regione disegnata nella vista frontale: poligono nel piano XZ estruso lungo Y fra y0 e y1."""
-    pts = np.asarray(poly, dtype=np.float32)
-
-    def f(p):
-        px, pz = p[:, 0], p[:, 2]
-        d = np.full(len(p), np.inf, dtype=np.float32)
-        s = np.ones(len(p), dtype=np.float32)
-        for i in range(len(pts)):
-            vi, vj = pts[i], pts[i - 1]
-            ex, ez = vj[0] - vi[0], vj[1] - vi[1]
-            wx, wz = px - vi[0], pz - vi[1]
-            t = np.clip((wx * ex + wz * ez) / max(ex * ex + ez * ez, 1e-12), 0.0, 1.0)
-            d = np.minimum(d, (wx - ex * t) ** 2 + (wz - ez * t) ** 2)
-            c1, c2, c3 = pz >= vi[1], pz < vj[1], ex * wz > ez * wx
-            s = np.where((c1 & c2 & c3) | (~c1 & ~c2 & ~c3), -s, s)
-        return np.maximum(s * np.sqrt(d), np.maximum(y0 - p[:, 1], p[:, 1] - y1))
-
-    return SDF(f, (pts[:, 0].min(), y0, pts[:, 1].min()), (pts[:, 0].max(), y1, pts[:, 1].max()))
-
-
-def surface_line(base, origin_fn, pts2d, step=0.025):
-    """Linea disegnata in 2D (lista di punti) e proiettata sulla superficie: origin_fn(q2) -> (origine, target)."""
-    dense = resample([np.array([a, b, 0.0]) for a, b in pts2d], step)
-    os_, ts_ = zip(*[origin_fn(q[0], q[1]) for q in dense])
-    pts, nrs = project_many(base, list(os_), [np.asarray(t) - np.asarray(o) for o, t in zip(os_, ts_)])
-    return pts, nrs
-
-
 def stitch_cross(base, center, tangent, size=0.05, r=0.014, lift=0.008):
     """Punto a croce (X) sulla superficie."""
     c = np.asarray(center, float)
@@ -254,7 +211,6 @@ DISC = (58, 64, 92)         # disco antigravita' (metallo canna di fucile)
 THREAD = (255, 92, 196)     # filo della toppa
 
 m = Model("QuantumTiger", "pet")
-rng = np.random.default_rng(47)
 
 # ============================================================ testa (spazio locale: muso verso -Y)
 HEAD_POS = np.array([0.0, -1.2, 2.66])
@@ -346,12 +302,7 @@ def ear_pose(s, sx):
     return s.rotate(EAR_R[sx]).translate(EAR_T[sx])
 
 
-def ear_pt(p, sx):
-    return rot_pts(EAR_R[sx], p) + EAR_T[sx]
-
-
 ears = [ear_pose(ear_shape(), sx) for sx in (1, -1)]
-EAR_CUPS = [ear_pose(round_cone((0, -0.065, 0.0), (0, -0.065, 0.17), 0.11, 0.05), sx) for sx in (1, -1)]
 EAR_BACKS = [ear_pose(ear_shape().offset(0.013).intersect(SDF(lambda p: 0.004 - p[:, 1], (-1, -1, -1), (1, 1, 1)),
                                                           k=0.01), sx) for sx in (1, -1)]
 EAR_SPOTS = [ear_pose(ellipsoid((0.07, 0.03, 0.06), (0.0, 0.07, 0.07)), sx) for sx in (1, -1)]
@@ -439,6 +390,7 @@ tail_glow_s = fast_union(tail_glow)
 DC = np.array((0.0, -0.06, 0.0))
 DISC_R = 1.0
 disc = cylinder(tuple(DC + (0, 0, 0.38)), tuple(DC + (0, 0, DISC_TOP - 0.06)), DISC_R, round=0.06)
+disc = disc.subtract(torus(0.84, 0.032, tuple(DC + (0, 0, DISC_TOP))), k=0.008)
 thrusters = []
 disc_cyan = [torus(DISC_R + 0.005, 0.04, tuple(DC + (0, 0, 0.41))),
              cylinder(tuple(DC + (0, 0, 0.27)), tuple(DC + (0, 0, 0.33)), 0.2, round=0.03),
@@ -448,7 +400,7 @@ for k_ in range(3):
     c = DC + np.array((0.66 * math.cos(a), 0.66 * math.sin(a), 0.0))
     thrusters.append(capped_cone(tuple(c + (0, 0, 0.36)), tuple(c + (0, 0, 0.22)), 0.13, 0.09, round=0.015))
     disc_cyan.append(cylinder(tuple(c + (0, 0, 0.2)), tuple(c + (0, 0, 0.225)), 0.07))
-disc_magenta = []
+disc_magenta = [torus(0.84, 0.027, tuple(DC + (0, 0, DISC_TOP - 0.006)))]
 
 # ============================================================ anelli quantici attorno alla testa
 RING_C = hp((0.0, 0.04, 0.25))
@@ -582,8 +534,8 @@ m.add("Stitches", fast_union(stitches), THREAD, role="detail", tris=350, voxel=0
 # ============================================================ circuiti luminosi (ciano = "Mane": scintille elettriche)
 m.add("Mane", fast_union(stripes[0] + [H(union(*head_traces[0]))] + electrons_c), CYAN, material="Neon",
       role="glow", tris=1700, voxel=0.0255)
-m.add("CircuitsMagenta", fast_union(stripes[1] + [H(union(*head_traces[1]))] + electrons_m), MAGENTA,
-      material="Neon", role="glow", tris=1150, voxel=0.0275)
+m.add("CircuitsMagenta", fast_union(stripes[1] + [H(union(*head_traces[1]))] + electrons_m + disc_magenta), MAGENTA,
+      material="Neon", role="glow", tris=1650, voxel=0.0271)
 m.add("DiscGlow", fast_union(disc_cyan), CYAN, material="Neon", role="glow", tris=1250, voxel=0.0284)
 m.add("TailGlow", tail_glow_s, MAGENTA, material="Neon", role="glow", tris=350, voxel=0.0276, group="Tail",
       pivot=TAIL_PIVOT)
@@ -620,7 +572,7 @@ for sx in (1, -1):
 m.add("Shine", union(H(union(*fangs)), *shines), TOOTH, role="shine", tris=380, voxel=0.0088)
 
 # ============================================================ disco antigravita' (metallo) e propulsori
-m.add("HoverDisc", union(disc, fast_union(thrusters)), DISC, material="Metal", role="detail", tris=800, voxel=0.0533)
+m.add("HoverDisc", union(disc, fast_union(thrusters)), DISC, material="Metal", role="detail", tris=800, voxel=0.0556)
 
 
 if __name__ == "__main__":

@@ -473,7 +473,7 @@ pal_reg = SDF(lambda p: np.maximum(np.maximum(np.abs(p[:, 0]) - 0.2, p[:, 2] - (
 jaw_reg = SDF(lambda p: np.maximum(np.maximum(np.abs(p[:, 0]) - 0.19, (JAW_Z - 0.03) - p[:, 2]),
                                    np.maximum(p[:, 1] - 0.02, -0.48 - p[:, 1])), (-0.2, -0.49, JAW_Z - 0.03),
               (0.2, 0.02, JAW_Z + 0.05))
-dark = [thin(upper, 0.006, 0.03).intersect(pal_reg), Jw(thin(jaw, 0.006, 0.03).intersect(jaw_reg))]
+dark = [thin(upper, 0.006, 0.07).intersect(pal_reg), Jw(thin(jaw, 0.006, 0.07).intersect(jaw_reg))]
 Rinv = euler(-GAPE, 0, 0)
 piv = np.asarray(HINGE, dtype=np.float32)
 
@@ -797,7 +797,7 @@ for li, (a, b, r) in enumerate(LEG_AXES[:3]):
     cuffs.append(band(r + 0.035, 0.042, 0.075).rotate(M).translate(tuple(c)))
     for ang in np.linspace(0, 2 * math.pi, 7)[:-1]:   # borchie sul ceppo
         d = M @ np.array([math.cos(ang), math.sin(ang), 0.0], dtype=np.float32)
-        cuffs.append(sphere(0.032, tuple(c + d * (r + 0.078))))
+        cuffs.append(sphere(0.042, tuple(c + d * (r + 0.078))))
     out_dir = norm(np.array([1.0 if li != 1 else -1.0, 0.25, 0.0]))
     out_dir = norm(out_dir - ax * float(np.dot(out_dir, ax)))
     ring_c = c + out_dir * (r + 0.1)
@@ -819,7 +819,7 @@ for P in HORN_PATHS:   # anelli di ferro chiodati infilati sulle corna: la besti
         cuffs.append(Hd(band(r + 0.012, 0.03, 0.045).rotate(M).translate(tuple(c))))
         for ang in np.linspace(0, 2 * math.pi, 6)[:-1]:
             d = M @ np.array([math.cos(ang), math.sin(ang), 0.0], dtype=np.float32)
-            cuffs.append(Hd(sphere(0.024, tuple(c + d * (r + 0.042)))))
+            cuffs.append(Hd(sphere(0.032, tuple(c + d * (r + 0.042)))))
 cuff_sdf = fast_union(cuffs)
 chain_sdf = fast_union(chain).intersect(halfspace_z(0.004))
 

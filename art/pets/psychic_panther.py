@@ -16,8 +16,8 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from lib.sdf import (SDF, bezier, capped_cone, capsule, cylinder, ellipsoid, euler, halfspace_z, look_matrix, prism,  # noqa: E402
-                     round_cone, smax, smin, sphere, torus, tube, union)
+from lib.sdf import (SDF, capsule, cylinder, ellipsoid, euler, halfspace_z, look_matrix, round_cone, smin,  # noqa: E402
+                     sphere, torus, tube, union)
 from lib.toy import Model  # noqa: E402
 
 
@@ -120,20 +120,6 @@ def fast_union(shapes, k=0.0, base=None, margin=0.06):
     return SDF(f, lo, hi)
 
 
-def paint(core, region, out=0.016, inn=0.035, margin=0.05, k=0.02):
-    """Strato di "vernice" sottile (guscio fra -inn e +out attorno a core) dentro 'region'."""
-    def f(p):
-        r = region(p)
-        d = np.maximum(r, margin).astype(np.float32)
-        idx = np.nonzero(r < margin)[0]
-        if len(idx):
-            c = core(p[idx])
-            d[idx] = smax(np.maximum(c - out, -c - inn), r[idx], k)
-        return d
-
-    return SDF(f, np.maximum(core.lo - out, region.lo), np.minimum(core.hi + out, region.hi))
-
-
 def shrink(s, step=0.05, pad=0.03):
     """Ricalcola un ingombro stretto (le unioni morbide annidate lo gonfiano) campionando la forma."""
     lo, hi = s.lo.astype(np.float64), s.hi.astype(np.float64)
@@ -180,46 +166,12 @@ def ell(c, radii, axis=(0, 0, 1), side=(1, 0, 0)):
     return ellipsoid(radii).rotate(orient(axis, side)).translate(tuple(np.asarray(c, dtype=np.float64)))
 
 
-def rot_pts(R, pts, pivot=(0, 0, 0)):
-    pv = np.asarray(pivot, dtype=np.float64)
-    return (np.asarray(pts, dtype=np.float64) - pv) @ np.asarray(R, dtype=np.float64).T + pv
-
-
 def horn(base, d, L, r0, curl=(0, 0, 0), n=5, r1=0.006, power=1.0):
     """Cono curvo (ciuffo, artiglio, dente): parte da base verso d (lunghezza L) e si piega verso 'curl'."""
     base, d, c = np.asarray(base, float), norm(d), np.asarray(curl, float)
     ts = np.linspace(0.0, 1.0, n)
     pts = [tuple(base + d * L * t + c * L * t * t) for t in ts]
     return tube(pts, [r0 + (r1 - r0) * t ** power for t in ts])
-
-
-def poly_xz(poly, y0, y1):
-    """Regione disegnata nella vista frontale: poligono nel piano XZ estruso lungo Y fra y0 e y1."""
-    pts = np.asarray(poly, dtype=np.float32)
-
-    def f(p):
-        px, pz = p[:, 0], p[:, 2]
-        d = np.full(len(p), np.inf, dtype=np.float32)
-        s = np.ones(len(p), dtype=np.float32)
-        for i in range(len(pts)):
-            vi, vj = pts[i], pts[i - 1]
-            ex, ez = vj[0] - vi[0], vj[1] - vi[1]
-            wx, wz = px - vi[0], pz - vi[1]
-            t = np.clip((wx * ex + wz * ez) / max(ex * ex + ez * ez, 1e-12), 0.0, 1.0)
-            d = np.minimum(d, (wx - ex * t) ** 2 + (wz - ez * t) ** 2)
-            c1, c2, c3 = pz >= vi[1], pz < vj[1], ex * wz > ez * wx
-            s = np.where((c1 & c2 & c3) | (~c1 & ~c2 & ~c3), -s, s)
-        return np.maximum(s * np.sqrt(d), np.maximum(y0 - p[:, 1], p[:, 1] - y1))
-
-    return SDF(f, (pts[:, 0].min(), y0, pts[:, 1].min()), (pts[:, 0].max(), y1, pts[:, 1].max()))
-
-
-def surface_line(base, origin_fn, pts2d, step=0.025):
-    """Linea disegnata in 2D (lista di punti) e proiettata sulla superficie: origin_fn(q2) -> (origine, target)."""
-    dense = resample([np.array([a, b, 0.0]) for a, b in pts2d], step)
-    os_, ts_ = zip(*[origin_fn(q[0], q[1]) for q in dense])
-    pts, nrs = project_many(base, list(os_), [np.asarray(t) - np.asarray(o) for o, t in zip(os_, ts_)])
-    return pts, nrs
 
 
 def stitch_cross(base, center, tangent, size=0.05, r=0.014, lift=0.008):
@@ -234,20 +186,6 @@ def stitch_cross(base, center, tangent, size=0.05, r=0.014, lift=0.008):
         pb = on_surface(base, c + b * size * 0.7, lift, 3)
         out.append(capsule(tuple(pa), tuple(pb), r))
     return out
-
-
-def wisp(base, d, L, r0, curl, wiggle=0.0, n=7, r1=0.014, phase=0.0):
-    """Lingua di energia: tubo che si assottiglia fino a una punta, con una curva a S (wiggle)."""
-    base, d, c = np.asarray(base, float), norm(d), np.asarray(curl, float)
-    side = np.cross(d, c)
-    side = norm(side) if np.linalg.norm(side) > 1e-6 else norm(np.cross(d, (0.0, 0.0, 1.0)) + 1e-3)
-    pts, radii = [], []
-    for i in range(n):
-        t = i / (n - 1)
-        p = base + d * L * t + c * L * t * t + side * wiggle * L * math.sin(t * math.pi * 1.6 + phase) * t
-        pts.append(tuple(p))
-        radii.append(max(r0 * (1 - t) ** 0.85, r1))
-    return tube(pts, radii)
 
 
 def catmull(points, n=6):
@@ -357,14 +295,6 @@ R_HEAD = euler(-8.0, 0.0, 12.0)       # mento alto, fiera, girata verso la camer
 
 def H(s):
     return s.scale(HS).rotate(R_HEAD).translate(HEAD_POS)
-
-
-def hp(p):
-    return rot_pts(R_HEAD, np.asarray(p, dtype=np.float64) * HS) + HEAD_POS
-
-
-def hv(v):
-    return rot_pts(R_HEAD, v)
 
 
 cran = ellipsoid((0.4, 0.38, 0.34), (0, 0.04, 0.05))
@@ -598,12 +528,12 @@ m.add("Head", core0.intersect(HEAD_ZONE.offset(0.03)), FUR, tris=2500, voxel=0.0
 pad_solid = union(*[ellipsoid((0.098, 0.093, 0.083), (sx * 0.067, -0.383, -0.145)) for sx in (1, -1)],
                   ellipsoid((0.083, 0.083, 0.068), (0, -0.313, -0.257)), k=0.03)
 pad_solid = pad_solid.subtract(nostrils.offset(0.01)).subtract(union(*lip_tubes).offset(0.004), k=0.008)
-m.add("Rosettes", rosettes, ROSETTE, role="detail", tris=450, voxel=0.0304)
+m.add("Rosettes", rosettes, ROSETTE, role="detail", tris=450, voxel=0.0306)
 m.add("Accent", H(union(pad_solid.subtract(head0.offset(-0.09)), ear_fluff)), ACCENT, role="detail", tris=400,
-      voxel=0.0285)
+      voxel=0.0306)
 m.add("Dome", H(DOME), GLASS, material="Glass", role="detail", tris=900, voxel=0.0340, transparency=0.55)
-m.add("Brain", H(brain), BRAIN, material="Neon", role="glow", tris=700, voxel=0.0231)
-m.add("BrainFolds", H(brain_core), BRAIN_CORE, role="detail", tris=950, voxel=0.02)
+m.add("Brain", H(brain), BRAIN, material="Neon", role="glow", tris=700, voxel=0.0341)
+m.add("BrainFolds", H(brain_core), BRAIN_CORE, role="detail", tris=950, voxel=0.0244)
 m.add("Stitches", union(H(fast_union(stitches)), H(nose)), THREAD, role="detail", tris=750, voxel=0.0249)
 
 whiskers = []
@@ -618,7 +548,7 @@ for sx in (1, -1):
     look = -0.01
     pupils.append(H(eye_place(ellipsoid((0.017, 0.02, 0.056)), sx, (look, -0.016, -0.006))))
     shines.append(H(eye_place(sphere(0.018), sx, (look - 0.03, -0.024, -0.004))))
-m.add("EyeGlow", union(*eyes, H(union(*whiskers))), EYE_GLOW, material="Neon", role="glow", tris=1000, voxel=0.0179)
+m.add("EyeGlow", union(*eyes, H(union(*whiskers))), EYE_GLOW, material="Neon", role="glow", tris=1000, voxel=0.0187)
 m.add("Pupils", union(*pupils), PUPIL, role="eye", tris=400, voxel=0.0066)
 fangs = []
 for sx in (1, -1):
@@ -627,9 +557,9 @@ for sx in (1, -1):
                             0.021, 0.005))
 m.add("Shine", union(H(union(*fangs)), *shines), TOOTH, role="shine", tris=500, voxel=0.0070)
 m.add("Nebula", aura, AURA, material="Neon", role="glow", tris=2200, voxel=0.0307)
-m.add("Sigil", fast_union(sigil), AURA, material="Neon", role="glow", tris=750, voxel=0.0246)
+m.add("Sigil", fast_union(sigil), AURA, material="Neon", role="glow", tris=750, voxel=0.0283)
 m.add("Aura", fast_union(orb_core), ORB, material="Neon", role="glow", tris=1100, voxel=0.0231)
-m.add("OrbGlass", fast_union(orb_glass), ORB_GLASS, material="Glass", role="detail", tris=400, voxel=0.0354,
+m.add("OrbGlass", fast_union(orb_glass), ORB_GLASS, material="Glass", role="detail", tris=400, voxel=0.0376,
       transparency=0.45)
 
 

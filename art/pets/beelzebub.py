@@ -730,7 +730,7 @@ def cape_f(p):
     x, y, z = p[:, 0], p[:, 1], p[:, 2]
     Y, u = cape_geom(x, z)
     dYdx = -2 * (0.72 - 0.3 * u) * x
-    d_sheet = (np.abs(y - Y) - 0.026) / np.sqrt(1 + dYdx ** 2 + 0.08)
+    d_sheet = (np.abs(y - Y) - 0.034) / np.sqrt(1 + dYdx ** 2 + 0.08)
     W = 0.6 + 0.32 * u
     # orlo in basso sbrindellato: punte a zig-zag di altezza irregolare
     ph = (x + 1.0) * 7.0
@@ -753,7 +753,7 @@ def collar_f(p):
     x, y, z = p[:, 0], p[:, 1], p[:, 2]
     u = np.clip((z - ZC0) / (ZC1 - ZC0), 0, 1)
     Y = 0.36 + 0.3 * u - (0.95 - 0.45 * u) * x * x
-    d_sheet = (np.abs(y - Y) - 0.022) / np.sqrt(1 + (2 * (0.95 - 0.45 * u) * x) ** 2 + 0.1)
+    d_sheet = (np.abs(y - Y) - 0.03) / np.sqrt(1 + (2 * (0.95 - 0.45 * u) * x) ** 2 + 0.1)
     W = 0.34 + 0.4 * u
     ztop = ZC1 - 0.16 * np.abs(np.sin(np.abs(x) / W.clip(0.1) * math.pi * 1.5))
     d_out = np.maximum.reduce([np.abs(x) - W, ZC0 - z, z - ztop])
@@ -850,7 +850,7 @@ def fly(c, fwd, s, bank):
              sphere(0.028, (0, 0.044, 0.004))]
     parts += [sphere(0.019, (sx * 0.021, 0.05, 0.014)) for sx in (1, -1)]
     for sx in (1, -1):
-        parts.append(ellipsoid((0.078, 0.03, 0.011)).rot(0, sx * -14, sx * -38).translate((sx * 0.05, -0.036, 0.03)))
+        parts.append(ellipsoid((0.078, 0.03, 0.015)).rot(0, sx * -14, sx * -38).translate((sx * 0.05, -0.036, 0.03)))
     body = union(*parts, k=0.01)
     return body.rot(0, bank, 0).scale(s).rotate(look(fwd)).translate(tuple(c))
 
@@ -951,7 +951,7 @@ for sx, nm in ((1, "WingR"), (-1, "WingL")):
     m.add(nm, place(mem), WING, role="detail", tris=520, voxel=0.02 * VX, transparency=0.45, reflectance=0.12,
           group=nm, pivot=piv)
     m.add(nm + "Veins", place(veins), VEIN, role="detail", tris=300, voxel=0.014 * VX, group=nm, pivot=piv)
-m.add("Shadow", fast_union(flies), FLY, material="Neon", role="glow", tris=1500, voxel=0.011 * VX)
+m.add("Shadow", fast_union(flies), FLY, material="Neon", role="glow", tris=2000, voxel=0.011 * VX)
 m.add("Claws", fast_union(claws).intersect(halfspace_z(0.002)), CLAW, role="detail", tris=900, voxel=0.016 * VX)
 m.add("Patch", patch, PATCH, material="Fabric", role="detail", tris=160, voxel=0.02 * VX)
 m.add("Stitches", fast_union(stitches), THREAD, role="detail", tris=200, voxel=0.012 * VX)

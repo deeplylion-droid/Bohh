@@ -1,13 +1,16 @@
 """Lince Cyber (CyberLynx) - pet del Percorso Estremo (felini super intelligenti).
 
 Una lince dorata, snella e sicura di se', acquattata con le zampe anteriori puntate e il posteriore raccolto,
-la testa alta e girata verso chi guarda con l'aria di chi ha gia' capito tutto. Davanti agli occhi un visore
-olografico: fascia di vetro ciano traslucido avvolta sul muso, con linee di dati luminose, un mirino attorno
-all'occhio destro e due capsule cromate alle tempie. Gli occhi socchiusi (palpebra pesante) guardano di lato,
-un sopracciglio e' alzato e il ghigno storto alla Stregatto mostra una fila di dentini aguzzi.
-I ciuffi delle orecchie sono antenne nere sottili con la punta luminosa; sul pelo corrono circuiti ciano
-(parte Neon "Mane": il gioco ci aggancia le scintille elettriche). La coda alzata finisce in una punta
-robotica cromata (gruppo "Tail") con un proiettore che proietta un piccolo tesseratto olografico.
+la testa grande alta e girata verso chi guarda con l'aria di chi ha gia' capito tutto. Davanti agli occhi un
+visore olografico: fascia di vetro ciano traslucido avvolta sul muso con il bordo superiore cromato, linee di
+dati luminose, un grafico a barre sopra il naso, un mirino attorno all'occhio sinistro e due capsule cromate
+alle tempie. Dietro il vetro gli occhi giallo-verdi socchiusi (palpebra pesante) guardano di lato; il
+sopracciglio destro e' alzato e il ghigno largo e storto alla Stregatto mostra file di dentini aguzzi.
+La gorgiera bianca da lince ha le punte nere, le orecchie hanno la punta nera e i loro ciuffi sono antenne
+sottili con la punta luminosa. Sul pelo corrono circuiti ciano con le piazzole (fianchi, schiena, zampe con i
+bracciali luminosi, chip sulla fronte: parte Neon "Mane", il gioco ci aggancia le scintille elettriche) e sul
+petto brilla un chip esagonale. La coda alzata (gruppo "Tail") finisce in una punta robotica cromata con un
+proiettore che proietta, in un cono di luce, un tesseratto olografico (due cubi annidati).
 Tocco "toy horror": la punta robotica e' fissata al pelo con graffette metalliche e l'orecchio destro e'
 ricucito con punti a croce.
 """
@@ -364,7 +367,6 @@ def ear_pt(p, sx):
 
 
 ears = [ear_pose(ear_shape(), sx) for sx in (1, -1)]
-EAR_CUPS = [ear_pose(round_cone((0, -0.065, 0.02), (0, -0.065, 0.36), 0.11, 0.012), sx) for sx in (1, -1)]
 EAR_TIPS = [ear_pose(ear_shape().offset(0.014).intersect(SDF(lambda p: 0.27 - 0.25 * p[:, 1] - p[:, 2], (-1, -1, -1),
                                                                (1, 1, 1)), k=0.01), sx) for sx in (1, -1)]
 head2 = union(head2, *ears, k=0.04)
@@ -432,7 +434,7 @@ def tail_frame(i):
     return p, t
 
 
-tech, tail_glow = [], []
+tech = []
 cuff_p, cuff_t = tail_frame(FUR_END)
 tech.append(cylinder(cuff_p - cuff_t * 0.06, cuff_p + cuff_t * 0.06, 0.16, round=0.025))       # ghiera
 for i in range(FUR_END + 1, NT):
@@ -483,9 +485,9 @@ def cp(a):
     return tuple(rot_pts(R_CUBE, a) + CUBE_C)
 
 
-holo = [cylinder(LENS - HOLO_UP * 0.03, LENS + HOLO_UP * 0.012, 0.08)] + tail_glow
-outer_c, outer_e = cube_edges(0.48)
-inner_c, inner_e = cube_edges(0.23)
+holo = [cylinder(LENS - HOLO_UP * 0.03, LENS + HOLO_UP * 0.012, 0.08)]
+_, outer_e = cube_edges(0.48)
+_, inner_e = cube_edges(0.23)
 holo += [capsule(cp(a), cp(b), 0.026) for a, b in outer_e]
 holo += [capsule(cp(a), cp(b), 0.023) for a, b in inner_e]
 beam = capped_cone(tuple(LENS), tuple(CUBE_C - HOLO_UP * 0.15), 0.06, 0.23, round=0.01)

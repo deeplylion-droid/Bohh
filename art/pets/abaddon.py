@@ -490,7 +490,7 @@ pal_reg = SDF(lambda p: np.maximum(np.maximum(np.abs(p[:, 0]) - 0.125, p[:, 2] -
 jaw_reg = SDF(lambda p: np.maximum(np.maximum(np.abs(p[:, 0]) - 0.115, (JAW_Z - 0.03) - p[:, 2]),
                                    np.maximum(p[:, 1] - 0.0, -0.64 - p[:, 1])), (-0.12, -0.65, JAW_Z - 0.03),
               (0.12, 0.0, JAW_Z + 0.05))
-dark = [thin(upper, 0.005, 0.03).intersect(pal_reg), Jw(thin(jaw, 0.005, 0.03).intersect(jaw_reg))]
+dark = [thin(upper, 0.006, 0.07).intersect(pal_reg), Jw(thin(jaw, 0.006, 0.07).intersect(jaw_reg))]
 Rinv = euler(-GAPE, 0, 0)
 piv = np.asarray(HINGE, dtype=np.float32)
 
@@ -659,7 +659,7 @@ pe = []
 for x in np.linspace(-0.37, 0.37, 15):
     pe.append(np.array([x, -1.2, 1.16 + 0.32 * (x / 0.38) ** 2]))
 pp, pnn = project_many(core0, [(0, -0.3, 1.4)] * len(pe), [q - np.array([0, -0.3, 1.4]) for q in pe])
-gold.append(tube([tuple(q + n_ * 0.05) for q, n_ in zip(pp, pnn)], 0.026))
+gold.append(tube([tuple(q + n_ * 0.05) for q, n_ in zip(pp, pnn)], 0.032))
 pb, pn = project(core0, (0, -0.5, 1.45), (0, -1, 0.1))
 gold.append(cylinder(tuple(pb - pn * 0.02), tuple(pb + pn * 0.07), 0.11, round=0.02))       # medaglione
 embers.append(ellipsoid((0.05, 0.05, 0.05), tuple(pb + pn * 0.08)))
@@ -672,12 +672,12 @@ for y0 in RINGS:   # anelli ad addome di locusta sul ventre e sui fianchi
     for edge, kind in ((y0 - 0.11, "gold"), (y0 + 0.115, "ember")):
         pts, nrs = project_many(core0, [(0, edge, 1.4)] * len(angs), [(math.sin(a), 0.0, math.cos(a)) for a in angs])
         if kind == "gold":
-            gold.append(tube([tuple(q + n_ * 0.045) for q, n_ in zip(pts, nrs)], 0.024))
+            gold.append(tube([tuple(q + n_ * 0.045) for q, n_ in zip(pts, nrs)], 0.032))
         else:
-            embers.append(tube([tuple(q + n_ * 0.005) for q, n_ in zip(pts, nrs)], 0.02))
+            embers.append(tube([tuple(q + n_ * 0.004) for q, n_ in zip(pts, nrs)], 0.032))
     for a in np.radians((-70, -35, 0, 35, 70)):   # borchie
         q, n_ = project(core0, (0, y0, 1.4), (math.sin(a), 0.0, math.cos(a)))
-        gold.append(sphere(0.03, tuple(q + n_ * 0.055)))
+        gold.append(sphere(0.04, tuple(q + n_ * 0.055)))
 
 
 # spallacci di bronzo con tre punte d'oro sulle spalle
@@ -687,7 +687,7 @@ for sx in (1, -1):
     dome = ellipsoid((0.3, 0.32, 0.3), tuple(c)).shell(0.028).intersect(
         SDF(lambda p, c=c, n=n.astype(np.float32): (0.04 - (p - c) @ n).astype(np.float32), c - 0.4, c + 0.4))
     armor.append(dome)
-    gold.append(torus(0.25, 0.022).rotate(frame(n, (0, 1, 0))).translate(tuple(c + n * 0.075)))
+    gold.append(torus(0.25, 0.03).rotate(frame(n, (0, 1, 0))).translate(tuple(c + n * 0.075)))
     for dz, dy, L in ((0.12, 0.0, 0.26), (-0.05, -0.2, 0.19), (-0.05, 0.2, 0.19)):
         d = norm(n + np.array([0, dy * 2.0, dz]))
         b = c + d * 0.28
@@ -713,7 +713,7 @@ for c, d, sx in CANNONS:
     armor.append(paint(core0, SDF(greave_reg, np.minimum(c, d) - 0.3, np.maximum(c, d) + 0.3), out=0.04, inn=0.03,
                        k=0.015))
     top = c + ax * float(np.linalg.norm(d - c)) * 0.14
-    gold.append(torus(0.165, 0.024).rotate(frame(ax, (0, 1, 0))).translate(tuple(top)))
+    gold.append(torus(0.165, 0.032).rotate(frame(ax, (0, 1, 0))).translate(tuple(top)))
     fwd = norm(np.array([sx * 0.25, -1.0, 0.0]) - ax * float(np.dot((sx * 0.25, -1.0, 0.0), ax)))
     gold.append(round_cone(tuple(c + fwd * 0.12), tuple(c + fwd * 0.3 - ax * 0.04), 0.05, 0.008))
 
@@ -794,10 +794,10 @@ def wing_local(sx):
     veins = [tube([(0.02, 0.0, 0.03), (0.6, 0.06, 0.03), (1.2, 0.04, 0.03)], 0.03),     # costa dell'ala anteriore
              tube([(0.03, -0.02, 0.03), (0.7, -0.04, 0.03), (1.24, -0.03, 0.03)], 0.024)]
     for ex, ey in ((1.08, -0.12), (1.1, -0.34), (0.94, -0.52), (0.68, -0.61), (0.38, -0.54), (0.16, -0.36)):
-        veins.append(tube([(0.03, -0.03, -0.02), (ex * 0.5, ey * 0.45, -0.02), (ex, ey, -0.02)], [0.024, 0.018, 0.013]))
+        veins.append(tube([(0.03, -0.03, -0.02), (ex * 0.5, ey * 0.45, -0.02), (ex, ey, -0.02)], [0.034, 0.028, 0.022]))
     for rr in (0.55, 0.85):   # venature trasversali ad arco
         arc = [(rr * math.cos(a) * 1.05, -rr * math.sin(a) * 0.72 - 0.02, -0.02) for a in np.linspace(0.08, 1.35, 7)]
-        veins.append(tube(arc, 0.012))
+        veins.append(tube(arc, 0.022))
     frame_ = union(fore, union(*veins).intersect(union(prism(HIND, -0.2, 0.2), prism(FORE, -0.2, 0.2)).offset(0.012))
                    .subtract(tears.offset(0.01)))
     return hind.scale(WSCALE), frame_.scale(WSCALE)
@@ -893,8 +893,8 @@ neck_end = fast_union([ell(NP[-1], (0.17, 0.22, 0.2), axis=NT[-1])], k=0.0)
 m.add("Head", shrink(fast_union([head_w], k=0.06, base=neck_end)), HIDE, role="skin", tris=1500, voxel=0.02 * VX)
 m.add("Armor", fast_union(armor), BRONZE, material="Metal", role="detail", tris=2600, voxel=0.026 * VX)
 m.add("Gold", fast_union(gold), GOLD, material="Foil", role="detail", tris=1700, voxel=0.018 * VX)
-m.add("Hair", hair, HAIR, role="detail", tris=1500, voxel=0.024 * VX)
-m.add("EmberGlow", fast_union([Hd(e) for e in eyes] + embers), EMBER, material="Neon", role="glow", tris=380,
+m.add("Hair", hair, HAIR, role="detail", tris=1300, voxel=0.024 * VX)
+m.add("EmberGlow", fast_union([Hd(e) for e in eyes] + embers), EMBER, material="Neon", role="glow", tris=600,
       voxel=0.014 * VX)
 # punte della criniera che ardono come braci: il gioco ci attacca il fuoco
 m.add("Flames", fast_union(lock_tips), FIRE, material="Neon", role="glow", tris=420, voxel=0.016 * VX)
