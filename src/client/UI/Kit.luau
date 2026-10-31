@@ -79,7 +79,7 @@ function Kit.Felt(frame: GuiObject, transparency: number?)
 		Image = id,
 		ScaleType = Enum.ScaleType.Tile,
 		TileSize = UDim2.fromOffset(96, 96),
-		ImageTransparency = transparency or 0.84,
+		ImageTransparency = transparency or 0.9, -- trama leggera: i colori restano brillanti
 		Size = UDim2.fromScale(1, 1),
 		ZIndex = 1,
 		Parent = frame,
@@ -577,7 +577,7 @@ function Kit.Card(props: { [string]: any }): Frame
 		Name = props.Name or "Card",
 	}, { Kit.Corner(UDim.new(0, 16)), Kit.Stroke(3) })
 	local light = color == Theme.Card or color == Theme.CardLight
-	Kit.Felt(card, if light then 0.92 else 0.84)
+	Kit.Felt(card, if light then 0.95 else 0.9)
 	Kit.Stitch(card, 16, if light then Theme.StitchCard else nil)
 	if props.Parent then
 		card.Parent = props.Parent

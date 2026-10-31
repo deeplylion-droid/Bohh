@@ -155,7 +155,7 @@ function Panel.Build(parent: Instance, C)
 		local c = Kit.Card({ LayoutOrder = i, ZIndex = 1, Parent = pages.Galactic })
 		local glow = New("Frame", {
 			Name = "Sky",
-			BackgroundColor3 = Color3.fromRGB(34, 24, 70),
+			BackgroundColor3 = Color3.fromRGB(150, 120, 255),
 			Size = UDim2.new(1, -20, 0, 168),
 			Position = UDim2.fromOffset(10, 10),
 			ZIndex = 2,
@@ -164,7 +164,7 @@ function Panel.Build(parent: Instance, C)
 		New("UIGradient", {
 			Color = Rarities.Gradients.Galactic,
 			Rotation = 90,
-			Transparency = NumberSequence.new(0.55),
+			Transparency = NumberSequence.new(0.1),
 			Parent = glow,
 		})
 		local vp = New("ViewportFrame", {
