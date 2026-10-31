@@ -12,8 +12,6 @@ Legenda: ⏳ in corso · 📋 da fare · ✅ fatto (con la versione pubblicata)
 | 3 | La **miniatura quadrata** (icona del gioco) non piace: proporne una diversa. | ⏳ (3 proposte) |
 | 9 | **Miniatura**: piace la B (uovo-mostro) ma deve dare l'idea che sia **su un picco montuoso**, senza rimpicciolirla troppo. | ⏳ pronte due versioni (con e senza bandierina) in `art/promo/final/`: si carica a mano su Creator Hub (le API non lo permettono) |
 | 7 | Lavorare **in parallelo con gli agenti** e **segnare tutto quello che chiede**, senza perdere nulla. | ⏳ (questo file) |
-| 10 | Percorso Estremo: le **cascate** delle rapide si compenetravano con l'acqua e scorrevano al contrario; l'**ingresso era nascosto** → metterlo come **bivio all'inizio del sentiero normale**. | ⏳ cascate rifatte (lastre sottili fra i livelli, schiuma che scende); bivio con ponticello e arco sulla rampa del sentiero |
-| 11 | Togliere lo striscione valanga **"qui sei al sicuro"** (si sovrappone a quello della pioggia di meteore) e il riquadro **"Percorso Estremo 1/4"**. | ⏳ fatto nel codice, da pubblicare |
 | 12 | **Controllo automatico delle compenetrazioni** su tutto il Percorso Estremo (es. nel deserto): "fai un controllo tu, non posso correggerti ogni punto". | ⏳ agente: esportazione offline + verifica geometrica + correzioni |
 | 13 | Percorso Estremo **più dettagliato**: "aggiungi un po' di cura!!!" | ⏳ due agenti (sezioni 1-2 e 3-4) |
 | 14 | Interfaccia **più moderna** ("troppo antiquata"), **anche il font**, fatta da un agente. | ⏳ agente |
@@ -22,6 +20,8 @@ Legenda: ⏳ in corso · 📋 da fare · ✅ fatto (con la versione pubblicata)
 
 | Richiesta | Versione |
 |---|---|
+| Percorso Estremo: ingresso come **bivio all'inizio del sentiero normale** (ponticello in salita con arco a strisce dalla rampa, cartelli con la freccia sull'arco del sentiero e sulla rampa); **cascate** delle rapide rifatte come lastre sottili fra i livelli, con la schiuma che scende | v44 |
+| Tolti lo striscione valanga "sei al sicuro" (in riparo, in vetta e nel Percorso Estremo non compare più) e il riquadro "Percorso Estremo 1/4" | v44 |
 | PERCORSO ESTREMO: 4 sezioni (Rapide degli Abissi, Tempio del Deserto, Laboratorio dei Geni, Inferno), santuari con uovo Estremo e portale, muri invisibili, anti-cheat sul server, cronometro, missione settimanale | v40 |
 | 12 pet Estremi (3 pesci degli abissi, 3 egizi, 3 felini geniali, 3 diavoli) e rarità Estremo con schiusa per sezione | v40 |
 | 3 giganti galattici nel negozio (Leone Nebulosa 399, Kraken Stellare 599, Balena Cosmica 799 R$), non si rubano né si vendono | v40 |
