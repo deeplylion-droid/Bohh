@@ -1,5 +1,6 @@
 -- Schermata di caricamento (ReplicatedFirst): parte subito, prima del resto del gioco.
--- Cielo sfumato, titolo gommoso, uova che saltellano, barra di avanzamento e consigli a rotazione.
+-- Cielo sfumato, titolo in Nunito Heavy, uova che saltellano, barra di avanzamento e consigli a
+-- rotazione (stesso stile "Vetta Pop" dell'interfaccia: inchiostro blu notte, pillole e contorni bianchi).
 -- Si chiude quando server, modelli 3D e personaggio sono pronti (al massimo dopo 45 s).
 
 local LocalizationService = game:GetService("LocalizationService")
@@ -13,8 +14,11 @@ local player = Players.LocalPlayer
 
 ReplicatedFirst:RemoveDefaultLoadingScreen()
 
-local OUTLINE = Color3.fromRGB(42, 22, 14)
+local OUTLINE = Color3.fromRGB(30, 22, 74) -- inchiostro blu notte (Theme.Ink)
 local TITLE = "CLIMB & STEAL EGGS" -- stesso nome di Config.Game.Name
+local NUNITO = "rbxasset://fonts/families/Nunito.json"
+local HEAVY = Font.new(NUNITO, Enum.FontWeight.Heavy)
+local BOLD = Font.new(NUNITO, Enum.FontWeight.ExtraBold)
 
 local italian = false
 do
@@ -151,7 +155,7 @@ end
 local title = new("TextLabel", {
 	BackgroundTransparency = 1,
 	Text = TITLE,
-	Font = Enum.Font.DenkOne,
+	FontFace = HEAVY,
 	TextScaled = true,
 	TextColor3 = Color3.fromRGB(255, 225, 77),
 	Size = UDim2.fromOffset(880, 120),
@@ -160,7 +164,7 @@ local title = new("TextLabel", {
 	ZIndex = 12,
 	Parent = content,
 }, {
-	stroke(8),
+	stroke(7),
 	new(
 		"UIGradient",
 		{ Rotation = 90, Color = ColorSequence.new(Color3.fromRGB(255, 244, 140), Color3.fromRGB(255, 170, 30)) }
@@ -208,7 +212,14 @@ local barBack = new("Frame", {
 	Position = UDim2.fromOffset(140, 360),
 	ZIndex = 12,
 	Parent = content,
-}, { new("UICorner", { CornerRadius = UDim.new(1, 0) }), stroke(5, Enum.ApplyStrokeMode.Border) })
+}, {
+	new("UICorner", { CornerRadius = UDim.new(1, 0) }),
+	new("UIStroke", {
+		Thickness = 4,
+		Color = Color3.new(1, 1, 1),
+		ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+	}),
+})
 local barFill = new("Frame", {
 	BackgroundColor3 = Color3.new(1, 1, 1),
 	Size = UDim2.new(0, 0, 1, -10),
@@ -225,36 +236,45 @@ local barFill = new("Frame", {
 local percent = new("TextLabel", {
 	BackgroundTransparency = 1,
 	Text = "0%",
-	Font = Enum.Font.DenkOne,
+	FontFace = HEAVY,
 	TextScaled = true,
 	TextColor3 = Color3.new(1, 1, 1),
 	Size = UDim2.new(1, 0, 0.7, 0),
 	Position = UDim2.fromScale(0, 0.15),
 	ZIndex = 14,
 	Parent = barBack,
-}, { stroke(3) })
+}, { stroke(2) })
 local status = new("TextLabel", {
 	BackgroundTransparency = 1,
 	Text = TEXT.loading,
-	Font = Enum.Font.PatrickHand,
+	FontFace = BOLD,
 	TextScaled = true,
 	TextColor3 = Color3.new(1, 1, 1),
 	Size = UDim2.fromOffset(620, 32),
 	Position = UDim2.fromOffset(140, 414),
 	ZIndex = 12,
 	Parent = content,
-}, { stroke(3) })
+}, { stroke(2.5) })
+-- consiglio su una pillola blu notte semitrasparente
+local tipPill = new("Frame", {
+	BackgroundColor3 = OUTLINE,
+	BackgroundTransparency = 0.3,
+	Size = UDim2.fromOffset(840, 50),
+	Position = UDim2.fromOffset(30, 472),
+	ZIndex = 12,
+	Parent = content,
+}, { new("UICorner", { CornerRadius = UDim.new(1, 0) }) })
 local tip = new("TextLabel", {
 	BackgroundTransparency = 1,
 	Text = "💡 " .. TIPS[math.random(1, #TIPS)],
-	Font = Enum.Font.PatrickHand,
+	FontFace = BOLD,
 	TextScaled = true,
 	TextColor3 = Color3.fromRGB(255, 240, 180),
-	Size = UDim2.fromOffset(820, 34),
-	Position = UDim2.fromOffset(40, 480),
-	ZIndex = 12,
-	Parent = content,
-}, { stroke(3) })
+	Size = UDim2.new(1, -48, 0, 30),
+	Position = UDim2.fromOffset(24, 10),
+	ZIndex = 13,
+	Parent = tipPill,
+})
 
 -- animazioni
 local progress, shown = 0.04, 0

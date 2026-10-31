@@ -19,6 +19,11 @@ local player = Players.LocalPlayer
 
 local Hud = {}
 
+-- colori dei testi RichText sui riquadri bianchi
+local GREEN = "#08b04a"
+local SOFT = "#686492"
+local RED = "#ec1a46"
+
 function Hud.Build(gui: ScreenGui, C)
 	local T = C.Lang.T
 	local texts: { { label: TextLabel, key: string, args: any } } = {}
@@ -35,44 +40,46 @@ function Hud.Build(gui: ScreenGui, C)
 	local hud = {}
 
 	---------------------------------------------------------------------------------------
-	-- Monete (in alto al centro)
+	-- Monete (in alto al centro): pillola bianca con la moneta che sporge a sinistra
 	---------------------------------------------------------------------------------------
-	local coins = New("Frame", {
+	local coins, coinsFace = Kit.Surface({
 		Name = "Coins",
-		BackgroundColor3 = Theme.Buttons.Yellow[1],
-		Size = UDim2.fromOffset(280, 78),
+		Size = UDim2.fromOffset(284, 72),
 		Position = UDim2.new(0.5, 0, 0, 8),
 		AnchorPoint = Vector2.new(0.5, 0),
+		Corner = Theme.Pill,
+		Stroke = 2.5,
+		StrokeColor = Theme.Buttons.Yellow[2],
 		Parent = gui,
-	}, { Kit.Corner(UDim.new(1, 0)), Kit.Stroke(4), New("UIScale") })
-	Kit.Felt(coins)
-	Kit.Stitch(coins, 39)
+	})
 	Kit.Icon("Coin", {
 		Name = "CoinIcon",
-		Size = UDim2.fromOffset(58, 58),
-		Position = UDim2.new(0, 10, 0.5, 0),
+		Size = UDim2.fromOffset(74, 74),
+		Position = UDim2.new(0, -10, 0.5, 0),
 		AnchorPoint = Vector2.new(0, 0.5),
-		ZIndex = 2,
-		Parent = coins,
+		ZIndex = 4,
+		Parent = coinsFace,
 	})
 	local coinText = Kit.Text({
 		Text = "$0",
-		Size = UDim2.new(1, -94, 0, 40),
-		Position = UDim2.new(0, 76, 0, 5),
+		Size = UDim2.new(1, -92, 0, 40),
+		Position = UDim2.new(0, 72, 0, 5),
 		TextXAlignment = Enum.TextXAlignment.Left,
-		ZIndex = 2,
-		Parent = coins,
+		TextColor3 = Theme.Ink,
+		Stroke = false,
+		ZIndex = 4,
+		Parent = coinsFace,
 	})
 	local rateText = Kit.Text({
 		Text = "+$0/s",
-		Font = Theme.BodyFont,
-		Size = UDim2.new(1, -94, 0, 24),
-		Position = UDim2.new(0, 78, 0, 45),
-		TextColor3 = Theme.Ink,
+		Font = Theme.HeadFont,
+		Size = UDim2.new(1, -92, 0, 20),
+		Position = UDim2.new(0, 73, 0, 45),
+		TextColor3 = Theme.GreenInk,
 		TextXAlignment = Enum.TextXAlignment.Left,
 		Stroke = false,
-		ZIndex = 2,
-		Parent = coins,
+		ZIndex = 4,
+		Parent = coinsFace,
 	})
 	local shown = 0
 	local target = 0
@@ -104,41 +111,13 @@ function Hud.Build(gui: ScreenGui, C)
 	refreshRate()
 	hud.Coins = coins
 
-	-- cartellino quasi bianco con il foro e la scritta a mano (etichette dei pulsanti)
-	local function tag(parent: Instance, pos: UDim2, width: number): TextLabel
-		local f = New("Frame", {
-			Name = "Tag",
-			BackgroundColor3 = Theme.Card,
-			Size = UDim2.fromOffset(width, 28),
-			Position = pos,
-			AnchorPoint = Vector2.new(0.5, 0),
-			Parent = parent,
-		}, { Kit.Corner(UDim.new(0, 6)), Kit.Stroke(3) })
-		New("Frame", {
-			Name = "Hole",
-			BackgroundColor3 = Theme.Outline,
-			Size = UDim2.fromOffset(7, 7),
-			Position = UDim2.new(0, 7, 0.5, 0),
-			AnchorPoint = Vector2.new(0, 0.5),
-			Parent = f,
-		}, { Kit.Corner(UDim.new(1, 0)) })
-		return Kit.Text({
-			Font = Theme.BodyFont,
-			Size = UDim2.new(1, -28, 0.84, 0),
-			Position = UDim2.new(0, 19, 0.08, 0),
-			TextColor3 = Theme.Ink,
-			Stroke = false,
-			Parent = f,
-		})
-	end
-
 	---------------------------------------------------------------------------------------
-	-- Menu a sinistra: bottoni rotondi di feltro con il cartellino
+	-- Menu a sinistra: riquadri colorati con l'icona che sporge e il nome sul bordo in basso
 	---------------------------------------------------------------------------------------
 	local menu = New("Frame", {
 		Name = "Menu",
 		BackgroundTransparency = 1,
-		Size = UDim2.fromOffset(332, 346),
+		Size = UDim2.fromOffset(332, 334),
 		Position = UDim2.new(0, 16, 0.5, -10),
 		AnchorPoint = Vector2.new(0, 0.5),
 		Parent = gui,
@@ -147,9 +126,9 @@ function Hud.Build(gui: ScreenGui, C)
 		{ name = "Shop", key = "MenuShop", color = "Red", icon = "Shop", x = 0, y = 0 },
 		{ name = "Upgrades", key = "MenuUpgrades", color = "Blue", icon = "Upgrades", x = 112, y = 0 },
 		{ name = "Index", key = "MenuIndex", color = "Purple", icon = "Index", x = 224, y = 0 },
-		{ name = "Gifts", key = "MenuGifts", color = "Pink", icon = "Gifts", x = 0, y = 140 },
-		{ name = "Quests", key = "MenuQuests", color = "Cyan", icon = "Quests", x = 112, y = 140 },
-		{ name = "Wheel", key = "MenuWheel", color = "Yellow", icon = "Wheel", x = 224, y = 140 },
+		{ name = "Gifts", key = "MenuGifts", color = "Pink", icon = "Gifts", x = 0, y = 132 },
+		{ name = "Quests", key = "MenuQuests", color = "Cyan", icon = "Quests", x = 112, y = 132 },
+		{ name = "Wheel", key = "MenuWheel", color = "Yellow", icon = "Wheel", x = 224, y = 132 },
 	}
 	hud.Badges = {}
 	for _, it in items do
@@ -159,13 +138,27 @@ function Hud.Build(gui: ScreenGui, C)
 			Color = it.color,
 			Size = UDim2.fromOffset(100, 100),
 			Position = UDim2.fromOffset(it.x, it.y),
-			Corner = UDim.new(1, 0),
+			Corner = UDim.new(0, 30),
 			Parent = menu,
 			OnClick = function()
 				C.UI.Toggle(it.name)
 			end,
 		})
-		local label = tag(menu, UDim2.fromOffset(it.x + 50, it.y + 104), 106)
+		-- icona grande, un po' in alto: in basso c'e' il nome
+		if b.Icon then
+			b.Icon.Size = UDim2.fromScale(0.84, 0.84)
+			b.Icon.Position = UDim2.fromScale(0.08, -0.02)
+		end
+		local label = Kit.Text({
+			Name = "Label",
+			Size = UDim2.fromOffset(124, 26),
+			Position = UDim2.new(0.5, 0, 1, -17),
+			AnchorPoint = Vector2.new(0.5, 0),
+			Stroke = 3,
+			MaxTextSize = 21,
+			ZIndex = 5,
+			Parent = b.Face,
+		})
 		bindText(label, it.key)
 		hud.Badges[it.name] = Kit.Badge(b.Frame)
 	end
@@ -173,48 +166,29 @@ function Hud.Build(gui: ScreenGui, C)
 		{ name = "Codes", color = "Orange", icon = "Codes", x = 0 },
 		{ name = "Settings", color = "Grey", icon = "Settings", x = 72 },
 	}
-	for _, it in small do
+	local function smallButton(name: string, color: string, icon: string, x: number)
 		Kit.Button({
-			Name = it.name,
-			Icon = it.icon,
-			Color = it.color,
-			Size = UDim2.fromOffset(58, 58),
-			Position = UDim2.fromOffset(it.x, 284),
-			Corner = UDim.new(1, 0),
+			Name = name,
+			Icon = icon,
+			Color = color,
+			Size = UDim2.fromOffset(60, 60),
+			Position = UDim2.fromOffset(x, 270),
+			Corner = UDim.new(0, 20),
 			Parent = menu,
 			OnClick = function()
-				C.UI.Toggle(it.name)
+				C.UI.Toggle(name)
 			end,
 		})
 	end
+	for _, it in small do
+		smallButton(it.name, it.color, it.icon, it.x)
+	end
 	if player:GetAttribute("IsAdmin") or RunService:IsStudio() then
-		Kit.Button({
-			Name = "Admin",
-			Icon = "Admin",
-			Color = "Red",
-			Size = UDim2.fromOffset(58, 58),
-			Position = UDim2.fromOffset(144, 284),
-			Corner = UDim.new(1, 0),
-			Parent = menu,
-			OnClick = function()
-				C.UI.Toggle("Admin")
-			end,
-		})
+		smallButton("Admin", "Red", "Admin", 144)
 	else
 		player:GetAttributeChangedSignal("IsAdmin"):Connect(function()
 			if player:GetAttribute("IsAdmin") and not menu:FindFirstChild("Admin") then
-				Kit.Button({
-					Name = "Admin",
-					Icon = "Admin",
-					Color = "Red",
-					Size = UDim2.fromOffset(58, 58),
-					Position = UDim2.fromOffset(144, 284),
-					Corner = UDim.new(1, 0),
-					Parent = menu,
-					OnClick = function()
-						C.UI.Toggle("Admin")
-					end,
-				})
+				smallButton("Admin", "Red", "Admin", 144)
 			end
 		end)
 	end
@@ -234,7 +208,7 @@ function Hud.Build(gui: ScreenGui, C)
 		Parent = gui,
 	}, {
 		New("UIListLayout", {
-			Padding = UDim.new(0, 8),
+			Padding = UDim.new(0, 10),
 			HorizontalAlignment = Enum.HorizontalAlignment.Center,
 			SortOrder = Enum.SortOrder.LayoutOrder,
 		}),
@@ -244,7 +218,7 @@ function Hud.Build(gui: ScreenGui, C)
 	hud.AnnounceSlot = New("Frame", {
 		Name = "AnnounceSlot",
 		BackgroundTransparency = 1,
-		Size = UDim2.fromOffset(600, 44),
+		Size = UDim2.fromOffset(600, 48),
 		Visible = false,
 		LayoutOrder = 2,
 		Parent = top,
@@ -252,7 +226,7 @@ function Hud.Build(gui: ScreenGui, C)
 	local status = New("Frame", {
 		Name = "Status",
 		BackgroundTransparency = 1,
-		Size = UDim2.fromOffset(720, 100),
+		Size = UDim2.fromOffset(720, 104),
 		Visible = false,
 		LayoutOrder = 3,
 		Parent = top,
@@ -265,80 +239,96 @@ function Hud.Build(gui: ScreenGui, C)
 		}),
 	})
 
-	local eventCard = New("Frame", {
+	-- evento: scheda bianca con il tondo colorato dell'evento e il tempo che resta
+	local eventCard, eventFace = Kit.Surface({
 		Name = "Event",
-		BackgroundColor3 = Theme.Buttons.Yellow[1],
-		Size = UDim2.fromOffset(360, 100),
+		Size = UDim2.fromOffset(372, 96),
 		Visible = false,
 		LayoutOrder = 1,
+		Corner = UDim.new(0, 22),
+		Stroke = 2,
+		StrokeTransparency = 0.8,
 		Parent = status,
-	}, {
-		Kit.Corner(UDim.new(0, 20)),
-		Kit.Stroke(4),
-		New("UIScale"),
 	})
-	Kit.Felt(eventCard)
-	Kit.Stitch(eventCard, 20)
-	local eventIcon = Kit.Icon(
-		"GoldenHour",
-		{ Size = UDim2.fromOffset(60, 60), Position = UDim2.fromOffset(10, 20), Parent = eventCard }
-	)
+	local eventBadge, eventIcon = Kit.IconBadge("GoldenHour", "Yellow", {
+		Size = UDim2.fromOffset(72, 72),
+		Position = UDim2.fromOffset(12, 12),
+		ZIndex = 4,
+		Ring = false,
+		IconScale = 0.86,
+		Parent = eventFace,
+	})
 	local eventTitle = Kit.Text({
-		Size = UDim2.new(1, -168, 0, 36),
-		Position = UDim2.fromOffset(80, 8),
+		Size = UDim2.new(1, -192, 0, 32),
+		Position = UDim2.fromOffset(96, 10),
 		TextXAlignment = Enum.TextXAlignment.Left,
-		Parent = eventCard,
+		TextColor3 = Theme.Ink,
+		Stroke = false,
+		ZIndex = 4,
+		Parent = eventFace,
 	})
+	local clockPill = New("Frame", {
+		Name = "Clock",
+		BackgroundColor3 = Theme.Ink,
+		Size = UDim2.fromOffset(80, 30),
+		Position = UDim2.new(1, -90, 0, 11),
+		ZIndex = 4,
+		Parent = eventFace,
+	}, { Kit.Corner(Theme.Pill) })
 	local eventClock = Kit.Text({
-		Size = UDim2.fromOffset(76, 36),
-		Position = UDim2.new(1, -86, 0, 8),
-		TextXAlignment = Enum.TextXAlignment.Right,
-		Parent = eventCard,
+		Size = UDim2.new(1, -14, 0.76, 0),
+		Position = UDim2.new(0, 7, 0.12, 0),
+		Stroke = false,
+		ZIndex = 5,
+		Parent = clockPill,
 	})
 	local eventSub = Kit.Text({
 		Font = Theme.BodyFont,
-		Size = UDim2.new(1, -94, 0, 44),
-		Position = UDim2.fromOffset(82, 48),
+		Size = UDim2.new(1, -110, 0, 40),
+		Position = UDim2.fromOffset(97, 46),
 		TextXAlignment = Enum.TextXAlignment.Left,
 		TextYAlignment = Enum.TextYAlignment.Top,
 		TextWrapped = true,
-		TextColor3 = Theme.Ink,
+		TextColor3 = Theme.InkSoft,
 		Stroke = false,
-		MaxTextSize = 23,
-		Parent = eventCard,
+		MaxTextSize = 19,
+		ZIndex = 4,
+		Parent = eventFace,
 	})
 
 	local chips = New("Frame", {
 		Name = "Chips",
 		BackgroundTransparency = 1,
-		Size = UDim2.fromOffset(240, 152),
+		Size = UDim2.fromOffset(250, 156),
 		Visible = false,
 		LayoutOrder = 2,
 		Parent = status,
 	}, { New("UIListLayout", { Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder }) })
 	local function chip(order: number, iconName: string)
-		local f = New("Frame", {
-			BackgroundColor3 = Theme.Card,
-			Size = UDim2.fromOffset(240, 44),
+		local f, face = Kit.Surface({
+			Size = UDim2.fromOffset(250, 44),
 			Visible = false,
 			LayoutOrder = order,
+			Corner = Theme.Pill,
+			Stroke = 2,
+			StrokeTransparency = 0.8,
+			Shadow = 4,
 			Parent = chips,
-		}, { Kit.Corner(UDim.new(1, 0)), Kit.Stroke(3) })
-		Kit.Stitch(f, 22, Theme.StitchCard)
+		})
 		Kit.Icon(
 			iconName,
-			{ Size = UDim2.fromOffset(32, 32), Position = UDim2.fromOffset(10, 6), ZIndex = 2, Parent = f }
+			{ Size = UDim2.fromOffset(34, 34), Position = UDim2.fromOffset(8, 5), ZIndex = 4, Parent = face }
 		)
 		local text = Kit.Text({
 			Font = Theme.BodyFont,
-			Size = UDim2.new(1, -60, 0, 30),
-			Position = UDim2.fromOffset(48, 7),
+			Size = UDim2.new(1, -62, 0, 26),
+			Position = UDim2.fromOffset(48, 9),
 			TextXAlignment = Enum.TextXAlignment.Left,
 			TextColor3 = Theme.Ink,
 			Stroke = false,
 			RichText = true,
-			ZIndex = 2,
-			Parent = f,
+			ZIndex = 4,
+			Parent = face,
 		})
 		return f, text
 	end
@@ -351,8 +341,8 @@ function Hud.Build(gui: ScreenGui, C)
 		Name = "Barrier",
 		Icon = "Barrier",
 		Color = "Red",
-		Size = UDim2.fromOffset(96, 96),
-		Corner = UDim.new(1, 0),
+		Size = UDim2.fromOffset(94, 94),
+		Corner = UDim.new(0, 30),
 		Position = UDim2.new(1, -16, 0.62, 0),
 		AnchorPoint = Vector2.new(1, 0.5),
 		Parent = gui,
@@ -360,7 +350,13 @@ function Hud.Build(gui: ScreenGui, C)
 			Net.Event("ToggleBarrier"):FireServer()
 		end,
 	})
-	local barrierLabel = tag(barrier.Frame, UDim2.new(0.5, 0, 1, 10), 112)
+	local _, barrierLabel = Kit.Tag({
+		Size = UDim2.fromOffset(110, 30),
+		Position = UDim2.new(0.5, 0, 1, 12),
+		AnchorPoint = Vector2.new(0.5, 0),
+		ZIndex = 3,
+		Parent = barrier.Frame,
+	})
 
 	local function refreshRight()
 		local now = workspace:GetServerTimeNow()
@@ -372,11 +368,13 @@ function Hud.Build(gui: ScreenGui, C)
 			eventTitle.Text = T("Event_" .. eventId)
 			eventClock.Text = Format.Clock(endsAt - now)
 			eventSub.Text = T("EventDesc_" .. eventId)
-			local icon = Events.List[eventId].icon
-			if eventIcon:IsA("ImageLabel") then
-				eventIcon.Image = Assets.Images["Icon" .. icon] or eventIcon.Image
-			elseif eventIcon:IsA("TextLabel") then
-				eventIcon.Text = Theme.Emoji[icon] or "⭐"
+			local def = Events.List[eventId]
+			Kit.Paint(eventBadge, Kit.Tint(def.color, 0.3), def.color)
+			clockPill.BackgroundColor3 = Kit.Tint(def.color, -0.45)
+			if eventIcon and eventIcon:IsA("ImageLabel") then
+				eventIcon.Image = Assets.Images["Icon" .. def.icon] or eventIcon.Image
+			elseif eventIcon and eventIcon:IsA("TextLabel") then
+				eventIcon.Text = Theme.Emoji[def.icon] or "⭐"
 			end
 		else
 			eventCard.Visible = false
@@ -386,23 +384,23 @@ function Hud.Build(gui: ScreenGui, C)
 		local nowUnix = now
 		if luckUntil > nowUnix then
 			luckChip.Visible = true
-			luckText.Text = `{T("Luck")} <font color="#12a846">{Format.Clock(luckUntil - nowUnix)}</font>`
+			luckText.Text = `{T("Luck")} <font color="{GREEN}">{Format.Clock(luckUntil - nowUnix)}</font>`
 		else
 			luckChip.Visible = false
 		end
 		local fb = player:GetAttribute("FriendBonus") or 0
 		friendChip.Visible = fb > 0
-		friendText.Text = `{T("FriendBonus")} <font color="#12a846">+{math.floor(fb * 100)}%</font>`
+		friendText.Text = `{T("FriendBonus")} <font color="{GREEN}">+{math.floor(fb * 100)}%</font>`
 		-- re della collina (solo a chi e' in cima al monumento)
 		kingChip.Visible = player:GetAttribute("OnHill") == true
 		if kingChip.Visible then
 			if player:GetAttribute("King") and player:GetAttribute("KingIdle") then
-				kingText.Text = `<font color="#7a685a">{T("KingIdle")}</font>`
+				kingText.Text = `<font color="{SOFT}">{T("KingIdle")}</font>`
 			elseif player:GetAttribute("King") then
 				local rate = Format.Rate(player:GetAttribute("KingRate") or 0)
-				kingText.Text = `{T("KingYou")} <font color="#12a846">{rate}</font>`
+				kingText.Text = `{T("KingYou")} <font color="{GREEN}">{rate}</font>`
 			else
-				kingText.Text = `<font color="#e2203e">{T("KingContested")}</font>`
+				kingText.Text = `<font color="{RED}">{T("KingContested")}</font>`
 			end
 		end
 		chips.Visible = luckChip.Visible or friendChip.Visible or kingChip.Visible
@@ -434,25 +432,36 @@ function Hud.Build(gui: ScreenGui, C)
 	end)
 
 	---------------------------------------------------------------------------------------
-	-- Cosa sto trasportando (in basso al centro)
+	-- Cosa sto trasportando (in basso al centro): scheda del colore della rarita'
 	---------------------------------------------------------------------------------------
-	local carry = New("Frame", {
+	local carry, carryFace = Kit.Surface({
 		Name = "Carry",
-		BackgroundColor3 = Theme.Buttons.Blue[1],
-		Size = UDim2.fromOffset(440, 100),
+		Size = UDim2.fromOffset(450, 100),
 		Position = UDim2.new(0.5, 0, 1, -14),
 		AnchorPoint = Vector2.new(0.5, 1),
 		Visible = false,
+		Corner = UDim.new(0, 24),
+		Color = Theme.Buttons.Blue[3],
+		Color2 = Theme.Buttons.Blue[1],
+		Stroke = 2.5,
+		StrokeColor = Theme.Buttons.Blue[2],
 		Parent = gui,
-	}, { Kit.Corner(UDim.new(0, 20)), Kit.Stroke(4), New("UIScale") })
-	Kit.Felt(carry)
-	Kit.Stitch(carry, 20)
-	-- uovo del colore della rarita' (o il pet rubato in 3D)
+	})
+	local carryStroke = carryFace:FindFirstChildOfClass("UIStroke") :: UIStroke
+	-- tondo bianco con l'uovo del colore della rarita' (o il pet rubato in 3D)
+	local eggDisc = New("Frame", {
+		Name = "Disc",
+		BackgroundColor3 = Theme.Card,
+		Size = UDim2.fromOffset(80, 80),
+		Position = UDim2.fromOffset(10, 10),
+		ZIndex = 3,
+		Parent = carryFace,
+	}, { Kit.Corner(Theme.Pill), Kit.Gradient(Theme.Card, Theme.CardShade) })
 	local carryEgg = Kit.Icon("Egg", {
-		Size = UDim2.fromOffset(76, 76),
-		Position = UDim2.fromOffset(10, 12),
-		ZIndex = 2,
-		Parent = carry,
+		Size = UDim2.fromOffset(64, 64),
+		Position = UDim2.fromOffset(8, 8),
+		ZIndex = 4,
+		Parent = eggDisc,
 	})
 	local carryView: ViewportFrame? = nil
 	local carryViewPet: string? = nil
@@ -472,11 +481,12 @@ function Hud.Build(gui: ScreenGui, C)
 		local vp = New("ViewportFrame", {
 			BackgroundTransparency = 1,
 			Size = UDim2.fromOffset(84, 84),
-			Position = UDim2.fromOffset(4, 6),
+			Position = UDim2.fromOffset(-2, -4),
 			Ambient = Color3.fromRGB(200, 200, 210),
 			LightColor = Color3.fromRGB(255, 250, 240),
 			LightDirection = Vector3.new(-0.5, -1, -0.6),
-			Parent = carry,
+			ZIndex = 4,
+			Parent = eggDisc,
 		})
 		local ok, model = pcall(Visuals.MakePet, petId, "None", "Normal")
 		if ok and model then
@@ -492,31 +502,31 @@ function Hud.Build(gui: ScreenGui, C)
 		carryView = vp
 	end
 	local carryTitle = Kit.Text({
-		Size = UDim2.new(1, -104, 0, 34),
-		Position = UDim2.fromOffset(92, 10),
+		Size = UDim2.new(1, -116, 0, 36),
+		Position = UDim2.fromOffset(102, 9),
 		TextXAlignment = Enum.TextXAlignment.Left,
-		ZIndex = 2,
-		Parent = carry,
+		Stroke = 2.5,
+		ZIndex = 4,
+		Parent = carryFace,
 	})
 	local carrySub = Kit.Text({
-		Font = Theme.BodyFont,
-		Size = UDim2.new(1, -104, 0, 24),
-		Position = UDim2.fromOffset(94, 46),
+		Font = Theme.HeadFont,
+		Size = UDim2.new(1, -116, 0, 22),
+		Position = UDim2.fromOffset(103, 47),
 		TextXAlignment = Enum.TextXAlignment.Left,
-		Stroke = 2,
 		RichText = true,
-		ZIndex = 2,
-		Parent = carry,
+		ZIndex = 4,
+		Parent = carryFace,
 	})
 	local carryHint = Kit.Text({
 		Font = Theme.BodyFont,
-		Size = UDim2.new(1, -104, 0, 20),
-		Position = UDim2.fromOffset(94, 70),
+		Size = UDim2.new(1, -116, 0, 19),
+		Position = UDim2.fromOffset(103, 71),
 		TextXAlignment = Enum.TextXAlignment.Left,
 		TextColor3 = Theme.Muted,
-		Stroke = false,
-		ZIndex = 2,
-		Parent = carry,
+		Stroke = 1.5,
+		ZIndex = 4,
+		Parent = carryFace,
 	})
 
 	local function refreshCarry()
@@ -535,14 +545,24 @@ function Hud.Build(gui: ScreenGui, C)
 		if carryEgg:IsA("ImageLabel") then
 			carryEgg.ImageColor3 = r.color:Lerp(Color3.new(1, 1, 1), 0.2)
 		end
+		-- la scheda prende il colore della rarita'
+		local deep = r.color:Lerp(r.colorDark, 0.55)
+		local edge = Kit.Tint(r.colorDark, -0.25)
+		Kit.Paint(carryFace, Kit.Tint(r.color, 0.12), deep)
+		carryStroke.Color = edge
 		local name = if kind == "Pet" and petId then T("Pet_" .. petId) else T("Egg_" .. rarity)
 		carryTitle.Text = if n > 1 then `{name} ×{n}` else name
-		carryTitle.TextColor3 = r.color
+		for _, label in { carryTitle, carrySub, carryHint } do
+			local st = label:FindFirstChildOfClass("UIStroke")
+			if st then
+				st.Color = edge
+			end
+		end
 		local speed = player:GetAttribute("WalkSpeed") or 16
 		local data = C.State.Data
 		local base = 16 + 1.5 * ((data and data.Upgrades and data.Upgrades.Speed) or 0)
 		local pct = math.floor((speed / base - 1) * 100 + 0.5)
-		carrySub.Text = T("CarrySpeed", { pct = `<font color="#ff8a7a">{pct}%</font>` })
+		carrySub.Text = T("CarrySpeed", { pct = `<font color="#ffe14a">{pct}%</font>` })
 			.. (if pct <= -20 then " · " .. T("Heavy") else "")
 		carryHint.Text = if stolen then T("CarryStolenHint") else T("CarryHint")
 		if not wasVisible then
@@ -562,10 +582,10 @@ function Hud.Build(gui: ScreenGui, C)
 		Name = "Slap",
 		Icon = "Slap",
 		Color = "Red",
-		Size = UDim2.fromOffset(118, 118),
+		Size = UDim2.fromOffset(116, 116),
 		Position = UDim2.new(1, -150, 1, -200),
 		AnchorPoint = Vector2.new(0.5, 0.5),
-		Corner = UDim.new(1, 0),
+		Corner = Theme.Pill,
 		Parent = gui,
 		OnClick = function()
 			C.Combat.SlapButton()
@@ -573,8 +593,9 @@ function Hud.Build(gui: ScreenGui, C)
 	})
 	local slapLabel = Kit.Text({
 		Size = UDim2.fromOffset(130, 26),
-		Position = UDim2.new(0.5, 0, 1, -2),
+		Position = UDim2.new(0.5, 0, 1, 0),
 		AnchorPoint = Vector2.new(0.5, 0),
+		Stroke = 3,
 		Parent = slap.Frame,
 	})
 	bindText(slapLabel, "BatSlap")
@@ -594,14 +615,14 @@ function Hud.Build(gui: ScreenGui, C)
 		menu.Position = UDim2.new(0, 16, if touch then 0.5 else 0.66, -10)
 		if touch then
 			-- pulsante del salto (TouchJump di Roblox): centro e raggio in pixel dello schermo
-			local small = math.min(vp.X, vp.Y) <= 500
-			local jr = if small then 35 else 60
-			local jx = if small then 60 else 110
-			local jy = if small then 55 else 150
+			local tiny = math.min(vp.X, vp.Y) <= 500
+			local jr = if tiny then 35 else 60
+			local jx = if tiny then 60 else 110
+			local jy = if tiny then 55 else 150
 			-- schiaffo a sinistra del salto, alla stessa altezza; barriera sopra il salto
 			slap.Frame.Position = UDim2.new(1, -(jx + jr + 16) / s - 59, 1, -jy / s)
 			barrier.Frame.AnchorPoint = Vector2.new(0.5, 1)
-			barrier.Frame.Position = UDim2.new(1, -jx / s, 1, -(jy + jr + 16) / s - 34)
+			barrier.Frame.Position = UDim2.new(1, -jx / s, 1, -(jy + jr + 16) / s - 36)
 		else
 			barrier.Frame.AnchorPoint = Vector2.new(1, 0.5)
 			barrier.Frame.Position = UDim2.new(1, -16, 0.62, 0)
@@ -617,36 +638,50 @@ function Hud.Build(gui: ScreenGui, C)
 	-- Avvisi importanti (valanga, furti) e nome della zona: nella colonna in alto sotto le
 	-- monete, non al centro dello schermo
 	---------------------------------------------------------------------------------------
-	local banner = New("Frame", {
+	local red = Theme.Buttons.Red
+	local banner, bannerFace = Kit.Surface({
 		Name = "Banner",
-		BackgroundColor3 = Theme.Buttons.Red[1],
-		Size = UDim2.fromOffset(500, 68),
+		Size = UDim2.fromOffset(520, 72),
 		Visible = false,
 		LayoutOrder = 1,
+		Corner = UDim.new(0, 22),
+		Color = red[3],
+		Color2 = red[1],
+		Stroke = 2.5,
+		StrokeColor = red[2],
 		Parent = top,
-	}, {
-		Kit.Corner(UDim.new(0, 16)),
-		Kit.Stroke(4),
-		New("UIScale"),
 	})
-	Kit.Felt(banner)
-	Kit.Stitch(banner, 16)
+	local bannerStroke = bannerFace:FindFirstChildOfClass("UIStroke") :: UIStroke
 	local bannerTitle = Kit.Text({
 		Size = UDim2.new(0.92, 0, 0, 36),
-		Position = UDim2.new(0.04, 0, 0, 5),
+		Position = UDim2.new(0.04, 0, 0, 6),
 		RichText = true,
-		ZIndex = 2,
-		Parent = banner,
+		Stroke = 2.5,
+		StrokeColor = red[2],
+		ZIndex = 4,
+		Parent = bannerFace,
 	})
 	local bannerSub = Kit.Text({
-		Font = Theme.BodyFont,
-		Size = UDim2.new(0.92, 0, 0, 22),
-		Position = UDim2.new(0.04, 0, 0, 41),
-		Stroke = 2,
-		ZIndex = 2,
-		Parent = banner,
+		Font = Theme.HeadFont,
+		Size = UDim2.new(0.92, 0, 0, 21),
+		Position = UDim2.new(0.04, 0, 0, 43),
+		Stroke = 1.5,
+		StrokeColor = red[2],
+		ZIndex = 4,
+		Parent = bannerFace,
 	})
 	hud.Banner = banner
+	local function bannerColors(top: Color3, bottom: Color3)
+		local edge = Kit.Tint(bottom, -0.3)
+		Kit.Paint(bannerFace, top, bottom)
+		bannerStroke.Color = edge
+		for _, label in { bannerTitle, bannerSub } do
+			local st = label:FindFirstChildOfClass("UIStroke")
+			if st then
+				st.Color = edge
+			end
+		end
+	end
 	-- priority: chi ha la priorita' piu' alta tiene lo striscione (furto 3 > valanga 2 > altro 1);
 	-- quando lo libera, gli altri lo riprendono al loro aggiornamento successivo
 	local bannerOwner = 0
@@ -670,15 +705,17 @@ function Hud.Build(gui: ScreenGui, C)
 		bannerTitle.Text = title
 		bannerSub.Text = sub or ""
 		if colors then
-			banner.BackgroundColor3 = colors[1]
+			bannerColors(colors[1], colors[2] or colors[1])
+		else
+			bannerColors(red[3], red[1])
 		end
 	end
 
 	local zoneLabel = Kit.Text({
 		Name = "Zone",
-		Size = UDim2.fromOffset(520, 46),
+		Size = UDim2.fromOffset(540, 48),
 		TextTransparency = 1,
-		Stroke = 4,
+		Stroke = 3.5,
 		Visible = false,
 		LayoutOrder = 0,
 		Parent = top,

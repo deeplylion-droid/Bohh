@@ -32,7 +32,7 @@ local PASS_COLORS = {
 
 function Panel.Build(parent: Instance, C)
 	local T = C.Lang.T
-	local p = Kit.Panel(T("MenuShop"), UDim2.fromOffset(860, 580), "Cyan", parent)
+	local p = Kit.Panel(T("MenuShop"), UDim2.fromOffset(860, 580), "Cyan", parent, "Shop")
 	local tabsBar = New("Frame", {
 		BackgroundTransparency = 1,
 		Size = UDim2.new(1, 0, 0, 60),
@@ -55,7 +55,8 @@ function Panel.Build(parent: Instance, C)
 			CanvasSize = UDim2.new(),
 			AutomaticCanvasSize = Enum.AutomaticSize.Y,
 			ScrollBarThickness = 8,
-			ScrollBarImageColor3 = Theme.Outline,
+			ScrollBarImageColor3 = Theme.Text,
+			ScrollBarImageTransparency = 0.25,
 			BorderSizePixel = 0,
 			Visible = false,
 			Parent = p.Body,
@@ -100,42 +101,35 @@ function Panel.Build(parent: Instance, C)
 		page(info[1])
 	end
 
-	-- scheda quasi bianca con la toppa rotonda colorata dietro l'icona
+	-- scheda bianca con il tondo colorato dietro l'icona
 	local function card(pg: Instance, order: number, color: string, iconName: string)
 		local c = Kit.Card({ LayoutOrder = order, ZIndex = 1, Parent = pg })
-		local patch = New("Frame", {
+		Kit.IconBadge(iconName, color, {
 			Name = "Patch",
-			BackgroundColor3 = (Theme.Buttons[color] or Theme.Buttons.Purple)[1],
-			Size = UDim2.fromOffset(80, 80),
+			Size = UDim2.fromOffset(84, 84),
 			Position = UDim2.new(0.5, 0, 0, 10),
 			AnchorPoint = Vector2.new(0.5, 0),
 			ZIndex = 2,
-			Parent = c,
-		}, { Kit.Corner(UDim.new(1, 0)), Kit.Stroke(3) })
-		Kit.Felt(patch)
-		Kit.Stitch(patch, -1)
-		Kit.Icon(iconName, {
-			Size = UDim2.fromOffset(66, 66),
-			Position = UDim2.new(0.5, 0, 0, 17),
-			AnchorPoint = Vector2.new(0.5, 0),
-			ZIndex = 3,
+			Ring = false,
+			IconScale = 0.9,
 			Parent = c,
 		})
 		local title = Kit.Text({
 			Size = UDim2.new(0.9, 0, 0, 30),
-			Position = UDim2.new(0.05, 0, 0, 94),
+			Position = UDim2.new(0.05, 0, 0, 100),
 			TextColor3 = Theme.Ink,
 			Stroke = false,
 			ZIndex = 3,
 			Parent = c,
 		})
 		local desc = Kit.Text({
-			Font = Theme.BodyFont,
-			Size = UDim2.new(0.9, 0, 0, 44),
-			Position = UDim2.new(0.05, 0, 0, 124),
+			Font = Theme.SoftFont,
+			Size = UDim2.new(0.9, 0, 0, 40),
+			Position = UDim2.new(0.05, 0, 0, 130),
 			TextColor3 = Theme.InkSoft,
 			Stroke = false,
 			TextWrapped = true,
+			MaxTextSize = 19,
 			ZIndex = 3,
 			Parent = c,
 		})
@@ -160,7 +154,7 @@ function Panel.Build(parent: Instance, C)
 			Position = UDim2.fromOffset(10, 10),
 			ZIndex = 2,
 			Parent = c,
-		}, { Kit.Corner(UDim.new(0, 14)), Kit.Stroke(3) })
+		}, { Kit.Corner(UDim.new(0, 14)) })
 		New("UIGradient", {
 			Color = Rarities.Gradients.Galactic,
 			Rotation = 90,
@@ -201,7 +195,7 @@ function Panel.Build(parent: Instance, C)
 			Parent = c,
 		})
 		local income = Kit.Text({
-			Font = Theme.BodyFont,
+			Font = Theme.HeadFont,
 			Size = UDim2.new(0.92, 0, 0, 24),
 			Position = UDim2.new(0.04, 0, 0, 214),
 			TextColor3 = Theme.GreenInk,
@@ -210,9 +204,9 @@ function Panel.Build(parent: Instance, C)
 			Parent = c,
 		})
 		local desc = Kit.Text({
-			Font = Theme.BodyFont,
-			Size = UDim2.new(0.92, 0, 0, 22),
-			Position = UDim2.new(0.04, 0, 0, 238),
+			Font = Theme.SoftFont,
+			Size = UDim2.new(0.92, 0, 0, 20),
+			Position = UDim2.new(0.04, 0, 0, 239),
 			TextColor3 = Theme.InkSoft,
 			Stroke = false,
 			ZIndex = 3,

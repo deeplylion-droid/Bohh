@@ -10,6 +10,7 @@ local Rewards = require(ReplicatedStorage.Shared.Config.Rewards)
 local Kit = require(script.Parent.Parent.Kit)
 
 local Theme = Kit.Theme
+local New = Kit.New
 local player = Players.LocalPlayer
 
 local Panel = {}
@@ -31,13 +32,14 @@ end
 
 function Panel.Build(parent: Instance, C)
 	local T = C.Lang.T
-	local p = Kit.Panel(T("GiftsTitle"), UDim2.fromOffset(860, 580), "Pink", parent)
+	local p = Kit.Panel(T("GiftsTitle"), UDim2.fromOffset(860, 580), "Pink", parent, "Gifts")
 
 	-- giornaliero
 	local dailyTitle = Kit.Text({
 		Size = UDim2.new(0.6, 0, 0, 34),
 		Position = UDim2.fromOffset(6, 16),
 		TextXAlignment = Enum.TextXAlignment.Left,
+		Stroke = 2.5,
 		Parent = p.Body,
 	})
 	local dailyClaim = Kit.Button({
@@ -58,11 +60,20 @@ function Panel.Build(parent: Instance, C)
 			Position = UDim2.new((i - 1) / 7, 5, 0, 66),
 			Parent = p.Body,
 		})
+		-- contorno dorato acceso solo sul giorno da riscattare
+		New("UIStroke", {
+			Name = "Today",
+			Thickness = 4,
+			Color = Theme.Buttons.Yellow[1],
+			ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+			Enabled = false,
+			Parent = d,
+		})
 		local dayLabel = Kit.Text({
-			Font = Theme.BodyFont,
-			Size = UDim2.new(0.9, 0, 0, 22),
-			Position = UDim2.new(0.05, 0, 0, 6),
-			TextColor3 = Theme.Ink,
+			Font = Theme.HeadFont,
+			Size = UDim2.new(0.9, 0, 0, 20),
+			Position = UDim2.new(0.05, 0, 0, 7),
+			TextColor3 = Theme.InkSoft,
 			Stroke = false,
 			Parent = d,
 		})
@@ -87,6 +98,7 @@ function Panel.Build(parent: Instance, C)
 		Size = UDim2.new(0.6, 0, 0, 34),
 		Position = UDim2.fromOffset(6, 212),
 		TextXAlignment = Enum.TextXAlignment.Left,
+		Stroke = 2.5,
 		Parent = p.Body,
 	})
 	local gifts = {}
@@ -157,10 +169,9 @@ function Panel.Build(parent: Instance, C)
 		for i, d in days do
 			d.day.Text = T("DailyDay", { n = i })
 			d.amount.Text = rewardText(T, d.reward)
-			local stroke = d.card:FindFirstChildOfClass("UIStroke")
+			local stroke = d.card:FindFirstChild("Today") :: UIStroke?
 			if stroke then
-				stroke.Color = if i == nextIndex and ready then Theme.Buttons.Yellow[2] else Theme.Outline
-				stroke.Thickness = if i == nextIndex and ready then 5 else 3
+				stroke.Enabled = i == nextIndex and ready
 			end
 			d.card.BackgroundColor3 = if i < nextIndex and not ready or (i <= streak and not ready)
 				then Theme.CardLight

@@ -16,50 +16,62 @@ local stack: Frame
 local announceFrame: Frame
 local player = Players.LocalPlayer
 
--- colore della scritta sul cartellino quasi bianco, per tipo di messaggio
+-- per tipo di messaggio: colore della scritta sulla pillola bianca, colore e simbolo del tondo
 local STYLE = {
-	Good = Color3.fromRGB(18, 150, 62),
-	Bad = Color3.fromRGB(214, 26, 56),
-	Info = Color3.fromRGB(58, 34, 22),
-	Gold = Color3.fromRGB(206, 112, 0),
+	Good = { text = Color3.fromRGB(8, 160, 68), badge = "Green", glyph = "" }, -- segno di spunta disegnato
+	Bad = { text = Color3.fromRGB(226, 22, 64), badge = "Red", glyph = "!" },
+	Info = { text = Color3.fromRGB(30, 22, 74), badge = "Blue", glyph = "i" },
+	Gold = { text = Color3.fromRGB(226, 120, 0), badge = "Yellow", glyph = "$" },
 }
 
 function Notify.Init(controllers)
 	C = controllers
 end
 
--- Messaggio su un cartellino quasi bianco (con il foro), in basso a destra (in alto a destra sui
--- telefoni), lontano dal centro dello schermo
+-- Messaggio su una pillola bianca con il tondo colorato del tipo, in basso a destra (in alto a
+-- destra sui telefoni), lontano dal centro dello schermo
 function Notify.Toast(text: string, style: string?)
-	local color = STYLE[style or "Info"] or STYLE.Info
-	local New = Kit.New
+	local st = STYLE[style or "Info"] or STYLE.Info
 	local Theme = Kit.Theme
-	local toast = New("Frame", {
-		BackgroundColor3 = Theme.Card,
-		Size = UDim2.fromOffset(420, 56),
-		Rotation = -1,
+	local toast, face = Kit.Surface({
+		Name = "Toast",
+		Size = UDim2.fromOffset(420, 54),
+		Corner = Theme.Pill,
+		Stroke = 2,
+		StrokeTransparency = 0.8,
+		Shadow = 4,
 		Parent = stack,
-	}, { Kit.Corner(UDim.new(0, 8)), Kit.Stroke(3), New("UIScale") })
-	Kit.Stitch(toast, 8, Theme.StitchCard)
-	New("Frame", {
-		Name = "Hole",
-		BackgroundColor3 = Theme.Outline,
-		Size = UDim2.fromOffset(10, 10),
-		Position = UDim2.new(0, 12, 0.5, 0),
+	})
+	local badge = Kit.IconBadge(nil, st.badge, {
+		Size = UDim2.fromOffset(38, 38),
+		Position = UDim2.new(0, 8, 0.5, 0),
 		AnchorPoint = Vector2.new(0, 0.5),
-		ZIndex = 2,
-		Parent = toast,
-	}, { Kit.Corner(UDim.new(1, 0)) })
+		ZIndex = 4,
+		Ring = false,
+		Parent = face,
+	})
+	if st.glyph == "" then
+		Kit.Check(badge, 5)
+	else
+		Kit.Text({
+			Text = st.glyph,
+			Size = UDim2.fromScale(0.62, 0.62),
+			Position = UDim2.fromScale(0.19, 0.19),
+			StrokeColor = Theme.Buttons[st.badge][2],
+			ZIndex = 5,
+			Parent = badge,
+		})
+	end
 	Kit.Text({
 		Text = text,
-		Font = Theme.BodyFont,
-		Size = UDim2.new(1, -46, 0.7, 0),
-		Position = UDim2.new(0, 32, 0.15, 0),
-		TextColor3 = color,
+		Font = Theme.HeadFont,
+		Size = UDim2.new(1, -72, 0.56, 0),
+		Position = UDim2.new(0, 56, 0.22, 0),
+		TextColor3 = st.text,
 		Stroke = false,
 		RichText = true,
-		ZIndex = 2,
-		Parent = toast,
+		ZIndex = 4,
+		Parent = face,
 	})
 	Kit.Pop(toast)
 	task.delay(3.6, function()
@@ -82,8 +94,8 @@ function Notify.Toast(text: string, style: string?)
 	end
 end
 
--- Annuncio a tutto il server (uova rare, schiuse epiche, eventi): striscia di feltro scuro nella
--- colonna in alto sotto le monete, con il bordo del colore della rarita'
+-- Annuncio a tutto il server (uova rare, schiuse epiche, eventi): pillola blu notte nella colonna
+-- in alto sotto le monete, con il contorno del colore della rarita'
 local function announceParent(): Frame
 	local hud = C.UI.Hud
 	local slot = hud and hud.AnnounceSlot
@@ -105,23 +117,23 @@ function Notify.Announce(text: string, rarity: string?)
 	local r = rarity and Rarities.List[rarity]
 	local color = if r then r.color else Theme.Gold
 	local box = New("Frame", {
-		BackgroundColor3 = Theme.Outline,
-		Size = UDim2.fromOffset(600, 44),
+		BackgroundColor3 = Theme.Ink,
+		BackgroundTransparency = 0.06,
+		Size = UDim2.fromOffset(600, 46),
 		Position = UDim2.fromScale(0.5, 0),
 		AnchorPoint = Vector2.new(0.5, 0),
 		Parent = parent,
-	}, { Kit.Corner(UDim.new(0, 12)), Kit.Stroke(3, color), New("UIScale") })
-	Kit.Stitch(box, 12, color)
+	}, { Kit.Corner(Theme.Pill), Kit.Stroke(2.5, color), New("UIScale") })
 	if parent:IsA("Frame") and parent.Name == "AnnounceSlot" then
 		parent.Visible = true
 	end
 	local label = Kit.Text({
 		Text = text,
-		Font = Theme.BodyFont,
-		Size = UDim2.new(0.94, 0, 0.7, 0),
-		Position = UDim2.new(0.03, 0, 0.15, 0),
+		Font = Theme.HeadFont,
+		Size = UDim2.new(0.92, 0, 0.6, 0),
+		Position = UDim2.new(0.04, 0, 0.2, 0),
 		RichText = true,
-		Stroke = 2,
+		Stroke = 1.5,
 		ZIndex = 2,
 		Parent = box,
 	})

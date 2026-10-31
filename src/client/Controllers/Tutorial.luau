@@ -16,6 +16,7 @@ local Kit
 local player = Players.LocalPlayer
 local step = 0
 local card: Frame
+local cardFace: Frame
 local cardText: TextLabel
 local cardStep: TextLabel
 local targetAtt: Attachment
@@ -117,56 +118,61 @@ end
 -- Grafica
 ---------------------------------------------------------------------------------------------
 local function buildCard()
-	local New = Kit.New
-	card = New("Frame", {
+	local Theme = Kit.Theme
+	-- scheda bianca con il contorno dorato, il tondo giallo del passo e l'icona del bersaglio
+	card, cardFace = Kit.Surface({
 		Name = "Tutorial",
-		BackgroundColor3 = Kit.Theme.Buttons.Yellow[1],
-		Size = UDim2.fromOffset(600, 76),
+		Size = UDim2.fromOffset(610, 78),
 		Position = UDim2.new(0.5, 0, 1, -124),
 		AnchorPoint = Vector2.new(0.5, 1),
 		Visible = false,
+		Corner = UDim.new(0, 24),
+		Stroke = 3,
+		StrokeColor = Theme.Buttons.Yellow[1],
 		Parent = C.UI.Gui("HUD"),
-	}, {
-		Kit.Corner(UDim.new(0, 20)),
-		Kit.Stroke(4),
-		New("UIScale"),
 	})
-	Kit.Felt(card)
-	Kit.Stitch(card, 20)
-	local badge = New("Frame", {
-		BackgroundColor3 = Kit.Theme.Outline,
-		Size = UDim2.fromOffset(62, 62),
-		Position = UDim2.fromOffset(8, 7),
-		Parent = card,
-	}, { Kit.Corner(UDim.new(1, 0)) })
+	local badge = Kit.IconBadge(nil, "Yellow", {
+		Size = UDim2.fromOffset(60, 60),
+		Position = UDim2.fromOffset(9, 9),
+		ZIndex = 4,
+		Ring = false,
+		Parent = cardFace,
+	})
 	cardStep = Kit.Text({
 		Text = "1/5",
-		Size = UDim2.fromScale(0.8, 0.5),
-		Position = UDim2.fromScale(0.1, 0.25),
-		TextColor3 = Kit.Theme.Gold,
+		Size = UDim2.fromScale(0.76, 0.46),
+		Position = UDim2.fromScale(0.12, 0.27),
+		TextColor3 = Theme.Ink,
+		Stroke = false,
+		ZIndex = 5,
 		Parent = badge,
 	})
 	cardText = Kit.Text({
 		Text = "",
-		Font = Kit.Theme.BodyFont,
-		Size = UDim2.new(1, -150, 0, 56),
-		Position = UDim2.fromOffset(80, 10),
+		Font = Theme.HeadFont,
+		Size = UDim2.new(1, -152, 0, 56),
+		Position = UDim2.fromOffset(82, 11),
 		TextXAlignment = Enum.TextXAlignment.Left,
 		TextWrapped = true,
-		Stroke = 3,
-		Parent = card,
+		TextColor3 = Theme.Ink,
+		Stroke = false,
+		ZIndex = 4,
+		Parent = cardFace,
 	})
 end
 
 local function setIcon(name: string)
-	local old = card:FindFirstChild("StepIcon")
+	local old = cardFace:FindFirstChild("StepIcon")
 	if old then
 		old:Destroy()
 	end
-	Kit.Icon(
-		name,
-		{ Name = "StepIcon", Size = UDim2.fromOffset(50, 50), Position = UDim2.new(1, -62, 0, 13), Parent = card }
-	)
+	Kit.Icon(name, {
+		Name = "StepIcon",
+		Size = UDim2.fromOffset(54, 54),
+		Position = UDim2.new(1, -64, 0, 12),
+		ZIndex = 4,
+		Parent = cardFace,
+	})
 end
 
 local function buildPointer()

@@ -102,27 +102,31 @@ local function confetti(parent: Instance, colors: { Color3 }, count: number)
 	end
 end
 
+-- Pillola colorata (rarita', mutazione, taglia, guadagno) con il gradiente e il contorno scuro
 local function chip(parent: Instance, text: string, colors: { Color3 }, order: number): Frame
+	local edge = Kit.Tint(colors[2], -0.2)
 	local f = Kit.New("Frame", {
-		BackgroundColor3 = colors[1],
-		Size = UDim2.fromOffset(0, 40),
+		Size = UDim2.fromOffset(0, 42),
 		AutomaticSize = Enum.AutomaticSize.X,
 		LayoutOrder = order,
 		ZIndex = 62,
 		Parent = parent,
 	}, {
 		Kit.Corner(UDim.new(1, 0)),
-		Kit.Stroke(4),
-		Kit.New("UIPadding", { PaddingLeft = UDim.new(0, 16), PaddingRight = UDim.new(0, 16) }),
+		Kit.Stroke(3, Color3.new(1, 1, 1)),
+		Kit.New("UIPadding", { PaddingLeft = UDim.new(0, 18), PaddingRight = UDim.new(0, 18) }),
 		Kit.New("UIScale"),
 	})
+	Kit.Paint(f, Kit.Tint(colors[1], 0.2), colors[1]:Lerp(colors[2], 0.35))
 	Kit.Text({
 		Text = text,
 		Size = UDim2.fromOffset(0, 30),
 		AutomaticSize = Enum.AutomaticSize.X,
 		TextScaled = false,
 		TextSize = 26,
-		Position = UDim2.fromOffset(0, 5),
+		Position = UDim2.fromOffset(0, 6),
+		Stroke = 2.5,
+		StrokeColor = edge,
 		ZIndex = 63,
 		Parent = f,
 	})
@@ -142,7 +146,7 @@ local function play(info)
 		Name = "HatchScene",
 		Text = "",
 		AutoButtonColor = false,
-		BackgroundColor3 = Color3.fromRGB(14, 10, 30),
+		BackgroundColor3 = Color3.fromRGB(16, 11, 42),
 		BackgroundTransparency = 1,
 		Size = UDim2.fromScale(1, 1),
 		ZIndex = 55,
@@ -189,9 +193,10 @@ local function play(info)
 	viewport.CurrentCamera = cam
 	local title = Kit.Text({
 		Text = T("Hatching"),
-		Size = UDim2.fromOffset(700, 54),
+		Size = UDim2.fromOffset(700, 56),
 		Position = UDim2.new(0.5, 0, 0, 40),
 		AnchorPoint = Vector2.new(0.5, 0),
+		Stroke = 3.5,
 		ZIndex = 61,
 		Parent = stage,
 	})
@@ -268,11 +273,11 @@ local function play(info)
 	local nameLabel = Kit.Text({
 		Text = T("Pet_" .. info.pet),
 		TextColor3 = rarity.color,
-		Size = UDim2.fromOffset(760, 70),
-		Position = UDim2.new(0.5, 0, 0, 520),
+		Size = UDim2.fromOffset(760, 72),
+		Position = UDim2.new(0.5, 0, 0, 518),
 		AnchorPoint = Vector2.new(0.5, 0),
 		ZIndex = 61,
-		Stroke = 5,
+		Stroke = 4,
 		Parent = stage,
 	})
 	local gradient = Rarities.Gradients[info.rarity]
@@ -318,24 +323,26 @@ local function play(info)
 		addChip(Format.Rate(income), { Color3.fromRGB(141, 255, 98), Color3.fromRGB(34, 170, 59) })
 	end
 	if info.new then
+		-- adesivo "NUOVO!": pillola gialla inclinata con l'anello bianco
 		local badge = Kit.New("Frame", {
-			BackgroundColor3 = Kit.Theme.Buttons.Yellow[1],
-			Size = UDim2.fromOffset(150, 58),
+			Size = UDim2.fromOffset(156, 58),
 			Position = UDim2.new(0.5, 170, 0, 150),
 			AnchorPoint = Vector2.new(0.5, 0.5),
 			Rotation = 12,
 			ZIndex = 64,
 			Parent = stage,
 		}, {
-			Kit.Corner(UDim.new(0, 16)),
-			Kit.Stroke(4),
+			Kit.Corner(UDim.new(1, 0)),
+			Kit.Stroke(4, Color3.new(1, 1, 1)),
 			Kit.New("UIScale"),
 		})
-		Kit.Stitch(badge, 16)
+		Kit.PaintNamed(badge, "Yellow")
 		Kit.Text({
 			Text = T("NewPet"),
-			Size = UDim2.fromScale(0.86, 0.7),
-			Position = UDim2.fromScale(0.07, 0.15),
+			Size = UDim2.fromScale(0.8, 0.66),
+			Position = UDim2.fromScale(0.1, 0.17),
+			TextColor3 = Kit.Theme.Ink,
+			Stroke = false,
 			ZIndex = 65,
 			Parent = badge,
 		})
@@ -349,7 +356,7 @@ local function play(info)
 	end
 	local hint = Kit.Text({
 		Text = T("TapToContinue"),
-		Font = Kit.Theme.BodyFont,
+		Font = Kit.Theme.HeadFont,
 		TextColor3 = Kit.Theme.Muted,
 		Size = UDim2.fromOffset(400, 26),
 		Position = UDim2.new(0.5, 0, 1, -24),

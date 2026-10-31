@@ -172,26 +172,26 @@ local function build(prompt: ProximityPrompt, inputType: Enum.ProximityPromptInp
 		{ BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), Parent = gui },
 		{ New("UIScale", { Scale = math.max(0.75, C.UI.Scale or 1) }) }
 	)
-	-- tasto rotondo con anello di caricamento
+	-- tasto rotondo colorato con l'anello bianco e l'anello di caricamento
 	local key = New("TextButton", {
 		Text = "",
 		AutoButtonColor = false,
-		BackgroundColor3 = colors[1],
 		Size = UDim2.fromOffset(72, 72),
 		Position = UDim2.fromOffset(8, 12),
+		ZIndex = 2,
 		Parent = holder,
-	}, { Kit.Corner(UDim.new(1, 0)), Kit.Stroke(4) })
-	Kit.Felt(key)
-	Kit.Stitch(key, -1)
+	}, { Kit.Corner(UDim.new(1, 0)), Kit.Stroke(3.5, Color3.new(1, 1, 1)) })
+	Kit.Paint(key, colors[3], colors[1])
 	local keyText = if inputType == Enum.ProximityPromptInputType.Touch
 		then "👆"
 		elseif inputType == Enum.ProximityPromptInputType.Gamepad then "X"
 		else prompt.KeyboardKeyCode.Name
 	Kit.Text({
 		Text = keyText,
-		Size = UDim2.fromScale(0.56, 0.56),
-		Position = UDim2.fromScale(0.22, 0.22),
-		ZIndex = 2,
+		Size = UDim2.fromScale(0.52, 0.52),
+		Position = UDim2.fromScale(0.24, 0.24),
+		StrokeColor = colors[2],
+		ZIndex = 3,
 		Parent = key,
 	})
 	local ring = New("UIStroke", {
@@ -205,33 +205,35 @@ local function build(prompt: ProximityPrompt, inputType: Enum.ProximityPromptInp
 			Parent = key,
 		}, { Kit.Corner(UDim.new(1, 0)) }),
 	})
-	local box = New("Frame", {
-		BackgroundColor3 = Kit.Theme.Card,
+	local _, box = Kit.Surface({
 		Size = UDim2.fromOffset(200, 64),
-		Position = UDim2.fromOffset(88, 16),
+		Position = UDim2.fromOffset(86, 16),
+		Corner = UDim.new(0, 18),
+		Stroke = 2,
+		StrokeTransparency = 0.7,
+		Shadow = 4,
 		Parent = holder,
-	}, { Kit.Corner(UDim.new(0, 10)), Kit.Stroke(4) })
-	Kit.Stitch(box, 8, Kit.Theme.StitchCard)
+	})
 	local action, object = promptTexts(prompt)
 	Kit.Text({
 		Text = action,
-		Size = UDim2.new(0.88, 0, 0, 30),
-		Position = UDim2.new(0.06, 0, 0, 5),
+		Size = UDim2.new(0.86, 0, 0, 29),
+		Position = UDim2.new(0.08, 0, 0, 6),
 		TextXAlignment = Enum.TextXAlignment.Left,
 		TextColor3 = Kit.Theme.Ink,
 		Stroke = false,
-		ZIndex = 2,
+		ZIndex = 4,
 		Parent = box,
 	})
 	local objLabel = Kit.Text({
 		Text = object,
-		Font = Kit.Theme.BodyFont,
-		Size = UDim2.new(0.88, 0, 0, 24),
-		Position = UDim2.new(0.06, 0, 0, 35),
+		Font = Kit.Theme.HeadFont,
+		Size = UDim2.new(0.86, 0, 0, 22),
+		Position = UDim2.new(0.08, 0, 0, 36),
 		TextXAlignment = Enum.TextXAlignment.Left,
 		TextColor3 = Kit.Theme.InkSoft,
 		Stroke = false,
-		ZIndex = 2,
+		ZIndex = 4,
 		Parent = box,
 	})
 	local rarity = prompt:GetAttribute("Rarity") or (prompt.Parent and prompt.Parent:GetAttribute("EggRarity"))

@@ -1024,6 +1024,13 @@ end
 
 Extreme.Pieces = pieces
 
+-- indice per id rifatto a percorso completo: molti elementi ricevono il nome dopo add() (navette,
+-- dischi, nastri, molla...) e senza questo il client non li troverebbe (resterebbero fermi)
+table.clear(byId)
+for _, p in pieces do
+	byId[p.id] = p
+end
+
 function Extreme.Get(id: string): Piece?
 	return byId[id]
 end

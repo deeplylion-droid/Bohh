@@ -1,6 +1,7 @@
--- Mattoni dell'interfaccia in stile "giocattolo di stoffa cucito": creazione di istanze, testi con
--- contorno, feltro dai colori accesi con la cucitura bianca attaccata al contorno scuro, pulsanti
--- con ombra e animazioni, pannelli con l'etichetta di stoffa e il bottone da cucito per chiudere.
+-- Mattoni dell'interfaccia in stile "Vetta Pop": creazione di istanze, testi con il contorno
+-- sottile, superfici lisce con il gradiente e l'ombra netta, pulsanti a pillola con il bordo 3D che
+-- si abbassa quando si premono, schede bianche, tondi con le icone, barre di avanzamento e pannelli
+-- con la linguetta bianca del titolo e la X rotonda per chiudere.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SoundService = game:GetService("SoundService")
@@ -12,6 +13,9 @@ local Theme = require(script.Parent.Theme)
 local Kit = {}
 
 Kit.Theme = Theme
+
+local WHITE = Color3.new(1, 1, 1)
+local BLACK = Color3.new(0, 0, 0)
 
 -- Crea un'istanza: props (proprieta' ed eventi "On<Evento>"), children (lista di istanze)
 function Kit.New(className: string, props: { [string]: any }?, children: { Instance }?): any
@@ -45,10 +49,11 @@ function Kit.Corner(radius: UDim?): UICorner
 	return New("UICorner", { CornerRadius = radius or Theme.Corner })
 end
 
-function Kit.Stroke(thickness: number?, color: Color3?): UIStroke
+function Kit.Stroke(thickness: number?, color: Color3?, transparency: number?): UIStroke
 	return New("UIStroke", {
 		Thickness = thickness or Theme.Stroke,
 		Color = color or Theme.Outline,
+		Transparency = transparency or 0,
 		ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
 		LineJoinMode = Enum.LineJoinMode.Round,
 	})
@@ -66,134 +71,61 @@ function Kit.Padding(px: number): UIPadding
 	return New("UIPadding", { PaddingLeft = u, PaddingRight = u, PaddingTop = u, PaddingBottom = u })
 end
 
--- Trama del feltro sopra il colore pieno (sotto ai contenuti, con gli stessi angoli arrotondati)
-function Kit.Felt(frame: GuiObject, transparency: number?)
-	local id = Assets.Images.FeltNoise
-	if not id then
-		return
-	end
-	local corner = frame:FindFirstChildOfClass("UICorner")
-	New("ImageLabel", {
-		Name = "Felt",
-		BackgroundTransparency = 1,
-		Image = id,
-		ScaleType = Enum.ScaleType.Tile,
-		TileSize = UDim2.fromOffset(96, 96),
-		ImageTransparency = transparency or 0.9, -- trama leggera: i colori restano brillanti
-		Size = UDim2.fromScale(1, 1),
-		ZIndex = 1,
-		Parent = frame,
-	}, { New("UICorner", { CornerRadius = if corner then corner.CornerRadius else UDim.new() }) })
+-- Colore schiarito (k > 0, verso il bianco) o scurito (k < 0, verso il nero)
+function Kit.Tint(c: Color3, k: number): Color3
+	return if k >= 0 then c:Lerp(WHITE, k) else c:Lerp(BLACK, -k)
 end
 
--- Cucitura tratteggiata attaccata al bordo, dentro il riquadro: tratti ripetuti sui lati e quarti di
--- cerchio negli angoli (raggio in px dell'UICorner; radius < 0 = riquadro rotondo).
-local CORNERS = { 8, 12, 16, 20, 28, 40 }
-function Kit.Stitch(frame: GuiObject, radius: number, color: Color3?): Frame?
-	local images = Assets.Images
-	if not images.StitchH then
-		return nil
+-- Colora un riquadro con un gradiente verticale (dall'alto in basso). Il fondo diventa bianco e il
+-- colore lo da' l'UIGradient "Paint": per cambiarlo si richiama Kit.Paint.
+function Kit.Paint(frame: GuiObject, top: Color3, bottom: Color3?)
+	frame.BackgroundColor3 = WHITE
+	local g = frame:FindFirstChild("Paint") :: UIGradient?
+	if not g then
+		g = New("UIGradient", { Name = "Paint", Rotation = 90, Parent = frame })
 	end
-	local col = color or Theme.Stitch
-	local holder = New("Frame", {
-		Name = "Stitch",
-		BackgroundTransparency = 1,
-		Size = UDim2.fromScale(1, 1),
-		ZIndex = 1,
-		Parent = frame,
-	})
-	if radius < 0 then
-		New("ImageLabel", {
-			BackgroundTransparency = 1,
-			Image = images.StitchRing,
-			ImageColor3 = col,
-			Size = UDim2.fromScale(1, 1),
-			ZIndex = 1,
-			Parent = holder,
-		})
-		return holder
-	end
-	local r = CORNERS[1]
-	for _, c in CORNERS do
-		if math.abs(c - radius) < math.abs(r - radius) then
-			r = c
-		end
-	end
-	local function strip(name: string, pos: UDim2, size: UDim2, image: string, tile: UDim2)
-		New("ImageLabel", {
-			Name = name,
-			BackgroundTransparency = 1,
-			Image = image,
-			ScaleType = Enum.ScaleType.Tile,
-			TileSize = tile,
-			ImageColor3 = col,
-			Position = pos,
-			Size = size,
-			ZIndex = 1,
-			Parent = holder,
-		})
-	end
-	local h, v = UDim2.fromOffset(16, 4), UDim2.fromOffset(4, 16)
-	strip("Top", UDim2.fromOffset(r, 0.5), UDim2.new(1, -2 * r, 0, 4), images.StitchH, h)
-	strip("Bottom", UDim2.new(0, r, 1, -4.5), UDim2.new(1, -2 * r, 0, 4), images.StitchH, h)
-	strip("Left", UDim2.fromOffset(0.5, r), UDim2.new(0, 4, 1, -2 * r), images.StitchV, v)
-	strip("Right", UDim2.new(1, -4.5, 0, r), UDim2.new(0, 4, 1, -2 * r), images.StitchV, v)
-	local corners = { UDim2.fromOffset(0, 0), UDim2.new(1, -r, 0, 0), UDim2.new(1, -r, 1, -r), UDim2.new(0, 0, 1, -r) }
-	for i, pos in corners do
-		New("ImageLabel", {
-			Name = "Corner" .. i,
-			BackgroundTransparency = 1,
-			Image = images["StitchCorner" .. r] or "",
-			ImageColor3 = col,
-			Size = UDim2.fromOffset(r, r),
-			Position = pos,
-			Rotation = (i - 1) * 90,
-			ZIndex = 1,
-			Parent = holder,
-		})
-	end
-	return holder
+	(g :: UIGradient).Color = ColorSequence.new(top, bottom or top)
 end
 
--- Raggio (px) della cucitura per un riquadro con questo UICorner e queste misure (-1 = rotondo)
-function Kit.StitchRadius(size: UDim2, corner: UDim?): number
-	local c = corner or Theme.Corner
-	if c.Scale > 0 then
-		local w, h = size.X.Offset, size.Y.Offset
-		if w > 0 and h > 0 and math.abs(w - h) > 2 then
-			return math.min(w, h) / 2
-		end
-		return -1
-	end
-	return c.Offset
+-- Colora con una tinta della palette (Theme.Buttons): chiara in alto, piena in basso
+function Kit.PaintNamed(frame: GuiObject, name: string)
+	local c = Theme.Buttons[name] or Theme.Buttons.Blue
+	Kit.Paint(frame, c[3], c[1])
 end
 
--- Testo con contorno scuro (stile titolo)
+-- Testo (di default: Nunito Heavy bianco con il contorno sottile color inchiostro).
+-- Font accetta un Font (FontFace) o un Enum.Font; Stroke = false toglie il contorno, un numero ne
+-- cambia lo spessore; StrokeColor il colore; MaxTextSize limita il TextScaled.
 function Kit.Text(props: { [string]: any }): TextLabel
 	local stroke = props.Stroke
-	props.Stroke = nil
+	local strokeColor = props.StrokeColor
 	local maxSize = props.MaxTextSize
+	local font = props.Font or Theme.TitleFont
+	props.Stroke = nil
+	props.StrokeColor = nil
 	props.MaxTextSize = nil
+	props.Font = nil
 	local label = New("TextLabel", {
 		BackgroundTransparency = 1,
-		Font = props.Font or Theme.TitleFont,
-		TextColor3 = props.TextColor3 or Theme.Text,
+		TextColor3 = Theme.Text,
 		TextScaled = true,
-		RichText = props.RichText or false,
-		Size = props.Size or UDim2.fromScale(1, 1),
+		RichText = false,
+		Size = UDim2.fromScale(1, 1),
 	})
+	if typeof(font) == "Font" then
+		label.FontFace = font
+	else
+		label.Font = font
+	end
 	for k, v in props do
-		if k ~= "Font" and k ~= "TextColor3" and k ~= "Size" and k ~= "RichText" then
-			if k == "Parent" then
-				continue
-			end
+		if k ~= "Parent" then
 			(label :: any)[k] = v
 		end
 	end
 	if stroke ~= false then
 		New("UIStroke", {
 			Thickness = if type(stroke) == "number" then stroke else Theme.TextStroke,
-			Color = Theme.Outline,
+			Color = strokeColor or Theme.Outline,
 			ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual,
 			LineJoinMode = Enum.LineJoinMode.Round,
 			Parent = label,
@@ -219,13 +151,44 @@ function Kit.Icon(name: string, props: { [string]: any }?): GuiObject
 			Text = Theme.Emoji[name] or "•",
 			TextScaled = true,
 			Font = Enum.Font.SourceSans,
-			TextColor3 = Color3.new(1, 1, 1),
+			TextColor3 = WHITE,
 		})
 	end
 	for k, v in p do
 		(inst :: any)[k] = v
 	end
 	return inst
+end
+
+-- Tondo colorato (gradiente della palette) con un'icona dentro e l'anello bianco
+function Kit.IconBadge(iconName: string?, color: string?, props: { [string]: any }): (Frame, GuiObject?)
+	local z = props.ZIndex or 1
+	local badge = New("Frame", {
+		Name = props.Name or "IconBadge",
+		Size = props.Size or UDim2.fromOffset(56, 56),
+		Position = props.Position or UDim2.new(),
+		AnchorPoint = props.AnchorPoint or Vector2.zero,
+		LayoutOrder = props.LayoutOrder or 0,
+		ZIndex = z,
+	}, { Kit.Corner(Theme.Pill) })
+	Kit.PaintNamed(badge, color or "Blue")
+	if props.Ring ~= false then
+		Kit.Stroke(if type(props.Ring) == "number" then props.Ring else 3, props.RingColor or WHITE).Parent = badge
+	end
+	local icon = nil
+	if iconName then
+		local k = props.IconScale or 0.82
+		icon = Kit.Icon(iconName, {
+			Name = "Icon",
+			Size = UDim2.fromScale(k, k),
+			Position = UDim2.fromScale(0.5, 0.5),
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			ZIndex = z + 1,
+			Parent = badge,
+		})
+	end
+	badge.Parent = props.Parent
+	return badge, icon
 end
 
 function Kit.Tween(
@@ -249,9 +212,9 @@ end
 function Kit.Pop(inst: GuiObject, delay: number?)
 	local scale = inst:FindFirstChildOfClass("UIScale") or New("UIScale", { Parent = inst })
 	local base = inst:GetAttribute("BaseScale") or 1
-	scale.Scale = 0.4 * base
+	scale.Scale = 0.5 * base
 	task.delay(delay or 0, function()
-		Kit.Tween(scale, 0.35, { Scale = base }, Enum.EasingStyle.Back)
+		Kit.Tween(scale, 0.32, { Scale = base }, Enum.EasingStyle.Back)
 	end)
 end
 
@@ -277,7 +240,119 @@ function Kit.Click()
 end
 Kit.SfxEnabled = true
 
--- Pulsante gommoso: gradiente, contorno, riflesso in alto, ombra 3D, testo e/o icona, badge.
+-- Riquadro sollevato (HUD, avvisi, schede a comparsa): un Frame contenitore trasparente (misura,
+-- posizione, UIScale per le animazioni) con l'ombra netta color inchiostro e la faccia colorata.
+-- I contenuti vanno nella faccia. Restituisce contenitore e faccia.
+export type SurfaceProps = {
+	Name: string?,
+	Size: UDim2,
+	Position: UDim2?,
+	AnchorPoint: Vector2?,
+	LayoutOrder: number?,
+	Visible: boolean?,
+	ZIndex: number?,
+	Parent: Instance?,
+	Color: Color3?, -- colore in alto (default bianco)
+	Color2: Color3?, -- colore in basso
+	Corner: UDim?,
+	Stroke: number?, -- spessore del contorno (0 = nessuno)
+	StrokeColor: Color3?,
+	StrokeTransparency: number?,
+	Shadow: number?, -- distanza dell'ombra in px (0 = nessuna)
+	ShadowTransparency: number?,
+}
+function Kit.Surface(p: SurfaceProps): (Frame, Frame)
+	local z = p.ZIndex or 1
+	local corner = p.Corner or Theme.Corner
+	local holder = New("Frame", {
+		Name = p.Name or "Surface",
+		BackgroundTransparency = 1,
+		Size = p.Size,
+		Position = p.Position or UDim2.new(),
+		AnchorPoint = p.AnchorPoint or Vector2.zero,
+		LayoutOrder = p.LayoutOrder or 0,
+		Visible = if p.Visible == nil then true else p.Visible,
+		ZIndex = z,
+	}, { New("UIScale") })
+	local depth = p.Shadow or 5
+	if depth > 0 then
+		New("Frame", {
+			Name = "Shadow",
+			BackgroundColor3 = Theme.Ink,
+			BackgroundTransparency = p.ShadowTransparency or Theme.ShadowTransparency,
+			Size = UDim2.fromScale(1, 1),
+			Position = UDim2.fromOffset(0, depth),
+			ZIndex = z,
+			Parent = holder,
+		}, { Kit.Corner(corner) })
+	end
+	local face = New("Frame", {
+		Name = "Face",
+		Size = UDim2.fromScale(1, 1),
+		ZIndex = z + 1,
+		Parent = holder,
+	}, { Kit.Corner(corner) })
+	local top = p.Color or Theme.Card
+	Kit.Paint(face, top, p.Color2 or (if p.Color then top else Theme.CardShade))
+	local stroke = p.Stroke or 0
+	if stroke > 0 then
+		Kit.Stroke(stroke, p.StrokeColor or Theme.Ink, p.StrokeTransparency).Parent = face
+	end
+	if p.Parent then
+		holder.Parent = p.Parent
+	end
+	return holder, face
+end
+
+-- Cartellino bianco a pillola con un testo color inchiostro (etichette sotto i pulsanti, tempi)
+function Kit.Tag(props: { [string]: any }): (Frame, TextLabel)
+	local holder, face = Kit.Surface({
+		Name = props.Name or "Tag",
+		Size = props.Size or UDim2.fromOffset(100, 28),
+		Position = props.Position,
+		AnchorPoint = props.AnchorPoint,
+		ZIndex = props.ZIndex,
+		Corner = Theme.Pill,
+		Stroke = 2,
+		StrokeTransparency = 0.75,
+		Shadow = 3,
+		Parent = props.Parent,
+	})
+	local text = Kit.Text({
+		Text = props.Text or "",
+		Size = UDim2.new(1, -16, 0.78, 0),
+		Position = UDim2.new(0, 8, 0.11, 0),
+		TextColor3 = props.TextColor3 or Theme.Ink,
+		Stroke = false,
+		ZIndex = (props.ZIndex or 1) + 2,
+		Parent = face,
+	})
+	return holder, text
+end
+
+-- Barra di avanzamento: binario grigio chiaro e riempimento verde a pillola
+function Kit.Bar(props: { [string]: any }): (Frame, Frame)
+	local z = props.ZIndex or 1
+	local track = New("Frame", {
+		Name = "Bar",
+		BackgroundColor3 = props.Track or Theme.Track,
+		Size = props.Size,
+		Position = props.Position or UDim2.new(),
+		ZIndex = z,
+		Parent = props.Parent,
+	}, { Kit.Corner(Theme.Pill) })
+	local fill = New("Frame", {
+		Name = "Fill",
+		Size = UDim2.fromScale(0, 1),
+		ZIndex = z + 1,
+		Parent = track,
+	}, { Kit.Corner(Theme.Pill) })
+	Kit.PaintNamed(fill, props.Color or "Green")
+	return track, fill
+end
+
+-- Pulsante a pillola: gradiente (chiaro in alto), contorno sottile e bordo 3D dello stesso colore
+-- piu' scuro; premuto, la faccia scende sul bordo. Testo e/o icona.
 export type ButtonProps = {
 	Text: string?,
 	Icon: string?,
@@ -296,6 +371,7 @@ export type ButtonProps = {
 
 function Kit.Button(p: ButtonProps)
 	local colors = Theme.Buttons[p.Color or "Green"] or Theme.Buttons.Green
+	local corner = p.Corner or Theme.Pill
 	local holder = New("Frame", {
 		Name = p.Name or "Button",
 		BackgroundTransparency = 1,
@@ -306,37 +382,35 @@ function Kit.Button(p: ButtonProps)
 		LayoutOrder = p.LayoutOrder or 0,
 	})
 	local scale = New("UIScale", { Parent = holder })
-	-- ombra sotto (spessore 3D)
-	New("Frame", {
+	-- bordo 3D sotto la faccia
+	local lip = New("Frame", {
 		Name = "Shadow",
-		BackgroundColor3 = Theme.Outline,
-		Size = UDim2.new(1, 0, 1, 0),
-		Position = UDim2.new(0, 0, 0, 5),
+		BackgroundColor3 = colors[2],
+		Size = UDim2.fromScale(1, 1),
+		Position = UDim2.fromOffset(0, Theme.Lip),
 		ZIndex = 1,
 		Parent = holder,
-	}, { Kit.Corner(p.Corner) })
+	}, { Kit.Corner(corner) })
 	local face = New("TextButton", {
 		Name = "Face",
 		Text = "",
 		AutoButtonColor = false,
-		BackgroundColor3 = colors[1],
 		Size = UDim2.fromScale(1, 1),
 		ZIndex = 2,
 		Parent = holder,
-	}, { Kit.Corner(p.Corner), Kit.Stroke(Theme.Stroke) })
-	-- feltro e cucitura attaccata al contorno
-	Kit.Felt(face)
-	Kit.Stitch(face, Kit.StitchRadius(p.Size, p.Corner))
+	}, { Kit.Corner(corner) })
+	local stroke = Kit.Stroke(2, colors[2])
+	stroke.Parent = face
 	local label, icon
 	if p.Icon and p.Text then
 		icon = Kit.Icon(
 			p.Icon,
-			{ Size = UDim2.fromScale(0.3, 0.7), Position = UDim2.fromScale(0.05, 0.15), ZIndex = 4, Parent = face }
+			{ Size = UDim2.fromScale(0.3, 0.74), Position = UDim2.fromScale(0.06, 0.13), ZIndex = 4, Parent = face }
 		)
 		label = Kit.Text({
 			Text = p.Text,
-			Size = UDim2.fromScale(0.62, 0.62),
-			Position = UDim2.fromScale(0.35, 0.19),
+			Size = UDim2.fromScale(0.58, 0.58),
+			Position = UDim2.fromScale(0.36, 0.21),
 			ZIndex = 4,
 			Parent = face,
 			MaxTextSize = p.TextSize,
@@ -344,29 +418,58 @@ function Kit.Button(p: ButtonProps)
 	elseif p.Icon then
 		icon = Kit.Icon(
 			p.Icon,
-			{ Size = UDim2.fromScale(0.68, 0.68), Position = UDim2.fromScale(0.16, 0.14), ZIndex = 4, Parent = face }
+			{ Size = UDim2.fromScale(0.72, 0.72), Position = UDim2.fromScale(0.14, 0.12), ZIndex = 4, Parent = face }
 		)
 	else
 		label = Kit.Text({
 			Text = p.Text or "",
-			Size = UDim2.fromScale(0.86, 0.64),
-			Position = UDim2.fromScale(0.07, 0.18),
+			Size = UDim2.fromScale(0.84, 0.6),
+			Position = UDim2.fromScale(0.08, 0.2),
 			ZIndex = 4,
 			Parent = face,
 			MaxTextSize = p.TextSize,
 		})
 	end
+	local current = p.Color or "Green"
+	local function applyColor(name: string)
+		local c = Theme.Buttons[name] or colors
+		current = name
+		Kit.Paint(face, c[3], c[1])
+		lip.BackgroundColor3 = c[2]
+		stroke.Color = c[2]
+		if label then
+			-- sui colori chiari il testo diventa color inchiostro e senza contorno
+			local light = Theme.LightButtons[name] == true
+			label.TextColor3 = if light then Theme.Ink else Theme.Text
+			local st = label:FindFirstChildOfClass("UIStroke")
+			if st then
+				st.Enabled = not light
+				st.Color = c[2]
+			end
+		end
+	end
+	applyColor(current)
+	-- pressione: la faccia scende sul bordo 3D; passandoci sopra si ingrandisce appena
+	local function press(down: boolean)
+		Kit.Tween(
+			face,
+			if down then 0.06 else 0.2,
+			{ Position = UDim2.fromOffset(0, if down then Theme.Lip - 1 else 0) },
+			if down then Enum.EasingStyle.Quad else Enum.EasingStyle.Back
+		)
+	end
 	face.MouseButton1Down:Connect(function()
-		Kit.Tween(scale, 0.08, { Scale = 0.92 })
+		press(true)
 	end)
 	face.MouseButton1Up:Connect(function()
-		Kit.Tween(scale, 0.25, { Scale = 1 }, Enum.EasingStyle.Back)
+		press(false)
 	end)
 	face.MouseLeave:Connect(function()
+		press(false)
 		Kit.Tween(scale, 0.2, { Scale = 1 })
 	end)
 	face.MouseEnter:Connect(function()
-		Kit.Tween(scale, 0.15, { Scale = 1.05 })
+		Kit.Tween(scale, 0.15, { Scale = 1.04 })
 	end)
 	if p.OnClick then
 		face.Activated:Connect(function()
@@ -383,16 +486,8 @@ function Kit.Button(p: ButtonProps)
 		Label = label,
 		Icon = icon,
 		SetColor = function(name: string)
-			local c = Theme.Buttons[name] or colors
-			face.BackgroundColor3 = c[1]
-			-- sul feltro chiaro il testo diventa scuro e senza contorno
-			if label then
-				local light = name == "White"
-				label.TextColor3 = if light then Theme.Ink else Theme.Text
-				local st = label:FindFirstChildOfClass("UIStroke")
-				if st then
-					st.Enabled = not light
-				end
+			if name ~= current then
+				applyColor(name)
 			end
 		end,
 		SetText = function(text: string)
@@ -403,111 +498,80 @@ function Kit.Button(p: ButtonProps)
 	}
 end
 
--- Badge rosso con numero (notifiche sui pulsanti)
+-- Badge rosso con numero e anello bianco (notifiche sui pulsanti)
 function Kit.Badge(parent: GuiObject): TextLabel
 	local badge = New("Frame", {
 		Name = "Badge",
-		BackgroundColor3 = Theme.Buttons.Red[1],
-		Size = UDim2.fromOffset(34, 34),
-		Position = UDim2.new(1, -20, 0, -14),
+		Size = UDim2.fromOffset(32, 32),
+		Position = UDim2.new(1, -22, 0, -10),
 		ZIndex = 10,
 		Visible = false,
 		Parent = parent,
-	}, { Kit.Corner(UDim.new(1, 0)), Kit.Stroke(3) })
+	}, { Kit.Corner(Theme.Pill), Kit.Stroke(2.5, WHITE) })
+	Kit.PaintNamed(badge, "Red")
 	local text = Kit.Text({
 		Text = "!",
-		Size = UDim2.fromScale(0.8, 0.8),
-		Position = UDim2.fromScale(0.1, 0.1),
+		Size = UDim2.fromScale(0.7, 0.66),
+		Position = UDim2.fromScale(0.15, 0.15),
+		StrokeColor = Theme.Buttons.Red[2],
 		ZIndex = 11,
 		Parent = badge,
 	})
 	return text
 end
 
--- Bottone da cucito rosso con quattro fori e la X di filo (chiude i pannelli)
-function Kit.SewButton(props: { [string]: any })
+-- Pulsante rotondo rosso con la X bianca e l'anello bianco (chiude i pannelli)
+function Kit.CloseButton(props: { [string]: any })
 	local b = Kit.Button({
 		Color = props.Color or "Red",
-		Size = props.Size or UDim2.fromOffset(58, 58),
+		Size = props.Size or UDim2.fromOffset(54, 54),
 		Position = props.Position,
 		AnchorPoint = props.AnchorPoint,
-		Corner = UDim.new(1, 0),
+		Corner = Theme.Pill,
 		Parent = props.Parent,
 		OnClick = props.OnClick,
 	})
-	for _, pos in { { 0.33, 0.33 }, { 0.67, 0.33 }, { 0.33, 0.67 }, { 0.67, 0.67 } } do
-		New("Frame", {
-			Name = "Hole",
-			BackgroundColor3 = Theme.Outline,
-			Size = UDim2.fromScale(0.15, 0.15),
-			Position = UDim2.fromScale(pos[1], pos[2]),
-			AnchorPoint = Vector2.new(0.5, 0.5),
-			ZIndex = 5,
-			Parent = b.Face,
-		}, { Kit.Corner(UDim.new(1, 0)) })
+	local ring = b.Face:FindFirstChildOfClass("UIStroke")
+	if ring then
+		ring.Color = WHITE
+		ring.Thickness = 3
 	end
 	for _, rot in { 45, -45 } do
 		New("Frame", {
-			Name = "Thread",
-			BackgroundColor3 = Theme.Stitch,
-			Size = UDim2.new(0.6, 0, 0.09, 0),
+			Name = "Cross",
+			BackgroundColor3 = WHITE,
+			Size = UDim2.fromScale(0.52, 0.13),
 			Position = UDim2.fromScale(0.5, 0.5),
 			AnchorPoint = Vector2.new(0.5, 0.5),
 			Rotation = rot,
 			ZIndex = 6,
 			Parent = b.Face,
-		}, { Kit.Corner(UDim.new(1, 0)) })
+		}, { Kit.Corner(Theme.Pill) })
 	end
 	return b
 end
 
--- Etichetta di stoffa quasi bianca cucita ai lati (titoli dei pannelli, cartellini)
-function Kit.FabricLabel(props: { [string]: any }): (Frame, TextLabel)
-	local label = New("Frame", {
-		Name = props.Name or "Label",
-		BackgroundColor3 = props.Color or Theme.Card,
-		Size = props.Size,
-		Position = props.Position or UDim2.new(),
-		AnchorPoint = props.AnchorPoint or Vector2.zero,
-		Rotation = props.Rotation or 0,
-		ZIndex = props.ZIndex or 1,
-		LayoutOrder = props.LayoutOrder or 0,
-		Parent = props.Parent,
-	}, { Kit.Corner(UDim.new(0, 8)), Kit.Stroke(props.Stroke or 4) })
-	local zi = (props.ZIndex or 1) + 1
-	if Assets.Images.StitchV then
-		for _, pos in { UDim2.new(0, 4, 0, 6), UDim2.new(1, -8, 0, 6) } do
-			New("ImageLabel", {
-				Name = "SideStitch",
-				BackgroundTransparency = 1,
-				Image = Assets.Images.StitchV,
-				ScaleType = Enum.ScaleType.Tile,
-				TileSize = UDim2.fromOffset(4, 16),
-				ImageColor3 = props.StitchColor or Theme.Ink,
-				Position = pos,
-				Size = UDim2.new(0, 4, 1, -12),
-				ZIndex = zi,
-				Parent = label,
-			})
-		end
+-- Segno di spunta bianco disegnato con due barrette (dentro un riquadro quadrato)
+function Kit.Check(parent: GuiObject, z: number?)
+	for _, arm in { { 0.36, 0.56, 0.3, 45 }, { 0.58, 0.49, 0.5, -47 } } do
+		New("Frame", {
+			Name = "Check",
+			BackgroundColor3 = WHITE,
+			Size = UDim2.fromScale(arm[3], 0.13),
+			Position = UDim2.fromScale(arm[1], arm[2]),
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Rotation = arm[4],
+			ZIndex = z or 2,
+			Parent = parent,
+		}, { Kit.Corner(Theme.Pill) })
 	end
-	local text = Kit.Text({
-		Text = props.Text or "",
-		Font = props.Font,
-		Size = UDim2.new(1, -28, 0.74, 0),
-		Position = UDim2.new(0, 14, 0.13, 0),
-		TextColor3 = props.TextColor3 or Theme.Ink,
-		Stroke = false,
-		ZIndex = zi,
-		Parent = label,
-	})
-	return label, text
 end
 
--- Pannello (finestra) di feltro colorato con la cucitura, l'etichetta del titolo e il bottone
--- da cucito per chiudere. Frame e' un contenitore trasparente (scalato da UI) con l'ombra e la faccia.
-function Kit.Panel(title: string, size: UDim2, color: string?, parent: Instance)
-	local felt = (Theme.Buttons[color or "Cyan"] or Theme.Buttons.Cyan)[1]
+-- Pannello (finestra): superficie colorata con il gradiente, l'ombra netta, la linguetta bianca del
+-- titolo (con il tondo dell'icona) a cavallo del bordo in alto e la X rotonda nell'angolo. Frame e'
+-- un contenitore trasparente (scalato da UI); i contenuti vanno in Body.
+function Kit.Panel(title: string, size: UDim2, color: string?, parent: Instance, icon: string?)
+	local colors = Theme.Buttons[color or "Cyan"] or Theme.Buttons.Cyan
 	local frame = New("Frame", {
 		Name = "Panel",
 		BackgroundTransparency = 1,
@@ -518,42 +582,62 @@ function Kit.Panel(title: string, size: UDim2, color: string?, parent: Instance)
 		ZIndex = 20,
 		Parent = parent,
 	}, { New("UIScale") })
+	local corner = UDim.new(0, 30)
 	New("Frame", {
 		Name = "Shadow",
-		BackgroundColor3 = Theme.Outline,
+		BackgroundColor3 = Theme.Ink,
+		BackgroundTransparency = 0.5,
 		Size = UDim2.fromScale(1, 1),
-		Position = UDim2.fromOffset(0, 8),
+		Position = UDim2.fromOffset(0, 10),
 		ZIndex = 19,
 		Parent = frame,
-	}, { Kit.Corner(UDim.new(0, 28)) })
+	}, { Kit.Corner(corner) })
 	local face = New("Frame", {
 		Name = "Face",
-		BackgroundColor3 = felt,
 		Size = UDim2.fromScale(1, 1),
 		ZIndex = 20,
 		Parent = frame,
-	}, { Kit.Corner(UDim.new(0, 28)), Kit.Stroke(5) })
-	Kit.Felt(face)
-	Kit.Stitch(face, 28)
-	-- etichetta di stoffa con il titolo, cucita sul bordo in alto
-	local ribbon, titleLabel = Kit.FabricLabel({
+	}, { Kit.Corner(corner), Kit.Stroke(3, colors[2]) })
+	Kit.Paint(face, colors[3], colors[1])
+	-- linguetta bianca del titolo, larga quanto il testo
+	local tab = New("Frame", {
 		Name = "Ribbon",
-		Text = title,
-		Size = UDim2.new(0.44, 0, 0, 60),
-		Position = UDim2.new(0.5, 0, 0, -28),
-		AnchorPoint = Vector2.new(0.5, 0),
-		Rotation = -2,
+		AutomaticSize = Enum.AutomaticSize.X,
+		Size = UDim2.fromOffset(0, 54),
+		Position = UDim2.fromOffset(30, -27),
 		ZIndex = 22,
 		Parent = frame,
+	}, {
+		Kit.Corner(Theme.Pill),
+		Kit.Stroke(3, colors[2]),
+		New("UIPadding", { PaddingLeft = UDim.new(0, 68), PaddingRight = UDim.new(0, 26) }),
 	})
-	local _ = ribbon
-	local close = Kit.SewButton({ Position = UDim2.new(1, -30, 0, -22), Parent = frame })
+	Kit.Paint(tab, Theme.Card, Theme.CardShade)
+	local titleLabel = Kit.Text({
+		Name = "Title",
+		Text = title,
+		TextScaled = false,
+		TextSize = 30,
+		AutomaticSize = Enum.AutomaticSize.X,
+		Size = UDim2.new(0, 0, 1, 0),
+		TextColor3 = Theme.Ink,
+		Stroke = false,
+		ZIndex = 23,
+		Parent = tab,
+	})
+	-- tondo dell'icona sull'inizio della linguetta (fuori dalla linguetta, che si allarga col testo)
+	Kit.IconBadge(icon, color or "Cyan", {
+		Size = UDim2.fromOffset(66, 66),
+		Position = UDim2.fromOffset(22, -33),
+		ZIndex = 24,
+		Ring = 3,
+		RingColor = colors[2],
+		IconScale = 0.84,
+		Parent = frame,
+	})
+	local close = Kit.CloseButton({ Position = UDim2.new(1, -38, 0, -18), Parent = frame })
 	close.Frame.ZIndex = 24
-	for _, d in close.Frame:GetDescendants() do
-		if d:IsA("GuiObject") then
-			d.ZIndex += 22
-		end
-	end
+	Kit.RaiseZ(close.Frame, 22)
 	local body = New("Frame", {
 		Name = "Body",
 		BackgroundTransparency = 1,
@@ -565,20 +649,25 @@ function Kit.Panel(title: string, size: UDim2, color: string?, parent: Instance)
 	return { Frame = frame, Body = body, Close = close, Title = titleLabel, Face = face }
 end
 
--- Scheda (riquadro) dentro i pannelli: interno quasi bianco con la cucitura chiara
+-- Scheda (riquadro) dentro i pannelli: bianca con un velo di gradiente; colorata se Color e' un
+-- colore acceso (gradiente piu' chiaro in alto e contorno sottile piu' scuro)
 function Kit.Card(props: { [string]: any }): Frame
 	local color = props.Color or Theme.Card
 	local card = New("Frame", {
-		BackgroundColor3 = color,
 		Size = props.Size or UDim2.fromScale(1, 1),
 		Position = props.Position or UDim2.new(),
 		LayoutOrder = props.LayoutOrder or 0,
 		ZIndex = props.ZIndex or 22,
 		Name = props.Name or "Card",
-	}, { Kit.Corner(UDim.new(0, 16)), Kit.Stroke(3) })
-	local light = color == Theme.Card or color == Theme.CardLight
-	Kit.Felt(card, if light then 0.95 else 0.9)
-	Kit.Stitch(card, 16, if light then Theme.StitchCard else nil)
+	}, { Kit.Corner(props.Corner or UDim.new(0, 18)) })
+	if color == Theme.Card then
+		Kit.Paint(card, Theme.Card, Theme.CardShade)
+	elseif color == Theme.CardLight then
+		Kit.Paint(card, Theme.CardLight, Kit.Tint(Theme.CardLight, -0.03))
+	else
+		Kit.Paint(card, Kit.Tint(color, 0.24), color)
+		Kit.Stroke(2, Kit.Tint(color, -0.28)).Parent = card
+	end
 	if props.Parent then
 		card.Parent = props.Parent
 	end

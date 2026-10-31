@@ -228,13 +228,13 @@ local function incubatorBillboard(base: BasePart)
 		Enabled = false,
 		Parent = base,
 	})
-	local label = Kit.Text({ Text = "", Size = UDim2.new(1, 0, 0, 38), Stroke = 4, Parent = gui })
+	local label = Kit.Text({ Text = "", Size = UDim2.new(1, 0, 0, 38), Stroke = 3, Parent = gui })
 	local bar = Kit.New("Frame", {
-		BackgroundColor3 = Kit.Theme.Outline,
+		BackgroundColor3 = Kit.Theme.Ink,
 		Size = UDim2.new(0.86, 0, 0, 16),
 		Position = UDim2.new(0.07, 0, 0, 44),
 		Parent = gui,
-	}, { Kit.Corner(UDim.new(1, 0)), Kit.Stroke(3) })
+	}, { Kit.Corner(UDim.new(1, 0)), Kit.Stroke(2.5, Color3.new(1, 1, 1)) })
 	local fill = Kit.New(
 		"Frame",
 		{ BackgroundColor3 = Kit.Theme.Green, Size = UDim2.fromScale(0, 1), Parent = bar },
@@ -324,7 +324,11 @@ local function drawBoard(board: BasePart)
 	gui:ClearAllChildren()
 	local T = C.Lang.T
 	local New = Kit.New
-	New("Frame", { BackgroundColor3 = Color3.fromRGB(40, 30, 72), Size = UDim2.fromScale(1, 1), Parent = gui })
+	New(
+		"Frame",
+		{ BackgroundColor3 = Kit.Theme.Ink, Size = UDim2.fromScale(1, 1), Parent = gui },
+		{ Kit.Gradient(Color3.fromRGB(255, 255, 255), Color3.fromRGB(150, 160, 210)) }
+	)
 	Kit.Text({
 		Text = T(board:GetAttribute("TitleKey") or "LbMoney"),
 		TextColor3 = Kit.Theme.Gold,
@@ -361,7 +365,7 @@ local function drawBoard(board: BasePart)
 		})
 		Kit.Text({
 			Text = e.name,
-			Font = Kit.Theme.BodyFont,
+			Font = Kit.Theme.HeadFont,
 			Size = UDim2.new(0.5, 0, 0.065, 0),
 			Position = UDim2.new(0.18, 0, y, 0),
 			TextXAlignment = Enum.TextXAlignment.Left,

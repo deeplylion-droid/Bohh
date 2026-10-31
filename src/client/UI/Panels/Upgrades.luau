@@ -44,14 +44,15 @@ end
 
 function Panel.Build(parent: Instance, C)
 	local T = C.Lang.T
-	local p = Kit.Panel(T("MenuUpgrades"), UDim2.fromOffset(760, 560), "Blue", parent)
+	local p = Kit.Panel(T("MenuUpgrades"), UDim2.fromOffset(760, 560), "Blue", parent, "Upgrades")
 	local scroll = New("ScrollingFrame", {
 		BackgroundTransparency = 1,
 		Size = UDim2.fromScale(1, 1),
 		CanvasSize = UDim2.new(),
 		AutomaticCanvasSize = Enum.AutomaticSize.Y,
 		ScrollBarThickness = 8,
-		ScrollBarImageColor3 = Theme.Outline,
+		ScrollBarImageColor3 = Theme.Text,
+		ScrollBarImageTransparency = 0.25,
 		BorderSizePixel = 0,
 		Parent = p.Body,
 	}, {
@@ -78,37 +79,31 @@ function Panel.Build(parent: Instance, C)
 			Parent = card,
 		})
 		local desc = Kit.Text({
-			Font = Theme.BodyFont,
+			Font = Theme.SoftFont,
 			Size = UDim2.new(1, -420, 0, 36),
-			Position = UDim2.fromOffset(82, 42),
+			Position = UDim2.fromOffset(81, 42),
 			TextXAlignment = Enum.TextXAlignment.Left,
 			TextYAlignment = Enum.TextYAlignment.Top,
 			TextWrapped = true,
 			TextColor3 = Theme.InkSoft,
 			Stroke = false,
-			MaxTextSize = 20,
+			MaxTextSize = 18,
 			Parent = card,
 		})
 		-- livello: numero e barra tra la descrizione e il pulsante
 		local lvl = Kit.Text({
-			Font = Theme.BodyFont,
-			Size = UDim2.fromOffset(128, 24),
-			Position = UDim2.new(1, -326, 0, 11),
-			TextColor3 = Theme.Ink,
+			Font = Theme.HeadFont,
+			Size = UDim2.fromOffset(128, 22),
+			Position = UDim2.new(1, -326, 0, 13),
+			TextColor3 = Theme.InkSoft,
 			Stroke = false,
 			Parent = card,
 		})
-		local bar = New("Frame", {
-			BackgroundColor3 = Theme.CardLight,
+		local _, fill = Kit.Bar({
 			Size = UDim2.fromOffset(128, 16),
 			Position = UDim2.new(1, -326, 0, 42),
 			Parent = card,
-		}, { Kit.Corner(UDim.new(1, 0)), Kit.Stroke(2) })
-		local fill = New(
-			"Frame",
-			{ BackgroundColor3 = Theme.Buttons.Green[1], Size = UDim2.fromScale(0, 1), Parent = bar },
-			{ Kit.Corner(UDim.new(1, 0)) }
-		)
+		})
 		local buy = Kit.Button({
 			Color = "Green",
 			Text = "",
@@ -124,7 +119,7 @@ function Panel.Build(parent: Instance, C)
 	end
 
 	-- trappole del lotto
-	local trapHeader = Kit.Text({ Size = UDim2.new(1, 0, 0, 40), LayoutOrder = 100, Parent = scroll })
+	local trapHeader = Kit.Text({ Size = UDim2.new(1, 0, 0, 40), LayoutOrder = 100, Stroke = 2.5, Parent = scroll })
 	local trapRows = {}
 	for i, id in Combat.TrapOrder do
 		local def = Combat.Traps[id]
@@ -138,9 +133,9 @@ function Panel.Build(parent: Instance, C)
 			Parent = card,
 		})
 		local desc = Kit.Text({
-			Font = Theme.BodyFont,
+			Font = Theme.SoftFont,
 			Size = UDim2.new(0.5, 0, 0, 20),
-			Position = UDim2.fromOffset(78, 42),
+			Position = UDim2.fromOffset(77, 42),
 			TextXAlignment = Enum.TextXAlignment.Left,
 			TextColor3 = Theme.InkSoft,
 			Stroke = false,

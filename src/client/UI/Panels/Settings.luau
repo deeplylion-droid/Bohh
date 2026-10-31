@@ -18,7 +18,7 @@ local ROWS = {
 
 function Panel.Build(parent: Instance, C)
 	local T = C.Lang.T
-	local p = Kit.Panel(T("SettingsTitle"), UDim2.fromOffset(580, 450), "Blue", parent)
+	local p = Kit.Panel(T("SettingsTitle"), UDim2.fromOffset(580, 450), "Blue", parent, "Settings")
 	local rows = {}
 	for i, r in ROWS do
 		local card = Kit.Card({
@@ -26,7 +26,7 @@ function Panel.Build(parent: Instance, C)
 			Position = UDim2.new(0, 5, 0, 30 + (i - 1) * 86),
 			Parent = p.Body,
 		})
-		Kit.Icon(r.icon, { Size = UDim2.fromOffset(46, 46), Position = UDim2.fromOffset(14, 14), Parent = card })
+		Kit.Icon(r.icon, { Size = UDim2.fromOffset(50, 50), Position = UDim2.fromOffset(12, 12), Parent = card })
 		local label = Kit.Text({
 			Size = UDim2.new(0.55, 0, 0, 34),
 			Position = UDim2.fromOffset(74, 20),

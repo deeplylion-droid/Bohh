@@ -12,23 +12,32 @@ local Panel = {}
 
 function Panel.Build(parent: Instance, C)
 	local T = C.Lang.T
-	local p = Kit.Panel(T("CodesTitle"), UDim2.fromOffset(560, 330), "Orange", parent)
+	local p = Kit.Panel(T("CodesTitle"), UDim2.fromOffset(560, 330), "Orange", parent, "Codes")
 	local box = New("TextBox", {
-		BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+		BackgroundColor3 = Theme.Card,
 		Size = UDim2.new(1, -20, 0, 66),
 		Position = UDim2.fromOffset(10, 40),
-		Font = Theme.TitleFont,
+		FontFace = Theme.TitleFont,
 		TextScaled = true,
-		TextColor3 = Theme.Outline,
-		PlaceholderColor3 = Color3.fromRGB(150, 140, 180),
+		TextColor3 = Theme.Ink,
+		PlaceholderColor3 = Color3.fromRGB(160, 156, 192),
 		ClearTextOnFocus = false,
 		Text = "",
 		Parent = p.Body,
-	}, { Kit.Corner(UDim.new(0, 18)), Kit.Stroke(4), Kit.Padding(12) })
+	}, {
+		Kit.Corner(UDim.new(0, 20)),
+		Kit.Stroke(3, Theme.Buttons.Orange[2]),
+		New("UIPadding", {
+			PaddingLeft = UDim.new(0, 20),
+			PaddingRight = UDim.new(0, 20),
+			PaddingTop = UDim.new(0, 14),
+			PaddingBottom = UDim.new(0, 14),
+		}),
+	})
 	local result = Kit.Text({
-		Font = Theme.BodyFont,
+		Font = Theme.HeadFont,
 		Size = UDim2.new(1, -20, 0, 28),
-		Position = UDim2.fromOffset(10, 116),
+		Position = UDim2.fromOffset(10, 118),
 		Stroke = 2,
 		Text = "",
 		Parent = p.Body,

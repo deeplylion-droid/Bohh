@@ -495,6 +495,10 @@ mt.__newindex = function(self, key, value)
 	end
 	local old = self.__props[key]
 	self.__props[key] = value
+	-- come in Roblox, Font (Enum) e FontFace (Font) sono la stessa proprieta': l'ultima vince
+	if key == "Font" then
+		self.__props.FontFace = nil
+	end
 	if old ~= value and type(key) == "string" and string.sub(key, 1, 2) ~= "__" then
 		fireChange(self, key)
 	end
@@ -951,6 +955,8 @@ local function ser(v)
 		return out
 	elseif t == "EnumItem" then
 		return { "Enum", v.Name }
+	elseif t == "Font" then
+		return { "Font", v.Family, v.Weight.Name, v.Style.Name }
 	elseif t == "number" or t == "string" or t == "boolean" then
 		return v
 	end

@@ -33,7 +33,7 @@ end
 
 function Panel.Build(parent: Instance, C)
 	local T = C.Lang.T
-	local p = Kit.Panel(T("WheelTitle"), UDim2.fromOffset(860, 540), "Orange", parent)
+	local p = Kit.Panel(T("WheelTitle"), UDim2.fromOffset(860, 540), "Orange", parent, "Wheel")
 
 	-- ruota (a sinistra) con la freccia fissa in alto
 	local holder = New("Frame", {
@@ -57,27 +57,27 @@ function Panel.Build(parent: Instance, C)
 		disc.BackgroundTransparency = 0
 		disc.BackgroundColor3 = Theme.CardLight
 		Kit.Corner(UDim.new(1, 0)).Parent = disc
-		Kit.Stroke(6).Parent = disc
+		Kit.Stroke(5).Parent = disc
 	end
 	local refreshFace = WheelFace.Build(disc, C, 22)
 	local pointer = New("Frame", {
 		Name = "Pointer",
-		BackgroundColor3 = Theme.Buttons.Red[1],
 		Size = UDim2.fromOffset(44, 44),
 		Position = UDim2.new(0.5, 0, 0, 6),
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		Rotation = 45,
 		ZIndex = 30,
 		Parent = holder,
-	}, { Kit.Corner(UDim.new(0, 8)), Kit.Stroke(4) })
-	New("Frame", {
-		BackgroundColor3 = Theme.Gold,
-		Size = UDim2.fromOffset(26, 26),
+	}, { Kit.Corner(UDim.new(0, 10)), Kit.Stroke(3, Theme.Text) })
+	Kit.PaintNamed(pointer, "Red")
+	local knob = New("Frame", {
+		Size = UDim2.fromOffset(28, 28),
 		Position = UDim2.new(0.5, 0, 0, -18),
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		ZIndex = 31,
 		Parent = holder,
-	}, { Kit.Corner(UDim.new(1, 0)), Kit.Stroke(4) })
+	}, { Kit.Corner(UDim.new(1, 0)), Kit.Stroke(3, Theme.Text) })
+	Kit.PaintNamed(knob, "Yellow")
 	local _ = pointer
 
 	-- informazioni e pulsanti (a destra)
@@ -88,15 +88,21 @@ function Panel.Build(parent: Instance, C)
 		ZIndex = 22,
 		Parent = p.Body,
 	})
-	local freeTitle = Kit.Text({ Size = UDim2.new(1, 0, 0, 36), Position = UDim2.fromOffset(0, 4), Parent = right })
+	local freeTitle = Kit.Text({
+		Size = UDim2.new(1, 0, 0, 34),
+		Position = UDim2.fromOffset(0, 4),
+		Stroke = 2.5,
+		Parent = right,
+	})
 	local freeClock = Kit.Text({
-		Size = UDim2.new(1, 0, 0, 44),
-		Position = UDim2.fromOffset(0, 42),
+		Size = UDim2.new(1, 0, 0, 46),
+		Position = UDim2.fromOffset(0, 40),
 		TextColor3 = Theme.Green,
+		Stroke = 3,
 		Parent = right,
 	})
 	local spinsText = Kit.Text({
-		Font = Theme.BodyFont,
+		Font = Theme.HeadFont,
 		Size = UDim2.new(1, 0, 0, 30),
 		Position = UDim2.fromOffset(0, 92),
 		Stroke = 2,
@@ -164,7 +170,7 @@ function Panel.Build(parent: Instance, C)
 		OnClick = spin,
 	})
 	local buyTitle = Kit.Text({
-		Font = Theme.BodyFont,
+		Font = Theme.HeadFont,
 		Size = UDim2.new(1, 0, 0, 26),
 		Position = UDim2.fromOffset(0, 236),
 		TextColor3 = Theme.Muted,
@@ -202,7 +208,8 @@ function Panel.Build(parent: Instance, C)
 	local jackpot = Kit.Text({
 		Size = UDim2.new(1, -10, 0, 34),
 		Position = UDim2.fromOffset(5, 412),
-		TextColor3 = Color3.fromRGB(255, 120, 110),
+		TextColor3 = Theme.Gold,
+		Stroke = 2.5,
 		MaxTextSize = 28,
 		Parent = right,
 	})

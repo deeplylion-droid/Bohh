@@ -134,7 +134,7 @@ local function setupBoard(board: Instance)
 			Size = UDim2.new(1, 0, 0, 52),
 			Position = UDim2.fromOffset(0, 58 + (i - 1) * 60),
 			Parent = root,
-		}, { Kit.Corner(UDim.new(0, 12)), Kit.Stroke(3) })
+		}, { Kit.Corner(UDim.new(0, 14)), Kit.Stroke(2.5, Theme.Ink, 0.4) })
 		local text = Kit.Text({
 			Font = Theme.BodyFont,
 			Size = UDim2.new(1, -120, 0.7, 0),

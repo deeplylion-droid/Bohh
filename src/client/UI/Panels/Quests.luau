@@ -56,7 +56,7 @@ end
 
 function Panel.Build(parent: Instance, C)
 	local T = C.Lang.T
-	local p = Kit.Panel(T("QuestsTitle"), UDim2.fromOffset(920, 560), "Blue", parent)
+	local p = Kit.Panel(T("QuestsTitle"), UDim2.fromOffset(920, 560), "Blue", parent, "Quests")
 	local columns = {}
 	for col, kind in { "Daily", "Weekly" } do
 		local x = (col - 1) * 0.5
@@ -71,10 +71,11 @@ function Panel.Build(parent: Instance, C)
 			Size = UDim2.new(0.62, 0, 0, 36),
 			Position = UDim2.fromOffset(6, 14),
 			TextXAlignment = Enum.TextXAlignment.Left,
+			Stroke = 2.5,
 			Parent = frame,
 		})
 		local clock = Kit.Text({
-			Font = Theme.BodyFont,
+			Font = Theme.HeadFont,
 			Size = UDim2.new(0.38, -6, 0, 26),
 			Position = UDim2.new(0.62, 0, 0, 20),
 			TextXAlignment = Enum.TextXAlignment.Right,
@@ -99,31 +100,24 @@ function Panel.Build(parent: Instance, C)
 			local text = Kit.Text({
 				Font = Theme.BodyFont,
 				Size = UDim2.new(1, -206, 0, 46),
-				Position = UDim2.fromOffset(82, 6),
+				Position = UDim2.fromOffset(82, 7),
 				TextXAlignment = Enum.TextXAlignment.Left,
 				TextWrapped = true,
 				TextColor3 = Theme.Ink,
 				Stroke = false,
-				MaxTextSize = 23,
+				MaxTextSize = 21,
 				ZIndex = 23,
 				Parent = card,
 			})
-			local bar = New("Frame", {
-				BackgroundColor3 = Theme.CardLight,
+			local bar, fill = Kit.Bar({
 				Size = UDim2.new(1, -212, 0, 26),
 				Position = UDim2.fromOffset(84, 62),
 				ZIndex = 23,
 				Parent = card,
-			}, { Kit.Corner(UDim.new(1, 0)), Kit.Stroke(2) })
-			local fill = New("Frame", {
-				BackgroundColor3 = Theme.Buttons.Green[1],
-				Size = UDim2.fromScale(0, 1),
-				ZIndex = 24,
-				Parent = bar,
-			}, { Kit.Corner(UDim.new(1, 0)) })
+			})
 			local barText = Kit.Text({
-				Size = UDim2.fromScale(1, 0.84),
-				Position = UDim2.fromScale(0, 0.08),
+				Size = UDim2.fromScale(1, 0.8),
+				Position = UDim2.fromScale(0, 0.1),
 				ZIndex = 25,
 				Stroke = 2,
 				Parent = bar,
@@ -186,13 +180,14 @@ function Panel.Build(parent: Instance, C)
 			Parent = bonus,
 		})
 		local bonusText = Kit.Text({
-			Font = Theme.BodyFont,
+			Font = Theme.HeadFont,
 			Size = UDim2.new(1, -196, 0, 44),
 			Position = UDim2.fromOffset(64, 11),
 			TextXAlignment = Enum.TextXAlignment.Left,
 			TextWrapped = true,
 			Stroke = 2,
-			MaxTextSize = 21,
+			StrokeColor = Theme.Buttons.Purple[2],
+			MaxTextSize = 20,
 			ZIndex = 23,
 			Parent = bonus,
 		})

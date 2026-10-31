@@ -29,14 +29,56 @@ GUIOBJ = {"Frame", "TextLabel", "TextButton", "TextBox", "ImageLabel", "ImageBut
 TEXT = {"TextLabel", "TextButton", "TextBox"}
 IMAGE = {"ImageLabel", "ImageButton"}
 
-FONT_FAMILY = {
-    "LuckiestGuy": "'Luckiest Guy', 'Noto Color Emoji'",
-    "FredokaOne": "'Fredoka One', 'Noto Color Emoji'",
-    "DenkOne": "'Denk One', 'Noto Color Emoji'",
-    "PatrickHand": "'Patrick Hand', 'Noto Color Emoji'",
-}
 UI_FONTS = ROOT / "art" / "ui" / "fonts"
+
+# Font di Roblox -> font web. FontFace = Font.new("rbxasset://fonts/families/<Famiglia>.json", peso):
+# famiglia e peso scelgono il file in art/ui/fonts (Nunito e' variabile: tutti i pesi in un file).
+# Enum.Font (proprieta' Font) si traduce nella stessa coppia famiglia/peso, come fa Roblox.
+WEIGHTS = {"Thin": 100, "ExtraLight": 200, "Light": 300, "Regular": 400, "Medium": 500, "SemiBold": 600,
+           "Bold": 700, "ExtraBold": 800, "Heavy": 900}
+FAMILIES = {  # famiglia Roblox -> (nome CSS, file, pesi del file)
+    "Nunito": ("Nunito", UI_FONTS / "Nunito.woff2", "200 1000"),
+    "LuckiestGuy": ("Luckiest Guy", FONTS / "luckiest-guy-latin-400-normal.woff2", "400"),
+    "FredokaOne": ("Fredoka One", FONTS / "fredoka-one-latin-400-normal.woff2", "400"),
+    "DenkOne": ("Denk One", UI_FONTS / "DenkOne-400.woff2", "400"),
+    "PatrickHand": ("Patrick Hand", UI_FONTS / "PatrickHand-400.woff2", "400"),
+    "Oswald": ("Oswald", UI_FONTS / "Oswald.woff2", "400 700"),
+    "Bangers": ("Bangers", UI_FONTS / "Bangers-400.woff2", "400"),
+}
+ENUM_FONTS = {  # Enum.Font -> (famiglia Roblox, peso)
+    "LuckiestGuy": ("LuckiestGuy", 400), "FredokaOne": ("FredokaOne", 400), "DenkOne": ("DenkOne", 400),
+    "PatrickHand": ("PatrickHand", 400), "Oswald": ("Oswald", 400), "Bangers": ("Bangers", 400),
+    "Nunito": ("Nunito", 400), "SourceSans": ("SourceSansPro", 400), "SourceSansBold": ("SourceSansPro", 700),
+    "SourceSansSemibold": ("SourceSansPro", 600),
+}
+EMOJI = "'Noto Color Emoji'"
 DEFAULT_FONT = "'DejaVu Sans', 'Noto Color Emoji', sans-serif"
+
+
+def font_of(p) -> tuple[str, int]:
+    """Famiglia Roblox e peso del testo: FontFace se c'e', altrimenti l'Enum.Font."""
+    ff = p.get("FontFace")
+    if isinstance(ff, list) and ff and ff[0] == "Font":
+        m = re.search(r"families/([A-Za-z0-9]+)\.json", ff[1] or "")
+        return (m.group(1) if m else "Default"), WEIGHTS.get(ff[2], 400)
+    return ENUM_FONTS.get(enum(p.get("Font"), "Legacy"), ("Default", 400))
+
+
+def font_key(fam: str, weight: int) -> str:
+    return f"{fam}:{weight}" if fam in FAMILIES else "Default:400"
+
+
+def font_css(key: str) -> tuple[str, int]:
+    """Famiglia CSS (con l'emoji di riserva) e peso per una chiave famiglia:peso."""
+    fam, w = key.split(":")
+    if fam not in FAMILIES:
+        return DEFAULT_FONT, 400
+    return f"'{FAMILIES[fam][0]}', {EMOJI}", int(w)
+
+
+def font_faces() -> str:
+    return "\n".join(f"@font-face {{ font-family: '{name}'; font-weight: {weights}; src: url('{path.as_uri()}'); }}"
+                     for name, path, weights in FAMILIES.values())
 
 
 def load_images() -> dict[str, Path]:
@@ -128,32 +170,32 @@ def stroke_shadow(t: float, color: str) -> str:
 # ------------------------------------------------------------------------------------------
 # Metriche dei font (larghezza dei caratteri misurata in Chromium, per AutomaticSize)
 # ------------------------------------------------------------------------------------------
-METRIC_FONTS = {"LuckiestGuy": "'Luckiest Guy'", "FredokaOne": "'Fredoka One'", "DenkOne": "'Denk One'",
-                "PatrickHand": "'Patrick Hand'", "Default": "'DejaVu Sans'"}
 METRICS: dict = {}
 
 
-def load_metrics(chars: set[str]) -> None:
+def load_metrics(chars: set[str], keys: set[str]) -> None:
+    """Larghezza di ogni carattere a 100px e altezza della riga per ogni coppia famiglia:peso usata."""
     cache = OUT / "font_metrics.json"
     data = json.loads(cache.read_text()) if cache.exists() else {}
-    missing = sorted(c for c in chars if any(c not in data.get(f, {}) for f in METRIC_FONTS))
-    if missing or any("_lh" not in data.get(f, {}) for f in METRIC_FONTS):
+    keys = set(keys) | {"Default:400"}
+    missing = sorted(c for c in chars if any(c not in data.get(k, {}) for k in keys))
+    if missing or any("_lh" not in data.get(k, {}) for k in keys):
         page_path = OUT / "_metrics.html"
-        fams = json.dumps(METRIC_FONTS)
+        fams = json.dumps({k: "{1} 100px {0}".format(*font_css(k)) for k in sorted(keys)})
+        samples = "".join(f'<span style="font-family:{font_css(k)[0]};font-weight:{font_css(k)[1]}">a</span>'
+                          for k in sorted(keys))
         page_path.write_text(f"""<!doctype html><html><head><meta charset="utf-8"><style>
-@font-face {{ font-family: 'Luckiest Guy'; src: url('{(FONTS / "luckiest-guy-latin-400-normal.woff2").as_uri()}'); }}
-@font-face {{ font-family: 'Fredoka One'; src: url('{(FONTS / "fredoka-one-latin-400-normal.woff2").as_uri()}'); }}
-@font-face {{ font-family: 'Denk One'; src: url('{(UI_FONTS / "DenkOne-400.woff2").as_uri()}'); }}
-@font-face {{ font-family: 'Patrick Hand'; src: url('{(UI_FONTS / "PatrickHand-400.woff2").as_uri()}'); }}
-</style></head><body><span style="font-family:'Luckiest Guy'">a</span><span style="font-family:'Fredoka One'">a</span><span style="font-family:'Denk One'">a</span><span style="font-family:'Patrick Hand'">a</span>
+{font_faces()}
+</style></head><body>{samples}
 <pre id="out"></pre><script>
 const chars = {json.dumps(missing)};
 const fams = {fams};
-document.fonts.ready.then(() => {{
+document.fonts.ready.then(async () => {{
+  for (const f of Object.values(fams)) await document.fonts.load(f, 'Hg');
   const c = document.createElement('canvas').getContext('2d');
   const res = {{}};
-  for (const [k, fam] of Object.entries(fams)) {{
-    c.font = '100px ' + fam + ", 'Noto Color Emoji'";
+  for (const [k, font] of Object.entries(fams)) {{
+    c.font = font;
     const m = c.measureText('Hg');
     res[k] = {{_lh: m.fontBoundingBoxAscent + m.fontBoundingBoxDescent}};
     for (const ch of chars) res[k][ch] = c.measureText(ch).width;
@@ -178,8 +220,8 @@ def plain(text: str) -> str:
 
 
 def text_size(text: str, font: str, ts: float) -> tuple[float, float]:
-    """Larghezza e altezza di un testo (TextSize di Roblox) senza a capo automatico."""
-    m = METRICS.get(font if font in METRICS else "Default", {})
+    """Larghezza e altezza di un testo (TextSize di Roblox) senza a capo automatico; font = famiglia:peso."""
+    m = METRICS.get(font if font in METRICS else "Default:400", {})
     lh = m.get("_lh", 100) or 100
     css = ts * 100 / lh
     lines = plain(text).split("\n")
@@ -230,7 +272,7 @@ def natural_size(node, w, h):
         pt, pb = udim(pp.get("PaddingTop", ["UDim", 0, 0]), h), udim(pp.get("PaddingBottom", ["UDim", 0, 0]), h)
     nw = nh = 0.0
     if node["c"] in TEXT and not p.get("TextScaled", False) and p.get("Text"):
-        nw, nh = text_size(p["Text"], enum(p.get("Font"), "Legacy"), p.get("TextSize", 14))
+        nw, nh = text_size(p["Text"], font_key(*font_of(p)), p.get("TextSize", 14))
     kids = [k for k in node.get("k", []) if k["c"] in GUIOBJ and k["p"].get("Visible", True)]
     layout = child_of(node, "UIListLayout")
     if layout and kids:
@@ -458,8 +500,8 @@ class Renderer:
         tt = p.get("TextTransparency", 0)
         if not text or tt >= 1:
             return ""
-        font = enum(p.get("Font"), "Legacy")
-        family = FONT_FAMILY.get(font, DEFAULT_FONT)
+        font = font_key(*font_of(p))
+        family, weight = font_css(font)
         scaled = p.get("TextScaled", False)
         wrapped = p.get("TextWrapped", False)
         cons = child_of(node, "UITextSizeConstraint")
@@ -479,7 +521,7 @@ class Renderer:
                    f"{udim(pp.get('PaddingBottom', ['UDim', 0, 0]), h)}px {udim(pp.get('PaddingLeft', ['UDim', 0, 0]), w)}px;")
         ws = "pre-wrap" if wrapped else "pre"
         attrs = (f'data-scaled="{1 if scaled else 0}" data-ts="{p.get("TextSize", 14)}" data-max="{maxts}" '
-                 f'data-min="{mints}" data-font="{font}"')
+                 f'data-min="{mints}" data-font="{font}" data-f="{100 / (METRICS.get(font, {}).get("_lh") or 100):.5f}"')
         layers = []
         if stroke and stroke[2] < 1:
             layers.append(f'<span class="tx stroke" style="color:{stroke[1]};text-shadow:{stroke_shadow(stroke[0], stroke[1])};'
@@ -491,7 +533,7 @@ class Renderer:
             layers.append(f'<span class="tx" style="color:{fill};white-space:{ws};text-align:{ta}">{content}</span>')
         boxes = "".join(
             f'<div class="tb" {attrs} style="position:absolute;inset:0;display:flex;justify-content:{xa};align-items:{ya};'
-            f'font-family:{family};{pad}">{layer}</div>' for layer in layers)
+            f'font-family:{family};font-weight:{weight};{pad}">{layer}</div>' for layer in layers)
         return boxes
 
     def viewport_html(self, node):
@@ -598,20 +640,10 @@ def core_gui(vw: int, vh: int, touch: bool, core: dict) -> str:
 
 SCRIPT = """
 <script>
-const FACTORS = {};
-function factor(font) {
-  if (FACTORS[font] !== undefined) return FACTORS[font];
-  const fam = {LuckiestGuy: "'Luckiest Guy'", FredokaOne: "'Fredoka One'"}[font] || "'DejaVu Sans'";
-  const c = document.createElement('canvas').getContext('2d');
-  c.font = '100px ' + fam;
-  const m = c.measureText('Hg');
-  const lh = m.fontBoundingBoxAscent + m.fontBoundingBoxDescent;
-  FACTORS[font] = lh > 0 ? 100 / lh : 1;
-  return FACTORS[font];
-}
+// TextSize di Roblox = altezza della riga: font-size CSS = TextSize * 100 / altezza della riga a 100px
 function apply(box, ts) {
   for (const sp of box.querySelectorAll('.tx')) {
-    sp.style.fontSize = (ts * factor(box.dataset.font)) + 'px';
+    sp.style.fontSize = (ts * (parseFloat(box.dataset.f) || 1)) + 'px';
     sp.style.lineHeight = ts + 'px';
   }
 }
@@ -666,20 +698,23 @@ document.fonts.ready.then(fitAll);
 """
 
 
-def collect_chars(node, out: set[str]) -> None:
+def collect_chars(node, out: set[str], fonts: set[str]) -> None:
     for key in ("Text", "PlaceholderText"):
         v = node["p"].get(key)
         if isinstance(v, str):
             out.update(plain(v))
+    if node["c"] in TEXT:
+        fonts.add(font_key(*font_of(node["p"])))
     for k in node.get("k", []):
-        collect_chars(k, out)
+        collect_chars(k, out, fonts)
 
 
 def page(scene: dict) -> tuple[str, list[str]]:
     vw, vh = scene["viewport"]
     chars: set[str] = set()
-    collect_chars(scene["root"], chars)
-    load_metrics(chars)
+    fonts: set[str] = set()
+    collect_chars(scene["root"], chars, fonts)
+    load_metrics(chars, fonts)
     r = Renderer()
     guis = [g for g in scene["root"].get("k", []) if g["c"] == "ScreenGui"]
     guis.sort(key=lambda g: g["p"].get("DisplayOrder", 0))
@@ -690,10 +725,7 @@ def page(scene: dict) -> tuple[str, list[str]]:
     bg = ROOT / "art" / "out" / "world" / "trail.png"
     bg_css = f"background:#4a6b8c url('{bg.as_uri()}') center/cover" if bg.exists() else "background:#4a6b8c"
     doc = f"""<!doctype html><html><head><meta charset="utf-8"><style>
-@font-face {{ font-family: 'Luckiest Guy'; src: url('{(FONTS / "luckiest-guy-latin-400-normal.woff2").as_uri()}'); }}
-@font-face {{ font-family: 'Fredoka One'; src: url('{(FONTS / "fredoka-one-latin-400-normal.woff2").as_uri()}'); }}
-@font-face {{ font-family: 'Denk One'; src: url('{(UI_FONTS / "DenkOne-400.woff2").as_uri()}'); }}
-@font-face {{ font-family: 'Patrick Hand'; src: url('{(UI_FONTS / "PatrickHand-400.woff2").as_uri()}'); }}
+{font_faces()}
 html, body {{ margin:0; padding:0; width:{vw}px; height:{vh}px; overflow:hidden; {bg_css}; }}
 .gui, .g {{ position:absolute; box-sizing:border-box; }}
 .tx {{ display:block; }}

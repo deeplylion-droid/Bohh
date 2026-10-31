@@ -50,9 +50,9 @@ end
 
 function Panel.Build(parent: Instance, C)
 	local T = C.Lang.T
-	local p = Kit.Panel(T("IndexTitle"), UDim2.fromOffset(880, 600), "Purple", parent)
+	local p = Kit.Panel(T("IndexTitle"), UDim2.fromOffset(880, 600), "Purple", parent, "Index")
 	local progress = Kit.Text({
-		Font = Theme.BodyFont,
+		Font = Theme.HeadFont,
 		Size = UDim2.new(1, 0, 0, 26),
 		Position = UDim2.fromOffset(0, 18),
 		Stroke = 2,
@@ -65,7 +65,8 @@ function Panel.Build(parent: Instance, C)
 		CanvasSize = UDim2.new(),
 		AutomaticCanvasSize = Enum.AutomaticSize.Y,
 		ScrollBarThickness = 8,
-		ScrollBarImageColor3 = Theme.Outline,
+		ScrollBarImageColor3 = Theme.Text,
+		ScrollBarImageTransparency = 0.25,
 		BorderSizePixel = 0,
 		Parent = p.Body,
 	}, {
@@ -86,30 +87,34 @@ function Panel.Build(parent: Instance, C)
 			-- 4 pet per riga, 5 per gli Ultra; i 10 Primordiali vanno su due file da 5
 			local perLine = if #list > 5 then math.ceil(#list / 2) else #list
 			local lines = math.ceil(#list / perLine)
+			-- riga del colore della rarita' (gradiente piu' chiaro in alto, contorno piu' scuro)
+			local deep = r.color:Lerp(r.colorDark, 0.3)
+			local edge = Kit.Tint(r.colorDark, -0.2)
 			local row = New("Frame", {
-				BackgroundColor3 = r.color:Lerp(r.colorDark, 0.25),
 				Size = UDim2.new(1, 0, 0, 50 + lines * 146),
 				LayoutOrder = i,
 				Parent = scroll,
 			}, {
-				Kit.Corner(UDim.new(0, 20)),
-				Kit.Stroke(4),
+				Kit.Corner(UDim.new(0, 22)),
+				Kit.Stroke(2.5, edge),
 			})
-			Kit.Felt(row)
-			Kit.Stitch(row, 20)
+			Kit.Paint(row, Kit.Tint(r.color, 0.15), deep)
 			local title = Kit.Text({
 				Size = UDim2.new(0.4, 0, 0, 32),
 				Position = UDim2.fromOffset(16, 9),
 				TextXAlignment = Enum.TextXAlignment.Left,
+				Stroke = 2.5,
+				StrokeColor = edge,
 				ZIndex = 2,
 				Parent = row,
 			})
 			local reward = Kit.Text({
-				Font = Theme.BodyFont,
+				Font = Theme.HeadFont,
 				Size = UDim2.new(0.42, 0, 0, 22),
-				Position = UDim2.new(0.4, 0, 0, 12),
+				Position = UDim2.new(0.4, 0, 0, 13),
 				TextXAlignment = Enum.TextXAlignment.Right,
 				Stroke = 2,
+				StrokeColor = edge,
 				ZIndex = 2,
 				Parent = row,
 			})
@@ -129,14 +134,14 @@ function Panel.Build(parent: Instance, C)
 			for k, pet in list do
 				local col, line = (k - 1) % perLine, (k - 1) // perLine
 				local slot = New("Frame", {
-					BackgroundColor3 = Theme.Card,
 					Size = UDim2.new(w - 0.015, 0, 0, 138),
 					Position = UDim2.new(col * w + 0.0075, 0, 0, 50 + line * 146),
 					ZIndex = 2,
 					Parent = row,
-				}, { Kit.Corner(UDim.new(0, 14)), Kit.Stroke(3) })
+				}, { Kit.Corner(UDim.new(0, 16)) })
+				Kit.Paint(slot, Theme.Card, Theme.CardShade)
 				local name = Kit.Text({
-					Font = Theme.BodyFont,
+					Font = Theme.HeadFont,
 					Size = UDim2.new(0.92, 0, 0, 22),
 					Position = UDim2.new(0.04, 0, 1, -28),
 					TextColor3 = Theme.Ink,

@@ -15,7 +15,7 @@ local Panel = {}
 
 function Panel.Build(parent: Instance, C)
 	local T = C.Lang.T
-	local p = Kit.Panel("ADMIN", UDim2.fromOffset(820, 560), "Red", parent)
+	local p = Kit.Panel("ADMIN", UDim2.fromOffset(820, 560), "Red", parent, "Admin")
 	local function send(action: string, args: { [string]: any }?)
 		Net.Event("AdminAction"):FireServer(action, args or {})
 	end
@@ -152,17 +152,17 @@ function Panel.Build(parent: Instance, C)
 
 	-- annuncio a tutto il server (filtrato da Roblox)
 	local box = New("TextBox", {
-		BackgroundColor3 = Color3.new(1, 1, 1),
+		BackgroundColor3 = Theme.Card,
 		Size = UDim2.new(1, -230, 0, 58),
 		Position = UDim2.new(0, 5, 0, 336),
-		Font = Theme.BodyFont,
+		FontFace = Theme.BodyFont,
 		TextScaled = true,
-		TextColor3 = Theme.Outline,
+		TextColor3 = Theme.Ink,
 		PlaceholderText = "Announcement...",
 		ClearTextOnFocus = false,
 		Text = "",
 		Parent = p.Body,
-	}, { Kit.Corner(UDim.new(0, 16)), Kit.Stroke(4), Kit.Padding(10) })
+	}, { Kit.Corner(UDim.new(0, 18)), Kit.Stroke(3, Theme.Buttons.Red[2]), Kit.Padding(12) })
 	Kit.Button({
 		Text = "📣",
 		Color = "Pink",
