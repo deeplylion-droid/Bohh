@@ -949,10 +949,10 @@ end
 -- Santuari: sala in fondo a ogni sezione con l'altare dell'uovo, il checkpoint e il portale
 ---------------------------------------------------------------------------------------------
 local SHRINE_STYLE = {
-	Rapids = { floor = rgb(60, 70, 96), wall = rgb(36, 44, 70), glow = rgb(60, 220, 255), material = "Slate" },
+	Rapids = { floor = rgb(104, 124, 160), wall = rgb(60, 72, 104), glow = rgb(60, 220, 255), material = "Slate" },
 	Desert = { floor = rgb(214, 178, 112), wall = rgb(190, 150, 90), glow = rgb(255, 200, 60), material = "Sandstone" },
 	Lab = { floor = rgb(200, 210, 222), wall = rgb(64, 72, 90), glow = rgb(120, 255, 220), material = "DiamondPlate" },
-	Inferno = { floor = rgb(48, 30, 30), wall = rgb(70, 20, 18), glow = rgb(255, 80, 30), material = "Basalt" },
+	Inferno = { floor = rgb(84, 54, 50), wall = rgb(96, 34, 28), glow = rgb(255, 80, 30), material = "Basalt" },
 }
 
 Extreme.Shrines = {}

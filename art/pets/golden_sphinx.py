@@ -231,7 +231,7 @@ block = block.subtract(union(capsule((0.18, -1.26, 0.27), (0.3, -1.26, 0.12), 0.
 rump = ellipsoid((0.4, 0.4, 0.34), (0, 0.72, 0.38))
 waist = ell((0, 0.32, 0.55), (0.32, 0.3, 0.38), axis=(0, -1.0, 0.45))
 ribs = ell((0, -0.05, 0.84), (0.39, 0.33, 0.44), axis=(0, -0.6, 1.0))
-chest = ell((0, -0.42, 1.08), (0.38, 0.34, 0.44), axis=(0, -0.3, 1.0))
+chest = ell((0, -0.42, 1.08), (0.41, 0.35, 0.44), axis=(0, -0.3, 1.0))
 withers = ellipsoid((0.38, 0.3, 0.27), (0, -0.2, 1.3))
 scap = [ell((sx * 0.29, -0.3, 1.1), (0.2, 0.26, 0.32), axis=(0, -0.3, 1.0)) for sx in (1, -1)]
 body = union(rump, waist, ribs, k=0.25)
@@ -433,7 +433,7 @@ lappets = []
 for sx in (1, -1):
     top = hp((sx * 0.26, -0.07, -0.16))
     pb, nb = project(core, (sx * 0.27, -0.4, 1.12), (0, -1.0, 0.05))
-    bot = pb + nb * 0.035
+    bot = pb + nb * 0.06
     strip = flatten(tube([(0, 0, 0.0), (0, 0, -0.33), (0, 0, -0.66)], [0.072, 0.078, 0.072]), 0.3, axis=1)
     L = float(np.linalg.norm(top - bot))
     lappets.append(strip.scale(L / 0.66).rotate(frame(top - bot, (0.0, -1.0, 0.1))).translate(top))
@@ -457,6 +457,61 @@ def stripe_region_w(p):
 
 
 nemes_stripes = paint(nemes_w, SDF(stripe_region_w, nemes_w.lo - 0.05, nemes_w.hi + 0.05), out=0.008, inn=0.016)
+
+# ============================================================ collare usekh sul petto (sotto le bande del nemes e la barba)
+SC_C = np.array([0.0, -0.55, 1.5], dtype=np.float32)            # base del collo
+SC_A = norm((0.0, -0.22, 0.44))                                   # asse del collo
+SC_F = norm(np.cross((1.0, 0.0, 0.0), SC_A))                      # davanti (perpendicolare all'asse)
+SC_IN, SC_OUT, SC_T = 0.3, 0.55, 0.03
+
+
+def sc_zone(p, r_in=SC_IN, r_out=SC_OUT):
+    q = p - SC_C
+    d = np.sqrt(np.einsum("ij,ij->i", q, q))
+    t = q @ SC_A.astype(np.float32)
+    rho = np.sqrt(np.maximum(d * d - t * t, 0.0))
+    front = (q @ SC_F.astype(np.float32))
+    return np.maximum.reduce([r_in - d, d - r_out, 0.24 - rho, -0.05 - front]).astype(np.float32)
+
+
+SC_ZONE = SDF(sc_zone, SC_C - SC_OUT - 0.05, SC_C + SC_OUT + 0.05)
+collar_base = paint(core, SC_ZONE, out=SC_T, inn=0.025)
+col_top = core.offset(SC_T)
+
+
+def sc_curve(r, n=40, span=118.0):
+    """Punti sulla superficie del collare a distanza r dal centro, sul davanti (da un fianco all'altro)."""
+    pts = []
+    for phi in np.radians(np.linspace(-span, span, n)):
+        out = SC_F * math.cos(phi) + np.array([1.0, 0.0, 0.0]) * math.sin(phi)
+
+        def q_of(th, out=out):
+            return SC_C + r * (-SC_A * math.cos(th) + out * math.sin(th))
+        lo_t, hi_t = 0.0, 0.62 * math.pi
+        if col_top(q_of(lo_t)[None, :].astype(np.float32))[0] > 0 or col_top(q_of(hi_t)[None, :].astype(np.float32))[0] < 0:
+            continue
+        for _ in range(30):
+            mid = 0.5 * (lo_t + hi_t)
+            if col_top(q_of(mid)[None, :].astype(np.float32))[0] < 0:
+                lo_t = mid
+            else:
+                hi_t = mid
+        if sc_zone(q_of(lo_t)[None, :].astype(np.float32), r - 0.02, r + 0.02)[0] > 0.03:
+            continue
+        pts.append((q_of(lo_t), q_of(lo_t - 0.04) - q_of(lo_t + 0.04)))
+    return pts
+
+
+collar_rods = []
+for r, rr in ((SC_IN + 0.01, 0.024), (0.43, 0.02), (SC_OUT - 0.005, 0.026)):
+    pts = [q for q, _ in sc_curve(r)]
+    collar_rods.append(tube([tuple(q) for q in pts], rr))
+collar_drops = []
+for q, down in sc_curve(SC_OUT + 0.02, n=17, span=110.0):
+    nrm = grad(col_top, q)
+    down = norm(down - nrm * float(np.dot(down, nrm)))
+    a_ = q + nrm * 0.005
+    collar_drops.append(round_cone(tuple(a_ + down * 0.005), tuple(a_ + down * 0.085), 0.024, 0.04))
 
 # ============================================================ ali di falco mezze alzate (piano locale u lungo il braccio, v verso le punte)
 WING_SH = np.array([0.26, -0.1, 1.44])          # spalla (perno dell'animazione), lato +X
@@ -555,25 +610,26 @@ def add(name, sdf, color, voxel, **kw):
     m.add(name, sdf.scale(GS) if GS != 1.0 else sdf, color, voxel=voxel * GS * VX, **kw)
 
 
-add("Body", core, GOLD_BODY, 0.032, material="Foil", tris=2800)
+add("Body", core, GOLD_BODY, 0.032, material="Foil", tris=2700)
 add("Face", Hd(head_skin), GOLD_BODY, 0.012, material="Foil", role="skin", tris=1300)
-add("Nemes", fast_union([nemes_w, Hd(union(headband_l, uraeus_l, beard_l))]), GOLD, 0.017, material="Foil",
-    role="detail", tris=1500)
-add("NemesStripes", nemes_stripes, LAPIS, 0.016, role="detail", tris=1700)
+add("Nemes", fast_union([nemes_w, Hd(union(headband_l, uraeus_l, beard_l))] + collar_rods + collar_drops), GOLD, 0.017,
+    material="Foil", role="detail", tris=1600)
+add("NemesStripes", nemes_stripes, LAPIS, 0.016, role="detail", tris=1600)
+add("Collar", collar_base, LAPIS, 0.022, role="detail", tris=600)
 lapis = [Hd(x) for x in brows + beard_bands_l + [hood_inlay_l]] + tuft_bands
 add("Lapis", fast_union(lapis), LAPIS, 0.009, role="detail", tris=600)
 add("Block", block, STONE, 0.03, role="detail", tris=250, smooth=False)
-add("Tuft", tuft_core, GOLD, 0.02, material="Foil", role="detail", tris=250)
+add("Tuft", tuft_core, GOLD, 0.02, material="Foil", role="detail", tris=200)
 add("Frost", fast_union(frieze), TURQ, 0.012, material="Neon", role="glow", tris=900)
 add("EyeGlow", Hd(fast_union(eyes + [crack] + uraeus_eyes_l)), EYE_GLOW, 0.008, material="Neon", role="glow", tris=300)
 add("Kohl", Hd(fast_union(kohl + pupils + mouth_dark)), KOHL, 0.007, role="eye", tris=550)
-add("Teeth", Hd(fast_union(teeth)), TOOTH, 0.005, role="shine", tris=200)
-add("Stitches", Hd(fast_union(face_stitches)), THREAD, 0.005, role="detail", tris=200)
+add("Teeth", Hd(fast_union(teeth)), TOOTH, 0.005, role="shine", tris=150)
+add("Stitches", Hd(fast_union(face_stitches)), THREAD, 0.005, role="detail", tris=150)
 add("Claws", fast_union(claws), LAPIS, 0.016, role="detail", tris=350)
 for sx, nm in ((1, "WingR"), (-1, "WingL")):
     piv = tuple(WING_SH * np.array([sx, 1, 1]))
-    add(nm, place_wing(fast_union(wing_lapis_l), sx), LAPIS, 0.018, role="detail", tris=1100, group=nm, pivot=piv)
-    add(nm + "Gold", place_wing(fast_union(wing_gold_l), sx), GOLD, 0.018, material="Foil", role="detail", tris=1100,
+    add(nm, place_wing(fast_union(wing_lapis_l), sx), LAPIS, 0.018, role="detail", tris=1000, group=nm, pivot=piv)
+    add(nm + "Gold", place_wing(fast_union(wing_gold_l), sx), GOLD, 0.018, material="Foil", role="detail", tris=1000,
         group=nm, pivot=piv)
 
 if __name__ == "__main__":

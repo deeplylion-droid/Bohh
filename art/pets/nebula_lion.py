@@ -432,7 +432,7 @@ FRONT = {1: ((0.5, -0.74, 2.56), (0.57, -1.04, 2.02), (0.55, -1.42, 1.76), (0.55
          -1: ((-0.5, -0.7, 2.56), (-0.55, -0.7, 1.9), (-0.53, -0.86, 1.46), (-0.53, -1.02, RT + 0.12))}
 legs = [front_leg(sx, *FRONT[sx]) for sx in (1, -1)] + [hind_leg(sx) for sx in (1, -1)]
 body = fast_union(legs, k=0.1, base=trunk)
-m.add("Body", body.intersect(above(RT - 0.03)), NAVY, tris=9600, voxel=0.026)
+m.add("Body", body.intersect(above(RT - 0.03)), NAVY, tris=9000, voxel=0.026)
 
 # ============================================================ testa ruggente (coordinate locali: muso verso -Y)
 H_T = np.array([0.0, -1.44, 3.8])
@@ -715,7 +715,7 @@ for sx in (1, -1):
             p, n = project(body, (0, ya + (yb - ya) * t, za + (zb - za) * t), (sx, 0, 0.1), max_dist=2.0)
             pts.append(tuple(p + n * 0.004))
         leo_pts += pts
-        starlines.append(tube(pts, 0.014))
+        starlines.append(tube(pts, 0.016))
     for k, (p, n) in pos.items():
         s = BRIGHT.get(k, 1.0)
         starlines.append(sphere(0.036 * s, tuple(p + n * 0.008)))
@@ -776,7 +776,7 @@ for tip, fwd, s in TOES:
     gold.append(horn(tuple(t0 + (0, 0, 0.015 * s)), tuple(t0 + fwd * 0.07 * s + (0, 0, 0.03 * s)), tuple(t0 + fwd * 0.13 * s),
                      tuple(t0 + fwd * 0.155 * s + (0, 0, -0.05 * s)), 0.036 * s, 0.006, n=7))
 m.add("Gold", fast_union(gold), GOLD, role="detail", tris=2600, voxel=0.01, reflectance=0.12)
-m.add("StarLines", fast_union(starlines), STARLINE, material="Neon", role="glow", tris=2200, voxel=0.007)
+m.add("StarLines", fast_union(starlines), STARLINE, material="Neon", role="glow", tris=2600, voxel=0.009)
 # nucleo luminoso della galassia + imbottitura di polvere di stelle che esce dalla cucitura del petto
 m.add("GalaxyCore", union(fast_union(core), fast_union(stuffing, k=0.03)), CORE, material="Neon", role="glow", tris=3400,
       voxel=0.016)
@@ -889,26 +889,28 @@ rock = [asteroid(),
         spike_down((0.62, -0.62, 0.7), (0.4, -0.42, 0.34), 0.2, seed=9),
         spike_down((-0.56, 0.9, 0.7), (-0.36, 0.7, 0.3), 0.2, seed=10)]
 # fascia di asteroidi in orbita: sassi su un'ellisse inclinata attorno alla punta dell'asteroide
-BELT_C, BELT_M = np.array([0.05, 0.16, 0.58]), euler(10, -9, 0).astype(np.float64)
+BELT_C, BELT_M = np.array([0.05, 0.16, 0.56]), euler(6, -5, 0).astype(np.float64)
 belt_rng = np.random.default_rng(21)
-for i in range(13):
-    a_ = 2 * math.pi * i / 13 + belt_rng.uniform(-0.12, 0.12)
-    c = BELT_C + BELT_M @ np.array([1.5 * math.cos(a_), 1.82 * math.sin(a_), belt_rng.uniform(-0.05, 0.05)])
-    sz = belt_rng.uniform(0.075, 0.13)
-    rock.append(chunk(c, (sz, sz * 0.85, sz * 0.75), seed=40 + i, rot=tuple(belt_rng.uniform(-40, 40, 3))))
+for i in range(7):
+    a_ = 2 * math.pi * (i + 0.35) / 7 + belt_rng.uniform(-0.15, 0.15)
+    c = BELT_C + BELT_M @ np.array([1.5 * math.cos(a_), 1.8 * math.sin(a_), belt_rng.uniform(-0.06, 0.06)])
+    sz = belt_rng.uniform(0.12, 0.19)
+    rock.append(chunk(c, (sz, sz * 0.82, sz * 0.7), seed=40 + i, rot=tuple(belt_rng.uniform(-40, 40, 3))))
 m.add("Rock", fast_union(rock).intersect(above(0.0)), ROCK, material="Slate", role="detail", tris=4200, voxel=0.026,
       smooth=False)
 
 crystals = []
-for base, d, L, r in (((-1.0, -1.0, 1.0), (-0.55, -0.5, 0.65), 0.62, 0.12), ((-0.92, -1.12, 0.92), (-0.75, -0.3, 0.38), 0.4, 0.085),
-                      ((-1.06, -0.86, 0.94), (-0.4, -0.85, 0.45), 0.34, 0.075), ((1.12, 0.58, 1.0), (0.7, 0.2, 0.6), 0.54, 0.115),
-                      ((1.08, 0.8, 0.94), (0.6, 0.55, 0.32), 0.36, 0.08),
+for base, d, L, r in (((-1.0, -1.0, 1.0), (-0.55, -0.5, 0.65), 0.78, 0.15), ((-0.92, -1.12, 0.92), (-0.75, -0.3, 0.38), 0.5, 0.1),
+                      ((-1.06, -0.86, 0.94), (-0.4, -0.85, 0.45), 0.42, 0.09), ((1.12, 0.58, 1.0), (0.7, 0.2, 0.6), 0.68, 0.14),
+                      ((1.08, 0.8, 0.94), (0.6, 0.55, 0.32), 0.44, 0.1),
+                      ((0.98, -0.92, 0.98), (0.7, -0.55, 0.45), 0.5, 0.11), ((0.86, -1.08, 0.9), (0.35, -0.85, 0.3), 0.34, 0.08),
+                      ((-0.3, -1.42, 0.86), (-0.15, -0.9, 0.35), 0.38, 0.09),
                       ((0.26, -0.38, 0.32), (0.25, -0.55, -0.8), 0.34, 0.09), ((0.36, -0.3, 0.36), (0.75, -0.2, -0.6), 0.26, 0.07),
                       ((-0.42, 0.42, 0.42), (-0.6, 0.35, -0.7), 0.3, 0.08),
                       ((-0.3, 1.3, 1.12), (-0.2, 0.6, 0.8), 0.38, 0.085), ((-0.12, 1.42, 1.1), (0.25, 0.5, 0.7), 0.26, 0.065)):
     d = norm(d)
     crystals.append(crystal(L, r, tip=0.36, sides=6).rotate(frame_from_z(d)).translate(tuple(np.asarray(base) - d * 0.12)))
-m.add("Crystals", fast_union(crystals).intersect(above(0.02)), CRYSTAL, material="Neon", role="glow", tris=900, voxel=0.016,
+m.add("Crystals", fast_union(crystals).intersect(above(0.02)), CRYSTAL, material="Neon", role="glow", tris=1100, voxel=0.016,
       smooth=False)
 
 # ============================================================ scala globale: altezza ~4 unita' (il gioco la riscala)

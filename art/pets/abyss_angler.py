@@ -637,9 +637,10 @@ log("chiave pronta")
 
 # ============================================================ parti
 m.add("Body", skin_body, INDIGO, tris=4800, voxel=0.045 * VX, reflectance=0.1)
-m.add("Maw", fast_union(maw + pupils), MAW, role="eye", tris=900, voxel=0.045 * VX)
+m.add("Maw", fast_union(maw), MAW, role="eye", tris=800, voxel=0.045 * VX)
 m.add("Teeth", fast_union(teeth), TOOTH, material="Glass", role="shine", transparency=0.1, tris=1500, voxel=0.02 * VX)
 m.add("EyeGlow", union(*eye_glow), EYE, material="Neon", role="glow", tris=240, voxel=0.022 * VX)
+m.add("Pupils", union(*pupils), PUPIL, role="eye", tris=120, voxel=0.012 * VX)
 m.add("Shine", union(*shines), WHITE, role="shine", tris=120, voxel=0.012 * VX)
 m.add("Armor", fast_union(armor + dor_rays + an_rays + [stalk, cup]), ARMOR, material="Metal", role="detail", tris=1700,
       voxel=0.022 * VX)

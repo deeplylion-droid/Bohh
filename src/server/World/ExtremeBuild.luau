@@ -674,6 +674,43 @@ local function shrines(folder: Instance)
 				parent = model,
 			})
 		end
+		-- cornici luminose in cima alle pareti e luci lungo la sala (dentro, col tetto, e' buio)
+		local u1 = s.length + s.shrineLength
+		for _, side in { -1, 1 } do
+			Build.Part({
+				name = "ShrineTrim",
+				size = Vector3.new(s.shrineLength, 0.8, 0.6),
+				cframe = CFrame.new(Extreme.At(i, (u0 + u1) / 2, y + 22, side * (hw + 0.2))),
+				color = sh.glow,
+				material = Enum.Material.Neon,
+				collide = false,
+				castShadow = false,
+				parent = model,
+			})
+			Build.Part({
+				name = "ShrineTrimLow",
+				size = Vector3.new(s.shrineLength, 0.4, 0.4),
+				cframe = CFrame.new(Extreme.At(i, (u0 + u1) / 2, y + 0.3, side * (hw - 0.3))),
+				color = sh.glow,
+				material = Enum.Material.Neon,
+				collide = false,
+				castShadow = false,
+				parent = model,
+			})
+		end
+		for k = 0, 2 do
+			local lamp = Build.Part({
+				name = "ShrineLamp",
+				size = Vector3.new(1, 1, 1),
+				cframe = CFrame.new(Extreme.At(i, u0 + (k + 0.5) * s.shrineLength / 3, y + 18, 0)),
+				transparency = 1,
+				collide = false,
+				query = false,
+				castShadow = false,
+				parent = model,
+			})
+			light(lamp, Color3.fromRGB(255, 244, 226), 44, 1.6)
+		end
 		-- luce sull'altare
 		local altarGlow = Build.Part({
 			name = "AltarGlow",

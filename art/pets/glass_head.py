@@ -289,8 +289,8 @@ WHITE = (255, 255, 255)
 m = Model("GlassHead", "pet")
 
 # ============================================================ corpo affusolato che risale in diagonale, piegato a S
-SPINE_CTRL = [(0.0, -1.36, 2.62), (0.0, -0.92, 2.5), (0.04, -0.42, 2.26), (0.2, 0.05, 1.98), (0.45, 0.42, 1.76),
-              (0.55, 0.82, 1.6), (0.42, 1.12, 1.52)]
+SPINE_CTRL = [(0.0, -1.22, 3.0), (0.0, -0.82, 2.78), (0.04, -0.36, 2.48), (0.2, 0.06, 2.15), (0.42, 0.42, 1.85),
+              (0.52, 0.78, 1.57), (0.42, 1.06, 1.37)]
 sp = Spine(SPINE_CTRL)
 L = sp.len
 log(f"spina lunga {L:.2f}")
@@ -343,7 +343,7 @@ def angle_f(p):
     return s, np.arctan2(w / np.maximum(b, 1e-3), np.abs(u) / np.maximum(a, 1e-3)), np.sqrt(a * b)
 
 
-belly = shell_paint(body, SDF(lambda p: (lambda s, th, r: np.maximum((th + 0.55) * r, np.maximum(0.12 * L - s, s - 0.93 * L)))(
+belly = shell_paint(body, SDF(lambda p: (lambda s, th, r: np.maximum((th + 0.55) * r, np.maximum(0.04 * L - s, s - 0.93 * L)))(
     *angle_f(p)).astype(np.float32), body.lo, body.hi), out=0.02, inn=0.05)
 
 # ============================================================ cupola di vetro sulla testa, occhi a tubo dentro
@@ -395,8 +395,10 @@ for sx in (1, -1):
     ts = np.linspace(0, 1, 400)
     v = body((o[None, :] + ts[:, None] * d[None, :]).astype(np.float32))
     p = o + ts[np.nonzero(v > 0)[0][0]] * d
-    nares.append(sphere(0.068, tuple(p - d * 0.02)))
-    shines.append(sphere(0.02, tuple(p + d * 0.04 + nD * 0.03 - nL * sx * 0.012)))
+    c_ = p - d * 0.01
+    nares.append(sphere(0.082, tuple(c_)))                                   # occhietto finto bianco
+    look = norm(d + nL * 0.5 - nD * 0.12)                                     # pupille di sbieco verso chi guarda
+    pupils.append(sphere(0.042, tuple(c_ + look * 0.062)))
 brows = []
 for sx in (1, -1):
     o = nose_c + nD * 0.05
@@ -505,13 +507,13 @@ def ribbon(pts, w0, w1, thick=0.026, twist=0.0):
 
 
 # lobo alto: sale all'indietro e poi ricade ondeggiando; lobo basso: scende ondeggiando fin quasi a terra
-LOBES = [(0.16, [(0.0, 0.0, 0.0), (-0.04, 0.34, 0.2), (-0.28, 0.72, 0.18), (-0.5, 1.02, -0.14), (-0.48, 1.3, -0.5),
-                 (-0.66, 1.52, -0.78)], 0.5),
-         (-0.16, [(0.0, 0.0, 0.0), (-0.02, 0.26, -0.28), (-0.22, 0.42, -0.66), (-0.48, 0.5, -0.98), (-0.5, 0.72, -1.3),
-                  (-0.72, 0.92, -1.5)], -0.6)]
+LOBES = [(0.18, [(0.0, 0.0, 0.0), (-0.06, 0.38, -0.1), (-0.3, 0.76, -0.2), (-0.5, 1.08, -0.5), (-0.44, 1.36, -0.86),
+                 (-0.62, 1.6, -1.1)], 0.5),
+         (-0.18, [(0.0, 0.0, 0.0), (-0.04, 0.3, -0.3), (-0.24, 0.54, -0.62), (-0.46, 0.7, -0.96), (-0.42, 0.94, -1.28),
+                  (-0.6, 1.16, -1.46)], -0.55)]
 for dw, ctrl, tw in LOBES:
     start = sp.world(L + 0.1, 0.0, dw)
-    shp, edges = ribbon([tuple(start + np.array(c_)) for c_ in ctrl], 0.2, 0.07, twist=tw)
+    shp, edges = ribbon([tuple(start + np.array(c_)) for c_ in ctrl], 0.26, 0.09, twist=tw)
     ribbons.append(shp)
     tail_glow += edges
 log("code pronte")
@@ -523,8 +525,8 @@ m.add("Dome", dome, DOME, material="Glass", role="detail", transparency=0.55, tr
 m.add("Collar", fast_union(collar + rivets), METAL, material="Metal", role="detail", tris=900, voxel=0.018 * VX)
 m.add("EyeTubes", union(*tubes, k=0.02), TUBE, material="Neon", role="glow", tris=500, voxel=0.018 * VX)
 m.add("Bubbles", union(*lenses), LENS, material="Neon", role="glow", tris=400, voxel=0.016 * VX)
-m.add("Pupils", union(*pupils, *nares, mouth), DARK, role="eye", tris=500, voxel=0.012 * VX)
-m.add("Shine", union(*shines), WHITE, role="shine", tris=80, voxel=0.008 * VX)
+m.add("Pupils", union(*pupils, mouth), DARK, role="eye", tris=400, voxel=0.012 * VX)
+m.add("Shine", union(*shines, *nares), WHITE, role="shine", tris=240, voxel=0.011 * VX)
 for nm in ("FinR", "FinL"):
     mem, piv = fins_mem[nm]
     m.add(nm, mem, FIN, role="detail", tris=450, voxel=0.024 * VX, group=nm, pivot=piv)
