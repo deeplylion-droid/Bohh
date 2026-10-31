@@ -1,19 +1,19 @@
 """Kraken Stellare (StarKraken) - pet ULTRA del negozio Robux: il gigante "mega galattico".
 
 Un kraken cosmico colossale che emerge da un vortice di nebulosa. Il mantello e' un bulbo enorme viola
-profondo attraversato da una fascia di nebulosa magenta e ciano (come una via lattea) e punteggiato di stelle;
-sulla fronte un oblo' di vetro con la cornice d'ottone a rivetti mostra una galassia a spirale luminosa.
-Tre grandi occhi d'ambra con la pupilla a fessura e le palpebre arrabbiate (il terzo occhio, il piu' grande,
-in mezzo alla fronte), una bocca larga a becco spalancata: labbra magenta, uncini del becco viola-neri, due
-file di zanne aguzze e la gola che brilla. Otto tentacoli spessi con il lato inferiore magenta e ventose a
-stella luminose: sei fanno da base arricciandosi a terra a girandola, due si alzano altissimi ai lati in
-grandi S, pronti a colpire (gruppi TentacleR/TentacleL). Sopra il mantello fluttua una corona di schegge di
-cristallo con un alone. Tocco "toy horror": una toppa cucita sul mantello e una grossa chiave di carica
-d'ottone piantata nella schiena.
+profondo attraversato da una fascia di nebulosa magenta e ciano (come una via lattea), punteggiato di stelle e
+di costellazioni; sulla fronte un oblo' di vetro con la cornice d'ottone a rivetti mostra una galassia a spirale
+luminosa. Tre grandi occhi d'ambra con la pupilla a fessura e le palpebre arrabbiate (il terzo occhio, il piu'
+grande, in mezzo alla fronte), una bocca larga a becco spalancata: placche e uncini d'avorio, due file di zanne
+aguzze e la gola che brilla. Otto tentacoli spessi con il lato inferiore magenta e ventose a stella luminose:
+sei fanno da base arricciandosi a terra a girandola, due si alzano altissimi ai lati in grandi S, pronti a
+colpire (gruppi TentacleR/TentacleL); quello sinistro sta per afferrare un pianetino con l'anello d'ottone.
+Sopra il mantello fluttua una corona di schegge di cristallo con un alone. Tocco "toy horror": una toppa
+cucita sul mantello e una grossa chiave di carica d'ottone piantata nella schiena.
 
-Effetti (nomi delle parti Neon letti da PET_FX): "Stars" = stelline e scintille sul mantello e nucleo
-della galassia; "Nebula" = il vortice di nebulosa a terra. Gli altri pezzi luminosi hanno nomi diversi
-(EyeGlow, CupGlow, CupGlowR/L, GalaxyGlow, CrystalGlow).
+Effetti (nomi delle parti Neon letti da PET_FX): "Stars" = stelline, scintille e costellazioni sul mantello e
+nucleo della galassia; "Nebula" = i bracci rosa del vortice di nebulosa a terra. Gli altri pezzi luminosi hanno
+nomi diversi (EyeGlow, CupGlow, CupGlowR/L, GalaxyGlow, CrystalGlow, SwirlGlow).
 """
 import math
 import os
@@ -235,7 +235,9 @@ def seg_tube(pts, radii):
                          for i in range(len(pts) - 1)])
 
 
-GROUND = SDF(lambda p: -p[:, 2], (-9, -9, 0), (9, 9, 9))   # niente sotto z = 0
+# niente sotto z = 0. L'ingombro parte un filo sotto lo zero: cosi' il piano di taglio non cade su uno strato
+# della griglia del marching cubes (darebbe triangoli degeneri che bloccano la decimazione)
+GROUND = SDF(lambda p: -p[:, 2], (-9, -9, -0.0071), (9, 9, 9))
 
 
 def shard(h, r, tip=0.42, sides=6):
@@ -498,7 +500,7 @@ for sx, tn in RT.items():
 
 body = sparse_union(stubs, k=0.24, base=face)
 body = body.subtract(recess, k=0.02).subtract(mouth_cav, k=0.025)
-m.add("Body", body, VIOLET, reflectance=0.12, tris=10500, voxel=0.022)
+m.add("Body", body, VIOLET, reflectance=0.12, tris=10200, voxel=0.022)
 
 
 def ramp_dr(u0, du=0.04, a=-0.014, b=0.006):
@@ -506,7 +508,7 @@ def ramp_dr(u0, du=0.04, a=-0.014, b=0.006):
 
 
 tents = [tn.tube(tn.us - 0.03, 1.0, dr=ramp_dr(tn.us - 0.03)) for tn in GT]
-m.add("Tentacles", sparse_union(tents).intersect(GROUND), VIOLET, reflectance=0.12, tris=10000, voxel=0.022)
+m.add("Tentacles", sparse_union(tents).intersect(GROUND), VIOLET, reflectance=0.12, tris=9600, voxel=0.022)
 
 for sx, nm in ((1, "TentacleR"), (-1, "TentacleL")):
     tn = RT[sx]
@@ -529,13 +531,13 @@ under_parts, cup_glow, specks = [], [], []
 for tn in GT:
     under_parts.append(shell_paint(tn.tube(tn.u_curl - 0.08, 1.0), tn.band(64, tn.u_curl - 0.07, 1.0),
                                    out=0.02, inn=0.08))
-    cup_glow += cup_stars(tn.cups(tn.u_curl - 0.02, 0.96, spacing=1.2, ang=30, size_k=0.62, rmin=0.055))
+    cup_glow += cup_stars(tn.cups(tn.u_curl - 0.02, 0.96, spacing=1.2, ang=30, size_k=0.66, rmin=0.064))
     specks += tn.dorsal(tn.us, tn.u_curl + 0.12, 0.3, rng)
 
 for sx, nm in ((1, "R"), (-1, "L")):
     tn = RT[sx]
     paint = shell_paint(tn.tube(tn.us, 1.0), tn.band(60, tn.us + 0.02, 1.0), out=0.02, inn=0.08)
-    stars = cup_stars(tn.cups(tn.us + 0.04, 0.96, spacing=1.15, ang=30, size_k=0.6, rmin=0.055))
+    stars = cup_stars(tn.cups(tn.us + 0.04, 0.96, spacing=1.15, ang=30, size_k=0.62, rmin=0.06))
     sp = tn.dorsal(tn.us + 0.05, 0.86, 0.32, rng)
     stars.append(blobs([c for c, _ in sp], [r for _, r in sp]))
     m.add(f"Tentacle{nm}Under", paint, MAGENTA, role="detail", tris=1300, voxel=0.03,
@@ -645,13 +647,13 @@ bow_c = PK + NK * 0.62
 for s in (1, -1):
     brass.append(torus(0.19, 0.058).rotate(frame(KA, NK)).translate(tuple(bow_c + KW * s * 0.22 + NK * 0.04)))
 brass.append(sphere(0.1, tuple(bow_c)))
-m.add("Brass", sparse_union(brass, k=0.02), BRASS, material="Metal", role="detail", tris=2000, voxel=0.015)
+m.add("Brass", sparse_union(brass, k=0.02), BRASS, material="Metal", role="detail", tris=1800, voxel=0.015)
 
 # ============================================================ faccia: occhi, bocca, becco, denti
 m.add("EyeGlow", union(*eye_glow), EYE, material="Neon", role="glow", tris=1300, voxel=0.012)
 mouth_lining = thin(mouth_cav, 0.03, 0.008).intersect(core.offset(-0.004))
 bowl = thin(recess, 0.022, 0.01).intersect(core.offset(-0.004))
-m.add("Sockets", sparse_union(sockets + [mouth_lining, bowl]), DARK, role="eye", tris=1900, voxel=0.018)
+m.add("Sockets", sparse_union(sockets + [mouth_lining, bowl]), DARK, role="eye", tris=1500, voxel=0.018)
 m.add("Pupils", sparse_union(pupils), DARK, role="eye", tris=500, voxel=0.009)
 
 # becco d'avorio: due placche a mezzaluna che incorniciano la bocca, con l'uncino al centro (in alto
@@ -768,8 +770,7 @@ for psi, hh, rho, up in ((18, 0.08, 0.84, 0.1), (-58, 0.07, 0.83, 0.3), (105, 0.
     radial = math.cos(a) * FWD + math.sin(a) * SIDE
     crystals.append(shard(hh, hh * 0.42).rotate(frame(norm(CROWN_UP + radial * 0.6), radial))
                     .translate(tuple(CC + radial * rho + CROWN_UP * up)))
-m.add("CrystalGlow", sparse_union(crystals + [cyan_swirl]), CRYSTAL, material="Neon", role="glow", tris=1900,
-      voxel=0.02)
+m.add("CrystalGlow", sparse_union(crystals), CRYSTAL, material="Neon", role="glow", tris=1100, voxel=0.016)
 
 m.add("Cyan", union(shell_paint(core, cy_region, out=0.03, inn=0.07), planet), CYAN, role="detail", tris=1300,
       voxel=0.024)
@@ -841,8 +842,9 @@ m.add("Stars", sparse_union([blobs(st_c, st_r), gal_core, *gal_stars, *twinkles,
 for c, r in (((2.5, -1.25, 0.0), 0.06), ((-2.55, 0.9, 0.0), 0.05), ((0.6, 2.75, 0.0), 0.055), ((-1.4, -2.3, 0.0), 0.05)):
     specks.append((np.array(c) + np.array([0, 0, 0.02]), r))
 m.add("Nebula", nebula, NEBULA, material="Neon", role="glow", tris=3400, voxel=0.04)
+m.add("SwirlGlow", cyan_swirl, CRYSTAL, material="Neon", role="glow", tris=1000, voxel=0.04)
 m.add("CupGlow", sparse_union(cup_glow + [blobs([c for c, _ in specks], [r for _, r in specks])])
-      .intersect(GROUND), CUP, material="Neon", role="glow", tris=2600, voxel=0.013)
+      .intersect(GROUND), CUP, material="Neon", role="glow", tris=3200, voxel=0.013)
 
 if __name__ == "__main__":
     m.build(views=tuple(os.environ.get("VIEWS", "3q,front").split(",")), res=int(os.environ.get("RES", 700)))
