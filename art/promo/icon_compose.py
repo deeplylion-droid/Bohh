@@ -165,8 +165,8 @@ def make_toppa(variant: str, hero_png: Path) -> Path:
 def sheet(icons: list[tuple[str, str, Path]], name: str = "sheet",
           title: str = "Climb &amp; Steal Eggs &mdash; proposte di icona") -> Path:
     cols = []
-    for code, title, p in icons:
-        cols.append(f"""<div class='col'><div class='h'>{code} &middot; {title}</div>
+    for code, label, p in icons:
+        cols.append(f"""<div class='col'><div class='h'>{code} &middot; {label}</div>
 <img class='big' src='{p.as_uri()}'>
 <div class='row'><div class='sm light'><img src='{p.as_uri()}'><span>150 px</span></div>
 <div class='sm dark'><img src='{p.as_uri()}'><span>150 px</span></div>
