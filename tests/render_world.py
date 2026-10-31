@@ -20,7 +20,8 @@ sys.path.insert(0, str(ROOT / "art"))
 from lib.render import setup_world  # noqa: E402
 from lib.toy import srgb_to_linear  # noqa: E402
 
-OUT = ROOT / "art" / "out" / "world"
+# RENDER_OUT=cartella: dove salvare i PNG (piu' agenti insieme non si sovrascrivono)
+OUT = ROOT / os.environ.get("RENDER_OUT", "art/out/world")
 M = np.array([[-1, 0, 0], [0, 0, 1], [0, 1, 0]], dtype=float)  # Roblox -> Blender
 MINV = M.T
 
