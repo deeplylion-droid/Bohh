@@ -901,7 +901,7 @@ def scene_extreme(w: int, samples: int, tag: str):
     # --- pilastri di pietra nella lava (il percorso a salti) e massi di lava sulle rive
     pm = basalt_material("PillarRock", top="#ff8a2a", top_e=0.0, rock="#2a1d24", veins=1.5, fog=("#ff6a4a", 0.0025, 40.0))
     jumps = env("PILLARS", 0.0)
-    path = [(3.6, 7.5, 2.8, 1.4), (-5.2, 12.0, 2.5, 1.3), (3.0, 19.5, 2.9, 1.3), (-1.0, 26.0, 2.4, 1.2),
+    path = [(7.4, 6.5, 2.8, 1.4), (-5.2, 12.0, 2.5, 1.3), (3.0, 19.5, 2.9, 1.3), (-1.0, 26.0, 2.4, 1.2),
             (2.2, 33.0, 2.6, 1.2), (-1.5, 41.0, 2.5, 1.1), (1.5, 49.0, 2.8, 1.1)]
     for i, (x, y, tz, r) in enumerate(path):
         pillar(f"Pillar{i}", x, y, tz, r, pm)
@@ -976,6 +976,8 @@ def scene_extreme(w: int, samples: int, tag: str):
     target = env("TARGET", (0.0, 20.0, 6.4))
     S.camera(cam_loc, target, lens=env("LENS", 24.0), dof_target=tuple(ac) if not PREVIEW else None, fstop=env("FSTOP", 8.0))
     print("[covers] avatar (x0, y0, x1, y1):", screen_extent(bac_objs, 1))
+    if os.environ.get("NORENDER") == "1":
+        print("[covers] pilastri:", [(o.name, screen_extent([o], 1)) for o in bpy.data.objects if o.name.startswith("Pillar")])
     pts = {"av_feet": bl[0], "av_head": bparts["Head"].matrix_world.translation, "shrine": (sx, sy, 5.0)}
     for name, objs in (("beh", beh_objs), ("aba", aba_objs), ("bee", bee_objs)):
         lo, hi = S.bounds(objs)

@@ -604,10 +604,11 @@ do
 		worst = math.max(worst, off)
 	end
 	add("extreme_branch", string.format("holes %d, worst %.2f", holes, worst))
-	-- il client trova gli elementi da animare per nome con Extreme.Get: nessuno deve mancare
+	-- il client trova gli elementi da animare con Extreme.Get(attributo Piece): nessuno deve mancare
 	local missing = {}
 	for _, inst in game:GetService("CollectionService"):GetTagged("ExtremePiece") do
-		if not Extreme.Get(inst.Name) then
+		local id = inst:GetAttribute("Piece")
+		if type(id) ~= "string" or not Extreme.Get(id) then
 			table.insert(missing, inst.Name)
 		end
 	end

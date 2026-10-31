@@ -12,7 +12,6 @@ Legenda: ⏳ in corso · 📋 da fare · ✅ fatto (con la versione pubblicata)
 | 3 | La **miniatura quadrata** (icona del gioco) non piace: proporne una diversa. | ⏳ (3 proposte) |
 | 9 | **Miniatura**: piace la B (uovo-mostro) ma deve dare l'idea che sia **su un picco montuoso**, senza rimpicciolirla troppo. | ⏳ pronte due versioni (con e senza bandierina) in `art/promo/final/`: si carica a mano su Creator Hub (le API non lo permettono) |
 | 7 | Lavorare **in parallelo con gli agenti** e **segnare tutto quello che chiede**, senza perdere nulla. | ⏳ (questo file) |
-| 12 | **Controllo automatico delle compenetrazioni** su tutto il Percorso Estremo (es. nel deserto): "fai un controllo tu, non posso correggerti ogni punto". | ⏳ agente: esportazione offline + verifica geometrica + correzioni |
 | 13 | Percorso Estremo **più dettagliato**: "aggiungi un po' di cura!!!" | ⏳ due agenti (sezioni 1-2 e 3-4) |
 | 15 | **Copertine** rifatte meglio, **in Blender** (scene 3D vere), con un **Bacon Hair** almeno in una e i **pet più fighi**. | ⏳ agente |
 
@@ -20,6 +19,7 @@ Legenda: ⏳ in corso · 📋 da fare · ✅ fatto (con la versione pubblicata)
 
 | Richiesta | Versione |
 |---|---|
+| **Controllo automatico delle compenetrazioni** (`tests/extreme_overlap.py`): 85 problemi visibili trovati e corretti in tutto il Percorso Estremo (deserto compreso: piattaforme che entravano nei santuari e nelle piastrelle, crepe nei pavimenti dei santuari, cartelli nei muri, tronchi che attraversavano le cascate). Corretto anche un bug grave: 22 elementi non si muovevano per i giocatori (dischi, navette, ascensore, nastri e la molla del Laboratorio, senza la quale il Laboratorio non si finiva) | v46 |
 | Interfaccia **moderna** (stile "Vetta Pop"): superfici lisce brillanti, pulsanti a pillola con bordo 3D, schede bianche, inchiostro blu notte, font **Nunito** (Heavy/ExtraBold/Bold) al posto di Denk One e Patrick Hand; anche la schermata di caricamento | v45 |
 | Percorso Estremo: ingresso come **bivio all'inizio del sentiero normale** (ponticello in salita con arco a strisce dalla rampa, cartelli con la freccia sull'arco del sentiero e sulla rampa); **cascate** delle rapide rifatte come lastre sottili fra i livelli, con la schiuma che scende | v44 |
 | Tolti lo striscione valanga "sei al sicuro" (in riparo, in vetta e nel Percorso Estremo non compare più) e il riquadro "Percorso Estremo 1/4" | v44 |
