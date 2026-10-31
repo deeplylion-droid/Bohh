@@ -147,7 +147,7 @@ Pets.List = {
 	-- Galattici: creature cosmiche di stazza mega galattica, in vendita nel negozio
 	galactic("NebulaLion", 650000, 46),
 	galactic("StarKraken", 800000, 48),
-	galactic("CosmicWhale", 1000000, 50),
+	galactic("CosmicWhale", 1000000, 40),
 }
 
 Pets.ById = {} :: { [string]: Pet }
