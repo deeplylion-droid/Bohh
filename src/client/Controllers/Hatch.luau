@@ -196,7 +196,7 @@ local function play(info)
 		Size = UDim2.fromOffset(700, 56),
 		Position = UDim2.new(0.5, 0, 0, 40),
 		AnchorPoint = Vector2.new(0.5, 0),
-		Stroke = 3.5,
+		Stroke = false,
 		ZIndex = 61,
 		Parent = stage,
 	})
@@ -277,7 +277,7 @@ local function play(info)
 		Position = UDim2.new(0.5, 0, 0, 518),
 		AnchorPoint = Vector2.new(0.5, 0),
 		ZIndex = 61,
-		Stroke = 4,
+		Stroke = 2,
 		Parent = stage,
 	})
 	local gradient = Rarities.Gradients[info.rarity]
@@ -361,7 +361,7 @@ local function play(info)
 		Size = UDim2.fromOffset(400, 26),
 		Position = UDim2.new(0.5, 0, 1, -24),
 		AnchorPoint = Vector2.new(0.5, 1),
-		Stroke = 2,
+		Stroke = false,
 		ZIndex = 61,
 		TextTransparency = 1,
 		Parent = stage,

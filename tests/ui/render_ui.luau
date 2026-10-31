@@ -1,6 +1,6 @@
 -- Costruisce l'interfaccia del client (HUD e pannelli) nell'ambiente finto di gui_env e ne esporta
 -- l'albero in JSON, una scena per file, per disegnarla con tests/ui/to_html.py.
--- Uso (dalla radice): .tools/bin/lune run tests/ui/render_ui.luau [scena...]
+-- Uso (dalla radice): .tools/bin/lune run tests/ui/render_ui.luau [scena...] [--validate]
 local fs = require("@lune/fs")
 local process = require("@lune/process")
 local roblox = require("@lune/roblox")
@@ -521,6 +521,15 @@ SCENES.index = panelScene("Index")
 SCENES.gifts = panelScene("Gifts")
 SCENES.codes = panelScene("Codes")
 SCENES.settings = panelScene("Settings")
+-- codice sbagliato: l'esito compare su una pillola sotto la casella
+SCENES.codes_result = panelScene("Codes", function(ctx)
+	for _, d in ctx.gui("Panels"):GetDescendants() do
+		if d:IsA("TextBox") then
+			d.Text = "MONTAGNA"
+		end
+	end
+	press(ctx.gui("Panels"), ctx.C.Lang.T("Redeem"))
+end)
 SCENES.admin = panelScene("Admin")
 SCENES.shop_phone = {
 	viewport = { 844, 390 },
@@ -561,7 +570,9 @@ SCENES.hud_phone_en = english(SCENES.hud_phone)
 
 local names = {}
 for i = 1, #process.args do
-	table.insert(names, process.args[i])
+	if string.sub(process.args[i], 1, 2) ~= "--" then
+		table.insert(names, process.args[i])
+	end
 end
 if #names == 0 then
 	for n in SCENES do
@@ -602,6 +613,55 @@ for _, name in names do
 		print("ERR  " .. name .. ": " .. tostring(err))
 	end
 end
+-- --validate: ricopia le proprieta' di ogni istanza finta su un'istanza vera di @lune/roblox, che
+-- controlla nomi, tipi ed enum come Roblox (l'ambiente finto accetta qualsiasi proprieta')
+if table.find(process.args, "--validate") then
+	local SKIP = {
+		Parent = true,
+		ClassName = true,
+		AbsoluteSize = true,
+		AbsolutePosition = true,
+		AbsoluteRotation = true,
+		AbsoluteContentSize = true,
+		AbsoluteCanvasSize = true,
+		AbsoluteWindowSize = true,
+		TextBounds = true,
+		TextFits = true,
+		__destroyed = true, -- segno interno dell'ambiente finto
+	}
+	local problems, seen, checked = {}, {}, 0
+	for _, obj in G.created do
+		local okNew, real = pcall(roblox.Instance.new, obj.__class)
+		if not okNew then
+			continue -- servizi e classi dell'ambiente finto che non si creano
+		end
+		for k, v in obj.__props do
+			if SKIP[k] or type(v) == "function" or type(v) == "table" then
+				continue
+			end
+			checked += 1
+			local okSet, err = pcall(function()
+				(real :: any)[k] = v
+			end)
+			if not okSet then
+				local msg = string.match(tostring(err), "^[^\n]*\n?([^\n]*)") or tostring(err)
+				local key = `{obj.__class}.{k}: {msg}`
+				if not seen[key] then
+					seen[key] = true
+					table.insert(problems, key)
+				end
+			end
+		end
+	end
+	print(`validate: {checked} proprieta' controllate su istanze vere, {#problems} problemi`)
+	for _, line in problems do
+		print("  " .. line)
+	end
+	if #problems > 0 then
+		failed += 1
+	end
+end
+
 local unknown = {}
 for k in G.unknown do
 	table.insert(unknown, k)

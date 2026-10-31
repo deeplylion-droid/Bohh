@@ -53,9 +53,9 @@ function Panel.Build(parent: Instance, C)
 	local p = Kit.Panel(T("IndexTitle"), UDim2.fromOffset(880, 600), "Purple", parent, "Index")
 	local progress = Kit.Text({
 		Font = Theme.HeadFont,
-		Size = UDim2.new(1, 0, 0, 26),
-		Position = UDim2.fromOffset(0, 18),
-		Stroke = 2,
+		Size = UDim2.new(1, 0, 0, 24),
+		Position = UDim2.fromOffset(0, 19),
+		Stroke = false,
 		Parent = p.Body,
 	})
 	local scroll = New("ScrollingFrame", {
@@ -99,20 +99,24 @@ function Panel.Build(parent: Instance, C)
 				Kit.Stroke(2.5, edge),
 			})
 			Kit.Paint(row, Kit.Tint(r.color, 0.15), deep)
+			local ink = Kit.OnColor(deep)
 			local title = Kit.Text({
-				Size = UDim2.new(0.4, 0, 0, 32),
-				Position = UDim2.fromOffset(16, 9),
+				Size = UDim2.new(0.4, 0, 0, 30),
+				Position = UDim2.fromOffset(18, 10),
 				TextXAlignment = Enum.TextXAlignment.Left,
-				Stroke = 2.5,
+				TextColor3 = ink,
+				Stroke = false,
 				ZIndex = 2,
 				Parent = row,
 			})
 			local reward = Kit.Text({
-				Font = Theme.HeadFont,
-				Size = UDim2.new(0.42, 0, 0, 22),
-				Position = UDim2.new(0.4, 0, 0, 13),
+				Font = Theme.BodyFont,
+				Size = UDim2.new(0.42, 0, 0, 20),
+				Position = UDim2.new(0.4, 0, 0, 14),
 				TextXAlignment = Enum.TextXAlignment.Right,
-				Stroke = 2,
+				TextColor3 = ink,
+				TextTransparency = if ink == Theme.Ink then 0.15 else 0,
+				Stroke = false,
 				ZIndex = 2,
 				Parent = row,
 			})

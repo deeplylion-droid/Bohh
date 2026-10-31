@@ -243,7 +243,7 @@ local percent = new("TextLabel", {
 	Position = UDim2.fromScale(0, 0.15),
 	ZIndex = 14,
 	Parent = barBack,
-}, { stroke(2) })
+})
 local status = new("TextLabel", {
 	BackgroundTransparency = 1,
 	Text = TEXT.loading,

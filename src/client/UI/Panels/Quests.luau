@@ -68,19 +68,19 @@ function Panel.Build(parent: Instance, C)
 			Parent = p.Body,
 		})
 		local title = Kit.Text({
-			Size = UDim2.new(0.62, 0, 0, 36),
-			Position = UDim2.fromOffset(6, 14),
+			Size = UDim2.new(0.62, 0, 0, 34),
+			Position = UDim2.fromOffset(6, 15),
 			TextXAlignment = Enum.TextXAlignment.Left,
-			Stroke = 2.5,
+			Stroke = false,
 			Parent = frame,
 		})
 		local clock = Kit.Text({
 			Font = Theme.HeadFont,
-			Size = UDim2.new(0.38, -6, 0, 26),
-			Position = UDim2.new(0.62, 0, 0, 20),
+			Size = UDim2.new(0.38, -6, 0, 22),
+			Position = UDim2.new(0.62, 0, 0, 22),
 			TextXAlignment = Enum.TextXAlignment.Right,
-			TextColor3 = Theme.Text,
-			Stroke = 2,
+			TextColor3 = Theme.Muted,
+			Stroke = false,
 			Parent = frame,
 		})
 		local cards = {}
@@ -116,10 +116,12 @@ function Panel.Build(parent: Instance, C)
 				Parent = card,
 			})
 			local barText = Kit.Text({
-				Size = UDim2.fromScale(1, 0.8),
-				Position = UDim2.fromScale(0, 0.1),
+				Font = Theme.HeadFont,
+				Size = UDim2.fromScale(1, 0.74),
+				Position = UDim2.fromScale(0, 0.13),
+				TextColor3 = Theme.Ink,
 				ZIndex = 25,
-				Stroke = 2,
+				Stroke = false,
 				Parent = bar,
 			})
 			local rIcon = Kit.Icon("Coin", {
@@ -129,11 +131,11 @@ function Panel.Build(parent: Instance, C)
 				Parent = card,
 			})
 			local rText = Kit.Text({
-				Size = UDim2.fromOffset(78, 28),
-				Position = UDim2.new(1, -84, 0, 12),
+				Size = UDim2.fromOffset(78, 26),
+				Position = UDim2.new(1, -84, 0, 13),
 				TextXAlignment = Enum.TextXAlignment.Left,
-				TextColor3 = Theme.Gold,
-				Stroke = 2,
+				TextColor3 = Theme.GoldInk,
+				Stroke = false,
 				ZIndex = 23,
 				Parent = card,
 			})
@@ -185,8 +187,7 @@ function Panel.Build(parent: Instance, C)
 			Position = UDim2.fromOffset(64, 11),
 			TextXAlignment = Enum.TextXAlignment.Left,
 			TextWrapped = true,
-			Stroke = 2,
-			StrokeColor = Theme.Buttons.Purple[2],
+			Stroke = false,
 			MaxTextSize = 20,
 			ZIndex = 23,
 			Parent = bonus,
@@ -255,7 +256,7 @@ function Panel.Build(parent: Instance, C)
 						c.rIcon.Image = Assets.Images["Icon" .. rIconName] or c.rIcon.Image
 					end
 					c.rText.Text = RewardInfo.Text(T, def.reward, data)
-					c.rText.TextColor3 = RewardInfo.Color(def.reward, data)
+					c.rText.TextColor3 = RewardInfo.InkColor(def.reward, data)
 					col.ready[i] = not e.C and prog >= def.target
 					if e.C then
 						c.btn.SetText("✔")

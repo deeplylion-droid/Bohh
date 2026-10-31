@@ -133,7 +133,7 @@ function Notify.Announce(text: string, rarity: string?)
 		Size = UDim2.new(0.92, 0, 0.6, 0),
 		Position = UDim2.new(0.04, 0, 0.2, 0),
 		RichText = true,
-		Stroke = 1.5,
+		Stroke = false,
 		ZIndex = 2,
 		Parent = box,
 	})
@@ -154,6 +154,10 @@ function Notify.Announce(text: string, rarity: string?)
 		if box.Parent then
 			Kit.Tween(box, 0.4, { BackgroundTransparency = 1 })
 			Kit.Tween(label, 0.4, { TextTransparency = 1 })
+			local edge = box:FindFirstChildOfClass("UIStroke")
+			if edge then
+				Kit.Tween(edge, 0.4, { Transparency = 1 })
+			end
 			task.wait(0.45)
 			local slot = box.Parent
 			box:Destroy()

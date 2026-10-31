@@ -119,17 +119,25 @@ function Panel.Build(parent: Instance, C)
 	end
 
 	-- trappole del lotto
-	local trapHeader = Kit.Text({ Size = UDim2.new(1, 0, 0, 40), LayoutOrder = 100, Stroke = 2.5, Parent = scroll })
+	local trapHeader = Kit.Text({ Size = UDim2.new(1, 0, 0, 38), LayoutOrder = 100, Stroke = false, Parent = scroll })
 	local trapRows = {}
 	for i, id in Combat.TrapOrder do
 		local def = Combat.Traps[id]
 		local card = Kit.Card({ Size = UDim2.new(1, 0, 0, 74), LayoutOrder = 100 + i, Parent = scroll })
+		-- tondo del colore della trappola dietro l'icona
+		local disc = New("Frame", {
+			Size = UDim2.fromOffset(54, 54),
+			Position = UDim2.fromOffset(11, 10),
+			Parent = card,
+		}, { Kit.Corner(UDim.new(1, 0)) })
+		Kit.Paint(disc, Kit.Tint(def.color, 0.45), Kit.Tint(def.color, 0.15))
 		Kit.Icon("Trap", { Size = UDim2.fromOffset(48, 48), Position = UDim2.fromOffset(14, 13), Parent = card })
 		local name = Kit.Text({
 			Size = UDim2.new(0.45, 0, 0, 28),
 			Position = UDim2.fromOffset(76, 8),
 			TextXAlignment = Enum.TextXAlignment.Left,
-			TextColor3 = def.color,
+			TextColor3 = Theme.Ink,
+			Stroke = false,
 			Parent = card,
 		})
 		local desc = Kit.Text({

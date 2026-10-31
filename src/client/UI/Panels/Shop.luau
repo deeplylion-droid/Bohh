@@ -107,8 +107,8 @@ function Panel.Build(parent: Instance, C)
 		local c = Kit.Card({ LayoutOrder = order, ZIndex = 1, Parent = pg })
 		Kit.IconBadge(iconName, color, {
 			Name = "Patch",
-			Size = UDim2.fromOffset(84, 84),
-			Position = UDim2.new(0.5, 0, 0, 10),
+			Size = UDim2.fromOffset(78, 78),
+			Position = UDim2.new(0.5, 0, 0, 9),
 			AnchorPoint = Vector2.new(0.5, 0),
 			ZIndex = 2,
 			Ring = false,
@@ -116,8 +116,8 @@ function Panel.Build(parent: Instance, C)
 			Parent = c,
 		})
 		local title = Kit.Text({
-			Size = UDim2.new(0.9, 0, 0, 30),
-			Position = UDim2.new(0.05, 0, 0, 100),
+			Size = UDim2.new(0.9, 0, 0, 28),
+			Position = UDim2.new(0.05, 0, 0, 90),
 			TextColor3 = Theme.Ink,
 			Stroke = false,
 			ZIndex = 3,
@@ -125,8 +125,8 @@ function Panel.Build(parent: Instance, C)
 		})
 		local desc = Kit.Text({
 			Font = Theme.SoftFont,
-			Size = UDim2.new(0.9, 0, 0, 40),
-			Position = UDim2.new(0.05, 0, 0, 130),
+			Size = UDim2.new(0.9, 0, 0, 44),
+			Position = UDim2.new(0.05, 0, 0, 119),
 			TextColor3 = Theme.InkSoft,
 			Stroke = false,
 			TextWrapped = true,

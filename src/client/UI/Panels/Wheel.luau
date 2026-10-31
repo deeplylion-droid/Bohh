@@ -89,23 +89,33 @@ function Panel.Build(parent: Instance, C)
 		Parent = p.Body,
 	})
 	local freeTitle = Kit.Text({
-		Size = UDim2.new(1, 0, 0, 34),
-		Position = UDim2.fromOffset(0, 4),
-		Stroke = 2.5,
+		Size = UDim2.new(1, 0, 0, 30),
+		Position = UDim2.fromOffset(0, 2),
+		Stroke = false,
 		Parent = right,
 	})
-	local freeClock = Kit.Text({
-		Size = UDim2.new(1, 0, 0, 46),
-		Position = UDim2.fromOffset(0, 40),
-		TextColor3 = Theme.Green,
-		Stroke = 3,
+	-- tempo del giro gratis su una pillola bianca
+	local clockPill = New("Frame", {
+		Size = UDim2.new(0.62, 0, 0, 50),
+		Position = UDim2.new(0.5, 0, 0, 36),
+		AnchorPoint = Vector2.new(0.5, 0),
+		ZIndex = 22,
 		Parent = right,
+	}, { Kit.Corner(UDim.new(1, 0)), Kit.Stroke(3, Theme.Buttons.Orange[2]) })
+	Kit.Paint(clockPill, Theme.Card, Theme.CardShade)
+	local freeClock = Kit.Text({
+		Size = UDim2.new(1, -24, 0.74, 0),
+		Position = UDim2.new(0, 12, 0.13, 0),
+		TextColor3 = Theme.GreenInk,
+		Stroke = false,
+		ZIndex = 23,
+		Parent = clockPill,
 	})
 	local spinsText = Kit.Text({
 		Font = Theme.HeadFont,
-		Size = UDim2.new(1, 0, 0, 30),
-		Position = UDim2.fromOffset(0, 92),
-		Stroke = 2,
+		Size = UDim2.new(1, 0, 0, 26),
+		Position = UDim2.fromOffset(0, 96),
+		Stroke = false,
 		Parent = right,
 	})
 	local spinning = false
@@ -171,10 +181,10 @@ function Panel.Build(parent: Instance, C)
 	})
 	local buyTitle = Kit.Text({
 		Font = Theme.HeadFont,
-		Size = UDim2.new(1, 0, 0, 26),
-		Position = UDim2.fromOffset(0, 236),
+		Size = UDim2.new(1, 0, 0, 24),
+		Position = UDim2.fromOffset(0, 238),
 		TextColor3 = Theme.Muted,
-		Stroke = 2,
+		Stroke = false,
 		Parent = right,
 	})
 	local buys = {}
@@ -198,20 +208,29 @@ function Panel.Build(parent: Instance, C)
 	end
 	local hint = Kit.Text({
 		Font = Theme.BodyFont,
-		Size = UDim2.new(1, -10, 0, 52),
-		Position = UDim2.fromOffset(5, 352),
+		Size = UDim2.new(1, -10, 0, 48),
+		Position = UDim2.fromOffset(5, 350),
 		TextWrapped = true,
-		Stroke = 2,
-		MaxTextSize = 22,
+		Stroke = false,
+		MaxTextSize = 20,
 		Parent = right,
 	})
-	local jackpot = Kit.Text({
-		Size = UDim2.new(1, -10, 0, 34),
-		Position = UDim2.fromOffset(5, 412),
-		TextColor3 = Theme.Gold,
-		Stroke = 2.5,
-		MaxTextSize = 28,
+	-- premio massimo su una pillola rossa
+	local jackpotPill = New("Frame", {
+		Size = UDim2.new(1, -10, 0, 42),
+		Position = UDim2.fromOffset(5, 406),
+		ZIndex = 22,
 		Parent = right,
+	}, { Kit.Corner(UDim.new(1, 0)), Kit.Stroke(3, Theme.Text) })
+	Kit.PaintNamed(jackpotPill, "Red")
+	local jackpot = Kit.Text({
+		Size = UDim2.new(1, -28, 0.66, 0),
+		Position = UDim2.new(0, 14, 0.17, 0),
+		Stroke = 2,
+		StrokeColor = Theme.Buttons.Red[2],
+		MaxTextSize = 26,
+		ZIndex = 23,
+		Parent = jackpotPill,
 	})
 
 	local function refresh()
@@ -225,10 +244,10 @@ function Panel.Build(parent: Instance, C)
 		freeTitle.Text = T("WheelFree")
 		if free then
 			freeClock.Text = T("WheelReady")
-			freeClock.TextColor3 = Theme.Green
+			freeClock.TextColor3 = Theme.GreenInk
 		else
 			freeClock.Text = Format.Clock((data.Wheel.NextFree or 0) - workspace:GetServerTimeNow())
-			freeClock.TextColor3 = Theme.Text
+			freeClock.TextColor3 = Theme.Ink
 		end
 		spinsText.Text = T("WheelExtra", { n = extra })
 		if spinning then

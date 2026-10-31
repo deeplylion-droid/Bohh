@@ -89,8 +89,8 @@ function fitPanel(panel)
 	-- sui telefoni il pannello puo' coprire le monete
 	local top = if UserInputService.TouchEnabled and cam.ViewportSize.Y < 600 then 8 else PANEL_TOP
 	local freeH = h - top - PANEL_BOTTOM
-	-- il nastro del titolo sporge di 26 sopra, la X di chiusura di 28 a destra
-	local extraH, extraW = 26 + 8, 2 * 30
+	-- il tondo del titolo sporge di 36 sopra e l'ombra di 10 sotto, la X di chiusura di 16 a destra
+	local extraH, extraW = 36 + 10, 2 * 30
 	local size = design
 	if panel.Resizable and design.Y + extraH > freeH then
 		-- sugli schermi molto larghi (telefoni in orizzontale) anche piu' largo

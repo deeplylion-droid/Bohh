@@ -149,12 +149,14 @@ function Hud.Build(gui: ScreenGui, C)
 			b.Icon.Size = UDim2.fromScale(0.84, 0.84)
 			b.Icon.Position = UDim2.fromScale(0.08, -0.02)
 		end
+		-- nome sul bordo in basso, contornato del colore del pulsante piu' scuro
 		local label = Kit.Text({
 			Name = "Label",
 			Size = UDim2.fromOffset(124, 26),
 			Position = UDim2.new(0.5, 0, 1, -17),
 			AnchorPoint = Vector2.new(0.5, 0),
 			Stroke = 3,
+			StrokeColor = Kit.Tint(Theme.Buttons[it.color][2], -0.25),
 			MaxTextSize = 21,
 			ZIndex = 5,
 			Parent = b.Face,
@@ -358,6 +360,7 @@ function Hud.Build(gui: ScreenGui, C)
 		Parent = barrier.Frame,
 	})
 
+	local shownEvent: string? = nil -- evento di cui il tondo ha gia' colore e icona
 	local function refreshRight()
 		local now = workspace:GetServerTimeNow()
 		-- evento
@@ -368,12 +371,15 @@ function Hud.Build(gui: ScreenGui, C)
 			eventTitle.Text = T("Event_" .. eventId)
 			eventClock.Text = Format.Clock(endsAt - now)
 			eventSub.Text = T("EventDesc_" .. eventId)
-			local def = Events.List[eventId]
-			Kit.Paint(eventBadge, Kit.Tint(def.color, 0.3), def.color)
-			if eventIcon and eventIcon:IsA("ImageLabel") then
-				eventIcon.Image = Assets.Images["Icon" .. def.icon] or eventIcon.Image
-			elseif eventIcon and eventIcon:IsA("TextLabel") then
-				eventIcon.Text = Theme.Emoji[def.icon] or "⭐"
+			if eventId ~= shownEvent then
+				shownEvent = eventId
+				local def = Events.List[eventId]
+				Kit.Paint(eventBadge, Kit.Tint(def.color, 0.3), def.color)
+				if eventIcon and eventIcon:IsA("ImageLabel") then
+					eventIcon.Image = Assets.Images["Icon" .. def.icon] or eventIcon.Image
+				elseif eventIcon and eventIcon:IsA("TextLabel") then
+					eventIcon.Text = Theme.Emoji[def.icon] or "⭐"
+				end
 			end
 		else
 			eventCard.Visible = false
@@ -595,6 +601,7 @@ function Hud.Build(gui: ScreenGui, C)
 		Position = UDim2.new(0.5, 0, 1, 0),
 		AnchorPoint = Vector2.new(0.5, 0),
 		Stroke = 3,
+		StrokeColor = Kit.Tint(Theme.Buttons.Red[2], -0.25),
 		Parent = slap.Frame,
 	})
 	bindText(slapLabel, "BatSlap")
@@ -727,6 +734,7 @@ function Hud.Build(gui: ScreenGui, C)
 		local mine = zoneShown
 		zoneLabel.Text = string.upper(name)
 		zoneLabel.TextColor3 = color
+		zoneStroke.Color = Kit.Tint(color, -0.65)
 		zoneLabel.TextTransparency = 0
 		zoneStroke.Transparency = 0
 		zoneLabel.Visible = true

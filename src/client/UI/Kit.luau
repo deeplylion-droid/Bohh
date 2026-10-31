@@ -76,6 +76,16 @@ function Kit.Tint(c: Color3, k: number): Color3
 	return if k >= 0 then c:Lerp(WHITE, k) else c:Lerp(BLACK, -k)
 end
 
+-- Colore del testo leggibile sopra un fondo: inchiostro sui colori chiari, bianco sugli altri
+-- (luminanza relativa)
+function Kit.OnColor(c: Color3): Color3
+	local function lin(x: number): number
+		return if x <= 0.04045 then x / 12.92 else ((x + 0.055) / 1.055) ^ 2.4
+	end
+	local l = 0.2126 * lin(c.R) + 0.7152 * lin(c.G) + 0.0722 * lin(c.B)
+	return if l > 0.42 then Theme.Ink else Theme.Text
+end
+
 -- Colora un riquadro con un gradiente verticale (dall'alto in basso). Il fondo diventa bianco e il
 -- colore lo da' l'UIGradient "Paint": per cambiarlo si richiama Kit.Paint.
 function Kit.Paint(frame: GuiObject, top: Color3, bottom: Color3?)

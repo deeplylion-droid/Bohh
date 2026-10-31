@@ -34,14 +34,25 @@ function Panel.Build(parent: Instance, C)
 			PaddingBottom = UDim.new(0, 14),
 		}),
 	})
+	local resultPill = New("Frame", {
+		Size = UDim2.new(1, -60, 0, 34),
+		Position = UDim2.new(0.5, 0, 0, 114),
+		AnchorPoint = Vector2.new(0.5, 0),
+		Visible = false,
+		Parent = p.Body,
+	}, { Kit.Corner(UDim.new(1, 0)), Kit.Stroke(2.5, Theme.Text) })
 	local result = Kit.Text({
 		Font = Theme.HeadFont,
-		Size = UDim2.new(1, -20, 0, 28),
-		Position = UDim2.fromOffset(10, 118),
-		Stroke = 2,
+		Size = UDim2.new(1, -28, 0.7, 0),
+		Position = UDim2.new(0, 14, 0.15, 0),
+		Stroke = false,
 		Text = "",
-		Parent = p.Body,
+		Parent = resultPill,
 	})
+	-- la pillola compare quando c'e' un esito
+	result:GetPropertyChangedSignal("Text"):Connect(function()
+		resultPill.Visible = result.Text ~= ""
+	end)
 	local busy = false
 	local redeem = Kit.Button({
 		Text = T("Redeem"),
@@ -62,7 +73,7 @@ function Panel.Build(parent: Instance, C)
 			busy = false
 			if ok then
 				result.Text = T(key or "CodeInvalid")
-				result.TextColor3 = if okRes then Theme.Green else Theme.Red
+				Kit.PaintNamed(resultPill, if okRes then "Green" else "Red")
 				if okRes then
 					box.Text = ""
 				end

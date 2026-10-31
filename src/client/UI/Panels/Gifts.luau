@@ -39,7 +39,7 @@ function Panel.Build(parent: Instance, C)
 		Size = UDim2.new(0.6, 0, 0, 34),
 		Position = UDim2.fromOffset(6, 16),
 		TextXAlignment = Enum.TextXAlignment.Left,
-		Stroke = 2.5,
+		Stroke = false,
 		Parent = p.Body,
 	})
 	local dailyClaim = Kit.Button({
@@ -98,7 +98,7 @@ function Panel.Build(parent: Instance, C)
 		Size = UDim2.new(0.6, 0, 0, 34),
 		Position = UDim2.fromOffset(6, 212),
 		TextXAlignment = Enum.TextXAlignment.Left,
-		Stroke = 2.5,
+		Stroke = false,
 		Parent = p.Body,
 	})
 	local gifts = {}

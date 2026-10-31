@@ -63,6 +63,23 @@ function RewardInfo.Spins(T, n: number): string
 	return if n == 1 then T("SpinsCount1") else T("SpinsCount", { n = n })
 end
 
+-- Colore del premio scritto su una scheda bianca (piu' scuro, senza contorno)
+function RewardInfo.InkColor(reward, data): Color3
+	if reward.kind == "Egg" or reward.kind == "Primal" then
+		local r = Rarities.List[RewardInfo.EggRarity(reward, data)]
+		if r then
+			return r.color:Lerp(r.colorDark, 0.55)
+		end
+	elseif reward.kind == "Coins" then
+		return Color3.fromRGB(236, 132, 0)
+	elseif reward.kind == "Luck" then
+		return Color3.fromRGB(8, 168, 70)
+	elseif reward.kind == "Spin" then
+		return Color3.fromRGB(122, 52, 230)
+	end
+	return Color3.fromRGB(30, 22, 74)
+end
+
 function RewardInfo.Color(reward, data): Color3
 	if reward.kind == "Egg" or reward.kind == "Primal" then
 		local r = Rarities.List[RewardInfo.EggRarity(reward, data)]

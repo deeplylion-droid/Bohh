@@ -13,6 +13,7 @@ local ColorSequence, NumberSequence, Enum = roblox.ColorSequence, roblox.NumberS
 local CFrame = roblox.CFrame
 
 G.unknown = {} -- membri sconosciuti letti dal codice (aiuta a completare il finto)
+G.created = {} -- tutte le istanze create (render_ui --validate le ricontrolla su istanze vere)
 
 ---------------------------------------------------------------------------------------------
 -- Segnali muti
@@ -260,6 +261,7 @@ local function new(className: string)
 		__id = nextId,
 		__class = className,
 	}
+	table.insert(G.created, obj)
 	return setmetatable(obj, mt)
 end
 
