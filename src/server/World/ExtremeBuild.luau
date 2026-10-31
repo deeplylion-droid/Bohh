@@ -381,11 +381,20 @@ local function approach(folder: Instance)
 		fire.Parent = flame
 		light(flame, Color3.fromRGB(255, 150, 80), 28, 1.8)
 	end
-	-- cartelli con la freccia: in fondo al viale della piazza e sulla discesa, poco prima del bivio
+	-- cartelli con la freccia (verso il bivio, a destra scendendo): appeso al palo ovest dell'arco del
+	-- sentiero in fondo al viale, e su un palo al bordo della rampa poco prima del bivio
 	local c = MapLayout.SummitCenter
-	arrowSign(folder, CFrame.lookAt(Vector3.new(-15, c.Y + 0.8, 147), Vector3.new(-15, c.Y + 0.8, 100)))
-	local onRamp = Vector3.new(-16, A.Y, Z - 12)
-	arrowSign(folder, CFrame.lookAt(onRamp, onRamp - Vector3.new(0, 0, 10)))
+	local onArch = Vector3.new(-23, c.Y + 7.5, 155.7)
+	Build.Sign(
+		folder,
+		CFrame.lookAt(onArch, onArch - Vector3.new(0, 0, 10)),
+		Vector3.new(8, 2.4, 0.4),
+		"ExtremeArrow",
+		nil,
+		{ bg = HAZARD_YELLOW, text = HAZARD_BLACK }
+	)
+	local edge = Vector3.new(-21, Terrain.HeightAt(-21, Z - 12) - 0.3, Z - 12)
+	arrowSign(folder, CFrame.lookAt(edge, edge - Vector3.new(0, 0, 10)))
 end
 
 ---------------------------------------------------------------------------------------------
