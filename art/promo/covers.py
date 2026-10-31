@@ -11,7 +11,8 @@ Scene:
            Grifone del Tuono, Komodo Infernale...), controluce caldo, la Balena Cosmica che vola nel cielo.
 - extreme: il Bacon Hair salta sopra un fiume di lava nell'Inferno del Percorso Estremo, con i diavoli
            (Behemoth, Abaddon, Belzebu') attorno; uovo Estremo sul santuario.
-- hatch:   un uovo Ultra che si schiude con raggi di luce e il Penta Drago che esce.
+- hatch:   un uovo Primordiale che si crepa con raggi di luce dorata e il Cobra Reale che ne esce (nasce
+           davvero da quell'uovo), la calotta del guscio che vola via; notte stellata sulla vetta.
 
 Uso (dalla cartella art/):
     PREVIEW=1 nice -n 10 ../.tools/venv/bin/python promo/covers.py steal 640 16 prova   # bozza veloce
@@ -84,9 +85,10 @@ def emissive(o) -> bool:
 
 
 def pet(name, loc=(0, 0, 0), rot_z=0.0, scale=1.0, kind="pet", subdiv=1, glow=1.0, prefix=""):
-    """Carica un pet/uovo del progetto (append_model) con suddivisione e bagliore regolabile."""
+    """Carica un pet/uovo del progetto (append_model) con bagliore regolabile. La suddivisione (SUBDIV=1) quadruplica
+    i poligoni: con tanti giganti in scena la memoria non basta, e i modelli sono gia' lisci."""
     root, objs = S.append_model(ART / f"out/{kind}/{name}/{name}.blend", loc, rot_z, scale, prefix=prefix)
-    if not PREVIEW and subdiv:
+    if not PREVIEW and subdiv and env("SUBDIV", 0) > 0:
         S.subdivide([o for o in objs if len(o.data.polygons) < 60000], subdiv)
     for o in objs:
         for m in o.data.materials:
@@ -1039,7 +1041,7 @@ def boolean_copy(src, ops, name):
     return ob
 
 
-def beams(name, origin, dirs, length, width, color="#ffe9a8", strength=6.0):
+def beams(name, origin, dirs, length, width, color="#ffc94a", strength=6.0, power=2.2):
     """Raggi di luce: coni sottili trasparenti ed emissivi che sfumano verso la punta (additivi)."""
     import bmesh
     from mathutils import Matrix
@@ -1049,7 +1051,7 @@ def beams(name, origin, dirs, length, width, color="#ffe9a8", strength=6.0):
     nt.links.new(tc.outputs["Object"], sep.inputs[0])
     # lungo l'asse locale z (0 = origine, 1 = punta): forte vicino all'uovo, svanisce in fondo
     t = S.math_node(nt, "DIVIDE", S.math_node(nt, "ADD", sep.outputs["Z"], length / 2), length, clamp=True)
-    fade = S.math_node(nt, "POWER", S.math_node(nt, "SUBTRACT", 1.0, t), 1.6)
+    fade = S.math_node(nt, "POWER", S.math_node(nt, "SUBTRACT", 1.0, t), power)
     em = nt.nodes.new("ShaderNodeEmission")
     em.inputs["Color"].default_value = lin(color)
     nt.links.new(S.math_node(nt, "MULTIPLY", fade, strength), em.inputs["Strength"])
@@ -1117,7 +1119,7 @@ def scene_hatch(w: int, samples: int, tag: str):
     snow.data.materials.append(S.snow_material("Snow", tint=(214, 226, 255), fog=(lin("#4a6fd8"), 0.006, 25.0)))
 
     # --- uovo Primordiale crepato: guscio inferiore cavo + calotta che vola via
-    es = env("EGG_S", 2.3)
+    es = env("EGG_S", 2.6)
     egg_root, e_objs = pet("EggPrimal", (0, 0, 0), env("EGG_YAW", 10.0), 1.0, kind="egg", subdiv=0, glow=2.5)
     egg_root.rotation_euler.z = 0.0
     bpy.context.view_layer.update()
@@ -1174,7 +1176,7 @@ def scene_hatch(w: int, samples: int, tag: str):
     for o in cap:
         o.parent = cap_root
         o.location = (-ec.x, -ec.y, -h0)
-    cap_root.location = Vector((ec.x, ec.y, h0)) + Vector(env("CAP_OFF", (-1.9, -0.4, 2.6)))
+    cap_root.location = Vector((ec.x, ec.y, h0)) + Vector(env("CAP_OFF", (-3.6, 2.5, 1.4)))
     cap_root.rotation_euler = (math.radians(env("CAP_RX", -20.0)), math.radians(env("CAP_RY", -42.0)), 0.0)
     grp.scale = (es, es, es)
     gx0, gy0 = env("EGG_XY", (0.0, 0.0))
@@ -1183,22 +1185,30 @@ def scene_hatch(w: int, samples: int, tag: str):
     bpy.context.view_layer.update()
     rim_z = grp.matrix_world @ Vector((ec.x, ec.y, h0))
 
-    # --- Cerbero che esce dall'uovo, impennato, con le zampe anteriori sul bordo
-    cs = env("CERB_S", 2.3)
-    cer, c_objs = pet("Cerberus", (0, 0, 0), env("CERB_YAW", 0.0), cs, glow=env("CERB_E", 1.8))
-    cer.rotation_euler.x = math.radians(env("CERB_PITCH", -24.0))
-    # punto del modello sotto il petto: va un poco sotto il bordo della crepa
-    place_by(cer, (0.0, -0.6, 0.9), tuple(rim_z + Vector(env("CERB_OFF", (0.0, 0.6, -0.9)))))
+    # --- il mostro Primordiale che esce dall'uovo: il Cobra Reale (nasce dall'uovo Primordiale del Canyon), il
+    # cappuccio giallo si legge subito contro il guscio scuro e la notte blu; le spire restano dentro il guscio
+    monster = env("MONSTER", "KingCobra")
+    cs = env("MON_S", 3.0)
+    cer, c_objs = pet(monster, (0, 0, 0), env("MON_YAW", 0.0), cs, glow=env("MON_E", 2.2))
+    cer.rotation_euler.x = math.radians(env("MON_PITCH", -8.0))
+    bpy.context.view_layer.update()
+    mlo, mhi = S.bounds(c_objs)
+    egg_c_w = grp.matrix_world @ ec
+    inside = env("MON_IN", 0.47)
+    cer.location += Vector((egg_c_w.x - float(mlo[0] + mhi[0]) / 2,
+                            egg_c_w.y + env("MON_DY", 0.6) - float(mlo[1] + mhi[1]) / 2,
+                            rim_z.z - inside * float(mhi[2] - mlo[2]) - float(mlo[2])))
+    bpy.context.view_layer.update()
 
     # --- raggi di luce e schegge
     rng = np.random.default_rng(7)
     dirs = []
-    for i in range(env("NBEAMS", 11)):
-        a = math.radians(-78 + 156 * i / (env("NBEAMS", 11) - 1) + rng.uniform(-5, 5))
+    for i in range(env("NBEAMS", 9)):
+        a = math.radians(-74 + 148 * i / (env("NBEAMS", 9) - 1) + rng.uniform(-5, 5))
         dirs.append(((math.sin(a), 0.55 + rng.uniform(-0.1, 0.1), math.cos(a) * 1.0 + 0.15), rng.uniform(0.7, 1.15),
                      rng.uniform(0.6, 1.3)))
-    beams("Beam", tuple(rim_z + Vector((0, 0.8, -0.4))), dirs, env("BEAM_L", 30.0), env("BEAM_W", 1.6),
-          strength=env("BEAM_E", 2.2))
+    beams("Beam", tuple(rim_z + Vector((0, 0.8, -0.4))), dirs, env("BEAM_L", 30.0), env("BEAM_W", 1.1),
+          strength=env("BEAM_E", 1.1))
     shell_mat = shell.data.materials[0]
     shards("Shards", tuple(rim_z + Vector((0, -0.5, 0.5))), env("NSHARDS", 16), 5.5, 0.35, shell_mat, seed=4)
 
@@ -1226,8 +1236,8 @@ def scene_hatch(w: int, samples: int, tag: str):
     S.area_light("CerRimL", tuple(cc + Vector((-8, 9, 6))), tuple(cc), env("RIM", 9000.0), 6.0, lin("#a9c8ff")[:3])
     S.area_light("CerRimR", tuple(cc + Vector((8, 9, 6))), tuple(cc), env("RIM", 9000.0), 6.0, lin("#a9c8ff")[:3])
 
-    cam_loc = env("CAM", (0.0, -21.0, 2.4))
-    target = env("TARGET", (0.0, 0.0, 7.5))
+    cam_loc = env("CAM", (0.0, -25.0, 2.6))
+    target = env("TARGET", (0.0, 0.0, 8.1))
     S.camera(cam_loc, target, lens=env("LENS", 30.0), dof_target=tuple(cc) if not PREVIEW else None, fstop=env("FSTOP", 8.0))
     flakes("Sparkles", cam_loc, target, env("FLAKES", 110), 5.0, 40.0, 0.02, 0.06, seed=21, color="#ffe3a0", glow=4.0)
     caps = S.bounds(cap)
