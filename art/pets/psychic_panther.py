@@ -337,7 +337,7 @@ ACCENT = (74, 60, 104)      # muso, mento e interno delle orecchie grigio-viola 
 ROSETTE = (84, 58, 128)     # rosette "fantasma" viola scuro
 GLASS = (226, 214, 255)     # cupola di vetro
 BRAIN = (255, 92, 200)      # circonvoluzioni rosa luminose
-BRAIN_CORE = (112, 18, 86)  # fondo dei solchi del cervello (magenta scuro, fa leggere le pieghe)
+BRAIN_CORE = (104, 14, 80)  # solchi del cervello (magenta scuro: fanno leggere le pieghe anche sul Neon)
 EYE_GLOW = (196, 110, 255)  # occhi viola accesi
 PUPIL = (18, 6, 30)
 THREAD = (255, 130, 206)    # filo dei punti attorno alla cupola (e naso)
@@ -496,24 +496,28 @@ body_only = shrink(union(union(torso, neck, k=0.16), legs, k=0.08).intersect(hal
 # ============================================================ cervello rosa (lobi con circonvoluzioni) dentro la cupola
 BR_C = np.array((0.0, 0.04, CUT_Z + 0.07))
 HEMI_R = np.array((0.165, 0.29, 0.23))
-gyri, cores = [], []
+ABOVE_CUT = halfspace_z(CUT_Z - 0.02, above=True)
+lobes, sulci = [], []
 for sx in (1, -1):
     hc = BR_C + np.array((sx * 0.135, 0.0, 0.0))
-    cores.append(ellipsoid(tuple(HEMI_R * 0.9 - 0.022), tuple(hc)))
-    for j, lv in enumerate((-0.58, -0.25, 0.08, 0.41, 0.72)):
-        pts = []
-        for yn in np.linspace(-0.93, 0.93, 17):
-            zn = lv + 0.1 * math.sin(6.5 * yn + 1.9 * j + (0.8 if sx > 0 else 0.0))
-            xn2 = 1.0 - yn * yn - zn * zn
-            if xn2 <= 0.02:
-                continue
-            xn = math.sqrt(xn2)
-            pts.append(tuple(hc + HEMI_R * np.array((sx * xn, yn, zn)) * 0.9))
-        if len(pts) > 2:
-            gyri.append(tube(pts, 0.031))
-ABOVE_CUT = halfspace_z(CUT_Z - 0.02, above=True)
-brain = shrink(fast_union(gyri, k=0.004).intersect(ABOVE_CUT))
-brain_core = union(*cores, k=0.02).intersect(ABOVE_CUT)
+    lobes.append(ellipsoid(tuple(HEMI_R), tuple(hc)))
+
+    def on_lobe(th, ph, hc=hc, sx=sx):
+        t, f = math.radians(th), math.radians(ph)
+        u = np.array((sx * math.sin(t) * math.sin(f), -math.cos(t), math.sin(t) * math.cos(f)))
+        return hc + HEMI_R * u * 1.0
+
+    # solchi lunghi da davanti a dietro, a varie distanze dalla scissura centrale
+    for k, ph0 in enumerate((14.0, 44.0, 74.0, 102.0)):
+        pts = [tuple(on_lobe(th, ph0 + 9.0 * math.sin(math.radians(th) * 5.0 + 1.3 * k + (0.7 if sx > 0 else 0.0))))
+               for th in np.linspace(28, 152, 15)]
+        sulci.append(tube(pts, 0.019))
+    # solchi corti trasversali che collegano quelli lunghi (aspetto da labirinto)
+    for th0, ph_a, ph_b in ((58, 14, 44), (96, 44, 74), (128, 14, 44), (78, 74, 102), (118, 74, 102)):
+        pts = [tuple(on_lobe(th0 + 6.0 * math.sin(i * 1.3), ph)) for i, ph in enumerate(np.linspace(ph_a, ph_b, 5))]
+        sulci.append(tube(pts, 0.017))
+brain = shrink(union(*lobes, k=0.03).intersect(ABOVE_CUT))
+brain_core = fast_union(sulci).intersect(ABOVE_CUT)
 
 # ============================================================ punti cuciti attorno alla cupola (+ naso rosa)
 stitch_base = union(head_final, DOME)
@@ -598,8 +602,8 @@ m.add("Rosettes", rosettes, ROSETTE, role="detail", tris=450, voxel=0.0304)
 m.add("Accent", H(union(pad_solid.subtract(head0.offset(-0.09)), ear_fluff)), ACCENT, role="detail", tris=400,
       voxel=0.0285)
 m.add("Dome", H(DOME), GLASS, material="Glass", role="detail", tris=900, voxel=0.0340, transparency=0.55)
-m.add("Brain", H(brain), BRAIN, material="Neon", role="glow", tris=1900, voxel=0.0231)
-m.add("BrainCore", H(brain_core), BRAIN_CORE, role="detail", tris=300, voxel=0.03)
+m.add("Brain", H(brain), BRAIN, material="Neon", role="glow", tris=700, voxel=0.0231)
+m.add("BrainFolds", H(brain_core), BRAIN_CORE, role="detail", tris=950, voxel=0.02)
 m.add("Stitches", union(H(fast_union(stitches)), H(nose)), THREAD, role="detail", tris=750, voxel=0.0249)
 
 whiskers = []
