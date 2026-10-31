@@ -1327,6 +1327,489 @@ local function section1(root: Instance)
 end
 
 ---------------------------------------------------------------------------------------------
+-- Sezione 2: il Tempio del Deserto
+---------------------------------------------------------------------------------------------
+
+-- prisma triangolare (timpano, piramidion): base larga w e alta h, visto di fronte (-Z) e' un triangolo
+local function gable(name: string, cf: CFrame, w: number, h: number, d: number, color: Color3, material: Enum.Material)
+	P(name, V3(d, h, w / 2), cf * CF(w / 4, h / 2, 0) * ANG(0, -math.pi / 2, 0), color, material, { class = WEDGE })
+	P(name, V3(d, h, w / 2), cf * CF(-w / 4, h / 2, 0) * ANG(0, math.pi / 2, 0), color, material, { class = WEDGE })
+end
+
+-- Ornamenti in cima alle sponde di sabbia (cf = sulla copertura, sguardo verso il canyon)
+local function urn(cf: CFrame, body: Color3, trim: Color3, s: number)
+	P("UrnFoot", V3(0.4 * s, 1.4 * s, 1.4 * s), cf * CF(0, 0.2 * s, 0) * UPRIGHT, trim, M.SmoothPlastic, { shape = CYL })
+	ball("Urn", 2.2 * s, cf * CF(0, 1.3 * s, 0), body, M.SmoothPlastic)
+	P("UrnNeck", V3(1 * s, 0.9 * s, 0.9 * s), cf * CF(0, 2.6 * s, 0) * UPRIGHT, trim, M.SmoothPlastic, { shape = CYL })
+end
+
+local function urns(cf: CFrame, s: number)
+	urn(cf * CF(-1.4 * s, 0, 0), C.terracotta, C.lapis, s)
+	urn(cf * CF(1.3 * s, 0, 0.5 * s), C.turquoise, C.gold, 0.8 * s)
+end
+
+-- gatta nera (Bastet) col collare d'oro
+local function catStatue(cf: CFrame, s: number)
+	P("CatBase", V3(2.2 * s, 0.6 * s, 3 * s), cf * CF(0, 0.3 * s, 0), C.sandLight, M.Sandstone)
+	P("CatBody", V3(2.8 * s, 1.7 * s, 1.7 * s), cf * CF(0, 2 * s, 0.2 * s) * UPRIGHT, C.black, M.SmoothPlastic, { shape = CYL })
+	P("CatCollar", V3(0.35 * s, 1.95 * s, 1.95 * s), cf * CF(0, 3.1 * s, 0.2 * s) * UPRIGHT, C.gold, M.Foil, { shape = CYL })
+	ball("CatHead", 1.6 * s, cf * CF(0, 3.9 * s, 0.1 * s), C.black, M.SmoothPlastic)
+	for _, sx in { -1, 1 } do
+		local mirror = if sx < 0 then FLIP else CFrame.identity
+		P("CatEar", V3(0.3 * s, 1.1 * s, 0.7 * s), cf * CF(0.42 * sx * s, 4.85 * s, 0.15 * s) * mirror * ANG(0, math.pi / 2, 0), C.black, M.SmoothPlastic, { class = WEDGE })
+	end
+end
+
+local function papyrus(cf: CFrame, s: number)
+	P("PapyrusRoot", V3(0.5 * s, 1.6 * s, 1.6 * s), cf * CF(0, 0.25 * s, 0) * UPRIGHT, C.palmDark, M.SmoothPlastic, { shape = CYL })
+	for _, st in { { 0, 6.5, 8 }, { 125, 5.2, 16 }, { 245, 4.4, 12 } } do
+		local root = cf * CF(0, 0.35 * s, 0) * ANG(0, rad(st[1]), 0) * ANG(rad(st[3]), 0, 0)
+		local len = st[2] * s
+		P("Papyrus", V3(len, 0.32 * s, 0.32 * s), root * CF(0, len / 2, 0) * UPRIGHT, C.papyrus, M.SmoothPlastic, { shape = CYL })
+		ball("PapyrusHead", 1.3 * s, root * CF(0, len + 0.35 * s, 0), C.papyrusTop, M.SmoothPlastic)
+	end
+end
+
+-- braciere d'oro con le braci; lit = fuoco vero e luce (pochi: costano)
+local function brazier(cf: CFrame, s: number, lit: boolean)
+	P("BrazierFoot", V3(0.4 * s, 1.8 * s, 1.8 * s), cf * CF(0, 0.2 * s, 0) * UPRIGHT, C.sandDark, M.Sandstone, { shape = CYL })
+	P("BrazierStand", V3(2.2 * s, 0.7 * s, 0.7 * s), cf * CF(0, 1.4 * s, 0) * UPRIGHT, C.gold, M.Foil, { shape = CYL })
+	P("Brazier", V3(0.9 * s, 2.6 * s, 2.6 * s), cf * CF(0, 2.95 * s, 0) * UPRIGHT, C.gold, M.Foil, { shape = CYL })
+	local coals = ball("Embers", 1.9 * s, cf * CF(0, 3.5 * s, 0), C.ember, M.Neon)
+	if lit then
+		fire(coals, 4 * s)
+		light(coals, rgb(255, 150, 60), 20, 1.6)
+	end
+end
+
+local function miniObelisk(cf: CFrame, s: number)
+	P("ObeliskBase", V3(2.4 * s, 0.6 * s, 2.4 * s), cf * CF(0, 0.3 * s, 0), C.sandDark, M.Sandstone)
+	local h = 6.5 * s
+	P("Obelisk", V3(1.3 * s, h, 1.3 * s), cf * CF(0, 0.6 * s + h / 2, 0), C.sandLight, M.Sandstone)
+	gable("ObeliskTip", cf * CF(0, 0.6 * s + h, 0), 1.3 * s, 1.1 * s, 1.3 * s, C.gold, M.Foil)
+	P("ObeliskGlyph", V3(0.3 * s, h * 0.55, 0.08), cf * CF(-0.25 * s, 0.6 * s + h * 0.55, -0.65 * s - 0.04), C.lapis, M.SmoothPlastic)
+	P("ObeliskGlyph", V3(0.3 * s, h * 0.4, 0.08), cf * CF(0.3 * s, 0.6 * s + h * 0.62, -0.65 * s - 0.04), C.bannerRed, M.SmoothPlastic)
+end
+
+-- palma: tronco in due tratti che pende verso -Z locale, ciuffo di foglie e noci di cocco
+local function palm(base: CFrame, h: number, lean: number, s: number, leaf: Color3)
+	P("PalmFoot", V3(0.4 * s, 2.2 * s, 2.2 * s), base * CF(0, 0.2 * s, 0) * UPRIGHT, C.trunk, M.Wood, { shape = CYL })
+	local p0 = (base * CF(0, 0.25 * s, 0)).Position
+	local p1 = (base * CF(0, h * 0.5, -lean * 0.3)).Position
+	local p2 = (base * CF(0, h, -lean)).Position
+	rod("PalmTrunk", p0, p1, 1.3 * s, C.trunk, M.Wood)
+	rod("PalmTrunk", p1, p2, 1.1 * s, C.trunk, M.Wood)
+	local crown = CF(p2) * base.Rotation
+	ball("PalmCrown", 1.9 * s, crown, C.palmDark, M.SmoothPlastic)
+	for k = 0, 4 do
+		local L = 7.5 * s
+		local f = crown * ANG(0, rad(k * 72 + 15), 0) * ANG(rad(-24 - (k % 2) * 12), 0, 0)
+		P("Frond", V3(1.8 * s, 0.25 * s, L), f * CF(0, 0, -L / 2 + 0.4 * s), leaf, M.SmoothPlastic)
+	end
+	ball("Coconut", 0.9 * s, crown * CF(0.62 * s, -0.8 * s, 0.3 * s), C.coconut, M.SmoothPlastic)
+	ball("Coconut", 0.9 * s, crown * CF(-0.5 * s, -0.85 * s, -0.42 * s), C.coconut, M.SmoothPlastic)
+end
+
+-- Ornamenti piatti sulle facce interne (f = sulla faccia, avanti = verso il canyon)
+local function glyphPanel(f: CFrame, k: number)
+	P("GlyphPanel", V3(5, 3.6, 0.2), f * CF(0, 0, -0.1), C.sandLight, M.Sandstone)
+	local z = -0.24
+	P("Glyph", V3(0.08, 1.3, 1.3), f * CF(-1.65, 0.55, z) * FORWARD, C.sunRed, M.SmoothPlastic, { shape = CYL })
+	P("Glyph", V3(0.35, 2.4, 0.08), f * CF(-0.35, 0, z), C.lapis, M.SmoothPlastic)
+	-- ankh d'oro
+	P("Glyph", V3(0.3, 1.7, 0.08), f * CF(1.05, -0.35, z), C.gold, M.Foil)
+	P("Glyph", V3(1.2, 0.3, 0.08), f * CF(1.05, 0.45, z), C.gold, M.Foil)
+	P("Glyph", V3(0.08, 0.8, 0.8), f * CF(1.05, 1.0, z) * FORWARD, C.gold, M.Foil, { shape = CYL })
+	local _ = k
+end
+
+local function scarabRelief(f: CFrame)
+	P("Scarab", V3(0.2, 2.2, 2.2), f * CF(0, -0.3, -0.1) * FORWARD, C.gold, M.Foil, { shape = CYL })
+	P("Scarab", V3(0.2, 1, 1), f * CF(0, 1.1, -0.1) * FORWARD, C.gold, M.Foil, { shape = CYL })
+	for _, sx in { -1, 1 } do
+		P("ScarabWing", V3(2.6, 0.8, 0.2), f * CF(1.6 * sx, 0, -0.1) * ANG(0, 0, rad(22 * sx)), C.gold, M.Foil)
+	end
+	P("ScarabSun", V3(0.2, 1.5, 1.5), f * CF(0, 2.6, -0.1) * FORWARD, C.sunRed, M.SmoothPlastic, { shape = CYL })
+end
+
+-- stendardo appeso sotto la copertura: asta d'oro, telo, fascia e sole
+local function banner(b: Bank, lx: number, len: number, col: Color3)
+	local rodY = b.under - 0.03 - 0.19
+	P("BannerRod", V3(3.6, 0.36, 0.36), onFace(b, lx, rodY) * CF(0, 0, -0.18), C.gold, M.Foil, { shape = CYL })
+	P("Banner", V3(2.8, len, 0.12), onFace(b, lx, rodY - len / 2) * CF(0, 0, -0.06), col, M.Fabric)
+	P("BannerBand", V3(2.8, 0.5, 0.06), onFace(b, lx, rodY - len + 0.9) * CF(0, 0, -0.15), C.gold, M.Foil)
+	P("BannerSun", V3(0.06, 1.3, 1.3), onFace(b, lx, rodY - len * 0.42) * CF(0, 0, -0.15) * FORWARD, C.gold, M.Foil, { shape = CYL })
+end
+
+-- Abbellimento delle sponde della sezione 2: ogni quattro sponde una ha un ornamento in cima e un rilievo sulla
+-- faccia, un'altra uno stendardo
+local function dressBanks2()
+	local banks = banksOf(2)
+	local levels = liquidLevels(2)
+	local rng = Random.new(2202)
+	local tops = {
+		{
+			"Urns",
+			function(cf: CFrame, _k: number)
+				urns(cf, 1.25)
+			end,
+		},
+		{
+			"Palm",
+			function(cf: CFrame, k: number)
+				palm(cf, 15 + (k % 3) * 2, 2.5, 1, if k % 2 == 0 then C.palmLeaf else C.palmDark)
+			end,
+		},
+		{
+			"CatStatue",
+			function(cf: CFrame, _k: number)
+				catStatue(cf, 1.35)
+			end,
+		},
+		{
+			"Brazier",
+			function(cf: CFrame, _k: number)
+				brazier(cf, 1.3, false)
+			end,
+		},
+		{
+			"Papyrus",
+			function(cf: CFrame, _k: number)
+				papyrus(cf, 1.3)
+			end,
+		},
+		{
+			"Obelisk",
+			function(cf: CFrame, _k: number)
+				miniObelisk(cf, 1.2)
+			end,
+		},
+	}
+	local count = { [1] = 0, [-1] = 0 }
+	for _, side in { 1, -1 } do
+		for k, b in banks[side] do
+			local phase = (k + (if side == 1 then 0 else 2)) % 4
+			if phase == 1 or phase == 3 then
+				continue
+			end
+			local host = { [b.piece] = true }
+			if b.cap then
+				host[b.cap] = true
+			end
+			local uc = (b.uMin + b.uMax) / 2
+			local level = levelAt(levels, uc)
+			local hi = b.under - 0.03
+			local lowLocal = function(lx: number): number
+				return if level > -math.huge then faceLocalY(b, lx, level + 1.5) else hi - 14
+			end
+			if phase == 0 then
+				count[side] += 1
+				local which = (count[side] + (if side == 1 then 0 else 3)) % #tops + 1
+				local maxX, maxZ = b.hx - 3.2, b.hz - 2.8
+				if maxX > 0 and maxZ > 0 then
+					for _ = 1, 5 do
+						begin(tops[which][1])
+						local cf = onTop(b, rng:NextNumber(-maxX, maxX), rng:NextNumber(-maxZ, maxZ * 0.2))
+						tops[which][2](cf, count[side])
+						if commit(nil, 0.15, host) then
+							break
+						end
+					end
+				end
+				for _ = 1, 4 do
+					local lx = rng:NextNumber(-b.size.X / 2 + 4.8, b.size.X / 2 - 4.8)
+					local y = math.max(lowLocal(lx) + 3, hi - 6.5) + rng:NextNumber(-0.8, 0.8)
+					if y > hi - 2.4 then
+						y = hi - 2.4
+					end
+					if y < lowLocal(lx) + 2.2 then
+						break
+					end
+					if count[side] % 2 == 0 then
+						begin("Glyphs")
+						glyphPanel(onFace(b, lx, y), count[side])
+					else
+						begin("ScarabRelief")
+						scarabRelief(onFace(b, lx, y - 0.6))
+					end
+					if commit(nil, 0.15, host) then
+						break
+					end
+				end
+			else
+				for _ = 1, 3 do
+					local lx = rng:NextNumber(-b.size.X / 2 + 3.4, b.size.X / 2 - 3.4)
+					local len = math.min(8, hi - lowLocal(lx) - 0.6)
+					if len < 4 then
+						break
+					end
+					begin("Banner")
+					banner(b, lx, len, if (k + side) % 4 < 2 then C.bannerRed else C.lapis)
+					if commit(nil, 0.15, host) then
+						break
+					end
+				end
+			end
+		end
+	end
+end
+
+-- Sfinge d'oro (GoldenSphinx) sdraiata su un piedistallo sospeso: top = centro della faccia superiore del
+-- piedistallo, sguardo = muso (verso chi arriva); X locale = lontano dal canyon
+local function sphinx(top: CFrame)
+	begin("GoldenSphinx", true)
+	P("Plinth", V3(16, 6, 44), top * CF(0, -3, -2), C.sandstone, M.Sandstone)
+	P("PlinthBand", V3(16.3, 1, 44.3), top * CF(0, -1.6, -2), C.lapis, M.SmoothPlastic)
+	P("Plinth", V3(12, 20, 32), top * CF(0, -15.5, -2), C.sandstone, M.Sandstone)
+	P("Plinth", V3(8, 16, 18), top * CF(0.4, -31, -1) * ANG(0, rad(12), 0), C.sandstone, M.Sandstone)
+	P("Plinth", V3(6, 6, 6), top * CF(0, -39, -1) * ANG(rad(45), 0, rad(35)), C.sandstone, M.Sandstone)
+	-- corpo sdraiato e zampe
+	P("Body", V3(10, 7, 20), top * CF(0, 3.5, 3), C.sphinx, M.SmoothPlastic)
+	P("Haunch", V3(11, 8.5, 9), top * CF(0, 4.25, 10.5), C.sphinx, M.SmoothPlastic)
+	P("Chest", V3(10.5, 11, 7), top * CF(0, 5.5, -7.5), C.sphinx, M.SmoothPlastic)
+	for _, sx in { -1, 1 } do
+		P("Paw", V3(3.2, 2.6, 12), top * CF(3.4 * sx, 1.3, -16), C.sphinx, M.SmoothPlastic)
+	end
+	P("Collar", V3(11.1, 1.6, 7.6), top * CF(0, 7.3, -7.5), C.lapis, M.SmoothPlastic)
+	-- testa col copricapo a strisce
+	P("Head", V3(7.6, 8, 7), top * CF(0, 15, -8.5), C.sphinxFace, M.SmoothPlastic)
+	P("Nemes", V3(9.6, 7.6, 7.4), top * CF(0, 16.4, -7.6), C.gold, M.Foil)
+	P("NemesStripe", V3(9.8, 1, 7.6), top * CF(0, 17.6, -7.6), C.lapis, M.SmoothPlastic)
+	for _, sx in { -1, 1 } do
+		P("Lappet", V3(2.2, 6.8, 2), top * CF(4.2 * sx, 11.7, -10.6), C.lapis, M.SmoothPlastic)
+		P("Eye", V3(1.5, 0.7, 0.2), top * CF(1.7 * sx, 16, -12.1), C.black, M.SmoothPlastic)
+	end
+	P("Uraeus", V3(2.2, 1, 1), top * CF(0, 20.3, -11.3) * UPRIGHT, C.gold, M.Foil, { shape = CYL })
+	P("Nose", V3(1.2, 1.8, 1), top * CF(0, 14.4, -12.5), C.sphinxFace, M.SmoothPlastic, { class = WEDGE })
+	P("Mouth", V3(2, 0.35, 0.15), top * CF(0, 12.8, -12.075), rgb(150, 70, 40), M.SmoothPlastic)
+	P("Beard", V3(1.6, 3.4, 1.2), top * CF(0, 10.2, -12), C.lapis, M.SmoothPlastic)
+	-- coda lungo il fianco
+	rod("Tail", (top * CF(5.6, 0.45, 14.2)).Position, (top * CF(5.6, 0.45, 3)).Position, 0.9, C.sphinx, M.SmoothPlastic)
+	ball("TailTip", 1.5, top * CF(5.6, 0.75, 2.4), C.lapis, M.SmoothPlastic)
+	-- ali ripiegate all'insu', come il pet (la piuma d'oro sta un poco piu' in fuori)
+	for _, sx in { -1, 1 } do
+		local root = top * CF(4.4 * sx, 6.5, -1) * ANG(0, 0, rad(-14 * sx))
+		for k, f in { { 14, 30 }, { 12, 48 }, { 10, 66 } } do
+			local out = if k == 2 then 0.3 * sx else 0
+			P("Feather", V3(0.7, f[1], 2.6), root * CF(out, 0, 0) * ANG(rad(f[2]), 0, 0) * CF(0, f[1] / 2, 0), if k == 2 then C.gold else C.lapis, M.SmoothPlastic)
+		end
+	end
+	return commit()
+end
+
+-- Piramide a gradoni su un'isola di sabbia sospesa: top = centro della base
+local function pyramidIsland(top: CFrame, size: number, height: number, steps: number)
+	begin("Pyramid", true)
+	island(top, size * 1.42 + 4, C.sand, M.Sand, C.sandstone)
+	local h = height / steps
+	for k = 0, steps - 1 do
+		local w = size * (1 - k / steps)
+		local last = k == steps - 1
+		P("PyramidStep", V3(w, h, w), top * CF(0, (k + 0.5) * h, 0), if last then C.gold else C.sandLight, if last then M.Foil else M.Sandstone)
+	end
+	return commit()
+end
+
+-- Oasi su un'isola sospesa: laghetto, palme e papiri
+local function oasis(top: CFrame)
+	begin("Oasis", true)
+	island(top, 30, C.sand, M.Sand, C.sandstone)
+	P("Pond", V3(0.4, 12, 12), top * CF(-1, 0, 1) * UPRIGHT, C.pond, M.SmoothPlastic, { shape = CYL, shine = 0.2 })
+	palm(top * CF(-9, 0, -4) * ANG(0, rad(40), 0), 17, 3, 1, C.palmLeaf)
+	palm(top * CF(7.5, 0, -6) * ANG(0, rad(-120), 0), 20, 4, 1.1, C.palmDark)
+	palm(top * CF(4, 0, 9.5) * ANG(0, rad(170), 0), 14, 2.5, 0.9, C.palmLeaf)
+	papyrus(top * CF(-6.5, 0, 7.5), 1.2)
+	return commit()
+end
+
+-- colonna con base, fascia dipinta e capitello a loto (capital = false: spezzata)
+local function column(base: CFrame, h: number, capital: boolean)
+	P("ColumnBase", V3(1, 4.2, 4.2), base * CF(0, 0.5, 0) * UPRIGHT, C.sandDark, M.Sandstone, { shape = CYL })
+	P("Column", V3(h, 3.2, 3.2), base * CF(0, 0.9 + h / 2, 0) * UPRIGHT, C.sandLight, M.Sandstone, { shape = CYL })
+	P("ColumnBand", V3(0.8, 3.5, 3.5), base * CF(0, 0.9 + h - 1.6, 0) * UPRIGHT, C.lapis, M.SmoothPlastic, { shape = CYL })
+	if capital then
+		P("Capital", V3(1.6, 4.4, 4.4), base * CF(0, h + 1.6, 0) * UPRIGHT, C.turquoise, M.SmoothPlastic, { shape = CYL })
+		P("Abacus", V3(4.6, 1, 4.6), base * CF(0, h + 2.9, 0), C.sandLight, M.Sandstone)
+	end
+end
+
+-- Colonnato in rovina su una piattaforma sospesa: top = centro della piattaforma, X locale lungo il canyon
+local function colonnade(top: CFrame)
+	begin("Colonnade", true)
+	P("Platform", V3(34, 3, 12), top * CF(0, -1.5, 0), C.sandstone, M.Sandstone)
+	P("Platform", V3(26, 14, 9), top * CF(0, -9.25, 0) * ANG(0, rad(4), 0), C.sandstone, M.Sandstone)
+	P("Platform", V3(15, 13, 7), top * CF(0.5, -21.5, 0) * ANG(0, rad(-7), 0), C.sandstone, M.Sandstone)
+	P("Platform", V3(5, 5, 5), top * CF(0, -28.5, 0) * ANG(rad(45), 0, rad(35)), C.sandstone, M.Sandstone)
+	local h = 17
+	for k, x in { -11, -3.5, 4, 11.5 } do
+		column(top * CF(x, 0, 0), if k == 3 then 7 else h, k ~= 3)
+	end
+	P("Lintel", V3(12.1, 2.2, 4.6), top * CF(-7.25, h + 3.4 + 1.1, 0), C.sandLight, M.Sandstone)
+	P("LintelStripe", V3(12.1, 0.6, 0.1), top * CF(-7.25, h + 4.5, -2.35), C.lapis, M.SmoothPlastic)
+	P("Drum", V3(3.6, 3.2, 3.2), top * CF(7.8, 1.6, 3.6) * ANG(0, rad(70), 0), C.sandLight, M.Sandstone, { shape = CYL })
+	return commit()
+end
+
+-- Disco alato (sole rosso con le ali) sulla faccia f (avanti = fuori dal muro)
+local function wingedSun(f: CFrame, s: number)
+	P("WingedSun", V3(0.5, 3.4 * s, 3.4 * s), f * CF(0, 0, -0.25) * FORWARD, C.sunRed, M.SmoothPlastic, { shape = CYL })
+	for _, sx in { -1, 1 } do
+		P("Wing", V3(10 * s, 1.5 * s, 0.4), f * CF(sx * 7.2 * s, 0.3 * s, -0.2) * ANG(0, 0, rad(7 * sx)), C.lapis, M.SmoothPlastic)
+		P("WingGold", V3(8 * s, 0.5 * s, 0.12), f * CF(sx * 7.4 * s, 0.3 * s, -0.2) * ANG(0, 0, rad(7 * sx)) * CF(0, -0.1 * s, -0.26), C.gold, M.Foil)
+	end
+end
+
+-- Porta del deserto all'uscita del santuario 1: due pilastri, architrave col disco alato, bracieri accesi
+local function desertGate()
+	local u = 7
+	local top = 308
+	local facing = ANG(0, -math.pi / 2, 0) -- verso +X: verso chi esce dal santuario
+	begin("DesertGate", true)
+	for _, side in { -1, 1 } do
+		P("GatePillar", V3(6, top - 254, 6), CF(Extreme.At(2, u, (254 + top) / 2, side * 40)), C.sandstone, M.Sandstone)
+		P("GatePillar", V3(5, 5, 5), CF(Extreme.At(2, u, 256, side * 40)) * ANG(rad(45), 0, rad(35)), C.sandstone, M.Sandstone)
+		P("GateBand", V3(6.4, 1.2, 6.4), CF(Extreme.At(2, u, top - 3, side * 40)), C.lapis, M.SmoothPlastic)
+		P("GateCapital", V3(7, 1.6, 7), CF(Extreme.At(2, u, top + 0.8, side * 40)), C.gold, M.Foil)
+	end
+	local lintelY = top + 1.6
+	P("GateLintel", V3(6, 4, 87), CF(Extreme.At(2, u, lintelY + 2, 0)), C.sandstone, M.Sandstone)
+	wingedSun(CF(Extreme.At(2, u - 3, lintelY + 2, 0)) * facing, 1)
+	for _, side in { -1, 1 } do
+		-- stendardi appesi all'architrave, sopra le sponde
+		local f = CF(Extreme.At(2, u - 3, lintelY + 3.6, side * 28)) * facing
+		P("Banner", V3(3, 7, 0.12), f * CF(0, -3.5, -0.06), C.bannerRed, M.Fabric)
+		P("BannerBand", V3(3, 0.6, 0.06), f * CF(0, -6, -0.15), C.gold, M.Foil)
+	end
+	commit()
+	for _, side in { -1, 1 } do
+		begin("GateBrazier", true)
+		brazier(CF(Extreme.At(2, u, lintelY + 4, side * 40)) * facing, 1.5, true)
+		commit()
+	end
+end
+
+-- Anubi (AnubisGuard) in piedi: base = sopra il cornicione, sguardo verso chi arriva
+local function anubis(base: CFrame)
+	P("AnubisPlinth", V3(5, 1.2, 5), base * CF(0, 0.6, 0), C.sandLight, M.Sandstone)
+	for _, sx in { -1, 1 } do
+		P("AnubisLeg", V3(1.3, 6, 1.6), base * CF(0.9 * sx, 4.2, 0), C.black, M.SmoothPlastic)
+		P("AnubisArm", V3(1.1, 4.4, 1.2), base * CF(2.45 * sx, 11.2, 0), C.black, M.SmoothPlastic)
+		P("AnubisEar", V3(0.5, 3.2, 1.2), base * CF(0.75 * sx, 17.85, 0.2) * (if sx < 0 then FLIP else CFrame.identity) * ANG(0, math.pi / 2, 0), C.black, M.SmoothPlastic, { class = WEDGE })
+		P("AnubisEye", V3(0.55, 0.25, 0.1), base * CF(0.65 * sx, 15.5, -1.45), C.glowCyan, M.Neon)
+	end
+	P("AnubisKilt", V3(3.8, 2.6, 2.4), base * CF(0, 7.6, 0), C.gold, M.Foil)
+	P("AnubisKiltStripe", V3(3.6, 0.6, 0.1), base * CF(0, 7.3, -1.25), C.lapis, M.SmoothPlastic)
+	P("AnubisTorso", V3(3.8, 4.6, 2.2), base * CF(0, 11.2, 0), C.black, M.SmoothPlastic)
+	P("AnubisCollar", V3(0.9, 4.6, 4.6), base * CF(0, 13.2, 0) * UPRIGHT, C.lapis, M.SmoothPlastic, { shape = CYL })
+	P("AnubisHead", V3(2.4, 2.6, 2.8), base * CF(0, 14.95, 0), C.black, M.SmoothPlastic)
+	P("AnubisSnout", V3(1.3, 1.2, 2.4), base * CF(0, 14.5, -2.4), C.black, M.SmoothPlastic)
+	rod("AnubisStaff", (base * CF(2.3, 1.2, -1.6)).Position, (base * CF(2.3, 17.5, -1.6)).Position, 0.5, C.lapis, M.SmoothPlastic)
+	P("AnubisStaffTop", V3(1.4, 0.6, 0.6), base * CF(2.3, 17.6, -1.6) * ANG(0, 0, rad(-20)), C.gold, M.Foil)
+end
+
+-- Scarabeo del sole (SunScarab) che regge il sole: base = sopra l'architrave
+local function sunScarab(base: CFrame)
+	ball("ScarabBody", 5, base * CF(0, 2.9, 0.4), C.turquoise, M.SmoothPlastic, { shine = 0.15 })
+	ball("ScarabHead", 2.4, base * CF(0, 2.7, -2.4), C.navy, M.SmoothPlastic)
+	for _, sx in { -1, 1 } do
+		for _, sz in { -1, 1 } do
+			local a = (base * CF(1.4 * sx, 2.1, 0.4 + 1.2 * sz)).Position
+			local b = (base * CF(2.9 * sx, 0.25, 0.4 + 2.3 * sz)).Position
+			rod("ScarabLeg", a, b, 0.45, C.navy, M.SmoothPlastic)
+		end
+		rod("ScarabArm", (base * CF(0.8 * sx, 3.2, -2.2)).Position, (base * CF(1.2 * sx, 7.4, -2.6)).Position, 0.45, C.navy, M.SmoothPlastic)
+		P("ScarabWing", V3(0.2, 3.6, 5), base * CF(2.3 * sx, 3.6, 1.4) * ANG(rad(-10), 0, rad(-28 * sx)), rgb(150, 224, 255), M.SmoothPlastic)
+	end
+	local sun = ball("Sun", 4.4, base * CF(0, 9.4, -2.6), C.sun, M.Neon)
+	light(sun, C.sun, 26, 2)
+end
+
+-- Facciata del santuario 2: due piloni con i rilievi, architrave col disco alato e lo scarabeo, Anubi e bracieri
+local function shrineFacade2()
+	local s = Extreme.Sections[2]
+	local uc = s.length - 2
+	local towerTop = 318
+	local facing = ANG(0, -math.pi / 2, 0)
+	begin("TemplePylons", true)
+	for _, side in { -1, 1 } do
+		local v = side * 45
+		P("Pylon", V3(16, towerTop - 238, 16), CF(Extreme.At(2, uc, (238 + towerTop) / 2, v)), C.sandstone, M.Sandstone)
+		P("Pylon", V3(11, 11, 11), CF(Extreme.At(2, uc, 240, v)) * ANG(rad(45), 0, rad(35)), C.sandstone, M.Sandstone)
+		P("PylonBand", V3(16.4, 1.2, 16.4), CF(Extreme.At(2, uc, towerTop - 2.4, v)), C.lapis, M.SmoothPlastic)
+		P("PylonCornice", V3(17.6, 2.4, 17.6), CF(Extreme.At(2, uc, towerTop + 1.2, v)), C.sandLight, M.Sandstone)
+		local face = CF(Extreme.At(2, uc - 8, 0, v)) * facing
+		P("PylonPanel", V3(10, 24, 0.3), face * CF(0, 298, -0.15), C.lapis, M.SmoothPlastic)
+		P("PylonSun", V3(0.3, 6, 6), face * CF(0, 303, -0.45) * FORWARD, C.gold, M.Foil, { shape = CYL })
+		P("PylonStripe", V3(10, 1, 0.3), face * CF(0, 292, -0.45), C.gold, M.Foil)
+	end
+	P("PylonLintel", V3(10, 6, 74), CF(Extreme.At(2, uc, 303, 0)), C.sandstone, M.Sandstone)
+	P("PylonLintelTop", V3(11, 1.4, 74), CF(Extreme.At(2, uc, 306.7, 0)), C.sandLight, M.Sandstone)
+	wingedSun(CF(Extreme.At(2, uc - 5, 302.6, 0)) * facing, 1.2)
+	commit()
+	begin("SunScarabStatue", true)
+	sunScarab(CF(Extreme.At(2, uc, 307.4, 0)) * facing)
+	commit()
+	for _, side in { -1, 1 } do
+		begin("AnubisStatue", true)
+		anubis(CF(Extreme.At(2, uc + 1, towerTop + 2.4, side * 45)) * facing)
+		commit()
+		begin("PylonBrazier", true)
+		brazier(CF(Extreme.At(2, uc - 5.5, towerTop + 2.4, side * 50.5)) * facing, 1.3, true)
+		commit()
+	end
+end
+
+-- Stendardi sulle pareti interne del santuario 2 (lontano dal portale e dai trofei)
+local function shrineBanners2()
+	local s = Extreme.Sections[2]
+	local sh = Extreme.Shrines[2]
+	local u0 = s.length
+	local portalU = s.x0 - sh.portal.Position.X
+	for _, side in { 1, -1 } do
+		for k, du in { 6, 20, 34, 48 } do
+			local u = u0 + du
+			if side == -1 and math.abs(u - portalU) < 11 then
+				continue
+			end
+			begin("ShrineBanner")
+			local f = CF(Extreme.At(2, u, s.floor + 19.6, side * (HW + 0.5))) * (if side == 1 then CFrame.identity else FLIP)
+			P("BannerRod", V3(3.6, 0.36, 0.36), f * CF(0, 0, -0.18), C.gold, M.Foil, { shape = CYL })
+			P("Banner", V3(2.8, 8, 0.12), f * CF(0, -4, -0.06), if k % 2 == 0 then C.lapis else C.bannerRed, M.Fabric)
+			P("BannerBand", V3(2.8, 0.5, 0.06), f * CF(0, -7.1, -0.15), C.gold, M.Foil)
+			P("BannerSun", V3(0.06, 1.3, 1.3), f * CF(0, -3.4, -0.15) * FORWARD, C.gold, M.Foil, { shape = CYL })
+			commit()
+		end
+	end
+end
+
+local function section2(root: Instance)
+	group = Build.Model("Desert", root)
+	local function at(u: number, y: number, v: number): Vector3
+		return Extreme.At(2, u, y, v)
+	end
+	desertGate()
+	-- sfinge a sinistra del corridoio delle lame, rivolta a chi arriva
+	do
+		local p = at(122, 296, 52)
+		sphinx(CFrame.lookAt(p, p + V3(1, 0, -0.22)))
+	end
+	-- colonnato in rovina a destra dei pilastri
+	do
+		local p = at(66, 284, -48)
+		colonnade(CFrame.lookAt(p, p + V3(0, 0, 1)))
+	end
+	-- oasi a sinistra delle mattonelle
+	oasis(CF(at(230, 281, 56)))
+	-- piramidi lontane
+	pyramidIsland(CF(at(70, 282, -150)), 64, 50, 7)
+	pyramidIsland(CF(at(210, 276, -110)), 56, 44, 7)
+	pyramidIsland(CF(at(305, 270, 125)), 72, 56, 8)
+	shrineFacade2()
+	shrineBanners2()
+	dressBanks2()
+end
+
+---------------------------------------------------------------------------------------------
 function ExtremeDecorA.Build(folder: Instance)
 	Terrain.Prepare()
 	table.clear(grid)
@@ -1334,6 +1817,7 @@ function ExtremeDecorA.Build(folder: Instance)
 	local root = folder.Parent or folder
 	addObstacles(root, folder)
 	section1(folder)
+	section2(folder)
 	folder:SetAttribute("Parts", stats.parts)
 	folder:SetAttribute("Lights", stats.lights)
 	folder:SetAttribute("Emitters", stats.emitters)

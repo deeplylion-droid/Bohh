@@ -44,11 +44,14 @@ export type Piece = {
 	shape: string?, -- Block | Cylinder | Ball | Wedge
 	transparency: number?,
 	collide: boolean?,
-	-- Mover: spostamento massimo e modo ("sine" avanti/indietro, "flow" scorre e ricomincia)
+	-- Mover: spostamento massimo e modo ("sine" avanti/indietro, "flow" scorre e ricomincia; con dip > 0
+	-- all'inizio e alla fine della corsa sale da sotto il liquido e ci riaffonda, per la frazione ease)
 	offset: Vector3?,
 	period: number?,
 	phase: number?,
 	mode: string?,
+	dip: number?,
+	ease: number?,
 	-- Pulse: fase attiva e avviso (secondi), effetto "Kill" o "Knock"
 	active: number?,
 	warn: number?,
@@ -389,7 +392,9 @@ do
 	)
 	-- partenza: piattaforma di roccia collegata al ponte
 	slab(1, -4, 14, -10, 10, 331, 8, ROCK, "Slate")
-	slab(1, -4, 14, -10.5, 10.5, 331.2, 0.4, MOSS, "Grass", { deco = true, collide = false })
+	-- muschio sopra: comincia appena dentro la bocca del canyon e sporge un po' sugli altri tre lati (le facce
+	-- a filo con quelle della roccia farebbero z-fighting)
+	slab(1, -3.9, 14.4, -10.5, 10.5, 331.2, 0.4, MOSS, "Grass", { deco = true, collide = false })
 
 	-- A) Sassi: pietre per saltare, alcune ondeggiano o affondano a intervalli
 	liquid(1, 14, 116, 318, WATER, "SmoothPlastic", 0.2)
@@ -428,22 +433,26 @@ do
 		end
 	end
 	-- cascata 1: sporgenza in cima, poi giu' nel bacino dei tronchi
-	slab(1, 108, 116, -6, 6, 321, 4, ROCK, "Slate")
+	slab(1, 108, 115.9, -6, 6, 321, 4, ROCK, "Slate")
 	fall(1, 116, 318, 304)
 
 	-- B) Tronchi: corsie di tronchi che scorrono verso valle; si sale a sinistra, si scende a destra
 	liquid(1, 116, 232, 304, WATER, "SmoothPlastic", 0.2)
-	slab(1, 116, 124, -Extreme.HalfWidth, -15, 307, 6, ROCK, "Slate") -- riva d'ingresso (sinistra)
-	slab(1, 220, 232, 9, Extreme.HalfWidth, 307.5, 6, ROCK, "Slate") -- riva d'uscita (destra)
+	slab(1, 116 + FALL_THICK, 124, -Extreme.HalfWidth, -15, 307, 6, ROCK, "Slate") -- riva d'ingresso (sinistra)
+	slab(1, 220, 231.9, 9, Extreme.HalfWidth, 307.5, 6, ROCK, "Slate") -- riva d'uscita (destra)
 	local lanes = {
 		{ v = -12, speed = 7, gap = 26, logLength = 13 },
 		{ v = -4, speed = 9.5, gap = 30, logLength = 12 },
 		{ v = 4, speed = 6, gap = 24, logLength = 11 },
 	}
-	local runStart, runEnd = 120, 232
-	local runLen = runEnd - runStart
+	-- ogni tronco sale da sott'acqua appena dopo la prima cascata e riaffonda prima del bordo della seconda
+	-- (tutto dentro la vasca: non attraversa i veli d'acqua e non sporge nel vuoto oltre il bordo)
+	local DIP = 4.2 -- quanto affonda: la cima del tronco finisce sotto il fondo della lastra d'acqua
 	for li, lane in lanes do
-		local count = math.ceil(runLen / lane.gap)
+		local half = lane.logLength / 2
+		local runStart, runEnd = 116 + half + 0.3, 232 - half - 0.3
+		local runLen = runEnd - runStart
+		local count = math.ceil(112 / lane.gap) -- quanti tronchi per corsia (come prima della corsa accorciata)
 		local period = runLen / lane.speed
 		for n = 0, count - 1 do
 			local s = sec(1)
@@ -457,6 +466,8 @@ do
 				offset = Vector3.new(-runLen, 0, 0),
 				period = period,
 				phase = n / count + li * 0.13,
+				dip = DIP,
+				ease = 8 / runLen,
 				color = WOOD,
 				material = "Wood",
 				shape = "Cylinder",
@@ -467,7 +478,7 @@ do
 
 	-- C) Vortici: dischi che girano sull'acqua, con qualche scoglio fra uno e l'altro
 	liquid(1, 232, 336, 290, WATER, "SmoothPlastic", 0.2)
-	slab(1, 232, 240, 9, Extreme.HalfWidth, 292, 6, ROCK, "Slate")
+	slab(1, 232 + FALL_THICK, 240, 9, Extreme.HalfWidth, 292, 6, ROCK, "Slate")
 	local discs = {
 		{ 248, 10, 5.5, 6 },
 		{ 262, -2, 5.0, -7 },
@@ -503,7 +514,7 @@ do
 		power = 70,
 		color = rgb(220, 240, 255),
 	})
-	slab(1, 326, 336, -5, 5, 292, 4, ROCK, "Slate")
+	slab(1, 326, 335.9, -5, 5, 292, 4, ROCK, "Slate")
 	fall(1, 336, 290, 276)
 
 	-- D) Rapide finali: dorsale di sassi stretta fra tronchi appesi che oscillano
@@ -615,7 +626,9 @@ do
 		SAND,
 		"Sand"
 	)
-	slab(2, -2, 8, -8, 8, 278, 8, PLATFORM, "Sandstone")
+	-- partenza: comincia dove finisce il pavimento del santuario (sovrapposti, le due facce di sopra
+	-- facevano z-fighting)
+	slab(2, 0, 8, -8, 8, 278, 8, PLATFORM, "Sandstone")
 
 	-- A) Pilastri sulle sabbie mobili, due presse che schiacciano a tempo
 	liquid(2, 8, 92, 266, QUICK, "Sand", 0)
@@ -690,7 +703,8 @@ do
 			t.phase = row * 0.11 + (lane + 1) * 0.29
 		end
 	end
-	slab(2, 258, 264, -6, 6, 272, 6, PLATFORM, "Sandstone")
+	-- dopo l'ultima fila di mattonelle (arriva a 259.6, piu' il tremolio): niente sovrapposizioni
+	slab(2, 260, 264, -6, 6, 272, 6, PLATFORM, "Sandstone")
 
 	-- D) Piattaforme di pietra che vanno avanti e indietro sopra il vuoto (salti di 6 stud)
 	kill(2, 264, 360, 254)
@@ -711,7 +725,7 @@ do
 		p.period = m[4]
 		p.phase = k * 0.23
 	end
-	slab(2, 348, 362, -6, 6, 262.5, 4, PLATFORM, "Sandstone")
+	slab(2, 348, 360, -6, 6, 262.5, 4, PLATFORM, "Sandstone") -- fino al santuario, non dentro
 	-- obelischi decorativi fuori dal percorso
 	for k, u in { 40, 130, 220, 310 } do
 		for _, side in { -1, 1 } do
@@ -782,7 +796,8 @@ do
 	)
 
 	-- A) Griglia laser: raggi bassi da saltare e pareti laser che si accendono a tempo
-	slab(3, -2, 92, -Extreme.HalfWidth, Extreme.HalfWidth, 262, 6, METAL, "DiamondPlate")
+	-- dal santuario del Deserto (non dentro) fino alle pareti (nessuna fessura lungo i muri)
+	slab(3, 0, 92, -Extreme.HalfWidth - 0.5, Extreme.HalfWidth + 0.5, 262, 6, METAL, "DiamondPlate")
 	local lasers = {
 		{ 14, "low", 0 },
 		{ 26, "wall", 0.0 },
@@ -874,7 +889,7 @@ do
 		p.period = m[4]
 		p.phase = k * 0.19
 	end
-	slab(3, 334, 342, -6, 6, 247, 3, METAL, "DiamondPlate")
+	slab(3, 334, 340, -6, 6, 247, 3, METAL, "DiamondPlate") -- fino al santuario, non dentro
 end
 
 ---------------------------------------------------------------------------------------------
@@ -900,7 +915,7 @@ do
 
 	-- A) Fiume di lava con pietre di basalto (alcune sprofondano) e geyser di fuoco
 	liquid(4, -2, 92, 236, LAVA, "Neon", 0)
-	slab(4, -2, 6, -6, 6, 246, 8, BASALT, "Basalt")
+	slab(4, 0, 6, -6, 6, 246, 8, BASALT, "Basalt") -- dove finisce il santuario del Laboratorio
 	-- pietre piccole a zig-zag (salti di 4-5 stud); quelle scure sprofondano a turno nella lava, quindi
 	-- bisogna aspettare sulla pietra prima che riaffiori
 	local stones = {
@@ -970,7 +985,8 @@ do
 	liquid(4, 270, 360, 226, LAVA, "Neon", 0)
 	for k = 0, 14 do
 		local u = 272 + k * 6
-		local t = slab(4, u, u + 5.2, -3.5, 3.5, 240 - k * 0.6, 2, BASALT, "Basalt")
+		-- l'ultima si ferma prima del santuario (dentro il suo pavimento sprofondava)
+		local t = slab(4, u, math.min(u + 5.2, 359.8), -3.5, 3.5, 240 - k * 0.6, 2, BASALT, "Basalt")
 		t.kind = "Faller"
 		t.period = 5
 		t.solid = 3.2
@@ -994,7 +1010,8 @@ for i, s in Extreme.Sections do
 	local u0 = s.length
 	local u1 = s.length + s.shrineLength
 	local y = s.floor
-	slab(i, u0, u1, -Extreme.HalfWidth, Extreme.HalfWidth, y, 10, st.floor, st.material)
+	-- pavimento fino alle pareti (a +-HalfWidth restava una fessura di mezzo stud lungo i muri)
+	slab(i, u0, u1, -Extreme.HalfWidth - 0.5, Extreme.HalfWidth + 0.5, y, 10, st.floor, st.material)
 	walls(i, u0, u1, y - 10, y + 26, st.wall, st.material)
 	-- tetto della sala
 	local roof = slab(i, u0, u1, -Extreme.HalfWidth - 6, Extreme.HalfWidth + 6, y + 28, 2, st.wall, st.material)
@@ -1053,7 +1070,18 @@ function Extreme.MoverState(p: Piece, t: number): (CFrame, Vector3)
 	local off = p.offset or Vector3.zero
 	if p.mode == "flow" then
 		local k = frac(t / per + (p.phase or 0))
-		return p.cframe + off * k, off / per
+		local cf, vel = p.cframe + off * k, off / per
+		-- dip: all'inizio della corsa sale da sotto il liquido e alla fine ci riaffonda (non compare e non
+		-- sparisce a galla); ease = frazione della corsa in cui sale o affonda
+		local dip = p.dip or 0
+		if dip > 0 then
+			local e = p.ease or 0.1
+			local x = if k < e then 1 - k / e elseif k > 1 - e then (k - 1 + e) / e else 0
+			local dir = if k < e then 1 else -1
+			cf -= Vector3.new(0, dip * x * x, 0)
+			vel += Vector3.new(0, dir * 2 * dip * x / (e * per), 0)
+		end
+		return cf, vel
 	end
 	local a = TAU * (t / per + (p.phase or 0))
 	return p.cframe + off * math.sin(a), off * (math.cos(a) * TAU / per)

@@ -32,7 +32,7 @@ from pathlib import Path
 
 import bpy
 import numpy as np
-from mathutils import Vector, noise
+from mathutils import Matrix, Vector, noise
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import avatar as A  # noqa: E402
@@ -549,10 +549,11 @@ def scene_giants(w: int, samples: int, tag: str):
 
     # --- altri giganti attorno (sinistra -> destra nel fotogramma)
     cast = [
-        ("InfernoKomodo", env("KOMODO", (-14.5, 1.5, 40.0)), env("KOMODO_S", 2.5), 2.0),
-        ("Cerberus", env("CERB", (-8.6, 6.5, 16.0)), env("CERB_S", 2.8), 1.6),
+        # i cinque giganti Ultra (nascono dall'uovo Ultra e stanno sui troni): Komodo, Titan Rex, Grifone, Vedova
+        ("InfernoKomodo", env("KOMODO", (-15.0, 1.0, 40.0)), env("KOMODO_S", 2.5), 2.0),
+        ("TitanRex", env("REX", (-8.8, 6.5, 22.0)), env("REX_S", 2.7), 1.8),
         ("ThunderGriffin", env("GRIF", (8.8, 7.0, -14.0)), env("GRIF_S", 2.6), 2.0),
-        ("FrostWyvern", env("WYV", (14.5, 2.5, -32.0)), env("WYV_S", 2.4), 2.0),
+        ("VenomWidow", env("WIDOW", (14.5, 1.5, -36.0)), env("WIDOW_S", 2.2), 2.0),
     ]
     giants = {"PentaDragon": d_objs}
     for name, (x, y, rot), s_, g in cast:
@@ -696,7 +697,7 @@ def basalt_material(name, top="#ff7a1e", top_e=2.2, rock="#2a1d24", veins=1.0, f
     nz = S.node(nt, "ShaderNodeTexNoise", Scale=0.5, Detail=3.0)
     nt.links.new(tc.outputs["Object"], nz.inputs["Vector"])
     k = S.math_node(nt, "ADD", sep.outputs["Z"], S.math_node(nt, "MULTIPLY", S.math_node(nt, "SUBTRACT", nz.outputs["Fac"], 0.5), 0.3))
-    topk = S.ramp(nt, k, [(0.7, (0, 0, 0, 1)), (0.78, (1, 1, 1, 1))])
+    topk = S.ramp(nt, k, [(env("CRUST_K", 0.86), (0, 0, 0, 1)), (env("CRUST_K", 0.86) + 0.06, (1, 1, 1, 1))])
     b = nt.nodes.new("ShaderNodeBsdfPrincipled")
     b.inputs["Base Color"].default_value = lin(rock)
     b.inputs["Roughness"].default_value = 0.75
@@ -750,7 +751,8 @@ def faceted_rock(name, center, size, mat, seed=0, sub=2, rough=0.28, flatten=1.0
 
 def pillar(name, x, y, top_z, radius, mat, cap_mat=None):
     prof = rounded_profile([(0, -3.0), (radius * 1.08, -3.0), (radius, top_z - 0.25), (radius * 0.98, top_z), (0, top_z)], 0.18)
-    ob = A.revolve(name, prof, 28, mat, center=(x, y, 0))
+    ob = A.revolve(name, prof, 6, mat, center=(x, y, 0))  # colonna di basalto esagonale
+    ob.rotation_euler.z = (x * 7.3 + y * 3.1) % 1.0
     for p_ in ob.data.polygons:
         p_.use_smooth = False
     return ob
@@ -782,9 +784,9 @@ def portal(name, center, radius, yaw_deg, color="#32f0ff"):
     wave.wave_type = "RINGS"
     nt.links.new(vm.outputs[0], wave.inputs["Vector"])
     k = S.math_node(nt, "ADD", S.math_node(nt, "MULTIPLY", wave.outputs["Fac"], 0.5), S.math_node(nt, "SUBTRACT", 1.0, grad.outputs["Fac"]))
-    col = S.ramp(nt, k, [(0.2, lin("#1a2cff")), (0.6, lin(color)), (1.0, lin("#e8ffff"))])
+    col = S.ramp(nt, k, [(0.2, lin("#0a24ff")), (0.6, lin("#00c8ff")), (1.0, lin(color))])
     em = nt.nodes.new("ShaderNodeEmission")
-    em.inputs["Strength"].default_value = env("PORTAL_E", 1.6)
+    em.inputs["Strength"].default_value = env("PORTAL_E", 0.9)
     nt.links.new(col, em.inputs["Color"])
     nt.links.new(em.outputs[0], out.inputs["Surface"])
     disc.data.materials.append(tag_glow(mat))
@@ -817,14 +819,14 @@ def scene_extreme(w: int, samples: int, tag: str):
         return z
 
     walls = S.grid_object("Canyon", -60, 60, -30, 140, 96, 110, canyon, smooth=False)
-    walls.data.materials.append(basalt_material("Basalt", rock="#1c1318", fog=("#ff6a4a", 0.0025, 40.0)))
+    walls.data.materials.append(basalt_material("Basalt", rock="#1c1318", top_e=1.6, fog=("#ff6a4a", 0.0025, 40.0)))
     lava = S.grid_object("Lava", -60, 60, -30, 160, 120, 160, lambda gx, gy: 0.12 * S.fbm(gx, gy, 0.1, 2, 5))
     lava.data.materials.append(lava_material(strength=env("LAVA_E", 2.6), scale=env("LAVA_SC", 0.12)))
 
     # --- pilastri di pietra nella lava (il percorso a salti) e massi di lava sulle rive
     pm = basalt_material("PillarRock", top="#ff8a2a", top_e=0.0, rock="#2a1d24", veins=1.5, fog=("#ff6a4a", 0.0025, 40.0))
     jumps = env("PILLARS", 0.0)
-    path = [(-3.6, 0.5, 2.4, 1.5), (3.2, 7.5, 2.8, 1.4), (-1.8, 13.5, 2.5, 1.3), (3.0, 19.5, 2.9, 1.3), (-1.0, 26.0, 2.4, 1.2),
+    path = [(3.2, 7.5, 2.8, 1.4), (-1.8, 13.5, 2.5, 1.3), (3.0, 19.5, 2.9, 1.3), (-1.0, 26.0, 2.4, 1.2),
             (2.2, 33.0, 2.6, 1.2), (-1.5, 41.0, 2.5, 1.1), (1.5, 49.0, 2.8, 1.1)]
     for i, (x, y, tz, r) in enumerate(path):
         pillar(f"Pillar{i}", x, y, tz, r, pm)
@@ -842,12 +844,12 @@ def scene_extreme(w: int, samples: int, tag: str):
     sx, sy = env("SHRINE", (0.5, 70.0))
     throne("Shrine", (sx, sy, -0.2), radius=3.0, height=2.6, top="#1fb6c9", rim="#ffd23a", glow="#3ff6ff")
     egg, egg_objs = pet("EggExtreme", (sx, sy, 2.6), 15.0, 1.1, kind="egg", glow=3.0)
-    portal("Portal", (sx + 7.5, sy + 4.0, 5.0), 4.2, -25.0)
+    portal("Portal", (sx - 7.0, sy + 3.0, 4.6), 4.0, 25.0)
 
     # --- diavoli giganti sulle sporgenze ai lati (destra: Behemoth, sinistra: Abaddon) e Belzebu' in volo
-    beh, beh_objs = pet("Behemoth", env("BEH", (8.6, 11.0, 1.3)), env("BEH_YAW", 42.0), env("BEH_S", 2.7), glow=2.2)
-    aba, aba_objs = pet("Abaddon", env("ABA", (-8.8, 17.0, 1.3)), env("ABA_YAW", -40.0), env("ABA_S", 2.7), glow=2.2)
-    bee, bee_objs = pet("Beelzebub", env("BEE", (6.0, 34.0, 7.5)), env("BEE_YAW", 25.0), env("BEE_S", 2.3), glow=2.2)
+    beh, beh_objs = pet("Behemoth", env("BEH", (8.6, 11.0, 1.3)), env("BEH_YAW", -28.0), env("BEH_S", 2.7), glow=2.2)
+    aba, aba_objs = pet("Abaddon", env("ABA", (-8.8, 17.0, 1.3)), env("ABA_YAW", 32.0), env("ABA_S", 2.7), glow=2.2)
+    bee, bee_objs = pet("Beelzebub", env("BEE", (6.5, 36.0, 5.0)), env("BEE_YAW", 25.0), env("BEE_S", 2.7), glow=2.2)
     for i, (root, objs) in enumerate(((beh, beh_objs), (aba, aba_objs))):
         lo, hi = S.bounds(objs)
         x, y = root.location.x, root.location.y
@@ -861,7 +863,7 @@ def scene_extreme(w: int, samples: int, tag: str):
     # --- il Bacon Hair a meta' salto fra due pilastri
     rig = A.build("Bacon", shirt=env("SHIRT", "#22d046"))
     A.pose(rig, env("LEAP_POSE", "leap"))
-    ax, ay, az = env("AV", (-0.6, 3.0, 5.4))
+    ax, ay, az = env("AV", (0.4, 5.0, 5.4))
     rig.root.location = (ax, ay, az)
     rig.root.rotation_euler.z = math.radians(env("AV_YAW", 50.0))
     bpy.context.view_layer.update()
@@ -895,7 +897,7 @@ def scene_extreme(w: int, samples: int, tag: str):
     S.point_light("ShrineGlow", tuple(Vector(((el + eh) / 2).tolist()) + Vector((0, -2, 0))), 900.0, 1.0, lin("#3ff6ff")[:3])
 
     cam_loc = env("CAM", (2.5, -10.0, 5.2))
-    target = env("TARGET", (0.0, 20.0, 3.5))
+    target = env("TARGET", (0.0, 20.0, 5.0))
     S.camera(cam_loc, target, lens=env("LENS", 24.0), dof_target=tuple(ac) if not PREVIEW else None, fstop=env("FSTOP", 8.0))
     pts = {"av_feet": bl[0], "av_head": rig.joints["HeadCenter"].matrix_world.translation, "shrine": (sx, sy, 5.0)}
     for name, objs in (("beh", beh_objs), ("aba", aba_objs), ("bee", bee_objs)):
@@ -905,7 +907,257 @@ def scene_extreme(w: int, samples: int, tag: str):
     return render_all("extreme", tag, w, bloom=0.5, sat=1.08)
 
 
-SCENES = {"steal": scene_steal, "giants": scene_giants, "extreme": scene_extreme}
+# =================================================================================== scena 4: l'uovo si schiude
+def zigzag_cutter(name, center, h0, amp, teeth, r_out, top, seed=0):
+    """Solido chiuso sopra una superficie a zig-zag (z = h0 +/- amp a denti alterni attorno all'asse verticale):
+    tolto all'uovo lascia la crepa frastagliata, intersecato da' la calotta che salta via."""
+    import bmesh
+    rng = np.random.default_rng(seed)
+    cx, cy = center
+    bm = bmesh.new()
+    n = teeth * 2
+    ring_lo, ring_hi = [], []
+    for i in range(n):
+        a = 2 * math.pi * (i + rng.uniform(-0.18, 0.18)) / n
+        z = h0 + (amp if i % 2 == 0 else -amp) * rng.uniform(0.7, 1.25)
+        ring_lo.append(bm.verts.new((cx + r_out * math.cos(a), cy + r_out * math.sin(a), z)))
+        ring_hi.append(bm.verts.new((cx + r_out * math.cos(a), cy + r_out * math.sin(a), top)))
+    c_lo = bm.verts.new((cx, cy, h0))
+    c_hi = bm.verts.new((cx, cy, top))
+    for i in range(n):
+        j = (i + 1) % n
+        bm.faces.new((c_lo, ring_lo[j], ring_lo[i]))
+        bm.faces.new((ring_lo[i], ring_lo[j], ring_hi[j], ring_hi[i]))
+        bm.faces.new((c_hi, ring_hi[i], ring_hi[j]))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    me = bpy.data.meshes.new(name)
+    bm.to_mesh(me)
+    bm.free()
+    ob = bpy.data.objects.new(name, me)
+    bpy.context.scene.collection.objects.link(ob)
+    ob.hide_render = True
+    return ob
+
+
+def boolean_copy(src, ops, name):
+    """Nuovo oggetto = src con una serie di booleani (('DIFFERENCE'|'INTERSECT', oggetto)) applicati."""
+    ob = src.copy()
+    ob.data = src.data.copy()
+    ob.name = name
+    bpy.context.scene.collection.objects.link(ob)
+    ob.modifiers.clear()
+    for i, (op, cutter) in enumerate(ops):
+        m = ob.modifiers.new(f"b{i}", "BOOLEAN")
+        m.operation = op
+        m.object = cutter
+        m.solver = "EXACT"
+    dg = bpy.context.evaluated_depsgraph_get()
+    me = bpy.data.meshes.new_from_object(ob.evaluated_get(dg))
+    ob.modifiers.clear()
+    old = ob.data
+    ob.data = me
+    bpy.data.meshes.remove(old)
+    return ob
+
+
+def beams(name, origin, dirs, length, width, color="#ffe9a8", strength=6.0):
+    """Raggi di luce: coni sottili trasparenti ed emissivi che sfumano verso la punta (additivi)."""
+    import bmesh
+    from mathutils import Matrix
+    mat, nt, out = S.new_material(name)
+    tc = nt.nodes.new("ShaderNodeTexCoord")
+    sep = nt.nodes.new("ShaderNodeSeparateXYZ")
+    nt.links.new(tc.outputs["Object"], sep.inputs[0])
+    # lungo l'asse locale z (0 = origine, 1 = punta): forte vicino all'uovo, svanisce in fondo
+    t = S.math_node(nt, "DIVIDE", S.math_node(nt, "ADD", sep.outputs["Z"], length / 2), length, clamp=True)
+    fade = S.math_node(nt, "POWER", S.math_node(nt, "SUBTRACT", 1.0, t), 1.6)
+    em = nt.nodes.new("ShaderNodeEmission")
+    em.inputs["Color"].default_value = lin(color)
+    nt.links.new(S.math_node(nt, "MULTIPLY", fade, strength), em.inputs["Strength"])
+    tr = nt.nodes.new("ShaderNodeBsdfTransparent")
+    add = nt.nodes.new("ShaderNodeAddShader")
+    nt.links.new(tr.outputs[0], add.inputs[0])
+    nt.links.new(em.outputs[0], add.inputs[1])
+    nt.links.new(add.outputs[0], out.inputs["Surface"])
+    tag_glow(mat)
+    objs = []
+    for i, (d, l_k, w_k) in enumerate(dirs):
+        d = Vector(d).normalized()
+        L = length * l_k
+        bm = bmesh.new()
+        bmesh.ops.create_cone(bm, cap_ends=False, segments=16, radius1=0.02, radius2=width * w_k, depth=length)
+        me = bpy.data.meshes.new(f"{name}{i}")
+        bm.to_mesh(me)
+        bm.free()
+        ob = bpy.data.objects.new(f"{name}{i}", me)
+        bpy.context.scene.collection.objects.link(ob)
+        ob.data.materials.append(mat)
+        ob.scale = (1, 1, l_k)
+        ob.rotation_euler = d.to_track_quat("Z", "Y").to_euler()
+        ob.location = Vector(origin) + d * (L / 2)
+        ob.visible_shadow = False
+        ob.visible_diffuse = False
+        objs.append(ob)
+    return objs
+
+
+def shards(name, center, n, spread, size, mat, seed=0, up=1.0):
+    """Schegge di guscio che volano via (tetraedri schiacciati)."""
+    import bmesh
+    from mathutils import Matrix, Euler
+    rng = np.random.default_rng(seed)
+    bm = bmesh.new()
+    for i in range(n):
+        a = rng.uniform(0, 2 * math.pi)
+        el = rng.uniform(0.15, 1.1)
+        r = spread * rng.uniform(0.5, 1.0)
+        p = Vector(center) + Vector((math.cos(a) * math.cos(el), math.sin(a) * math.cos(el) * 0.6, math.sin(el) * up)) * r
+        s_ = size * rng.uniform(0.5, 1.2)
+        m = Matrix.Translation(p) @ Euler(rng.uniform(0, 6.28, 3)).to_matrix().to_4x4() @ Matrix.Diagonal((s_, s_ * 0.8, s_ * 0.25, 1))
+        ret = bmesh.ops.create_cone(bm, cap_ends=True, segments=3, radius1=1.0, radius2=0.0, depth=1.0, matrix=m)
+    me = bpy.data.meshes.new(name)
+    bm.to_mesh(me)
+    bm.free()
+    ob = bpy.data.objects.new(name, me)
+    bpy.context.scene.collection.objects.link(ob)
+    ob.data.materials.append(mat)
+    return ob
+
+
+def scene_hatch(w: int, samples: int, tag: str):
+    S.reset()
+    setup(w, samples, vt="Standard", look="None", exposure=-0.35)
+
+    def ground(gx, gy):
+        z = -0.01 * np.clip(np.hypot(gx, gy - 4) - 10, 0, None) ** 2
+        z += 0.25 * S.fbm(gx, gy, 0.12, 3, 21) + 0.05 * S.fbm(gx, gy, 1.0, 2, 4)
+        z += 0.5 * np.exp(-(gx ** 2 + gy ** 2) / 9.0)  # neve ammucchiata attorno all'uovo
+        return z
+
+    snow = S.grid_object("Snow", -50, 50, -25, 80, 220, 220, ground)
+    snow.data.materials.append(S.snow_material("Snow", tint=(214, 226, 255), fog=(lin("#4a6fd8"), 0.006, 25.0)))
+
+    # --- uovo Primordiale crepato: guscio inferiore cavo + calotta che vola via
+    es = env("EGG_S", 2.3)
+    egg_root, e_objs = pet("EggPrimal", (0, 0, 0), env("EGG_YAW", 10.0), 1.0, kind="egg", subdiv=0, glow=2.5)
+    egg_root.rotation_euler.z = 0.0
+    bpy.context.view_layer.update()
+    shell = [o for o in e_objs if o.name.split(".")[0] == "Shell"][0]
+    slo, shi = S.bounds([shell])
+    ec = Vector(((slo + shi) / 2).tolist())
+    h0 = float(slo[2] + (shi[2] - slo[2]) * env("CRACK_H", 0.6))
+    cutter = zigzag_cutter("Cutter", (ec.x, ec.y), h0, 0.32, 7, 2.6, 10.0, seed=3)
+    inner = shell.copy()
+    inner.data = shell.data.copy()
+    inner.name = "Inner"
+    bpy.context.scene.collection.objects.link(inner)
+    inner.parent = None
+    inner.matrix_world = Matrix.Translation(ec) @ Matrix.Diagonal((0.9, 0.9, 0.93, 1.0)) @ Matrix.Translation(-ec)
+    inner.hide_render = True
+    bottom, cap = [], []
+    for o in e_objs:
+        base = o.name.split(".")[0]
+        ops_b = [("DIFFERENCE", cutter)] + ([("DIFFERENCE", inner)] if base == "Shell" else [])
+        ops_c = [("INTERSECT", cutter)] + ([("DIFFERENCE", inner)] if base == "Shell" else [])
+        b = boolean_copy(o, ops_b, f"Bot{base}")
+        c = boolean_copy(o, ops_c, f"Cap{base}")
+        b.parent = c.parent = None
+        bottom.append(b)
+        if len(c.data.polygons):
+            cap.append(c)
+        o.hide_render = True
+        o.hide_viewport = True
+    # interno dell'uovo: luce
+    from mathutils import Matrix as _M
+    import bmesh
+    bm = bmesh.new()
+    bmesh.ops.create_uvsphere(bm, u_segments=32, v_segments=16, radius=1.0)
+    me = bpy.data.meshes.new("Core")
+    bm.to_mesh(me)
+    bm.free()
+    core = bpy.data.objects.new("Core", me)
+    bpy.context.scene.collection.objects.link(core)
+    core.location = (ec.x, ec.y, h0 - 0.35)
+    core.scale = (1.0, 1.0, 0.75)
+    core.data.materials.append(emission("CoreM", "#ffd36a", env("CORE_E", 12.0)))
+    # tutto nello stesso gruppo, poi in scala e al suo posto
+    grp = bpy.data.objects.new("HatchEgg", None)
+    bpy.context.scene.collection.objects.link(grp)
+    for o in bottom + cap + [core]:
+        o.parent = grp
+    # la calotta salta in alto a sinistra, inclinata
+    for o in cap:
+        o.matrix_parent_inverse = Matrix()
+    cap_root = bpy.data.objects.new("CapRoot", None)
+    bpy.context.scene.collection.objects.link(cap_root)
+    cap_root.parent = grp
+    cap_root.location = (ec.x, ec.y, h0)
+    for o in cap:
+        o.parent = cap_root
+        o.location = (-ec.x, -ec.y, -h0)
+    cap_root.location = Vector((ec.x, ec.y, h0)) + Vector(env("CAP_OFF", (-1.9, -0.4, 2.6)))
+    cap_root.rotation_euler = (math.radians(env("CAP_RX", -20.0)), math.radians(env("CAP_RY", -42.0)), 0.0)
+    grp.scale = (es, es, es)
+    gx0, gy0 = env("EGG_XY", (0.0, 0.0))
+    grp.location = (gx0, gy0, float(ground(np.array([[gx0]]), np.array([[gy0]]))[0, 0]) - 0.35)
+    grp.rotation_euler.z = math.radians(env("EGG_YAW", 10.0))
+    bpy.context.view_layer.update()
+    rim_z = grp.matrix_world @ Vector((ec.x, ec.y, h0))
+
+    # --- Cerbero che esce dall'uovo, impennato, con le zampe anteriori sul bordo
+    cs = env("CERB_S", 2.3)
+    cer, c_objs = pet("Cerberus", (0, 0, 0), env("CERB_YAW", 0.0), cs, glow=env("CERB_E", 1.8))
+    cer.rotation_euler.x = math.radians(env("CERB_PITCH", -24.0))
+    # punto del modello sotto il petto: va un poco sotto il bordo della crepa
+    place_by(cer, (0.0, -0.6, 0.9), tuple(rim_z + Vector(env("CERB_OFF", (0.0, 0.6, -0.9)))))
+
+    # --- raggi di luce e schegge
+    rng = np.random.default_rng(7)
+    dirs = []
+    for i in range(env("NBEAMS", 11)):
+        a = math.radians(-78 + 156 * i / (env("NBEAMS", 11) - 1) + rng.uniform(-5, 5))
+        dirs.append(((math.sin(a), 0.55 + rng.uniform(-0.1, 0.1), math.cos(a) * 1.0 + 0.15), rng.uniform(0.7, 1.15),
+                     rng.uniform(0.6, 1.3)))
+    beams("Beam", tuple(rim_z + Vector((0, 0.8, -0.4))), dirs, env("BEAM_L", 30.0), env("BEAM_W", 1.6),
+          strength=env("BEAM_E", 2.2))
+    shell_mat = shell.data.materials[0]
+    shards("Shards", tuple(rim_z + Vector((0, -0.5, 0.5))), env("NSHARDS", 16), 5.5, 0.35, shell_mat, seed=4)
+
+    # --- cielo notturno luminoso con stelle, vette innevate, mare di nuvole
+    world_stops = [(0.0, lin("#7cc8ff")), (0.08, lin("#4a8ff0")), (0.22, lin("#3150c8")), (0.45, lin("#24288f")),
+                   (1.0, lin("#140f4a"))]
+    sky_gradient(world_stops, light_color=lin("#6f86ff"), light_strength=env("AMB", 0.5), stars=env("STARS", 5.0))
+    fogc = "#4a7fe0"
+    m1 = S.rock_snow_material("Mnt1", "#1c2450", "#a9c2ff", fogc, 0.005, 30, snow_from=0.5)
+    m2 = S.rock_snow_material("Mnt2", "#1c2450", "#9db6f5", fogc, 0.007, 30, snow_from=0.45)
+    S.mountain_layer("Far1", 90, 60, 240, [(-80, 120, 30, 0.6, 0.5), (-20, 130, 38, 0.55, 0.5), (45, 115, 34, 0.6, 0.5),
+                                          (100, 126, 28, 0.55, 0.5)], m1, nx=200, ny=50, seed=61, rough=5.0, z_off=env("FARZ", -26.0))
+    S.mountain_layer("Far2", 200, 80, 420, [(-150, 240, 46, 0.45, 0.4), (-50, 260, 54, 0.42, 0.4), (60, 245, 50, 0.45, 0.4),
+                                           (160, 260, 42, 0.42, 0.4)], m2, nx=220, ny=50, seed=67, rough=6.0, z_off=env("FARZ", -26.0) - 6)
+    cloud_sea(env("ZCLOUD", -22.0), fogc, color=(170, 196, 255), glow=0.25, density=0.0014)
+
+    # --- luci: l'uovo illumina tutto da sotto (oro), controluce lunare freddo, fiamme di Cerbero
+    core_w = core.matrix_world.translation
+    S.point_light("EggLight", tuple(core_w + Vector((0, 0, 1.0))), env("EGGLIGHT", 9000.0), 1.5, lin("#ffc45a")[:3])
+    S.point_light("EggFront", tuple(core_w + Vector((0, -4.0, 0.5))), env("EGGFRONT", 1200.0), 1.0, lin("#ffcf7a")[:3])
+    S.sun_light("Moon", (0.3, 1.0, 0.6), env("MOONL", 1.6), lin("#bcd0ff")[:3], angle=2.0)
+    cl, ch = S.bounds(c_objs)
+    cc = Vector(((cl + ch) / 2).tolist())
+    S.area_light("CerKey", tuple(cc + Vector((-7, -10, 6))), tuple(cc), env("KEY", 5000.0), 8.0, lin("#fff0e0")[:3])
+    S.area_light("CerRimL", tuple(cc + Vector((-8, 9, 6))), tuple(cc), env("RIM", 9000.0), 6.0, lin("#a9c8ff")[:3])
+    S.area_light("CerRimR", tuple(cc + Vector((8, 9, 6))), tuple(cc), env("RIM", 9000.0), 6.0, lin("#a9c8ff")[:3])
+
+    cam_loc = env("CAM", (0.0, -21.0, 2.4))
+    target = env("TARGET", (0.0, 0.0, 7.5))
+    S.camera(cam_loc, target, lens=env("LENS", 30.0), dof_target=tuple(cc) if not PREVIEW else None, fstop=env("FSTOP", 8.0))
+    flakes("Sparkles", cam_loc, target, env("FLAKES", 110), 5.0, 40.0, 0.02, 0.06, seed=21, color="#ffe3a0", glow=4.0)
+    caps = S.bounds(cap)
+    report(egg_bottom=grp.matrix_world @ Vector((ec.x, ec.y, float(slo[2]))), rim=rim_z, cer_top=((cl[0] + ch[0]) / 2, cc.y, ch[2]),
+           cer_l=(cl[0], cc.y, cc.z), cer_r=(ch[0], cc.y, cc.z), cap=tuple((caps[0] + caps[1]) / 2))
+    return render_all("hatch", tag, w, bloom=0.6, sat=1.08)
+
+
+SCENES = {"steal": scene_steal, "giants": scene_giants, "extreme": scene_extreme, "hatch": scene_hatch}
 
 if __name__ == "__main__":
     which = sys.argv[1]

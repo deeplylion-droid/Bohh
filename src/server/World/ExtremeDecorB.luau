@@ -539,7 +539,7 @@ end
 local function labGate()
 	local u0, u1 = 7.5, 12.5
 	local um = (u0 + u1) / 2
-	local top = 292
+	local top = 286
 	for _, s in { -1, 1 } do
 		span(3, u0, u1, 232, top - 6, s * 23.5, s * 28.5, "GatePillar", WHITE, Mat.SmoothPlastic)
 		span(3, u0 - 1, u1 + 1, 229, 232, s * 23.5, s * 29.5, "GateFoot", DARK, Mat.DiamondPlate)
@@ -1163,16 +1163,24 @@ local function infernoCliffs()
 	end
 end
 
--- corno ricurvo d'osso: segmenti sempre piu' sottili con i giunti arrotondati e la punta luminosa
-local function horn(name: string, pts: { Vector3 }, ds: { number }): BasePart
-	for k = 1, #ds do
-		local tip = k == #ds
-		rod(name, pts[k], pts[k + 1], ds[k], if tip then LAVA else BONE, if tip then Mat.Neon else Mat.SmoothPlastic)
+-- corno ricurvo d'osso lungo una curva di Bezier (a -> controllo b -> punta c): segmenti sempre piu' sottili con
+-- i giunti arrotondati e la punta luminosa
+local function horn(name: string, a: Vector3, b: Vector3, c: Vector3, d0: number): BasePart
+	local n = 5
+	local pts = {}
+	for k = 0, n do
+		local t = k / n
+		table.insert(pts, a * (1 - t) ^ 2 + b * 2 * (1 - t) * t + c * t * t)
+	end
+	for k = 1, n do
+		local tip = k == n
+		local d = d0 * (1 - 0.13 * (k - 1))
+		rod(name, pts[k], pts[k + 1], d, if tip then LAVA else BONE, if tip then Mat.Neon else Mat.SmoothPlastic)
 		if not tip then
-			sphere(name .. "Joint", ds[k], pts[k + 1], BONE, Mat.SmoothPlastic)
+			sphere(name .. "Joint", d, pts[k + 1], BONE, Mat.SmoothPlastic)
 		end
 	end
-	return sphere(name .. "Tip", ds[#ds], pts[#pts], LAVA_HOT, Mat.Neon)
+	return sphere(name .. "Tip", d0 * (1 - 0.13 * (n - 1)), pts[n + 1], LAVA_HOT, Mat.Neon)
 end
 
 -- teschio: occhi rossi nelle orbite, naso nero e mascella (dir = verso dove guarda)
@@ -1232,13 +1240,13 @@ local function infernoGate()
 	-- corna di toro sulle estremita' dell'architrave, con il fuoco in punta
 	for _, s in { -1, 1 } do
 		local top = yb + 8
-		local tip = horn("GateHorn", {
+		local tip = horn(
+			"GateHorn",
 			at(4, um, top - 1, s * (vg + 3)),
-			at(4, um, top + 3, s * (vg + 8)),
-			at(4, um, top + 10, s * (vg + 12)),
-			at(4, um, top + 18, s * (vg + 13)),
-			at(4, um, top + 24, s * (vg + 10.5)),
-		}, { 4.4, 3.6, 2.8, 2.1 })
+			at(4, um, top, s * (vg + 16)),
+			at(4, um, top + 20, s * (vg + 13)),
+			4.4
+		)
 		fire(tip, 5, 9, rgb(255, 170, 60), rgb(255, 60, 20))
 		light(tip, rgb(255, 140, 60), 30, 1.6)
 	end
@@ -1247,7 +1255,15 @@ local function infernoGate()
 	skull("GateSkull", skullC, 8, Vector3.new(1, 0, 0))
 	local jaw = at(4, u0 + 1.6, yb + 8 + 0.9, 0)
 	box("SkullJaw", Vector3.new(4.4, 1.8, 4.6), CFrame.new(jaw), BONE, Mat.SmoothPlastic)
-	box("SkullMouth", Vector3.new(0.1, 0.5, 3.4), CFrame.new(jaw + Vector3.new(2.25, 0.1, 0)), BLACK, Mat.SmoothPlastic)
+	for _, tv in { -1.1, 0, 1.1 } do
+		box(
+			"SkullTeeth",
+			Vector3.new(0.1, 1.2, 0.3),
+			CFrame.new(jaw + Vector3.new(2.25, 0, tv)),
+			BLACK,
+			Mat.SmoothPlastic
+		)
+	end
 end
 
 -- Ponte degli uncini: due portali di ferro arrugginito oltre le sponde reggono la trave da cui pendono gli uncini
@@ -1372,15 +1388,28 @@ local function infernoThrone()
 	local skullC = at(4, seat1 - 3, 296, 0)
 	skull("ThroneSkull", skullC, 12, Vector3.new(1, 0, 0))
 	span(4, seat1 - 8.4, seat1 - 0.4, 286, 290.4, -3.8, 3.8, "ThroneSkullJaw", BONE, Mat.SmoothPlastic)
-	span(4, seat1 - 8.5, seat1 - 8.4, 287.6, 288.4, -2.8, 2.8, "ThroneSkullMouth", BLACK, Mat.SmoothPlastic)
+	for _, tv in { -1.9, 0, 1.9 } do
+		span(
+			4,
+			seat1 - 8.5,
+			seat1 - 8.4,
+			286.6,
+			289.6,
+			tv - 0.25,
+			tv + 0.25,
+			"ThroneSkullTeeth",
+			BLACK,
+			Mat.SmoothPlastic
+		)
+	end
 	for _, s in { -1, 1 } do
-		horn("ThroneHorn", {
+		horn(
+			"ThroneHorn",
 			skullC + Vector3.new(0, 2.5, s * 4.4),
-			at(4, seat1 - 3, 299.5, s * 10.5),
-			at(4, seat1 - 3, 305, s * 15.5),
-			at(4, seat1 - 3, 312, s * 17),
-			at(4, seat1 - 3, 318, s * 15),
-		}, { 4.4, 3.6, 2.8, 2.1 })
+			at(4, seat1 - 3, 298.5, s * 17),
+			at(4, seat1 - 3, 317, s * 15),
+			4.4
+		)
 	end
 	local glow = span(4, U - 6, U - 5, 270, 271, -0.5, 0.5, "ThroneGlow", WHITE, Mat.SmoothPlastic, 1)
 	light(glow, rgb(255, 120, 60), 50, 2)

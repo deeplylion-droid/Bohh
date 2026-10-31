@@ -264,10 +264,13 @@ local function approach(folder: Instance)
 		local t = math.clamp((x - A.X) / (B.X - A.X), 0, 1)
 		return A.Y + (B.Y - A.Y) * t
 	end
-	-- ponticello in salita: la faccia superiore passa per la linea A-B
+	-- ponticello in salita: la faccia superiore passa per la linea A-B; all'inizio continua per 4 stud sotto
+	-- la rampa (che e' in pendenza di traverso): esce dal terreno invece di avere un angolo sepolto e
+	-- l'altro sospeso
 	local a0 = Vector3.new(A.X + 2, A.Y, Z)
-	local mid = (a0 + B) / 2
-	local length = (B - a0).Magnitude
+	local start = a0 + (a0 - B).Unit * 4
+	local mid = (start + B) / 2
+	local length = (B - start).Magnitude
 	local deckCf = CFrame.lookAt(mid, B)
 	Build.Part({
 		name = "ExtremeBranch",
@@ -277,6 +280,11 @@ local function approach(folder: Instance)
 		material = Enum.Material.Slate,
 		parent = folder,
 	})
+	-- corrimano: dal primo all'ultimo paletto (dentro il bordo del ponte, non a filo: z-fighting)
+	local firstX, lastX = A.X - 4, A.X - 4 - 4 * math.floor((A.X - 4 - (B.X + 2)) / 4)
+	local railFrom = Vector3.new(firstX, deckY(firstX), Z)
+	local railTo = Vector3.new(lastX, deckY(lastX), Z)
+	local railCf = CFrame.lookAt((railFrom + railTo) / 2, railTo)
 	for _, side in { -1, 1 } do
 		Build.Part({
 			name = "ExtremeBranchEdge",
@@ -289,12 +297,12 @@ local function approach(folder: Instance)
 			parent = folder,
 		})
 		-- corrimano a strisce: paletti e una corda
-		for x = A.X - 4, B.X + 2, -4 do
+		for x = firstX, lastX, -4 do
 			local y = deckY(x)
 			Build.Part({
 				name = "BranchPost",
 				size = Vector3.new(0.6, 3.6, 0.6),
-				cframe = CFrame.new(x, y + 1.8, Z + side * 4.7),
+				cframe = CFrame.new(x, y + 1.8, Z + side * 4.6),
 				color = Color3.fromRGB(110, 72, 40),
 				material = Enum.Material.Wood,
 				parent = folder,
@@ -302,8 +310,8 @@ local function approach(folder: Instance)
 		end
 		Build.Part({
 			name = "BranchRope",
-			size = Vector3.new(0.35, 0.35, length - 4),
-			cframe = deckCf * CFrame.new(side * 4.7, 3.2, 0),
+			size = Vector3.new(0.35, 0.35, (railTo - railFrom).Magnitude),
+			cframe = railCf * CFrame.new(side * 4.6, 3, 0),
 			color = ROPE,
 			material = Enum.Material.Fabric,
 			collide = false,
@@ -337,7 +345,7 @@ local function approach(folder: Instance)
 	end
 	Build.Part({
 		name = "GateBeam",
-		size = Vector3.new(3, 3, 17),
+		size = Vector3.new(3.4, 3, 17), -- piu' spessa dei pali (a filo facevano z-fighting)
 		cframe = CFrame.new(archX, baseY + 24.5, Z),
 		color = HAZARD_BLACK,
 		material = Enum.Material.Metal,
@@ -348,7 +356,7 @@ local function approach(folder: Instance)
 	Build.Sign(
 		folder,
 		CFrame.lookAt(signPos, signPos + facing),
-		Vector3.new(16, 4.6, 0.6),
+		Vector3.new(15.6, 4.6, 0.6), -- le estremita' dentro i pali, non a filo
 		"ExtremeSign",
 		nil,
 		{ bg = Color3.fromRGB(220, 30, 50), text = Color3.fromRGB(255, 255, 255) }
@@ -479,15 +487,18 @@ local function canyon(folder: Instance)
 		castShadow = false,
 		parent = folder,
 	})
-	-- cartello all'inizio di ogni sezione
+	-- cartello all'inizio di ogni sezione: sulla piattaforma di partenza (sezione 1) o in fondo al santuario
+	-- precedente, dove si riparte; girato verso il centro, con l'estremita' lontana dalle pareti (prima
+	-- entrava nei muri e nelle sponde) e il palo che arriva al bordo del cartello senza bucarlo
 	for i, s in Extreme.Sections do
-		local startU = if i == 1 then 2 else -4 -- in fondo al santuario precedente, dove si riparte
+		local startU = if i == 1 then 3 else -4
+		local side = if i == 1 then -7 else -14.8
 		local floorY = if i == 1 then floorTop else Extreme.Sections[i - 1].floor
-		local pos = Extreme.At(i, startU, floorY + 6, -(hw - 1))
+		local pos = Extreme.At(i, startU, floorY + 6, side)
 		Build.Part({
 			name = "SectionPost",
-			size = Vector3.new(0.8, 6, 0.8),
-			cframe = CFrame.new(pos - Vector3.new(0, 3, 0)),
+			size = Vector3.new(0.8, 5.9, 0.8),
+			cframe = CFrame.new(pos - Vector3.new(0, 3.05, 0)),
 			color = HAZARD_BLACK,
 			material = Enum.Material.Metal,
 			parent = folder,

@@ -137,6 +137,12 @@ local function jump(a: Node, b: Node): (number?, number)
 	local moving = a.p.kind == "Mover" or b.p.kind == "Mover"
 	for _, t in (if moving then TIMES else { 0 }) do
 		local ca, cb = center(a, t), center(b, t)
+		-- un appoggio che in quell'istante e' sotto il pelo del liquido (tronco che affonda) non regge
+		local underA = E.InKill(Vector3.new(ca.X, topAt(a, t) + 0.3, ca.Z))
+		local underB = E.InKill(Vector3.new(cb.X, topAt(b, t) + 0.3, cb.Z))
+		if underA or underB then
+			continue
+		end
 		local g = gap(a, ca, b, cb)
 		local rise = topAt(b, t) - topAt(a, t)
 		local diff: number?
