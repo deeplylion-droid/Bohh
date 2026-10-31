@@ -453,7 +453,7 @@ for i in range(NS):
     th = 2 * math.pi * (i + 0.5) / NS
     c = np.array((0.375 * math.cos(th), 0.04 + 0.36 * math.sin(th), CUT_Z - 0.005))
     t = np.array((-math.sin(th), math.cos(th), 0.0))
-    stitches += stitch_cross(stitch_base, on_surface(stitch_base, c, 0.0), t, size=0.07, r=0.014, lift=0.01)
+    stitches += stitch_cross(stitch_base, on_surface(stitch_base, c, 0.0), t, size=0.075, r=0.017, lift=0.01)
 nose = union(*[ellipsoid((0.034, 0.03, 0.026), tuple(NOSE_C + (sx * 0.03, 0.0, 0.012))) for sx in (1, -1)],
              ellipsoid((0.024, 0.026, 0.024), tuple(NOSE_C + (0.0, -0.008, -0.032))), k=0.045).subtract(nostrils, k=0.008)
 
@@ -472,16 +472,12 @@ for a, L in ((-20, 0.55), (20, 0.55)):
     p, nr = surf(body_only, c, c + np.array((math.sin(ar), 1.0, 0.25)))
     flames.append(wisp(p - nr * 0.05, norm(np.array((math.sin(ar) * 0.3, 0.6, 1.0))), L, 0.09,
                        np.array((0.0, 0.25, -0.05)), wiggle=0.12, phase=rng.uniform(0, 3), r1=0.02))
-sigil = [torus(1.08, 0.024, (0.0, 0.0, 0.024)), torus(0.94, 0.016, (0.0, 0.0, 0.016))]
-for k_ in range(2):
-    pts = [(0.94 * math.cos(math.radians(90 + 120 * j + 60 * k_)), 0.94 * math.sin(math.radians(90 + 120 * j + 60 * k_)),
-            0.016) for j in range(4)]
-    for a_, b_ in zip(pts[:-1], pts[1:]):
-        sigil.append(capsule(a_, b_, 0.016))
+SIG_C = np.array((0.0, -0.05, 0.0))
+sigil = [torus(1.0, 0.03, tuple(SIG_C + (0.0, 0.0, 0.03)))]
 for j in range(6):
     a = math.radians(30 + 60 * j)
-    sigil.append(cylinder((1.08 * math.cos(a), 1.08 * math.sin(a), 0.0), (1.08 * math.cos(a), 1.08 * math.sin(a), 0.03),
-                          0.06, round=0.008))
+    c = SIG_C + np.array((1.0 * math.cos(a), 1.0 * math.sin(a), 0.0))
+    sigil.append(cylinder(tuple(c), tuple(c + (0, 0, 0.045)), 0.068, round=0.012))
 aura = union(fast_union(flames, k=0.03).subtract(body_only.offset(-0.05)), fast_union(sigil))
 
 # ============================================================ tre sfere psichiche fluttuanti
@@ -490,20 +486,20 @@ orb_core, orb_glass = [], []
 for i, c in enumerate(ORBS):
     orb_core.append(sphere(0.1, tuple(c)))
     nrm = norm((0.4 * (1 if i % 2 else -1), 0.3, 1.0))
-    orb_core.append(torus(0.225, 0.014).rotate(orient(nrm)).translate(tuple(c)))
+    orb_core.append(torus(0.205, 0.026).rotate(orient(nrm)).translate(tuple(c)))
     orb_glass.append(sphere(0.158, tuple(c)))
 
 # ============================================================ parti
 HEAD_ZONE = H(ellipsoid((0.64, 0.62, 0.6), (0.0, -0.05, 0.04)))
 m.add("Body", core0.subtract(HEAD_ZONE.offset(-0.03)), FUR, tris=2700, voxel=0.03)
-m.add("Head", core0.intersect(HEAD_ZONE.offset(0.03)), FUR, tris=2600, voxel=0.022)
+m.add("Head", core0.intersect(HEAD_ZONE.offset(0.03)), FUR, tris=2700, voxel=0.022)
 pad_solid = union(*[ellipsoid((0.098, 0.093, 0.083), (sx * 0.067, -0.383, -0.145)) for sx in (1, -1)],
                   ellipsoid((0.083, 0.083, 0.068), (0, -0.313, -0.257)), k=0.03)
 pad_solid = pad_solid.subtract(nostrils.offset(0.01)).subtract(union(*lip_tubes).offset(0.004), k=0.008)
 m.add("Accent", H(union(pad_solid.subtract(head0.offset(-0.09)), ear_fluff)), ACCENT, role="detail", tris=700,
       voxel=0.016)
 m.add("Dome", H(DOME), GLASS, material="Glass", role="detail", tris=900, voxel=0.018, transparency=0.45)
-m.add("Brain", H(brain), BRAIN, material="Neon", role="glow", tris=1500, voxel=0.01)
+m.add("Brain", H(brain), BRAIN, material="Neon", role="glow", tris=1600, voxel=0.01)
 m.add("Stitches", union(H(fast_union(stitches)), H(nose)), THREAD, role="detail", tris=700, voxel=0.01)
 
 eyes, pupils, shines = [], [], []
@@ -520,8 +516,8 @@ for sx in (1, -1):
     fangs.append(round_cone(tuple(b + np.array((0, 0.02, 0.005))), tuple(b + np.array((sx * -0.004, -0.012, -0.072))),
                             0.021, 0.005))
 m.add("Shine", union(H(union(*fangs)), *shines), TOOTH, role="shine", tris=500, voxel=0.008)
-m.add("Nebula", aura, AURA, material="Neon", role="glow", tris=1900, voxel=0.014)
-m.add("Aura", fast_union(orb_core), ORB, material="Neon", role="glow", tris=700, voxel=0.012)
+m.add("Nebula", aura, AURA, material="Neon", role="glow", tris=2200, voxel=0.016)
+m.add("Aura", fast_union(orb_core), ORB, material="Neon", role="glow", tris=1000, voxel=0.014)
 m.add("OrbGlass", fast_union(orb_glass), ORB_GLASS, material="Glass", role="detail", tris=600, voxel=0.015,
       transparency=0.45)
 
