@@ -71,6 +71,36 @@ local LOOK = {
 		tint = Color3.fromRGB(255, 238, 224),
 		fx = "Embers",
 	},
+	-- Percorso Estremo: rapide con la nebbiolina delle cascate, sabbia del tempio, laboratorio
+	-- luminoso, inferno rosso
+	Abyss = {
+		color = Color3.fromRGB(176, 222, 240),
+		decay = Color3.fromRGB(60, 120, 160),
+		density = 0.3,
+		tint = Color3.fromRGB(242, 250, 255),
+		fx = "Mist",
+	},
+	Desert = {
+		color = Color3.fromRGB(255, 222, 172),
+		decay = Color3.fromRGB(200, 140, 80),
+		density = 0.32,
+		tint = Color3.fromRGB(255, 246, 228),
+		fx = "Dust",
+	},
+	Lab = {
+		color = Color3.fromRGB(190, 240, 255),
+		decay = Color3.fromRGB(60, 90, 140),
+		density = 0.28,
+		tint = Color3.fromRGB(240, 252, 255),
+		fx = "Sparkles",
+	},
+	Inferno = {
+		color = Color3.fromRGB(255, 132, 92),
+		decay = Color3.fromRGB(130, 30, 20),
+		density = 0.4,
+		tint = Color3.fromRGB(255, 232, 222),
+		fx = "Embers",
+	},
 	-- dentro il vulcano: foschia rosso scuro e braci
 	Den = {
 		color = Color3.fromRGB(150, 56, 70),
@@ -166,6 +196,22 @@ local FX = {
 		Lifetime = NumberRange.new(2, 4),
 		Speed = NumberRange.new(0.2, 0.8),
 		Acceleration = Vector3.new(0, 0.3, 0),
+		Rate = 22,
+	},
+	-- goccioline e nebbiolina d'acqua che salgono lente (rapide)
+	Mist = {
+		Texture = SMOKE,
+		Color = ColorSequence.new(Color3.fromRGB(240, 250, 255)),
+		LightEmission = 0.3,
+		Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.8), NumberSequenceKeypoint.new(1, 2.4) }),
+		Transparency = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, 1),
+			NumberSequenceKeypoint.new(0.3, 0.82),
+			NumberSequenceKeypoint.new(1, 1),
+		}),
+		Lifetime = NumberRange.new(4, 7),
+		Speed = NumberRange.new(0.3, 1),
+		Acceleration = Vector3.new(-0.6, 0.5, 0),
 		Rate = 22,
 	},
 	Embers = {
