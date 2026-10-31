@@ -550,9 +550,9 @@ for sx in (1, -1):
     look = -0.012
     pupils.append(H(eye_place(ellipsoid((0.034, 0.02, 0.036)), sx, (look, -0.014, -0.004))))
     shines.append(H(eye_place(sphere(0.02), sx, (look - 0.03, -0.022, -0.006))))
-m.add("Iris", union(*irises), IRIS, role="eye", tris=380, voxel=0.0167)
+m.add("Iris", union(*irises), IRIS, role="eye", tris=400, voxel=0.0163)
 m.add("ThirdEye", H(third_place(ellipsoid((0.072, 0.052, 0.116)), (0, 0.014, 0))), THIRD, material="Neon", role="glow",
-      tris=360, voxel=0.0130)
+      tris=400, voxel=0.0124)
 third_slit = third_place(ellipsoid((0.009, 0.02, 0.05)), (0, -0.034, 0))
 nose = union(*[ellipsoid((0.05, 0.036, 0.032), tuple(NOSE_C + (sx * 0.04, -0.006, 0.014))) for sx in (1, -1)],
              ellipsoid((0.032, 0.03, 0.028), tuple(NOSE_C + (0.0, -0.014, -0.034))), k=0.05).subtract(nostrils, k=0.008)
@@ -570,7 +570,7 @@ for sx in (1, -1):
     b, _ = surf(head0, (sx * 0.04, -0.24, -0.2), (sx * 0.085, -0.84, -0.21))
     fangs.append(round_cone(tuple(b + np.array((0, 0.02, 0.005))), tuple(b + np.array((sx * -0.004, -0.012, -0.09))),
                             0.026, 0.005))
-m.add("Shine", union(H(union(*fangs)), *shines), TOOTH, role="shine", tris=380, voxel=0.0088)
+m.add("Shine", union(H(union(*fangs)), *shines), TOOTH, role="shine", tris=400, voxel=0.0086)
 
 # ============================================================ disco antigravita' (metallo) e propulsori
 m.add("HoverDisc", union(disc, fast_union(thrusters)), DISC, material="Metal", role="detail", tris=800, voxel=0.0556)

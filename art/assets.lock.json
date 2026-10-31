@@ -292,6 +292,10 @@
   }
  },
  "models": {
+  "Abaddon": {
+   "asset": 113923150216298,
+   "hash": "d9406234efdbaed5a1877a998112427d86521b87"
+  },
   "AbyssAngler": {
    "asset": 86373077096443,
    "hash": "694b4c073124ee44dd78173479fd1801244b0370"
@@ -335,6 +339,14 @@
   "BatRubberMallet": {
    "asset": 102462824877629,
    "hash": "d5bb6f6b7250014c589e83e71d8383f4090e7366"
+  },
+  "Beelzebub": {
+   "asset": 71842451618798,
+   "hash": "6a32b1a63cda4793d84ca358d80fa1b116ee3337"
+  },
+  "Behemoth": {
+   "asset": 127152636675862,
+   "hash": "feb8877fb0e0a9e016ebb919c3be379d2af3eb09"
   },
   "Bench": {
    "asset": 102514670772746,

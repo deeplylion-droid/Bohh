@@ -564,7 +564,7 @@ for sx in (1, -1):
                             0.021, 0.005))
 m.add("Shine", union(H(union(*fangs)), *shines), TOOTH, role="shine", tris=500, voxel=0.0070)
 m.add("Nebula", aura, AURA, material="Neon", role="glow", tris=2200, voxel=0.0307)
-m.add("Sigil", fast_union(sigil), AURA, material="Neon", role="glow", tris=750, voxel=0.0283)
+m.add("Sigil", fast_union(sigil).intersect(halfspace_z(0.0, above=True)), AURA, material="Neon", role="glow", tris=750, voxel=0.0283)
 m.add("Aura", fast_union(orb_core), ORB, material="Neon", role="glow", tris=1100, voxel=0.0231)
 m.add("OrbGlass", fast_union(orb_glass), ORB_GLASS, material="Glass", role="detail", tris=400, voxel=0.0376,
       transparency=0.45)
