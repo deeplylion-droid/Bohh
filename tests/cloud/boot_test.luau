@@ -607,6 +607,18 @@ do
 	add("extreme_reach_start", reach(Vector3.new(0, 334, 0) + dir * 60, Extreme.StartSpawn.Position))
 	local count = #(Pets.ByRarity.Extreme or {})
 	add("extreme_pets", count)
+	-- tre pet per sezione, ognuno col suo tempo di schiusa
+	local Rarities = require(ReplicatedStorage.Shared.Config.Rarities)
+	local perZone = {}
+	for _, def in Pets.ByRarity.Extreme or {} do
+		perZone[def.zone or "?"] = (perZone[def.zone or "?"] or 0) + 1
+	end
+	local zones = {}
+	for _, sec in Extreme.Sections do
+		local hatch = Rarities.List.Extreme.hatchByZone and Rarities.List.Extreme.hatchByZone[sec.id]
+		table.insert(zones, `{sec.id}:{perZone[sec.id] or 0}/{hatch}s`)
+	end
+	add("extreme_zones", table.concat(zones, " "))
 	add("extreme_zone_at_start", MapLayout.ZoneAt(Extreme.StartSpawn.Position))
 end
 
