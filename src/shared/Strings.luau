@@ -192,6 +192,10 @@ local T: { [string]: Entry } = {
 		it = "{pet} è sul tuo trono! Il gigante che c'era è nel deposito",
 	},
 	GiantSwapped = { en = "{pet} is on the throne", it = "{pet} è sul trono" },
+	GalacticStored = {
+		en = "{pet} is waiting in your storage: use SWAP GIANT on the throne",
+		it = "{pet} ti aspetta nel deposito: usa CAMBIA GIGANTE sul trono",
+	},
 	CantStealBought = { en = "Galactic giants can't be stolen!", it = "I giganti galattici non si rubano!" },
 	ExtremeHudTitle = { en = "EXTREME TRAIL", it = "PERCORSO ESTREMO" },
 	ExtremeHudSection = { en = "Section {n}/{total}", it = "Sezione {n}/{total}" },

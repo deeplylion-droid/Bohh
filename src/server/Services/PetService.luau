@@ -230,15 +230,29 @@ function PetService.GrantBought(player: Player, petId: string): boolean
 	if not data then
 		return false
 	end
+	local ped = pedestal(player, 0)
+	if ped and ped.base:GetAttribute("BeingStolen") then
+		-- qualcuno sta portando via il gigante del trono: il nuovo aspetta in cima al deposito
+		data.Vault = data.Vault or {}
+		table.insert(data.Vault, 1, { Id = petId, Mutation = "None", Size = "Normal", Bought = true })
+		pushVault(player)
+		S.IndexService.Record(player, petId, "None")
+		S.StateService.Notify(player, "GalacticStored", { pet = "Pet_" .. petId }, "Gold")
+		return true
+	end
 	local uid = petAt(player, 0)
 	if uid then
 		toVault(player, uid)
 	end
 	local newUid = PetService.AddPet(player, { Id = petId, Mutation = "None", Size = "Normal", Bought = true })
-	pushVault(player)
 	if not newUid then
-		return false
+		-- non dovrebbe succedere (il trono e' appena stato liberato): il pet resta nel deposito
+		data.Vault = data.Vault or {}
+		table.insert(data.Vault, 1, { Id = petId, Mutation = "None", Size = "Normal", Bought = true })
+		pushVault(player)
+		return true
 	end
+	pushVault(player)
 	S.IndexService.Record(player, petId, "None")
 	S.StateService.Notify(player, "GalacticArrived", { pet = "Pet_" .. petId }, "Gold")
 	S.StateService.Announce("AnnounceGalactic", { name = player.DisplayName, pet = "Pet_" .. petId }, "Galactic")
