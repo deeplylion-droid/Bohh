@@ -394,10 +394,10 @@ def curve_frames(pts):
 
 
 # ============================================================ colori
-HIDE = (48, 32, 38)         # pelle scura da locusta
+HIDE = (70, 34, 28)         # pelle rosso bruciato scuro
 BRONZE = (138, 88, 50)      # corazza di bronzo scuro
 GOLD = (244, 188, 70)
-HAIR = (112, 20, 30)        # criniera cremisi scuro
+HAIR = (30, 20, 26)         # criniera nera (le punte ardono come braci)
 EMBER = (255, 112, 26)      # occhi e fessure di brace (Neon)
 VENOM = (176, 255, 64)      # pungiglione velenoso (Neon)
 MOUTH = (40, 10, 14)
@@ -410,9 +410,9 @@ THREAD = (242, 226, 184)
 m = Model("Abaddon", "pet")
 
 # ============================================================ testa da cavallo (spazio locale: muso verso -Y)
-HEAD_T = np.array([0.0, -1.16, 2.5], dtype=np.float32)
-HS = 1.28
-R_HEAD = euler(17.0, 6.0, 13.0)     # muso in basso come un destriero, girato e inclinato verso chi guarda
+HEAD_T = np.array([0.0, -1.06, 2.56], dtype=np.float32)
+HS = 1.4
+R_HEAD = euler(15.0, 6.0, 13.0)     # muso in basso come un destriero, girato e inclinato verso chi guarda
 JAW_Z = -0.13
 HINGE = (0.0, 0.02, JAW_Z)
 GAPE = 33.0
@@ -585,7 +585,7 @@ haunch = ellipsoid((0.48, 0.42, 0.49), (0, 0.6, 1.48))
 withers = ellipsoid((0.38, 0.36, 0.34), (0, -0.42, 1.78))
 torso = union(chest, barrel, haunch, k=0.25)
 torso = union(torso, withers, k=0.2)
-NECK_PTS = bezier((0, -0.48, 1.66), (0, -0.72, 2.0), (0, -0.9, 2.3), tuple(hp((0, 0.18, -0.04))), 10)
+NECK_PTS = bezier((0, -0.46, 1.66), (0, -0.66, 1.98), (0, -0.82, 2.26), tuple(hp((0, 0.16, -0.04))), 10)
 NP, NT = curve_frames(NECK_PTS)
 neck_parts = []
 for i, (c, t) in enumerate(zip(NP, NT)):
@@ -601,18 +601,18 @@ LEGS = {
     (1, "h"): [(0.36, 0.62, 1.4), (0.42, 0.42, 0.98), (0.4, 0.84, 0.6), (0.39, 0.72, 0.2)],
     (-1, "h"): [(-0.36, 0.62, 1.4), (-0.42, 0.38, 0.98), (-0.4, 0.82, 0.6), (-0.39, 0.7, 0.2)],
 }
-leg_parts, HOOVES, SPINE_LEGS = [], [], []
+leg_parts, HOOVES, SPINE_LEGS, FETLOCKS = [], [], [], []
 for (sx, kind), pts in LEGS.items():
     a, b, c, d = (np.array(q, dtype=np.float64) for q in pts)
     if kind == "f":
-        leg_parts += [round_cone(a, b, 0.28, 0.2), ell(mix(a, b, 0.4), (0.24, 0.25, 0.3), axis=b - a),
-                      round_cone(b, c, 0.19, 0.13), ell(mix(b, c, 0.3), (0.16, 0.16, 0.22), axis=c - b),
-                      round_cone(c, d, 0.12, 0.115)]
+        leg_parts += [round_cone(a, b, 0.3, 0.22), ell(mix(a, b, 0.4), (0.26, 0.27, 0.32), axis=b - a),
+                      round_cone(b, c, 0.21, 0.15), ell(mix(b, c, 0.3), (0.18, 0.18, 0.24), axis=c - b),
+                      round_cone(c, d, 0.14, 0.13)]
     else:
         leg_parts += [ell((sx * 0.4, 0.58, 1.24), (0.3, 0.42, 0.46), axis=(0, -0.35, 1)),
-                      round_cone(a, b, 0.27, 0.19), round_cone(b, c, 0.19, 0.12),
-                      ell(mix(b, c, 0.35) + np.array([0, 0.04, 0.02]), (0.16, 0.17, 0.23), axis=c - b),
-                      round_cone(c, d, 0.12, 0.115)]
+                      round_cone(a, b, 0.29, 0.21), round_cone(b, c, 0.21, 0.14),
+                      ell(mix(b, c, 0.35) + np.array([0, 0.04, 0.02]), (0.18, 0.19, 0.25), axis=c - b),
+                      round_cone(c, d, 0.14, 0.13)]
         SPINE_LEGS.append((b, c, d, sx))
     if (sx, kind) == (1, "f"):
         fwd = norm((0.0, 0.45, -1.0))
@@ -621,7 +621,8 @@ for (sx, kind), pts in LEGS.items():
         HOOVES.append((hoof_c, norm(d - c), True))
     else:
         HOOVES.append((d + np.array([0, -0.02, -0.12]), np.array([0, 0, -1.0]), False))
-    leg_parts.append(sphere(0.14, tuple(d)))   # nodello
+    leg_parts.append(sphere(0.16, tuple(d)))   # nodello
+    FETLOCKS.append((d, norm(d - c), (sx, kind) == (1, "f")))
 
 # coda da scorpione: si alza dalla groppa e si inarca sopra il dorso (gruppo "Tail")
 TAIL_PIVOT = (0.0, 0.96, 1.7)
@@ -696,36 +697,42 @@ def crupper_reg(p):
 
 armor.append(paint(core0, SDF(crupper_reg, (-0.5, 0.4, 1.3), (0.5, 1.1, 1.95)), out=0.055, inn=0.03, k=0.02))
 
-# ============================================================ criniera cremisi che fluttua all'indietro
-locks = []
-crest = []
-for i in range(1, len(NP) - 1):
+# ============================================================ criniera nera che si alza e vola all'indietro (punte di brace)
+locks, crest, lock_tips = [], [], []
+for i in range(1, len(NP) - 1, 1):
     c, t = NP[i], NT[i]
     back = norm(np.array([0.0, t[2], -t[1]]))       # verso la cresta del collo (dietro e in alto)
     u = i / (len(NP) - 1)
     r = 0.4 - 0.13 * u
-    crest.append(c + back * (r * 0.88))
-crest.append(hp((0, 0.12, 0.22)))
+    crest.append((c + back * (r * 0.86), back))
+crest.append((hp((0, 0.1, 0.24)), norm(hv((0, 0.5, 0.86)))))
 crest = crest[::-1]   # dalla nuca al garrese
 lrng = np.random.default_rng(4)
-lock_tips = []
-for j, root in enumerate(crest):
+BACK = norm((0.0, 1.0, 0.12))
+for j, (root, nrm_) in enumerate(crest):
+    u = j / max(len(crest) - 1, 1)
     for sgn in ((1, -1) if j % 2 == 0 else (-1, 1)):
-        u = j / max(len(crest) - 1, 1)
-        L = 0.95 + 0.3 * math.sin(j * 1.7) + lrng.uniform(-0.06, 0.06) - 0.25 * u
-        side = sgn * (0.16 + 0.1 * u)
-        p0 = np.asarray(root, float)
-        lift = 0.34 - 0.2 * u
-        pts = bezier(tuple(p0), tuple(p0 + np.array([side * 0.5, 0.2, lift]) * L),
-                     tuple(p0 + np.array([side * 1.0, 0.62, lift * 0.6]) * L),
-                     tuple(p0 + np.array([side * 1.25, 0.95, -0.12 + 0.18 * math.sin(j * 2.1)]) * L), 10)
-        rad = [0.1 * (1 - (k / 10) ** 1.3) + 0.014 for k in range(11)]
+        L = 1.05 - 0.35 * u + lrng.uniform(-0.08, 0.08)
+        side = np.array([sgn * (0.1 + 0.12 * u), 0.0, 0.0])
+        p0 = np.asarray(root, float) - nrm_ * 0.03
+        pts = bezier(tuple(p0), tuple(p0 + (nrm_ * 0.36 + side * 0.4) * L),
+                     tuple(p0 + (nrm_ * 0.46 + BACK * 0.42 + side * 1.0) * L),
+                     tuple(p0 + (nrm_ * 0.2 + BACK * 0.92 + side * 1.6 + np.array([0, 0, 0.1])) * L), 10)
+        rad = [0.105 * (1 - (k / 10) ** 1.3) + 0.016 for k in range(11)]
         locks.append(tube(pts[:9], rad[:9]))
-        lock_tips.append(tube(pts[7:], rad[7:]).offset(0.006))      # punta di brace
-hair = fast_union(locks, k=0.03)
+        lock_tips.append(tube(pts[7:], rad[7:]).offset(0.007))      # punta di brace
+# ciuffi di pelo sui nodelli (zampe "a calzino" da cavallo da guerra)
+for d, ax, raised in FETLOCKS:
+    for a in np.linspace(0, 2 * math.pi, 9)[:-1]:
+        side_v = np.array([math.cos(a), math.sin(a), 0.0])
+        side_v = norm(side_v - ax * float(np.dot(side_v, ax)))
+        base = d + side_v * 0.12 + ax * 0.02
+        tipp = base + side_v * 0.07 + ax * 0.15
+        locks.append(round_cone(tuple(base), tuple(tipp), 0.06, 0.012))
+hair = fast_union(locks, k=0.03).intersect(halfspace_z(0.0))
 
 # ============================================================ ali da locusta (2 paia per lato)
-WSCALE = 1.38
+WSCALE = 1.3
 FORE = [(0.0, 0.03), (0.3, 0.08), (0.8, 0.105), (1.18, 0.09), (1.33, 0.02), (1.27, -0.06), (0.8, -0.085), (0.3, -0.07),
         (0.02, -0.03)]
 HIND = [(0.0, 0.0), (0.5, -0.03), (1.0, -0.09), (1.14, -0.24), (1.08, -0.44), (0.84, -0.6), (0.5, -0.62),
@@ -750,11 +757,11 @@ def wing_local(sx):
     return hind.scale(WSCALE), frame_.scale(WSCALE)
 
 
-WING_ROOT = {sx: np.array([sx * 0.22, -0.16, 2.0]) for sx in (1, -1)}
+WING_ROOT = {sx: np.array([sx * 0.24, -0.24, 1.98]) for sx in (1, -1)}
 
 
 def wing_matrix():
-    along = norm((0.62, 0.55, 0.62))
+    along = norm((0.52, 0.45, 0.74))
     chord = np.array([0.0, -0.45, 1.0])
     chord = norm(chord - along * float(np.dot(chord, along)))
     nrm = np.cross(along, chord)
@@ -825,8 +832,8 @@ gold.append(sphere(0.06, tuple(shaft_end + kn * 0.1)))
 # punti a croce che cuciono la criniera al collo
 stitches = []
 for i in range(1, len(crest) - 1, 2):
-    c = np.asarray(crest[i], float)
-    t_ = norm(np.asarray(crest[i + 1], float) - np.asarray(crest[i - 1], float))
+    c = np.asarray(crest[i][0], float)
+    t_ = norm(np.asarray(crest[i + 1][0], float) - np.asarray(crest[i - 1][0], float))
     nn = grad(core, c)
     sd = norm(np.cross(t_, nn))
     for sg in (1, -1):

@@ -147,8 +147,10 @@ local function updateEntry(e: Entry, t: number, hrp: BasePart?, hrpPos: Vector3?
 				part.CFrame *= CFrame.new((math.random() - 0.5) * 0.3, 0, (math.random() - 0.5) * 0.3)
 			end
 		elseif style == "Laser" then
+			-- le pareti laser sono velate (si vede cosa c'e' dietro), i raggi bassi pieni
+			local wall = def.size.Y > 2
 			part.Transparency = if phase == "active"
-				then 0.1
+				then (if wall then 0.45 else 0.1)
 				elseif phase == "warn" then (if math.sin(t * 40) > 0 then 0.55 else 0.9)
 				else 1
 		elseif style == "Fire" then

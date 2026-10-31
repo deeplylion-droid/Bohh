@@ -440,14 +440,20 @@ for sx in (1, -1):
 nemes_w = union(Hd(nemes_l), *lappets, k=0.04)
 
 STRIPE_F = np.array([0.0, -0.5, 0.06], dtype=np.float32)   # centro dei cerchi delle righe (davanti al volto)
-STRIPE_P = 0.1
+STRIPE_P = 0.12
+
+
+CAVITY = ellipsoid((0.185, 0.3, 0.28), (0, -0.2, -0.06))
+NECK_HOLE = ellipsoid((0.2, 0.22, 0.2), (0, 0.06, -0.42))
 
 
 def stripe_region_w(p):
     q = to_head(p)
     d = np.sqrt(np.einsum("ij,ij->i", q - STRIPE_F, q - STRIPE_F)) / STRIPE_P
     fr = d - np.floor(d)
-    return ((np.abs(fr - 0.25) - 0.25) * STRIPE_P * HS).astype(np.float32)
+    band = (np.abs(fr - 0.25) - 0.25) * STRIPE_P * HS
+    hidden = np.minimum(np.abs(CAVITY(q)) - 0.02, np.abs(NECK_HOLE(q)) - 0.02) * -1.0   # > 0 sulle pareti nascoste
+    return np.maximum(band, hidden * HS).astype(np.float32)
 
 
 nemes_stripes = paint(nemes_w, SDF(stripe_region_w, nemes_w.lo - 0.05, nemes_w.hi + 0.05), out=0.008, inn=0.016)
@@ -463,7 +469,7 @@ W_M = np.stack([WU, WV, WW], axis=1).astype(np.float32)
 ARM_L = 1.05
 
 
-def feather(base, d, L, a, layer, th=0.024):
+def feather(base, d, L, a, layer, th=0.03):
     """Penna: ellissoide schiacciato che parte da 'base' (piano dell'ala) lungo la direzione d."""
     d = norm((d[0], d[1], 0.0))
     c = np.array([base[0] + d[0] * L / 2, base[1] + d[1] * L / 2, layer])
@@ -473,12 +479,10 @@ def feather(base, d, L, a, layer, th=0.024):
 wing_gold_l, wing_lapis_l = [], []
 arm_pts = [(u, -0.035 * math.sin(math.pi * u / ARM_L), -0.02) for u in np.linspace(0.0, ARM_L, 9)]
 wing_gold_l.append(tube(arm_pts, taper(9, 0.08, 0.055)))
-for u in np.linspace(0.04, ARM_L - 0.02, 10):                          # fila 1: piccole penne d'oro a scaglia
-    wing_gold_l.append(feather((u, -0.05), (0.2, 1.0), 0.24, 0.068, -0.046))
-for u in np.linspace(0.06, ARM_L - 0.03, 9):                           # fila 2: copritrici di lapislazzuli
-    wing_lapis_l.append(feather((u, 0.06), (0.16, 1.0), 0.34, 0.072, -0.024))
-BACK = [(0.0, -0.02), (ARM_L, -0.02), (ARM_L + 0.12, 0.2), (ARM_L - 0.05, 0.42), (0.6, 0.5), (0.2, 0.52), (-0.02, 0.4)]
-wing_lapis_l.append(prism(BACK, 0.024, 0.044, round=0.008))         # sottofondo pieno dietro le penne
+for u in np.linspace(0.05, ARM_L - 0.03, 8):                           # fila 1: piccole penne d'oro a scaglia
+    wing_gold_l.append(feather((u, -0.05), (0.2, 1.0), 0.25, 0.08, -0.05))
+for u in np.linspace(0.07, ARM_L - 0.04, 7):                           # fila 2: copritrici di lapislazzuli
+    wing_lapis_l.append(feather((u, 0.06), (0.16, 1.0), 0.36, 0.085, -0.025))
 FLIGHT = []
 for i, u in enumerate(np.linspace(0.0, 0.66, 7)):                     # secondarie
     FLIGHT.append(((u, 0.18), (0.1 + 0.05 * i, 1.0), 0.5 + 0.035 * i))
@@ -486,7 +490,7 @@ for i, ang in enumerate(np.linspace(66, 6, 7)):                        # remigan
     a_ = math.radians(ang)
     FLIGHT.append(((0.74 + 0.05 * i, 0.2 - 0.035 * i), (math.cos(a_), math.sin(a_)), 0.66 + 0.045 * i))
 for j, (base, d, L) in enumerate(FLIGHT):
-    (wing_gold_l if j % 2 else wing_lapis_l).append(feather(base, d, L, 0.074, 0.0 + 0.006 * (j % 2)))
+    (wing_gold_l if j % 2 else wing_lapis_l).append(feather(base, d, L, 0.078, 0.0 + 0.008 * (j % 2)))
 
 
 def place_wing(shape, sx):
@@ -507,7 +511,7 @@ def flank_point(sx, s, t):
 
 def glyph_strokes():
     """Tratti dei geroglifici nel piano del fregio (s, t)."""
-    st = [[(0.02, -0.13), (0.6, -0.13)]]                                          # riga di base
+    st = [[(0.0, -0.13), (0.52, -0.13)]]                                          # riga di base
     c = 0.07                                                                     # ankh
     st += [[(c + 0.035 * math.cos(a), 0.05 + 0.04 * math.sin(a)) for a in np.linspace(0, 2 * math.pi, 13)],
            [(c, 0.01), (c, -0.09)], [(c - 0.04, 0.0), (c + 0.04, 0.0)]]
@@ -521,8 +525,6 @@ def glyph_strokes():
     c = 0.46                                                                     # disco solare con il punto
     st.append([(c + 0.045 * math.cos(a), 0.0 + 0.045 * math.sin(a)) for a in np.linspace(0, 2 * math.pi, 15)])
     st.append([(c - 0.004, 0.0), (c + 0.004, 0.0)])
-    c = 0.565                                                                    # piuma di maat
-    st += [[(c, -0.09), (c, 0.04), (c + 0.03, 0.08), (c + 0.04, 0.05)]]
     return st
 
 
@@ -544,7 +546,7 @@ tuft_bands = [paint(tuft_core, slab(TAIL_END + TAIL_DIR * d, TAIL_DIR, 0.028, 0.
               for d in (0.05, 0.16, 0.27)]
 
 # ============================================================ parti
-GS = float(os.environ.get("GS", 1.0))   # scala finale del modello
+GS = float(os.environ.get("GS", 1.1))   # scala finale del modello
 
 
 def add(name, sdf, color, voxel, **kw):
@@ -553,21 +555,21 @@ def add(name, sdf, color, voxel, **kw):
     m.add(name, sdf.scale(GS) if GS != 1.0 else sdf, color, voxel=voxel * GS * VX, **kw)
 
 
-add("Body", core, GOLD_BODY, 0.032, material="Foil", tris=3100)
-add("Face", Hd(head_skin), GOLD_BODY, 0.012, material="Foil", role="skin", tris=1500)
+add("Body", core, GOLD_BODY, 0.032, material="Foil", tris=2800)
+add("Face", Hd(head_skin), GOLD_BODY, 0.012, material="Foil", role="skin", tris=1300)
 add("Nemes", fast_union([nemes_w, Hd(union(headband_l, uraeus_l, beard_l))]), GOLD, 0.017, material="Foil",
-    role="detail", tris=1400)
-add("NemesStripes", nemes_stripes, LAPIS, 0.016, role="detail", tris=1200)
+    role="detail", tris=1500)
+add("NemesStripes", nemes_stripes, LAPIS, 0.016, role="detail", tris=1700)
 lapis = [Hd(x) for x in brows + beard_bands_l + [hood_inlay_l]] + tuft_bands
-add("Lapis", fast_union(lapis), LAPIS, 0.009, role="detail", tris=700)
-add("Block", block, STONE, 0.03, role="detail", tris=300, smooth=False)
+add("Lapis", fast_union(lapis), LAPIS, 0.009, role="detail", tris=600)
+add("Block", block, STONE, 0.03, role="detail", tris=250, smooth=False)
 add("Tuft", tuft_core, GOLD, 0.02, material="Foil", role="detail", tris=250)
-add("Frost", fast_union(frieze), TURQ, 0.012, material="Neon", role="glow", tris=1000)
-add("EyeGlow", Hd(fast_union(eyes + [crack] + uraeus_eyes_l)), EYE_GLOW, 0.008, material="Neon", role="glow", tris=350)
-add("Kohl", Hd(fast_union(kohl + pupils + mouth_dark)), KOHL, 0.007, role="eye", tris=600)
+add("Frost", fast_union(frieze), TURQ, 0.012, material="Neon", role="glow", tris=900)
+add("EyeGlow", Hd(fast_union(eyes + [crack] + uraeus_eyes_l)), EYE_GLOW, 0.008, material="Neon", role="glow", tris=300)
+add("Kohl", Hd(fast_union(kohl + pupils + mouth_dark)), KOHL, 0.007, role="eye", tris=550)
 add("Teeth", Hd(fast_union(teeth)), TOOTH, 0.005, role="shine", tris=200)
 add("Stitches", Hd(fast_union(face_stitches)), THREAD, 0.005, role="detail", tris=200)
-add("Claws", fast_union(claws), LAPIS, 0.016, role="detail", tris=400)
+add("Claws", fast_union(claws), LAPIS, 0.016, role="detail", tris=350)
 for sx, nm in ((1, "WingR"), (-1, "WingL")):
     piv = tuple(WING_SH * np.array([sx, 1, 1]))
     add(nm, place_wing(fast_union(wing_lapis_l), sx), LAPIS, 0.018, role="detail", tris=1100, group=nm, pivot=piv)

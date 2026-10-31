@@ -94,7 +94,7 @@ local function piecePart(p: Extreme.Piece, parent: Instance): BasePart?
 	if p.kind == "Pulse" then
 		if p.style == "Laser" then
 			mat = Enum.Material.Neon
-			transparency = 0.2
+			transparency = if p.size.Y > 2 then 0.45 else 0.15
 		elseif p.style == "Fire" then
 			mat = Enum.Material.Neon
 			transparency = 1 -- il client lo accende quando e' attivo
