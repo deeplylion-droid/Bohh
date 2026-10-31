@@ -33,6 +33,12 @@ local function r3(v: number): number
 	return math.floor(v * 1000 + 0.5) / 1000
 end
 
+-- assi di rotazione con 6 decimali: con 3 una parte a 900 stud dall'origine si inclina di ~0.05 gradi
+-- e il controllo delle facce complanari sbaglia di mezzo stud
+local function r6(v: number): number
+	return math.floor(v * 1e6 + 0.5) / 1e6
+end
+
 -- primo livello sotto la cartella del percorso (Pieces, o il nome della parte stessa)
 local function topFolder(d: Instance): string
 	local node = d
@@ -51,12 +57,12 @@ local function pose(cf: any, transparency: number): { number }
 		r3(cf.X),
 		r3(cf.Y),
 		r3(cf.Z),
-		r3(cf.RightVector.X),
-		r3(cf.RightVector.Y),
-		r3(cf.RightVector.Z),
-		r3(cf.UpVector.X),
-		r3(cf.UpVector.Y),
-		r3(cf.UpVector.Z),
+		r6(cf.RightVector.X),
+		r6(cf.RightVector.Y),
+		r6(cf.RightVector.Z),
+		r6(cf.UpVector.X),
+		r6(cf.UpVector.Y),
+		r6(cf.UpVector.Z),
 		r3(transparency),
 	}
 end
@@ -188,12 +194,12 @@ for _, d in folder:GetDescendants() do
 			s = { r3(d.Size.X), r3(d.Size.Y), r3(d.Size.Z) },
 			p = { r3(cf.X), r3(cf.Y), r3(cf.Z) },
 			r = {
-				r3(cf.RightVector.X),
-				r3(cf.RightVector.Y),
-				r3(cf.RightVector.Z),
-				r3(cf.UpVector.X),
-				r3(cf.UpVector.Y),
-				r3(cf.UpVector.Z),
+				r6(cf.RightVector.X),
+				r6(cf.RightVector.Y),
+				r6(cf.RightVector.Z),
+				r6(cf.UpVector.X),
+				r6(cf.UpVector.Y),
+				r6(cf.UpVector.Z),
 			},
 			k = {
 				math.floor(d.Color.R * 255 + 0.5),

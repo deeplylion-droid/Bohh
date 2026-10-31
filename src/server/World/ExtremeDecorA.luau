@@ -9,13 +9,15 @@
 --    sponde, sopra i santuari o in alto;
 --  * niente compenetrazioni: ogni oggetto e' controllato (scatole orientate) contro gli elementi del percorso, compreso
 --    lo spazio spazzato da quelli mobili, contro le altre parti di ExtremeBuild e contro gli ornamenti gia' piazzati;
---    se tocca qualcosa non viene costruito (gli ornamenti delle sponde provano un altro punto). Le sponde sono casuali
---    (e il Random dei test offline non e' quello di Roblox), quindi tutto cio' che sta sulle sponde si appoggia alle
---    sponde vere lette da Shared.Extreme.
+--    se tocca qualcosa non viene costruito (gli ornamenti delle sponde provano un altro punto). Tutto cio' che sta
+--    sulle sponde si appoggia alle sponde vere lette da Shared.Extreme;
+--  * le scelte casuali usano Shared.Util.Rng (come le sponde): nel gioco viene esattamente quello che si controlla
+--    offline con tests/extreme_dump.luau e tests/extreme_overlap.py.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Extreme = require(ReplicatedStorage.Shared.Extreme)
+local Rng = require(ReplicatedStorage.Shared.Util.Rng)
 local Build = require(script.Parent.Build)
 local Terrain = require(script.Parent.Terrain)
 
@@ -830,7 +832,7 @@ local function starfish(f: CFrame, col: Color3, s: number, turn: number)
 end
 
 -- spugne incrostanti: tre dischi colorati accostati (senza sovrapporsi)
-local function crust(f: CFrame, rng: Random)
+local function crust(f: CFrame, rng: Rng.Rng)
 	local cols = { C.coralPurple, C.coralOrange, C.coralPink, C.coralYellow }
 	local first = rng:NextInteger(1, #cols)
 	for k = 1, 3 do
@@ -846,7 +848,7 @@ end
 local function dressBanks1()
 	local banks = banksOf(1)
 	local levels = liquidLevels(1)
-	local rng = Random.new(1101)
+	local rng = Rng.new(1101)
 	-- { nome, raggio in pianta, costruttore }
 	local tops: { { any } } = {
 		{
@@ -1801,7 +1803,7 @@ end
 local function dressBanks2()
 	local banks = banksOf(2)
 	local levels = liquidLevels(2)
-	local rng = Random.new(2202)
+	local rng = Rng.new(2202)
 	local tops = {
 		{
 			"Urns",

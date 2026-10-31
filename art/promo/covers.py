@@ -428,7 +428,8 @@ LEAP_SPLAY = 24  # gambe aperte di lato (salto a stella): in volo si legge subit
 
 def scene_steal(w: int, samples: int, tag: str):
     S.reset()
-    setup(w, samples, exposure=env("EXPO", 0.1))
+    # Standard come le altre copertine: cielo e Titan Rex piu' accesi (con AgX il blu e il rosso si spengono)
+    setup(w, samples, vt="Standard", look="None", exposure=-0.5)
 
     # --- cresta innevata lungo l'asse Y (verso la camera), il terreno cade ai lati
     def ridge(gx, gy):
@@ -441,7 +442,7 @@ def scene_steal(w: int, samples: int, tag: str):
         return float(ridge(np.array([[x]]), np.array([[y]]))[0, 0])
 
     snow = S.grid_object("Snow", -40, 44, -30, 70, 260, 260, ridge)
-    snow.data.materials.append(S.snow_material("Snow", tint=(240, 247, 255), fog=(lin("#b4dcff"), 0.005, 25.0)))
+    snow.data.materials.append(S.snow_material("Snow", tint=env("SNOW", (222, 234, 252)), fog=(lin("#b4dcff"), 0.005, 25.0)))
 
     # --- Bacon Hair: corre verso la camera (un po' verso sinistra) con l'uovo Ultra sopra la testa
     bac, bac_objs, bparts = bacon_player(CARRY, env("FACE", "shocked"))
@@ -1194,7 +1195,7 @@ def scene_hatch(w: int, samples: int, tag: str):
     bpy.context.view_layer.update()
     mlo, mhi = S.bounds(c_objs)
     egg_c_w = grp.matrix_world @ ec
-    inside = env("MON_IN", 0.47)
+    inside = env("MON_IN", 0.42)
     cer.location += Vector((egg_c_w.x - float(mlo[0] + mhi[0]) / 2,
                             egg_c_w.y + env("MON_DY", 0.6) - float(mlo[1] + mhi[1]) / 2,
                             rim_z.z - inside * float(mhi[2] - mlo[2]) - float(mlo[2])))

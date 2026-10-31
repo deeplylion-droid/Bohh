@@ -613,6 +613,23 @@ do
 		end
 	end
 	add("extreme_get_missing", if #missing == 0 then "none" else table.concat(missing, " "))
+	-- l'arredo non si tocca: niente collisioni, raggi o tocchi, tutto ancorato (l'anti-cheat conosce solo
+	-- le parti del percorso)
+	local decor = {}
+	for _, name in { "ExtremeDecorA", "ExtremeDecorB" } do
+		local f = folder:FindFirstChild(name)
+		local parts, bad = 0, 0
+		for _, d in (if f then f:GetDescendants() else {}) do
+			if d:IsA("BasePart") then
+				parts += 1
+				if d.CanCollide or d.CanQuery or d.CanTouch or not d.Anchored then
+					bad += 1
+				end
+			end
+		end
+		table.insert(decor, `{name}:{parts}/{bad}`)
+	end
+	add("extreme_decor_parts_bad", table.concat(decor, " "))
 	add("extreme_reach_start", reach(Vector3.new(0, 334, 120), Extreme.StartSpawn.Position))
 	local count = #(Pets.ByRarity.Extreme or {})
 	add("extreme_pets", count)

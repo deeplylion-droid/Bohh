@@ -12,13 +12,13 @@ Legenda: ⏳ in corso · 📋 da fare · ✅ fatto (con la versione pubblicata)
 | 3 | La **miniatura quadrata** (icona del gioco) non piace: proporne una diversa. | ⏳ (3 proposte) |
 | 9 | **Miniatura**: piace la B (uovo-mostro) ma deve dare l'idea che sia **su un picco montuoso**, senza rimpicciolirla troppo. | ⏳ pronte due versioni (con e senza bandierina) in `art/promo/final/`: si carica a mano su Creator Hub (le API non lo permettono) |
 | 7 | Lavorare **in parallelo con gli agenti** e **segnare tutto quello che chiede**, senza perdere nulla. | ⏳ (questo file) |
-| 13 | Percorso Estremo **più dettagliato**: "aggiungi un po' di cura!!!" | ⏳ due agenti (sezioni 1-2 e 3-4) |
 | 15 | **Copertine** rifatte meglio, **in Blender** (scene 3D vere), con un **Bacon Hair** almeno in una e i **pet più fighi**. | ⏳ agente |
 
 ## Fatte
 
 | Richiesta | Versione |
 |---|---|
+| Percorso Estremo **più dettagliato**: Abissi (faccia di rana pescatrice all'ingresso, rana pescatrice gigante, relitto con forziere, pinnacoli con cascate, meduse luminose, coralli e alghe sulle sponde), Deserto (porta con sole alato, Sfinge d'oro, piramidi, oasi, facciata del tempio con Anubi e scarabeo), Laboratorio (statua della lince geniale, schermo gigante, bobine di Tesla, cervello in barattolo, vasche luminose, lavagne), Inferno (porta dell'inferno, cascate di lava, ponte di ferro sugli uncini, trono del re demone). 1.704 parti, nessuna si può toccare; sponde uguali nel gioco e nei controlli offline | v47 |
 | **Controllo automatico delle compenetrazioni** (`tests/extreme_overlap.py`): 85 problemi visibili trovati e corretti in tutto il Percorso Estremo (deserto compreso: piattaforme che entravano nei santuari e nelle piastrelle, crepe nei pavimenti dei santuari, cartelli nei muri, tronchi che attraversavano le cascate). Corretto anche un bug grave: 22 elementi non si muovevano per i giocatori (dischi, navette, ascensore, nastri e la molla del Laboratorio, senza la quale il Laboratorio non si finiva) | v46 |
 | Interfaccia **moderna** (stile "Vetta Pop"): superfici lisce brillanti, pulsanti a pillola con bordo 3D, schede bianche, inchiostro blu notte, font **Nunito** (Heavy/ExtraBold/Bold) al posto di Denk One e Patrick Hand; anche la schermata di caricamento | v45 |
 | Percorso Estremo: ingresso come **bivio all'inizio del sentiero normale** (ponticello in salita con arco a strisce dalla rampa, cartelli con la freccia sull'arco del sentiero e sulla rampa); **cascate** delle rapide rifatte come lastre sottili fra i livelli, con la schiuma che scende | v44 |
