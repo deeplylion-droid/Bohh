@@ -379,7 +379,7 @@ def report(**pts):
     print("[covers] schermo: " + "  ".join(f"{k}={screen(v)}" for k, v in pts.items()))
 
 
-CARRY = {"Root": (9, 0, 0), "Neck": (-4, 0, 6), "ShoulderR": (-176, 5, 0), "ShoulderL": (-174, -5, 0),
+CARRY = {"Root": (9, 0, 0), "Neck": (-4, 0, 6), "ShoulderR": (-174, 11, 0), "ShoulderL": (-172, -11, 0),
          "HipR": (-44, 0, 0), "HipL": (40, 0, 0)}
 
 
@@ -405,17 +405,20 @@ def scene_steal(w: int, samples: int, tag: str):
     A.pose(rig, CARRY)
     ax, ay = env("AV_XY", (0.0, 0.0))
     place_avatar(rig, ax, ay, gz(ax, ay), env("AV_YAW", -26.0), air=env("AIR", 0.3))
-    egg_root, egg_objs, egg_c = carry_egg(rig, env("EGG", "EggUltra"), width=env("EGG_W", 2.3), glow=env("EGG_E", 2.2),
-                                          sink=env("EGG_SINK", 0.25))
+    egg_root, egg_objs, egg_c = carry_egg(rig, env("EGG", "EggUltra"), width=env("EGG_W", 1.95), glow=env("EGG_E", 2.2),
+                                          sink=env("EGG_SINK", -0.12))
 
     # --- Titan Rex gigante che insegue (dietro, a destra), fauci spalancate verso il Bacon Hair
     rs = env("REX_S", 3.2)
     rex, rex_objs = pet("TitanRex", (0, 0, 0), env("REX_YAW", -30.0), rs, glow=env("REX_E", 1.8))
+    rex.rotation_euler.x = math.radians(env("REX_PITCH", 14.0))  # si sbilancia in avanti: carica
     # il muso (davanti, in alto nel modello) va dietro e sopra il Bacon Hair; poi i piedi sulla neve
     snout = (0.0, -2.96, 2.6)
     place_by(rex, snout, env("REX_SNOUT", (3.0, 5.0, 8.0)))
     rx, ry = rex.location.x, rex.location.y
-    rex.location.z = gz(rx, ry) - 0.06 * rs
+    if env("REX_GROUND", 1.0) > 0:
+        r_lo, _ = S.bounds(rex_objs)
+        rex.location.z += gz(rx, ry) - float(r_lo[2]) - 0.08 * rs
     bpy.context.view_layer.update()
 
     # --- neve sollevata dai passi (tanti piccoli grumi) e dalle zampe del gigante
@@ -463,7 +466,7 @@ def scene_steal(w: int, samples: int, tag: str):
              fstop=env("FSTOP", 6.0))
     flakes("Flakes", cam_loc, target, env("FLAKES", 140), 4.0, 40.0, 0.02, 0.05, seed=4, glow=0.3)
     head = rig.joints["HeadCenter"].matrix_world.translation
-    feet = rig.parts["ShoeR"].matrix_world.translation
+    feet = rig.parts["ShoeR"].matrix_world @ Vector((0, 0, -1.82))
     e_lo, e_hi = S.bounds(egg_objs)
     report(feet=feet, head=head, egg_top=(egg_c.x, egg_c.y, e_hi[2]), snout=model_pt(rex, snout),
            rex_crown=model_pt(rex, (0, -1.6, 3.72)), rex_tail=model_pt(rex, (0, 1.93, 1.5)),

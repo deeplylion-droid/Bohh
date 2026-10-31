@@ -122,7 +122,7 @@ local function buildCard()
 	-- scheda bianca con il contorno dorato, il tondo giallo del passo e l'icona del bersaglio
 	card, cardFace = Kit.Surface({
 		Name = "Tutorial",
-		Size = UDim2.fromOffset(610, 78),
+		Size = UDim2.fromOffset(560, 78),
 		Position = UDim2.new(0.5, 0, 1, -124),
 		AnchorPoint = Vector2.new(0.5, 1),
 		Visible = false,

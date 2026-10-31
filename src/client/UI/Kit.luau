@@ -603,21 +603,21 @@ function Kit.Panel(title: string, size: UDim2, color: string?, parent: Instance,
 	local tab = New("Frame", {
 		Name = "Ribbon",
 		AutomaticSize = Enum.AutomaticSize.X,
-		Size = UDim2.fromOffset(0, 54),
-		Position = UDim2.fromOffset(30, -27),
+		Size = UDim2.fromOffset(0, 58),
+		Position = UDim2.fromOffset(30, -29),
 		ZIndex = 22,
 		Parent = frame,
 	}, {
 		Kit.Corner(Theme.Pill),
 		Kit.Stroke(3, colors[2]),
-		New("UIPadding", { PaddingLeft = UDim.new(0, 68), PaddingRight = UDim.new(0, 26) }),
+		New("UIPadding", { PaddingLeft = UDim.new(0, 74), PaddingRight = UDim.new(0, 28) }),
 	})
 	Kit.Paint(tab, Theme.Card, Theme.CardShade)
 	local titleLabel = Kit.Text({
 		Name = "Title",
 		Text = title,
 		TextScaled = false,
-		TextSize = 30,
+		TextSize = 37,
 		AutomaticSize = Enum.AutomaticSize.X,
 		Size = UDim2.new(0, 0, 1, 0),
 		TextColor3 = Theme.Ink,
@@ -627,8 +627,8 @@ function Kit.Panel(title: string, size: UDim2, color: string?, parent: Instance,
 	})
 	-- tondo dell'icona sull'inizio della linguetta (fuori dalla linguetta, che si allarga col testo)
 	Kit.IconBadge(icon, color or "Cyan", {
-		Size = UDim2.fromOffset(66, 66),
-		Position = UDim2.fromOffset(22, -33),
+		Size = UDim2.fromOffset(72, 72),
+		Position = UDim2.fromOffset(20, -36),
 		ZIndex = 24,
 		Ring = 3,
 		RingColor = colors[2],

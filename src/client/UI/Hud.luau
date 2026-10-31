@@ -370,7 +370,6 @@ function Hud.Build(gui: ScreenGui, C)
 			eventSub.Text = T("EventDesc_" .. eventId)
 			local def = Events.List[eventId]
 			Kit.Paint(eventBadge, Kit.Tint(def.color, 0.3), def.color)
-			clockPill.BackgroundColor3 = Kit.Tint(def.color, -0.45)
 			if eventIcon and eventIcon:IsA("ImageLabel") then
 				eventIcon.Image = Assets.Images["Icon" .. def.icon] or eventIcon.Image
 			elseif eventIcon and eventIcon:IsA("TextLabel") then

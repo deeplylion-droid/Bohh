@@ -1055,5 +1055,134 @@ def terrain_pass(parts, terrain, findings):
         if bad:
             pts = np.array([b[0] for b in bad])
             worst = max(b[1] for b in bad)
+            top = pts.copy()
+            top[:, 1] = terrain_height(T, pts[:, 0], pts[:, 2]) + 0.1  # sulla superficie del terreno
             findings.append(Finding("TE", f"il terreno spunta sopra {P.name} fino a {worst:.1f} stud ({len(bad)} punti)",
-                                    P, None, pts.mean(axis=0), pts + np.array([0, 0.2, 0]), float(worst)))
+                                    P, None, pts.mean(axis=0), top, float(worst)))
+
+
+# --------------------------------------------------------------------------------------- rapporto
+SEVERITY_RULES = {
+    # codice: (minimo di punti di vista, distanza massima, misura minima) per "!!"
+    "ZF": (3, 60, 0.5),
+    "SG": (2, 60, 0.0),
+    "TR": (3, 60, 0.1),
+    "PK": (4, 40, 0.0),
+    "XP": (3, 60, 0.0),
+    "MV": (3, 80, 0.0),
+    "TE": (1, 120, 0.5),
+}
+
+
+def grade(f, viewer):
+    if f.sev == "." and f.extra:
+        return
+    excl = {p.i for p in (f.A, f.B) if p is not None}
+    f.seen, f.dist = viewer.visible_from(f.points, exclude=excl) if len(f.points) else (0, math.inf)
+    if f.seen == 0:
+        f.sev = "."
+        f.extra = f.extra or "non si vede dal percorso"
+        return
+    need, dmax, smin = SEVERITY_RULES.get(f.code, (3, 60, 0))
+    strong = f.seen >= need and f.dist <= dmax and f.size >= smin
+    if f.extra == "near" or (f.extra.startswith("trasparenza")):
+        strong = False
+    f.sev = "!!" if strong else "!"
+
+
+def extent(P):
+    """Ingombro della parte in coordinate di sezione (come gli argomenti di slab in Shared.Extreme)."""
+    if P is None:
+        return ""
+    s, _, _, _ = local_coords(P.pos)
+    x0 = SECTIONS[max(s, 1) - 1][2]
+    lo, hi = P.poly.lo, P.poly.hi
+    return (f"u {x0 - hi[0]:.1f}..{x0 - lo[0]:.1f}  v {lo[2] - COURSE_Z:+.1f}..{hi[2] - COURSE_Z:+.1f}  "
+            f"y {lo[1]:.1f}..{hi[1]:.1f}")
+
+
+def report(findings, args, ignored, stats):
+    out = []
+    shown = [f for f in findings if args.verbose or f.sev != "."]
+    if args.section is not None:
+        shown = [f for f in shown if section_of(f.center[0]) == args.section]
+    if args.folder:
+        shown = [f for f in shown if any(p is not None and p.folder == args.folder for p in (f.A, f.B))]
+    shown.sort(key=lambda f: (section_of(f.center[0]) if section_of(f.center[0]) else 0.5, f.rank()))
+    out.append(f"Percorso Estremo - controllo compenetrazioni: {stats}")
+    last = None
+    for f in shown:
+        s = section_of(f.center[0])
+        if s != last:
+            out.append("")
+            out.append(f"== {'Bivio e ingresso' if s == 0 else f'Sezione {s}: ' + SECTIONS[s - 1][1]}")
+            last = s
+        vis = f"visto da {f.seen} punti, il piu' vicino a {f.dist:.0f} stud" if f.seen else (f.extra or "nascosto")
+        out.append(f"{f.sev:>2} {f.code} {fmt_where(f.center)}")
+        out.append(f"      {f.text}  [{vis}]")
+        for tag, P in (("A", f.A), ("B", f.B)):
+            if P is not None:
+                pose = f"  (posa {P.pose})" if hasattr(P, "pose") else ""
+                out.append(f"      {tag}: {P.label()}  {extent(P)}{pose}")
+        if f.extra and f.seen and f.extra != "near":
+            out.append(f"      nota: {f.extra}")
+    n2 = sum(1 for f in findings if f.sev == "!!")
+    n1 = sum(1 for f in findings if f.sev == "!")
+    n0 = sum(1 for f in findings if f.sev == ".")
+    out.append("")
+    out.append(f"Totale: {n2} chiaramente visibili (!!), {n1} visibili ma piccoli/lontani (!), "
+               f"{n0} nascosti o minori (.)" + ("" if args.verbose else " - questi ultimi con --verbose"))
+    if args.verbose:
+        out.append("Casi voluti, non segnalati: " + ", ".join(f"{k} {v}" for k, v in sorted(ignored.items(), key=lambda kv: -kv[1])))
+    return "\n".join(out), n2 + n1
+
+
+def run_dump(path):
+    cmd = [str(ROOT / ".tools/bin/lune"), "run", "tests/extreme_dump.luau", "--all", "--poses", "--terrain",
+           "--out", str(path)]
+    res = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True)
+    if res.returncode != 0:
+        sys.stderr.write(res.stdout + res.stderr)
+        sys.exit(2)
+    for line in (res.stdout + res.stderr).splitlines():
+        if not line.startswith("[extreme_dump]"):
+            print(line)  # avvisi della costruzione (es. errori nei moduli d'arredo)
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
+    ap.add_argument("--dump", help="dump gia' fatto (con --all --poses --terrain); senza, lo rifa'")
+    ap.add_argument("--section", type=int, help="solo questa sezione (0 = bivio)")
+    ap.add_argument("--folder", help="solo i problemi che toccano questa cartella (es. ExtremeDecorA)")
+    ap.add_argument("--verbose", action="store_true", help="anche i casi minori, nascosti e voluti")
+    ap.add_argument("--json", help="salva il rapporto completo in questo file")
+    args = ap.parse_args()
+    path = Path(args.dump) if args.dump else DEFAULT_DUMP
+    if not args.dump:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        run_dump(path)
+    data, parts = load_parts(path)
+    terrain = data.get("terrain")
+    if terrain:
+        terrain["_rows"] = np.array(terrain["rows"], dtype=float)
+    if not any(p.poses for p in parts):
+        print("attenzione: il dump non ha le pose degli elementi mobili (serve --poses): salto il controllo MV")
+    viewer = Viewer(parts, terrain)
+    findings, ignored = [], {}
+    static_pass(parts, viewer, findings, ignored)
+    mover_pass(parts, viewer, findings, ignored)
+    terrain_pass(parts, terrain, findings)
+    for f in findings:
+        grade(f, viewer)
+    stats = (f"{path.relative_to(ROOT) if path.is_relative_to(ROOT) else path}: {len(parts)} parti, "
+             f"{sum(1 for p in parts if p.moving)} mobili, {len(viewer.spots)} punti di vista")
+    text, bad = report(findings, args, ignored, stats)
+    print(text)
+    if args.json:
+        Path(args.json).write_text(json.dumps({"findings": [f.as_dict() for f in findings], "ignored": ignored},
+                                              indent=1, ensure_ascii=False))
+    sys.exit(1 if bad else 0)
+
+
+if __name__ == "__main__":
+    main()

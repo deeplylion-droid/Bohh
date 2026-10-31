@@ -104,7 +104,6 @@ function Panel.Build(parent: Instance, C)
 				Position = UDim2.fromOffset(16, 9),
 				TextXAlignment = Enum.TextXAlignment.Left,
 				Stroke = 2.5,
-				StrokeColor = edge,
 				ZIndex = 2,
 				Parent = row,
 			})
@@ -114,7 +113,6 @@ function Panel.Build(parent: Instance, C)
 				Position = UDim2.new(0.4, 0, 0, 13),
 				TextXAlignment = Enum.TextXAlignment.Right,
 				Stroke = 2,
-				StrokeColor = edge,
 				ZIndex = 2,
 				Parent = row,
 			})

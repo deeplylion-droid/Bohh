@@ -216,7 +216,8 @@ function Notify.Start()
 		Name = "Toasts",
 		BackgroundTransparency = 1,
 		Size = UDim2.fromOffset(430, 300),
-		Position = if touch then UDim2.new(1, -16, 0, 96) else UDim2.new(1, -16, 1, -24),
+		-- su PC a sinistra del pulsante della difesa, che sta sul bordo destro
+		Position = if touch then UDim2.new(1, -16, 0, 96) else UDim2.new(1, -124, 1, -24),
 		AnchorPoint = if touch then Vector2.new(1, 0) else Vector2.new(1, 1),
 		Parent = C.UI.Gui("Top"),
 	}, {

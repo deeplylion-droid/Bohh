@@ -19,6 +19,7 @@ type Scene = {
 	loading: boolean?,
 	viewport: { number }?,
 	touch: boolean?,
+	locale: string?, -- lingua di Roblox (default "it-it")
 	attributes: { [string]: any }?,
 	workspace: { [string]: any }?,
 	data: ((any) -> ())?,
@@ -112,6 +113,7 @@ local function setup(scene: Scene)
 		attributes = attrs,
 		workspaceAttributes = scene.workspace,
 		now = NOW,
+		locale = scene.locale,
 	})
 	-- remote finti: nessun server, solo i segnali
 	local remotes = {}
@@ -527,6 +529,35 @@ SCENES.shop_phone = {
 		ctx.C.UI.Open("Shop")
 	end,
 }
+
+-- Varianti: ogni pannello su un telefono in orizzontale (844x390) e le scene principali in inglese
+-- (testi di lunghezza diversa)
+local function phone(base: Scene): Scene
+	local out = table.clone(base)
+	out.viewport = { 844, 390 }
+	out.touch = true
+	return out
+end
+local function english(base: Scene): Scene
+	local out = table.clone(base)
+	out.locale = "en-us"
+	local data = base.data
+	out.data = function(d)
+		d.Settings.Lang = "en"
+		if data then
+			data(d)
+		end
+	end
+	return out
+end
+for _, name in { "upgrades", "index", "gifts", "wheel", "settings", "codes", "shop_bats", "hud_busy" } do
+	SCENES[name .. "_phone"] = phone(SCENES[name])
+end
+for _, name in { "hud_busy", "shop", "shop_boosts", "upgrades", "index", "gifts", "quests", "wheel", "tutorial" } do
+	SCENES[name .. "_en"] = english(SCENES[name])
+end
+SCENES.quests_phone_en = english(SCENES.quests_phone)
+SCENES.hud_phone_en = english(SCENES.hud_phone)
 
 local names = {}
 for i = 1, #process.args do

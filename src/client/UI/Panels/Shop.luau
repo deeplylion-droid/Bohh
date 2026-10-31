@@ -72,11 +72,12 @@ function Panel.Build(parent: Instance, C)
 		pages[name] = sf
 		return sf
 	end
+	-- linguette: quella scelta e' gialla, le altre del colore del pannello
 	local tabButtons = {}
 	local function show(name: string)
 		for n, pg in pages do
 			pg.Visible = n == name
-			tabButtons[n].SetColor(if n == name then "White" else "Yellow")
+			tabButtons[n].SetColor(if n == name then "Yellow" else "Cyan")
 		end
 	end
 	local TABS = {
@@ -88,7 +89,7 @@ function Panel.Build(parent: Instance, C)
 	for i, info in TABS do
 		local b = Kit.Button({
 			Text = T(info[2]),
-			Color = "Yellow",
+			Color = "Cyan",
 			Size = UDim2.fromOffset(190, 54),
 			LayoutOrder = i,
 			TextSize = 26,

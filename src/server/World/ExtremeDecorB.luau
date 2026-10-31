@@ -306,7 +306,7 @@ local function wallTop(i: number, u: number, side: number): number
 	for _, p in Extreme.Pieces do
 		if p.section == i and p.wall then
 			local c, h = p.cframe.Position, p.size / 2
-			if math.abs(x - c.X) <= h.X and (c.Z - Extreme.Z) * side > 0 then
+			if math.abs(x - c.X) <= h.X and (c.Z - Extreme.Z) * side >= -0.01 then
 				best = math.max(best, c.Y + h.Y)
 			end
 		end
@@ -538,39 +538,31 @@ local function labGate()
 	light(bulb, rgb(255, 230, 150), 30, 1.6)
 end
 
--- Vasche di vetro col liquido luminoso (una col cervello), su una terrazza attaccata al muro destro
+-- Vasche col liquido luminoso (sopra, la parte vuota di vetro), su una terrazza attaccata al muro destro
 local function labTanks()
 	annex(3, 18, 46, 23, 37, 276, 1, LIGHT, Mat.DiamondPlate)
 	local liquids = { LIME, rgb(255, 90, 200) }
 	for k, u in { 26, 38 } do
 		column(3, u, 30, 276, 278, 9, "TankBase", DARK, Mat.DiamondPlate)
-		column(3, u, 30, 278, 296, 8, "TankGlass", GLASS, Mat.Glass, 0.55)
-		local liquid =
-			column(3, u, 30, 278.05, 292, 7.2, "TankLiquid", liquids[k], Mat.Neon, if k == 1 then 0.2 else 0.45)
+		local liquid = column(3, u, 30, 278, 291 + k, 8, "TankLiquid", liquids[k], Mat.Neon, 0.12)
+		column(3, u, 30, 291 + k, 296, 8, "TankGlass", GLASS, Mat.Glass, 0.6)
 		column(3, u, 30, 296, 298, 9, "TankCap", DARK, Mat.DiamondPlate)
 		column(3, u, 30, 298, 299.2, 4, "TankTop", STEEL, Mat.Metal)
+		-- anelli di rinforzo fra base e liquido e fra vetro e coperchio sono le flange: niente dentro il vetro
 		if k == 1 then
 			light(liquid, LIME, 22, 1.4)
-			-- bollicine
-			local anchor = span(3, u - 1.5, u + 1.5, 279, 290, 28.5, 31.5, "BubbleSource", WHITE, Mat.SmoothPlastic, 1)
-			emitter(anchor, {
+			emitter(liquid, {
 				Texture = SPARKLE,
 				Color = ColorSequence.new(rgb(230, 255, 220)),
 				LightEmission = 0.6,
 				Size = seq(0.35, 0.15),
 				Transparency = seq(0.2, 1),
-				Lifetime = NumberRange.new(1, 1.6),
+				Lifetime = NumberRange.new(0.8, 1.3),
 				Speed = NumberRange.new(2, 3.5),
 				EmissionDirection = Enum.NormalId.Top,
 				SpreadAngle = Vector2.new(6, 6),
 				Rate = 8,
 			})
-		else
-			-- cervello che galleggia nel liquido
-			for _, dv in { -0.9, 0.9 } do
-				sphere("Brain", 3.2, at(3, u, 286, 30 + dv), rgb(255, 150, 205), Mat.SmoothPlastic)
-			end
-			column(3, u, 30, 282.6, 284.9, 0.9, "BrainStem", rgb(240, 120, 180), Mat.SmoothPlastic)
 		end
 	end
 	runbar(3, 28, 36, 298.6, 30, 0.8, "TankPipe", YELLOW, Mat.SmoothPlastic)
@@ -655,8 +647,7 @@ local function labFlasks()
 		local rim = math.sqrt(r * r - (r * 0.8) ^ 2)
 		column(3, u, v, ringTop - 0.5, ringTop, rim * 2, "FlaskRing", STEEL, Mat.Metal)
 		rod("FlaskArm", at(3, U, ringTop - 0.25, V), at(3, u, ringTop - 0.25, v), 0.4, STEEL, Mat.Metal)
-		sphere("Flask", f.d, at(3, u, f.y, v), GLASS, Mat.Glass, 0.5)
-		sphere("FlaskLiquid", f.d - 0.8, at(3, u, f.y - 0.1, v), f.color, Mat.Neon, 0.25)
+		sphere("Flask", f.d, at(3, u, f.y, v), f.color, Mat.Neon, 0.15)
 		-- collo e tappo
 		local neckD = f.d * 0.3
 		local neckBase = f.y + math.sqrt(r * r - (neckD / 2) ^ 2)
@@ -701,7 +692,7 @@ local function labCatStatue()
 	vcylL("CatBody", 0, 0, 14, 1, 12, FUR, Mat.SmoothPlastic)
 	ballL("CatChest", 0, 9.5, -3.4, 9, CREAM, Mat.SmoothPlastic)
 	for _, sx in { -1, 1 } do
-		vcylL("CatLeg", sx * 2.6, 0, 8.2, -6, 3.2, FUR, Mat.SmoothPlastic)
+		vcylL("CatLeg", sx * 2.6, 0, 8.2, -6.1, 3.2, FUR, Mat.SmoothPlastic)
 		ballL("CatPaw", sx * 2.6, 1.75, -7, 3.8, CREAM, Mat.SmoothPlastic)
 		ballL("CatHaunch", sx * 4.6, 3.7, 3, 8, FUR, Mat.SmoothPlastic)
 	end
@@ -729,7 +720,7 @@ local function labCatStatue()
 			* CFrame.Angles(0, 0, -sx * RAD(8))
 			* CFrame.Angles(0, -sx * RAD(90), 0)
 		wedge("CatEar", Vector3.new(1.6, 6, 4.4), ear, FUR, Mat.SmoothPlastic)
-		wedge("CatTuft", Vector3.new(1.8, 1.6, 1.2), ear * CFrame.new(0, 2.6, 1.6), BLACK, Mat.SmoothPlastic)
+		wedge("CatTuft", Vector3.new(1.8, 1.6, 1.2), ear * CFrame.new(0, 2.65, 1.65), BLACK, Mat.SmoothPlastic)
 	end
 	-- coda che gira attorno al corpo e sale, con il cubo olografico in punta
 	local t0 = (L * CFrame.new(2, 1.2, 5.6)).Position
@@ -806,24 +797,34 @@ local function labHolo()
 	sphere("HoloPlanet", 1.2, at(3, U - 8.5, 307.4, -1), CYAN, Mat.Neon)
 end
 
--- Cervello gigante in un barattolo, sulla terrazza del muro sinistro dopo la sala rotonda
+-- Cervello gigante in un barattolo di vetro rosa (otto lastre attorno, vuoto dentro), sulla terrazza del muro sinistro
 local function labBrainJar()
 	annex(3, 258, 286, -23, -47, 268, -1, LIGHT, Mat.DiamondPlate)
 	local U, V = 272, -35
+	local c = at(3, U, 0, V)
 	column(3, U, V, 268, 271, 16, "JarBase", DARK, Mat.DiamondPlate)
-	column(3, U, V, 271, 271.6, 15, "JarRing", GOLD, Mat.Foil)
-	column(3, U, V, 271.6, 295.6, 14, "JarGlass", GLASS, Mat.Glass, 0.55)
-	local liquid = column(3, U, V, 271.65, 291, 13.2, "JarLiquid", rgb(196, 90, 255), Mat.Neon, 0.5)
-	light(liquid, rgb(220, 120, 255), 30, 1.8)
-	for _, dv in { -1.8, 1.8 } do
-		sphere("Brain", 8, at(3, U, 283.4, V + dv), rgb(255, 140, 200), Mat.SmoothPlastic)
+	column(3, U, V, 271, 271.6, 15.4, "JarRing", GOLD, Mat.Foil)
+	local y0, y1 = 271.6, 295.6
+	local R, t = 6.6, 0.3 -- apotema del piano medio delle lastre, spessore
+	local w = 2 * (R - t / 2) * math.tan(math.pi / 8) -- le facce interne si toccano negli spigoli
+	for k = 0, 7 do
+		local a = k * math.pi / 4
+		local cf = CFrame.new(c.X, (y0 + y1) / 2, c.Z) * CFrame.Angles(0, a, 0) * CFrame.new(0, 0, -R)
+		box("JarGlass", Vector3.new(w, y1 - y0, t), cf, rgb(220, 120, 255), Mat.Glass, 0.45)
 	end
-	column(3, U, V, 276, 280, 2, "BrainStem", rgb(240, 120, 180), Mat.SmoothPlastic)
-	column(3, U, V, 295.6, 297.6, 15, "JarLid", STEEL, Mat.Metal)
-	sphere("JarDome", 8, at(3, U, seatedY(297.6, 8, 3), V), STEEL, Mat.Metal)
+	-- cervello a due lobi sul suo sostegno
+	column(3, U, V, 271.6, 276, 3, "BrainStand", STEEL, Mat.Metal)
+	column(3, U, V, 276, 279.7, 2, "BrainStem", rgb(240, 120, 180), Mat.SmoothPlastic)
+	local brain = nil
+	for _, dv in { -1.8, 1.8 } do
+		brain = sphere("Brain", 8, at(3, U, 283.4, V + dv), rgb(255, 140, 200), Mat.SmoothPlastic)
+	end
+	light(brain :: BasePart, rgb(230, 130, 255), 30, 1.8)
+	column(3, U, V, y1, y1 + 2, 15.4, "JarLid", STEEL, Mat.Metal)
+	sphere("JarDome", 8, at(3, U, seatedY(y1 + 2, 8, 3), V), STEEL, Mat.Metal)
 	for _, du in { -5, 5 } do
-		column(3, U + du, V, 297.6, 305, 0.6, "Electrode", COPPER, Mat.Foil)
-		sphere("ElectrodeTip", 1.4, at(3, U + du, seatedY(305, 1.4, 0.3), V), CYAN, Mat.Neon)
+		column(3, U + du, V, y1 + 2, y1 + 9.4, 0.6, "Electrode", COPPER, Mat.Foil)
+		sphere("ElectrodeTip", 1.4, at(3, U + du, seatedY(y1 + 9.4, 1.4, 0.3), V), CYAN, Mat.Neon)
 	end
 end
 
