@@ -36,10 +36,10 @@ COVERS = {
                     box="left:40px;top:190px;width:680px;", rot=-5),
     "cover_2": dict(scene="giants", lines=[("HATCH GIANT", 140), ("PETS!", 210)], grad=GOLD,
                     box="left:50px;top:36px;width:900px;", rot=-4),
-    "cover_3": dict(scene="extreme", lines=[("EXTREME", 190), ("TRAIL!", 190)], grad=CYAN,
-                    box="left:0;right:0;top:26px;", rot=-3, inline=True),
-    "cover_4": dict(scene="hatch", lines=[("HATCH", 170), ("MONSTERS!", 170)], grad=FIRE,
-                    box="left:0;right:0;top:26px;", rot=-3, inline=True),
+    "cover_3": dict(scene="extreme", lines=[("EXTREME", 180), ("TRAIL!", 180)], grad=CYAN,
+                    box="left:0;right:0;top:52px;", rot=-3, inline=True),
+    "cover_4": dict(scene="hatch", lines=[("HATCH", 166), ("MONSTERS!", 166)], grad=FIRE,
+                    box="left:0;right:0;top:46px;", rot=-3, inline=True),
 }
 
 
