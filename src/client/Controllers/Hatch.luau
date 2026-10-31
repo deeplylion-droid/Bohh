@@ -104,7 +104,7 @@ end
 
 local function chip(parent: Instance, text: string, colors: { Color3 }, order: number): Frame
 	local f = Kit.New("Frame", {
-		BackgroundColor3 = Color3.new(1, 1, 1),
+		BackgroundColor3 = colors[1],
 		Size = UDim2.fromOffset(0, 40),
 		AutomaticSize = Enum.AutomaticSize.X,
 		LayoutOrder = order,
@@ -113,7 +113,6 @@ local function chip(parent: Instance, text: string, colors: { Color3 }, order: n
 	}, {
 		Kit.Corner(UDim.new(1, 0)),
 		Kit.Stroke(4),
-		Kit.Gradient(colors[1], colors[2]),
 		Kit.New("UIPadding", { PaddingLeft = UDim.new(0, 16), PaddingRight = UDim.new(0, 16) }),
 		Kit.New("UIScale"),
 	})
@@ -320,7 +319,7 @@ local function play(info)
 	end
 	if info.new then
 		local badge = Kit.New("Frame", {
-			BackgroundColor3 = Color3.new(1, 1, 1),
+			BackgroundColor3 = Kit.Theme.Buttons.Yellow[1],
 			Size = UDim2.fromOffset(150, 58),
 			Position = UDim2.new(0.5, 170, 0, 150),
 			AnchorPoint = Vector2.new(0.5, 0.5),
@@ -329,10 +328,10 @@ local function play(info)
 			Parent = stage,
 		}, {
 			Kit.Corner(UDim.new(0, 16)),
-			Kit.Stroke(5),
-			Kit.Gradient(Color3.fromRGB(255, 236, 120), Color3.fromRGB(255, 150, 20)),
+			Kit.Stroke(4),
 			Kit.New("UIScale"),
 		})
+		Kit.Stitch(badge, 16)
 		Kit.Text({
 			Text = T("NewPet"),
 			Size = UDim2.fromScale(0.86, 0.7),

@@ -27,7 +27,7 @@ local PASS_COLORS = {
 
 function Panel.Build(parent: Instance, C)
 	local T = C.Lang.T
-	local p = Kit.Panel(T("MenuShop"), UDim2.fromOffset(860, 580), "Green", parent)
+	local p = Kit.Panel(T("MenuShop"), UDim2.fromOffset(860, 580), "Cyan", parent)
 	local tabsBar = New("Frame", {
 		BackgroundTransparency = 1,
 		Size = UDim2.new(1, 0, 0, 60),
@@ -50,7 +50,7 @@ function Panel.Build(parent: Instance, C)
 			CanvasSize = UDim2.new(),
 			AutomaticCanvasSize = Enum.AutomaticSize.Y,
 			ScrollBarThickness = 8,
-			ScrollBarImageColor3 = Theme.Muted,
+			ScrollBarImageColor3 = Theme.Outline,
 			BorderSizePixel = 0,
 			Visible = false,
 			Parent = p.Body,
@@ -70,13 +70,13 @@ function Panel.Build(parent: Instance, C)
 	local function show(name: string)
 		for n, pg in pages do
 			pg.Visible = n == name
-			tabButtons[n].SetColor(if n == name then "Yellow" else "Dark")
+			tabButtons[n].SetColor(if n == name then "White" else "Yellow")
 		end
 	end
 	for i, info in { { "Passes", "ShopPasses" }, { "Boosts", "ShopBoosts" }, { "Bats", "ShopBats" } } do
 		local b = Kit.Button({
 			Text = T(info[2]),
-			Color = "Dark",
+			Color = "Yellow",
 			Size = UDim2.fromOffset(220, 54),
 			LayoutOrder = i,
 			TextSize = 26,
@@ -89,27 +89,43 @@ function Panel.Build(parent: Instance, C)
 		page(info[1])
 	end
 
+	-- scheda quasi bianca con la toppa rotonda colorata dietro l'icona
 	local function card(pg: Instance, order: number, color: string, iconName: string)
-		local colors = Theme.Buttons[color]
-		local c = New("Frame", { BackgroundColor3 = Color3.new(1, 1, 1), LayoutOrder = order, Parent = pg }, {
-			Kit.Corner(UDim.new(0, 22)),
-			Kit.Stroke(4),
-			Kit.Gradient(colors[1]:Lerp(Theme.Card, 0.55), Theme.Card),
-		})
-		Kit.Icon(iconName, {
-			Size = UDim2.fromOffset(74, 74),
+		local c = Kit.Card({ LayoutOrder = order, ZIndex = 1, Parent = pg })
+		local patch = New("Frame", {
+			Name = "Patch",
+			BackgroundColor3 = (Theme.Buttons[color] or Theme.Buttons.Purple)[1],
+			Size = UDim2.fromOffset(80, 80),
 			Position = UDim2.new(0.5, 0, 0, 10),
 			AnchorPoint = Vector2.new(0.5, 0),
+			ZIndex = 2,
+			Parent = c,
+		}, { Kit.Corner(UDim.new(1, 0)), Kit.Stroke(3) })
+		Kit.Felt(patch)
+		Kit.Stitch(patch, -1)
+		Kit.Icon(iconName, {
+			Size = UDim2.fromOffset(66, 66),
+			Position = UDim2.new(0.5, 0, 0, 17),
+			AnchorPoint = Vector2.new(0.5, 0),
+			ZIndex = 3,
 			Parent = c,
 		})
-		local title = Kit.Text({ Size = UDim2.new(0.9, 0, 0, 30), Position = UDim2.new(0.05, 0, 0, 86), Parent = c })
+		local title = Kit.Text({
+			Size = UDim2.new(0.9, 0, 0, 30),
+			Position = UDim2.new(0.05, 0, 0, 94),
+			TextColor3 = Theme.Ink,
+			Stroke = false,
+			ZIndex = 3,
+			Parent = c,
+		})
 		local desc = Kit.Text({
 			Font = Theme.BodyFont,
 			Size = UDim2.new(0.9, 0, 0, 44),
-			Position = UDim2.new(0.05, 0, 0, 118),
-			TextColor3 = Theme.Muted,
+			Position = UDim2.new(0.05, 0, 0, 124),
+			TextColor3 = Theme.InkSoft,
 			Stroke = false,
 			TextWrapped = true,
+			ZIndex = 3,
 			Parent = c,
 		})
 		return c, title, desc

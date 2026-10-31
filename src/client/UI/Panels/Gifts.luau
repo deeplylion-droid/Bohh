@@ -62,7 +62,8 @@ function Panel.Build(parent: Instance, C)
 			Font = Theme.BodyFont,
 			Size = UDim2.new(0.9, 0, 0, 22),
 			Position = UDim2.new(0.05, 0, 0, 6),
-			Stroke = 2,
+			TextColor3 = Theme.Ink,
+			Stroke = false,
 			Parent = d,
 		})
 		Kit.Icon(rewardIcon(r), {
@@ -74,7 +75,8 @@ function Panel.Build(parent: Instance, C)
 		local amount = Kit.Text({
 			Size = UDim2.new(0.92, 0, 0, 26),
 			Position = UDim2.new(0.04, 0, 1, -32),
-			TextColor3 = Theme.Gold,
+			TextColor3 = Theme.GoldInk,
+			Stroke = false,
 			Parent = d,
 		})
 		days[i] = { card = d, day = dayLabel, amount = amount, reward = r }
@@ -103,7 +105,8 @@ function Panel.Build(parent: Instance, C)
 		local amount = Kit.Text({
 			Size = UDim2.new(0.92, 0, 0, 24),
 			Position = UDim2.new(0.04, 0, 0, 68),
-			TextColor3 = Theme.Gold,
+			TextColor3 = Theme.GoldInk,
+			Stroke = false,
 			Parent = d,
 		})
 		local btn = Kit.Button({
@@ -156,7 +159,7 @@ function Panel.Build(parent: Instance, C)
 			d.amount.Text = rewardText(T, d.reward)
 			local stroke = d.card:FindFirstChildOfClass("UIStroke")
 			if stroke then
-				stroke.Color = if i == nextIndex and ready then Theme.Gold else Theme.Outline
+				stroke.Color = if i == nextIndex and ready then Theme.Buttons.Yellow[2] else Theme.Outline
 				stroke.Thickness = if i == nextIndex and ready then 5 else 3
 			end
 			d.card.BackgroundColor3 = if i < nextIndex and not ready or (i <= streak and not ready)

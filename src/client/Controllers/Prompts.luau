@@ -159,16 +159,24 @@ local function build(prompt: ProximityPrompt, inputType: Enum.ProximityPromptInp
 	local key = New("TextButton", {
 		Text = "",
 		AutoButtonColor = false,
-		BackgroundColor3 = Color3.new(1, 1, 1),
+		BackgroundColor3 = colors[1],
 		Size = UDim2.fromOffset(72, 72),
 		Position = UDim2.fromOffset(8, 12),
 		Parent = holder,
-	}, { Kit.Corner(UDim.new(1, 0)), Kit.Stroke(5), Kit.Gradient(colors[1], colors[2]) })
+	}, { Kit.Corner(UDim.new(1, 0)), Kit.Stroke(4) })
+	Kit.Felt(key)
+	Kit.Stitch(key, -1)
 	local keyText = if inputType == Enum.ProximityPromptInputType.Touch
 		then "👆"
 		elseif inputType == Enum.ProximityPromptInputType.Gamepad then "X"
 		else prompt.KeyboardKeyCode.Name
-	Kit.Text({ Text = keyText, Size = UDim2.fromScale(0.6, 0.6), Position = UDim2.fromScale(0.2, 0.2), Parent = key })
+	Kit.Text({
+		Text = keyText,
+		Size = UDim2.fromScale(0.56, 0.56),
+		Position = UDim2.fromScale(0.22, 0.22),
+		ZIndex = 2,
+		Parent = key,
+	})
 	local ring = New("UIStroke", {
 		Thickness = 7,
 		Color = Color3.new(1, 1, 1),
@@ -181,32 +189,38 @@ local function build(prompt: ProximityPrompt, inputType: Enum.ProximityPromptInp
 		}, { Kit.Corner(UDim.new(1, 0)) }),
 	})
 	local box = New("Frame", {
-		BackgroundColor3 = Color3.fromRGB(29, 22, 48),
-		BackgroundTransparency = 0.12,
+		BackgroundColor3 = Kit.Theme.Card,
 		Size = UDim2.fromOffset(200, 64),
 		Position = UDim2.fromOffset(88, 16),
 		Parent = holder,
-	}, { Kit.Corner(UDim.new(0, 16)), Kit.Stroke(4) })
+	}, { Kit.Corner(UDim.new(0, 10)), Kit.Stroke(4) })
+	Kit.Stitch(box, 8, Kit.Theme.StitchCard)
 	local action, object = promptTexts(prompt)
 	Kit.Text({
 		Text = action,
-		Size = UDim2.new(0.9, 0, 0, 32),
-		Position = UDim2.new(0.05, 0, 0, 4),
+		Size = UDim2.new(0.88, 0, 0, 30),
+		Position = UDim2.new(0.06, 0, 0, 5),
 		TextXAlignment = Enum.TextXAlignment.Left,
+		TextColor3 = Kit.Theme.Ink,
+		Stroke = false,
+		ZIndex = 2,
 		Parent = box,
 	})
 	local objLabel = Kit.Text({
 		Text = object,
 		Font = Kit.Theme.BodyFont,
-		Size = UDim2.new(0.9, 0, 0, 22),
-		Position = UDim2.new(0.05, 0, 0, 36),
+		Size = UDim2.new(0.88, 0, 0, 24),
+		Position = UDim2.new(0.06, 0, 0, 35),
 		TextXAlignment = Enum.TextXAlignment.Left,
-		Stroke = 2,
+		TextColor3 = Kit.Theme.InkSoft,
+		Stroke = false,
+		ZIndex = 2,
 		Parent = box,
 	})
 	local rarity = prompt:GetAttribute("Rarity") or (prompt.Parent and prompt.Parent:GetAttribute("EggRarity"))
 	if rarity and Rarities.List[rarity] then
-		objLabel.TextColor3 = Rarities.List[rarity].color
+		-- il nome della rarita' nel suo colore, scurito per leggersi sul chiaro
+		objLabel.TextColor3 = Rarities.List[rarity].color:Lerp(Rarities.List[rarity].colorDark, 0.45)
 	end
 	Kit.Pop(holder)
 

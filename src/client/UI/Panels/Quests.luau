@@ -78,7 +78,7 @@ function Panel.Build(parent: Instance, C)
 			Size = UDim2.new(0.38, -6, 0, 26),
 			Position = UDim2.new(0.62, 0, 0, 20),
 			TextXAlignment = Enum.TextXAlignment.Right,
-			TextColor3 = Theme.Muted,
+			TextColor3 = Theme.Text,
 			Stroke = 2,
 			Parent = frame,
 		})
@@ -102,24 +102,25 @@ function Panel.Build(parent: Instance, C)
 				Position = UDim2.fromOffset(82, 6),
 				TextXAlignment = Enum.TextXAlignment.Left,
 				TextWrapped = true,
-				Stroke = 2,
-				MaxTextSize = 22,
+				TextColor3 = Theme.Ink,
+				Stroke = false,
+				MaxTextSize = 23,
 				ZIndex = 23,
 				Parent = card,
 			})
 			local bar = New("Frame", {
-				BackgroundColor3 = Theme.Outline,
+				BackgroundColor3 = Theme.CardLight,
 				Size = UDim2.new(1, -212, 0, 26),
 				Position = UDim2.fromOffset(84, 62),
 				ZIndex = 23,
 				Parent = card,
-			}, { Kit.Corner(UDim.new(1, 0)) })
+			}, { Kit.Corner(UDim.new(1, 0)), Kit.Stroke(2) })
 			local fill = New("Frame", {
-				BackgroundColor3 = Color3.new(1, 1, 1),
+				BackgroundColor3 = Theme.Buttons.Green[1],
 				Size = UDim2.fromScale(0, 1),
 				ZIndex = 24,
 				Parent = bar,
-			}, { Kit.Corner(UDim.new(1, 0)), Kit.Gradient(Theme.Buttons.Green[1], Theme.Buttons.Green[2]) })
+			}, { Kit.Corner(UDim.new(1, 0)) })
 			local barText = Kit.Text({
 				Size = UDim2.fromScale(1, 0.84),
 				Position = UDim2.fromScale(0, 0.08),
@@ -138,6 +139,7 @@ function Panel.Build(parent: Instance, C)
 				Position = UDim2.new(1, -84, 0, 12),
 				TextXAlignment = Enum.TextXAlignment.Left,
 				TextColor3 = Theme.Gold,
+				Stroke = 2,
 				ZIndex = 23,
 				Parent = card,
 			})
@@ -173,7 +175,7 @@ function Panel.Build(parent: Instance, C)
 		local bonus = Kit.Card({
 			Size = UDim2.new(1, 0, 0, 66),
 			Position = UDim2.fromOffset(0, 58 + 3 * 114),
-			Color = Color3.fromRGB(70, 46, 120),
+			Color = Theme.Buttons.Purple[1],
 			Parent = frame,
 		})
 		local bonusReward = if kind == "Daily" then Plaza.Quests.DailyBonus else Plaza.Quests.WeeklyBonus

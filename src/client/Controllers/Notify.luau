@@ -16,31 +16,49 @@ local stack: Frame
 local announceFrame: Frame
 local player = Players.LocalPlayer
 
+-- colore della scritta sul cartellino quasi bianco, per tipo di messaggio
 local STYLE = {
-	Good = { Color3.fromRGB(141, 255, 98), Color3.fromRGB(34, 170, 59) },
-	Bad = { Color3.fromRGB(255, 120, 110), Color3.fromRGB(200, 30, 45) },
-	Info = { Color3.fromRGB(105, 216, 255), Color3.fromRGB(27, 110, 230) },
-	Gold = { Color3.fromRGB(255, 236, 120), Color3.fromRGB(240, 150, 10) },
+	Good = Color3.fromRGB(18, 150, 62),
+	Bad = Color3.fromRGB(214, 26, 56),
+	Info = Color3.fromRGB(58, 34, 22),
+	Gold = Color3.fromRGB(206, 112, 0),
 }
 
 function Notify.Init(controllers)
 	C = controllers
 end
 
--- Toast in alto a destra dello schermo (piu' recenti in alto)
+-- Messaggio su un cartellino quasi bianco (con il foro), in basso a destra (in alto a destra sui
+-- telefoni), lontano dal centro dello schermo
 function Notify.Toast(text: string, style: string?)
-	local colors = STYLE[style or "Info"] or STYLE.Info
+	local color = STYLE[style or "Info"] or STYLE.Info
 	local New = Kit.New
+	local Theme = Kit.Theme
 	local toast = New("Frame", {
-		BackgroundColor3 = Color3.new(1, 1, 1),
-		Size = UDim2.fromOffset(420, 58),
+		BackgroundColor3 = Theme.Card,
+		Size = UDim2.fromOffset(420, 56),
+		Rotation = -1,
 		Parent = stack,
-	}, { Kit.Corner(UDim.new(0, 18)), Kit.Stroke(4), Kit.Gradient(colors[1], colors[2]), New("UIScale") })
+	}, { Kit.Corner(UDim.new(0, 8)), Kit.Stroke(3), New("UIScale") })
+	Kit.Stitch(toast, 8, Theme.StitchCard)
+	New("Frame", {
+		Name = "Hole",
+		BackgroundColor3 = Theme.Outline,
+		Size = UDim2.fromOffset(10, 10),
+		Position = UDim2.new(0, 12, 0.5, 0),
+		AnchorPoint = Vector2.new(0, 0.5),
+		ZIndex = 2,
+		Parent = toast,
+	}, { Kit.Corner(UDim.new(1, 0)) })
 	Kit.Text({
 		Text = text,
-		Size = UDim2.new(0.92, 0, 0.62, 0),
-		Position = UDim2.new(0.04, 0, 0.19, 0),
+		Font = Theme.BodyFont,
+		Size = UDim2.new(1, -46, 0.7, 0),
+		Position = UDim2.new(0, 32, 0.15, 0),
+		TextColor3 = color,
+		Stroke = false,
 		RichText = true,
+		ZIndex = 2,
 		Parent = toast,
 	})
 	Kit.Pop(toast)
@@ -64,27 +82,47 @@ function Notify.Toast(text: string, style: string?)
 	end
 end
 
--- Annuncio grande al centro (uova rare, schiuse epiche, eventi)
+-- Annuncio a tutto il server (uova rare, schiuse epiche, eventi): striscia di feltro scuro nella
+-- colonna in alto sotto le monete, con il bordo del colore della rarita'
+local function announceParent(): Frame
+	local hud = C.UI.Hud
+	local slot = hud and hud.AnnounceSlot
+	if slot then
+		return slot
+	end
+	return announceFrame
+end
+
 function Notify.Announce(text: string, rarity: string?)
 	local New = Kit.New
-	for _, ch in announceFrame:GetChildren() do
-		ch:Destroy()
+	local Theme = Kit.Theme
+	local parent = announceParent()
+	for _, ch in parent:GetChildren() do
+		if ch:IsA("GuiObject") then
+			ch:Destroy()
+		end
 	end
 	local r = rarity and Rarities.List[rarity]
-	local color = if r then r.color else Color3.fromRGB(255, 225, 77)
+	local color = if r then r.color else Theme.Gold
 	local box = New("Frame", {
-		BackgroundColor3 = Color3.fromRGB(29, 22, 48),
-		BackgroundTransparency = 0.1,
-		Size = UDim2.fromOffset(640, 70),
+		BackgroundColor3 = Theme.Outline,
+		Size = UDim2.fromOffset(600, 44),
 		Position = UDim2.fromScale(0.5, 0),
 		AnchorPoint = Vector2.new(0.5, 0),
-		Parent = announceFrame,
-	}, { Kit.Corner(UDim.new(0, 22)), Kit.Stroke(5, color), New("UIScale") })
+		Parent = parent,
+	}, { Kit.Corner(UDim.new(0, 12)), Kit.Stroke(3, color), New("UIScale") })
+	Kit.Stitch(box, 12, color)
+	if parent:IsA("Frame") and parent.Name == "AnnounceSlot" then
+		parent.Visible = true
+	end
 	local label = Kit.Text({
 		Text = text,
-		Size = UDim2.new(0.94, 0, 0.66, 0),
-		Position = UDim2.new(0.03, 0, 0.17, 0),
+		Font = Theme.BodyFont,
+		Size = UDim2.new(0.94, 0, 0.7, 0),
+		Position = UDim2.new(0.03, 0, 0.15, 0),
 		RichText = true,
+		Stroke = 2,
+		ZIndex = 2,
 		Parent = box,
 	})
 	if rarity and Rarities.Gradients[rarity] then
@@ -105,7 +143,11 @@ function Notify.Announce(text: string, rarity: string?)
 			Kit.Tween(box, 0.4, { BackgroundTransparency = 1 })
 			Kit.Tween(label, 0.4, { TextTransparency = 1 })
 			task.wait(0.45)
+			local slot = box.Parent
 			box:Destroy()
+			if slot and slot.Name == "AnnounceSlot" and #slot:GetChildren() == 0 then
+				(slot :: Frame).Visible = false
+			end
 		end
 	end)
 end
@@ -123,7 +165,7 @@ local function arrowTo(thief: Player, duration: number)
 		Font = Enum.Font.SourceSansBold,
 		TextColor3 = Color3.fromRGB(255, 70, 70),
 		Parent = gui,
-	}, { New("UIStroke", { Thickness = 4, Color = Color3.fromRGB(29, 22, 48) }) })
+	}, { New("UIStroke", { Thickness = 4, Color = Kit.Theme.Outline }) })
 	local stop = os.clock() + duration
 	local conn
 	conn = RunService.RenderStepped:Connect(function()

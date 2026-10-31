@@ -32,7 +32,10 @@ IMAGE = {"ImageLabel", "ImageButton"}
 FONT_FAMILY = {
     "LuckiestGuy": "'Luckiest Guy', 'Noto Color Emoji'",
     "FredokaOne": "'Fredoka One', 'Noto Color Emoji'",
+    "DenkOne": "'Denk One', 'Noto Color Emoji'",
+    "PatrickHand": "'Patrick Hand', 'Noto Color Emoji'",
 }
+UI_FONTS = ROOT / "art" / "ui" / "fonts"
 DEFAULT_FONT = "'DejaVu Sans', 'Noto Color Emoji', sans-serif"
 
 
@@ -125,7 +128,8 @@ def stroke_shadow(t: float, color: str) -> str:
 # ------------------------------------------------------------------------------------------
 # Metriche dei font (larghezza dei caratteri misurata in Chromium, per AutomaticSize)
 # ------------------------------------------------------------------------------------------
-METRIC_FONTS = {"LuckiestGuy": "'Luckiest Guy'", "FredokaOne": "'Fredoka One'", "Default": "'DejaVu Sans'"}
+METRIC_FONTS = {"LuckiestGuy": "'Luckiest Guy'", "FredokaOne": "'Fredoka One'", "DenkOne": "'Denk One'",
+                "PatrickHand": "'Patrick Hand'", "Default": "'DejaVu Sans'"}
 METRICS: dict = {}
 
 
@@ -139,7 +143,9 @@ def load_metrics(chars: set[str]) -> None:
         page_path.write_text(f"""<!doctype html><html><head><meta charset="utf-8"><style>
 @font-face {{ font-family: 'Luckiest Guy'; src: url('{(FONTS / "luckiest-guy-latin-400-normal.woff2").as_uri()}'); }}
 @font-face {{ font-family: 'Fredoka One'; src: url('{(FONTS / "fredoka-one-latin-400-normal.woff2").as_uri()}'); }}
-</style></head><body><span style="font-family:'Luckiest Guy'">a</span><span style="font-family:'Fredoka One'">a</span>
+@font-face {{ font-family: 'Denk One'; src: url('{(UI_FONTS / "DenkOne-400.woff2").as_uri()}'); }}
+@font-face {{ font-family: 'Patrick Hand'; src: url('{(UI_FONTS / "PatrickHand-400.woff2").as_uri()}'); }}
+</style></head><body><span style="font-family:'Luckiest Guy'">a</span><span style="font-family:'Fredoka One'">a</span><span style="font-family:'Denk One'">a</span><span style="font-family:'Patrick Hand'">a</span>
 <pre id="out"></pre><script>
 const chars = {json.dumps(missing)};
 const fams = {fams};
@@ -402,9 +408,15 @@ class Renderer:
                 fit = {"Fit": "contain", "Crop": "cover"}.get(enum(p.get("ScaleType"), "Stretch"), "fill")
                 op = 1 - p.get("ImageTransparency", 0)
                 uri = IMAGES[m.group(1)].as_uri()
-                inner.append(
-                    f'<img src="{uri}" style="position:absolute;left:0;top:0;width:100%;'
-                    f'height:100%;object-fit:{fit};opacity:{op}">')
+                if enum(p.get("ScaleType"), "Stretch") == "Tile":
+                    ts = p.get("TileSize", ["UDim2", 1, 0, 1, 0])
+                    tw, th = udim(["UDim", ts[1], ts[2]], w), udim(["UDim", ts[3], ts[4]], h)
+                    inner.append(f'<div style="position:absolute;inset:0;background:url({uri}) 0 0/{tw}px {th}px repeat;'
+                                 f'opacity:{op}"></div>')
+                else:
+                    inner.append(
+                        f'<img src="{uri}" style="position:absolute;left:0;top:0;width:100%;'
+                        f'height:100%;object-fit:{fit};opacity:{op}">')
                 tint = p.get("ImageColor3", ["Color3", 255, 255, 255])
                 if tint[1:] != [255, 255, 255]:
                     # ImageColor3 moltiplica i colori dell'immagine
@@ -680,6 +692,8 @@ def page(scene: dict) -> tuple[str, list[str]]:
     doc = f"""<!doctype html><html><head><meta charset="utf-8"><style>
 @font-face {{ font-family: 'Luckiest Guy'; src: url('{(FONTS / "luckiest-guy-latin-400-normal.woff2").as_uri()}'); }}
 @font-face {{ font-family: 'Fredoka One'; src: url('{(FONTS / "fredoka-one-latin-400-normal.woff2").as_uri()}'); }}
+@font-face {{ font-family: 'Denk One'; src: url('{(UI_FONTS / "DenkOne-400.woff2").as_uri()}'); }}
+@font-face {{ font-family: 'Patrick Hand'; src: url('{(UI_FONTS / "PatrickHand-400.woff2").as_uri()}'); }}
 html, body {{ margin:0; padding:0; width:{vw}px; height:{vh}px; overflow:hidden; {bg_css}; }}
 .gui, .g {{ position:absolute; box-sizing:border-box; }}
 .tx {{ display:block; }}

@@ -120,18 +120,19 @@ local function buildCard()
 	local New = Kit.New
 	card = New("Frame", {
 		Name = "Tutorial",
-		BackgroundColor3 = Color3.new(1, 1, 1),
+		BackgroundColor3 = Kit.Theme.Buttons.Yellow[1],
 		Size = UDim2.fromOffset(600, 76),
 		Position = UDim2.new(0.5, 0, 1, -124),
 		AnchorPoint = Vector2.new(0.5, 1),
 		Visible = false,
 		Parent = C.UI.Gui("HUD"),
 	}, {
-		Kit.Corner(UDim.new(0, 24)),
-		Kit.Stroke(5),
-		Kit.Gradient(Color3.fromRGB(255, 236, 120), Color3.fromRGB(255, 168, 30)),
+		Kit.Corner(UDim.new(0, 20)),
+		Kit.Stroke(4),
 		New("UIScale"),
 	})
+	Kit.Felt(card)
+	Kit.Stitch(card, 20)
 	local badge = New("Frame", {
 		BackgroundColor3 = Kit.Theme.Outline,
 		Size = UDim2.fromOffset(62, 62),

@@ -1,5 +1,10 @@
 {
  "images": {
+  "FeltNoise": {
+   "decal": 117419030681382,
+   "hash": "7e39ecb4d7011576da48f790d894fa507ae1d9b2",
+   "image": 107485374213561
+  },
   "IconAdmin": {
    "decal": 108786170313278,
    "hash": "d9ff10a758758fae8dc794e830232dbda39a12c7",
@@ -224,6 +229,51 @@
    "decal": 135226943448644,
    "hash": "ac2d2d5aae3a0fb7b4662824948af38b935e286a",
    "image": 115456508303091
+  },
+  "StitchCorner12": {
+   "decal": 111645351574108,
+   "hash": "d0876ff06e1184432c9bf68b6aa081e24e3e4f96",
+   "image": 138594411323979
+  },
+  "StitchCorner16": {
+   "decal": 135113333655064,
+   "hash": "d4bb2308e4ee8fdc92e95d7ac23a8fa08c2a28eb",
+   "image": 86525140999359
+  },
+  "StitchCorner20": {
+   "decal": 102380592237402,
+   "hash": "230829da63528c6903d570c17df4c8ccba6bd5ee",
+   "image": 122158288617833
+  },
+  "StitchCorner28": {
+   "decal": 100925098140108,
+   "hash": "0363240c420515269c84085b4866e65b68be7bf9",
+   "image": 100085154893951
+  },
+  "StitchCorner40": {
+   "decal": 77922862856073,
+   "hash": "be326a5d94a61b4d744d30e506e94fb2bb27cf9b",
+   "image": 121215115710581
+  },
+  "StitchCorner8": {
+   "decal": 77995914099715,
+   "hash": "62bb95c89caf42b914e01c6f11325dc838a86be1",
+   "image": 74986769343359
+  },
+  "StitchH": {
+   "decal": 131409014336990,
+   "hash": "95b03d6232e323d6fa2aa33fe9eec5eba0b8d271",
+   "image": 72345152770914
+  },
+  "StitchRing": {
+   "decal": 127748606102102,
+   "hash": "69d8cf8b5d4ae47e5679d40e1c2c7cb9b21d2e72",
+   "image": 112929867137563
+  },
+  "StitchV": {
+   "decal": 124467512830861,
+   "hash": "79af642d883d5712da8984ccae2b2d31d19f0e63",
+   "image": 82621918127578
   },
   "WheelFace": {
    "decal": 82498062807948,

@@ -65,7 +65,7 @@ function Panel.Build(parent: Instance, C)
 		CanvasSize = UDim2.new(),
 		AutomaticCanvasSize = Enum.AutomaticSize.Y,
 		ScrollBarThickness = 8,
-		ScrollBarImageColor3 = Theme.Muted,
+		ScrollBarImageColor3 = Theme.Outline,
 		BorderSizePixel = 0,
 		Parent = p.Body,
 	}, {
@@ -87,33 +87,30 @@ function Panel.Build(parent: Instance, C)
 			local perLine = if #list > 5 then math.ceil(#list / 2) else #list
 			local lines = math.ceil(#list / perLine)
 			local row = New("Frame", {
-				BackgroundColor3 = Color3.new(1, 1, 1),
+				BackgroundColor3 = r.color:Lerp(r.colorDark, 0.25),
 				Size = UDim2.new(1, 0, 0, 50 + lines * 146),
 				LayoutOrder = i,
 				Parent = scroll,
 			}, {
 				Kit.Corner(UDim.new(0, 20)),
 				Kit.Stroke(4),
-				Kit.Gradient(r.color:Lerp(Theme.Card, 0.6), Theme.Card),
 			})
+			Kit.Felt(row)
+			Kit.Stitch(row, 20)
 			local title = Kit.Text({
 				Size = UDim2.new(0.4, 0, 0, 32),
-				Position = UDim2.fromOffset(14, 8),
+				Position = UDim2.fromOffset(16, 9),
 				TextXAlignment = Enum.TextXAlignment.Left,
-				TextColor3 = r.color,
+				ZIndex = 2,
 				Parent = row,
 			})
-			if Rarities.Gradients[rarity] then
-				New("UIGradient", { Color = Rarities.Gradients[rarity], Parent = title })
-				title.TextColor3 = Color3.new(1, 1, 1)
-			end
 			local reward = Kit.Text({
 				Font = Theme.BodyFont,
 				Size = UDim2.new(0.42, 0, 0, 22),
 				Position = UDim2.new(0.4, 0, 0, 12),
 				TextXAlignment = Enum.TextXAlignment.Right,
-				TextColor3 = Theme.Muted,
-				Stroke = false,
+				Stroke = 2,
+				ZIndex = 2,
 				Parent = row,
 			})
 			local claim = Kit.Button({
@@ -132,17 +129,19 @@ function Panel.Build(parent: Instance, C)
 			for k, pet in list do
 				local col, line = (k - 1) % perLine, (k - 1) // perLine
 				local slot = New("Frame", {
-					BackgroundColor3 = Color3.fromRGB(29, 22, 48),
-					BackgroundTransparency = 0.35,
+					BackgroundColor3 = Theme.Card,
 					Size = UDim2.new(w - 0.015, 0, 0, 138),
 					Position = UDim2.new(col * w + 0.0075, 0, 0, 50 + line * 146),
+					ZIndex = 2,
 					Parent = row,
-				}, { Kit.Corner(UDim.new(0, 16)) })
+				}, { Kit.Corner(UDim.new(0, 14)), Kit.Stroke(3) })
 				local name = Kit.Text({
 					Font = Theme.BodyFont,
 					Size = UDim2.new(0.92, 0, 0, 22),
-					Position = UDim2.new(0.04, 0, 1, -30),
-					Stroke = 2,
+					Position = UDim2.new(0.04, 0, 1, -28),
+					TextColor3 = Theme.Ink,
+					Stroke = false,
+					ZIndex = 3,
 					Parent = slot,
 				})
 				local dots = Kit.Text({

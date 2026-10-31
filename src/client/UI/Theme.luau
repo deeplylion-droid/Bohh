@@ -1,38 +1,48 @@
 --!strict
--- Palette, font e misure dell'interfaccia (stile "cartone gommoso" con contorni scuri spessi).
+-- Palette, font e misure dell'interfaccia (stile "giocattolo di stoffa cucito").
 
 local Theme = {}
 
-Theme.Outline = Color3.fromRGB(29, 22, 48)
+-- Stile "cucito": feltro dai colori accesi con la cucitura bianca attaccata al contorno scuro,
+-- interni quasi bianchi, titoli in Denk One e testi in Patrick Hand (scritto a mano)
+Theme.Outline = Color3.fromRGB(42, 22, 14)
 Theme.Text = Color3.fromRGB(255, 255, 255)
-Theme.Gold = Color3.fromRGB(255, 225, 77)
-Theme.Green = Color3.fromRGB(157, 255, 107)
-Theme.Red = Color3.fromRGB(255, 110, 100)
-Theme.Muted = Color3.fromRGB(201, 189, 245)
-Theme.PanelTop = Color3.fromRGB(64, 47, 116)
-Theme.PanelBottom = Color3.fromRGB(35, 24, 74)
-Theme.Card = Color3.fromRGB(48, 36, 94)
-Theme.CardLight = Color3.fromRGB(72, 56, 130)
+Theme.Ink = Color3.fromRGB(58, 34, 22) -- testo scuro sugli interni chiari
+Theme.InkSoft = Color3.fromRGB(122, 104, 90) -- testo secondario sugli interni chiari
+Theme.Gold = Color3.fromRGB(255, 206, 48)
+Theme.GoldInk = Color3.fromRGB(222, 128, 0) -- importi sugli interni chiari
+Theme.Green = Color3.fromRGB(96, 236, 120)
+Theme.GreenInk = Color3.fromRGB(18, 168, 70)
+Theme.Red = Color3.fromRGB(255, 92, 92)
+Theme.RedInk = Color3.fromRGB(226, 32, 62)
+Theme.Muted = Color3.fromRGB(226, 244, 255) -- testo secondario sul feltro colorato
+Theme.PanelTop = Color3.fromRGB(0, 194, 174)
+Theme.PanelBottom = Color3.fromRGB(0, 194, 174)
+Theme.Card = Color3.fromRGB(255, 252, 246) -- interni quasi bianchi
+Theme.CardLight = Color3.fromRGB(238, 230, 218) -- interni gia' usati / riscattati
+Theme.Stitch = Color3.fromRGB(255, 255, 255)
+Theme.StitchCard = Color3.fromRGB(220, 211, 196)
 
-Theme.TitleFont = Enum.Font.LuckiestGuy
-Theme.BodyFont = Enum.Font.FredokaOne
+Theme.TitleFont = Enum.Font.DenkOne
+Theme.BodyFont = Enum.Font.PatrickHand
 
 Theme.Stroke = 4
 Theme.TextStroke = 3
-Theme.Corner = UDim.new(0, 20)
+Theme.Corner = UDim.new(0, 16)
 
--- Coppie di colori (alto, basso) per i gradienti dei pulsanti
+-- Colori del feltro (primo) e versione scura (secondo, per ombre e stati premuti)
 Theme.Buttons = {
-	Green = { Color3.fromRGB(141, 255, 98), Color3.fromRGB(34, 194, 59) },
-	Blue = { Color3.fromRGB(105, 216, 255), Color3.fromRGB(27, 125, 255) },
-	Purple = { Color3.fromRGB(211, 155, 255), Color3.fromRGB(138, 61, 255) },
-	Pink = { Color3.fromRGB(255, 158, 224), Color3.fromRGB(255, 60, 158) },
-	Orange = { Color3.fromRGB(255, 200, 90), Color3.fromRGB(255, 128, 20) },
-	Red = { Color3.fromRGB(255, 120, 110), Color3.fromRGB(216, 27, 43) },
-	Yellow = { Color3.fromRGB(255, 236, 120), Color3.fromRGB(255, 175, 23) },
-	Grey = { Color3.fromRGB(196, 196, 214), Color3.fromRGB(120, 120, 150) },
-	Dark = { Color3.fromRGB(74, 56, 130), Color3.fromRGB(40, 28, 82) },
-	Cyan = { Color3.fromRGB(120, 255, 236), Color3.fromRGB(20, 180, 200) },
+	Green = { Color3.fromRGB(33, 212, 91), Color3.fromRGB(18, 150, 62) },
+	Blue = { Color3.fromRGB(45, 107, 255), Color3.fromRGB(26, 70, 190) },
+	Purple = { Color3.fromRGB(161, 72, 255), Color3.fromRGB(112, 40, 196) },
+	Pink = { Color3.fromRGB(255, 79, 168), Color3.fromRGB(200, 40, 124) },
+	Orange = { Color3.fromRGB(255, 138, 31), Color3.fromRGB(206, 96, 0) },
+	Red = { Color3.fromRGB(255, 46, 77), Color3.fromRGB(196, 22, 50) },
+	Yellow = { Color3.fromRGB(255, 184, 0), Color3.fromRGB(214, 140, 0) },
+	Grey = { Color3.fromRGB(154, 163, 184), Color3.fromRGB(108, 116, 138) },
+	Dark = { Color3.fromRGB(86, 66, 120), Color3.fromRGB(56, 40, 86) },
+	Cyan = { Color3.fromRGB(0, 194, 174), Color3.fromRGB(0, 140, 126) },
+	White = { Color3.fromRGB(255, 252, 246), Color3.fromRGB(220, 211, 196) },
 }
 
 -- Icone di riserva (emoji) quando l'immagine dedicata non e' ancora disponibile

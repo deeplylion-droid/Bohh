@@ -7067,6 +7067,7 @@ return {
 		},
 	} :: { [string]: ModelInfo },
 	Images = {
+		FeltNoise = "rbxassetid://107485374213561",
 		IconAdmin = "rbxassetid://86547832031463",
 		IconAlarm = "rbxassetid://101193026476857",
 		IconAvalanche = "rbxassetid://82572462992371",
@@ -7112,6 +7113,15 @@ return {
 		SkyDn = "rbxassetid://90690804494524",
 		SkySide = "rbxassetid://76770476327285",
 		SkyUp = "rbxassetid://115456508303091",
+		StitchCorner12 = "rbxassetid://138594411323979",
+		StitchCorner16 = "rbxassetid://86525140999359",
+		StitchCorner20 = "rbxassetid://122158288617833",
+		StitchCorner28 = "rbxassetid://100085154893951",
+		StitchCorner40 = "rbxassetid://121215115710581",
+		StitchCorner8 = "rbxassetid://74986769343359",
+		StitchH = "rbxassetid://72345152770914",
+		StitchRing = "rbxassetid://112929867137563",
+		StitchV = "rbxassetid://82621918127578",
 		WheelFace = "rbxassetid://128665285270479",
 	} :: { [string]: string },
 	Sounds = {

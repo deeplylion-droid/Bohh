@@ -148,7 +148,13 @@ local DEFAULTS = {
 		{ Text = "", PlaceholderText = "", ClearTextOnFocus = true, PlaceholderColor3 = Color3.fromRGB(178, 178, 178) },
 		{ __index = TEXT }
 	),
-	ImageLabel = { Image = "", ImageColor3 = white, ImageTransparency = 0, ScaleType = Enum.ScaleType.Stretch },
+	ImageLabel = {
+		Image = "",
+		ImageColor3 = white,
+		ImageTransparency = 0,
+		ScaleType = Enum.ScaleType.Stretch,
+		TileSize = UDim2.fromScale(1, 1),
+	},
 	ImageButton = {
 		Image = "",
 		ImageColor3 = white,

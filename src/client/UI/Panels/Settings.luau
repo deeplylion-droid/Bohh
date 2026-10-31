@@ -5,6 +5,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Net = require(ReplicatedStorage.Shared.Net)
 local Kit = require(script.Parent.Parent.Kit)
 
+local Theme = Kit.Theme
+
 local Panel = {}
 
 local ROWS = {
@@ -16,7 +18,7 @@ local ROWS = {
 
 function Panel.Build(parent: Instance, C)
 	local T = C.Lang.T
-	local p = Kit.Panel(T("SettingsTitle"), UDim2.fromOffset(580, 450), "Grey", parent)
+	local p = Kit.Panel(T("SettingsTitle"), UDim2.fromOffset(580, 450), "Blue", parent)
 	local rows = {}
 	for i, r in ROWS do
 		local card = Kit.Card({
@@ -29,6 +31,8 @@ function Panel.Build(parent: Instance, C)
 			Size = UDim2.new(0.55, 0, 0, 34),
 			Position = UDim2.fromOffset(74, 20),
 			TextXAlignment = Enum.TextXAlignment.Left,
+			TextColor3 = Theme.Ink,
+			Stroke = false,
 			Parent = card,
 		})
 		local btn = Kit.Button({

@@ -13,7 +13,7 @@ local player = Players.LocalPlayer
 
 ReplicatedFirst:RemoveDefaultLoadingScreen()
 
-local OUTLINE = Color3.fromRGB(29, 22, 48)
+local OUTLINE = Color3.fromRGB(42, 22, 14)
 local TITLE = "CLIMB & STEAL EGGS" -- stesso nome di Config.Game.Name
 
 local italian = false
@@ -93,9 +93,9 @@ local bg = new("Frame", {
 	new("UIGradient", {
 		Rotation = 90,
 		Color = ColorSequence.new({
-			ColorSequenceKeypoint.new(0, Color3.fromRGB(110, 196, 255)),
-			ColorSequenceKeypoint.new(0.55, Color3.fromRGB(178, 160, 255)),
-			ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 176, 214)),
+			ColorSequenceKeypoint.new(0, Color3.fromRGB(64, 170, 255)),
+			ColorSequenceKeypoint.new(0.6, Color3.fromRGB(150, 222, 255)),
+			ColorSequenceKeypoint.new(1, Color3.fromRGB(226, 248, 255)),
 		}),
 	}),
 })
@@ -104,9 +104,9 @@ local bg = new("Frame", {
 local mountains = new("Frame", { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), Parent = bg })
 for i, m in
 	{
-		{ x = 0.18, size = 0.62, color = Color3.fromRGB(120, 104, 214) },
-		{ x = 0.82, size = 0.58, color = Color3.fromRGB(132, 112, 222) },
-		{ x = 0.5, size = 0.86, color = Color3.fromRGB(96, 80, 196) },
+		{ x = 0.18, size = 0.62, color = Color3.fromRGB(0, 170, 152) },
+		{ x = 0.82, size = 0.58, color = Color3.fromRGB(45, 107, 255) },
+		{ x = 0.5, size = 0.86, color = Color3.fromRGB(26, 70, 190) },
 	}
 do
 	local peak = new("Frame", {
@@ -151,7 +151,7 @@ end
 local title = new("TextLabel", {
 	BackgroundTransparency = 1,
 	Text = TITLE,
-	Font = Enum.Font.LuckiestGuy,
+	Font = Enum.Font.DenkOne,
 	TextScaled = true,
 	TextColor3 = Color3.fromRGB(255, 225, 77),
 	Size = UDim2.fromOffset(880, 120),
@@ -225,7 +225,7 @@ local barFill = new("Frame", {
 local percent = new("TextLabel", {
 	BackgroundTransparency = 1,
 	Text = "0%",
-	Font = Enum.Font.LuckiestGuy,
+	Font = Enum.Font.DenkOne,
 	TextScaled = true,
 	TextColor3 = Color3.new(1, 1, 1),
 	Size = UDim2.new(1, 0, 0.7, 0),
@@ -236,7 +236,7 @@ local percent = new("TextLabel", {
 local status = new("TextLabel", {
 	BackgroundTransparency = 1,
 	Text = TEXT.loading,
-	Font = Enum.Font.FredokaOne,
+	Font = Enum.Font.PatrickHand,
 	TextScaled = true,
 	TextColor3 = Color3.new(1, 1, 1),
 	Size = UDim2.fromOffset(620, 32),
@@ -247,7 +247,7 @@ local status = new("TextLabel", {
 local tip = new("TextLabel", {
 	BackgroundTransparency = 1,
 	Text = "💡 " .. TIPS[math.random(1, #TIPS)],
-	Font = Enum.Font.FredokaOne,
+	Font = Enum.Font.PatrickHand,
 	TextScaled = true,
 	TextColor3 = Color3.fromRGB(255, 240, 180),
 	Size = UDim2.fromOffset(820, 34),

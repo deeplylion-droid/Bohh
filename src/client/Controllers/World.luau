@@ -230,7 +230,7 @@ local function incubatorBillboard(base: BasePart)
 	})
 	local label = Kit.Text({ Text = "", Size = UDim2.new(1, 0, 0, 38), Stroke = 4, Parent = gui })
 	local bar = Kit.New("Frame", {
-		BackgroundColor3 = Color3.fromRGB(29, 22, 48),
+		BackgroundColor3 = Kit.Theme.Outline,
 		Size = UDim2.new(0.86, 0, 0, 16),
 		Position = UDim2.new(0.07, 0, 0, 44),
 		Parent = gui,

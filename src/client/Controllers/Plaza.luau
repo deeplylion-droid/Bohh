@@ -140,13 +140,16 @@ local function setupBoard(board: Instance)
 			Size = UDim2.new(1, -120, 0.7, 0),
 			Position = UDim2.new(0, 12, 0.15, 0),
 			TextXAlignment = Enum.TextXAlignment.Left,
-			Stroke = 2,
+			TextColor3 = Theme.Ink,
+			Stroke = false,
 			Parent = row,
 		})
 		local prog = Kit.Text({
 			Size = UDim2.new(0, 100, 0.7, 0),
 			Position = UDim2.new(1, -110, 0.15, 0),
 			TextXAlignment = Enum.TextXAlignment.Right,
+			TextColor3 = Theme.Ink,
+			Stroke = false,
 			Parent = row,
 		})
 		rows[i] = { row = row, text = text, prog = prog }
@@ -174,7 +177,7 @@ local function setupBoard(board: Instance)
 				r.text.Text = T("Quest_" .. def.stat, { n = def.target })
 				local done = e.P >= def.target
 				r.prog.Text = if e.C then "✔" else `{math.min(e.P, def.target)}/{def.target}`
-				r.prog.TextColor3 = if done then Theme.Green else Theme.Text
+				r.prog.TextColor3 = if done then Theme.GreenInk else Theme.Ink
 				r.row.BackgroundColor3 = if e.C then Theme.CardLight else Theme.Card
 			end
 		end

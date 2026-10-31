@@ -62,14 +62,14 @@ function Panel.Build(parent: Instance, C)
 	local refreshFace = WheelFace.Build(disc, C, 22)
 	local pointer = New("Frame", {
 		Name = "Pointer",
-		BackgroundColor3 = Color3.new(1, 1, 1),
+		BackgroundColor3 = Theme.Buttons.Red[1],
 		Size = UDim2.fromOffset(44, 44),
 		Position = UDim2.new(0.5, 0, 0, 6),
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		Rotation = 45,
 		ZIndex = 30,
 		Parent = holder,
-	}, { Kit.Corner(UDim.new(0, 8)), Kit.Stroke(4), Kit.Gradient(Theme.Buttons.Red[1], Theme.Buttons.Red[2], 45) })
+	}, { Kit.Corner(UDim.new(0, 8)), Kit.Stroke(4) })
 	New("Frame", {
 		BackgroundColor3 = Theme.Gold,
 		Size = UDim2.fromOffset(26, 26),
