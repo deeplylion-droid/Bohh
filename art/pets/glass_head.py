@@ -392,8 +392,9 @@ for phi in np.linspace(0, 2 * math.pi, 49)[:-1]:
             ring.append(pw)
             break
 ring = np.array(ring)
-collar = [tube([tuple(r) for r in list(ring) + [ring[0]]], 0.05)]
-rivets = [sphere(0.035, tuple(ring[i] + norm(ring[i] - D_C) * 0.045)) for i in range(0, len(ring), 4)]
+ring = np.array([r_ + norm(r_ - D_C) * 0.022 for r_ in ring])          # appena fuori dal vetro: il collare si vede
+collar = [tube([tuple(r) for r in list(ring) + [ring[0]]], 0.064)]
+rivets = [sphere(0.042, tuple(ring[i] + norm(ring[i] - D_C) * 0.055)) for i in range(0, len(ring), 4)]
 log(f"collare: {len(ring)} punti")
 
 # ============================================================ faccia: narici-occhietti e boccuccia imbronciata
@@ -529,7 +530,7 @@ log("code pronte")
 m.add("Body", union(body, *brows, k=0.03), BODY, tris=4100, voxel=0.0292 * VX, reflectance=0.12)
 m.add("Belly", belly, BELLY, role="detail", tris=1000, voxel=0.0478 * VX)
 m.add("Dome", dome, DOME, material="Glass", role="detail", transparency=0.55, tris=1300, voxel=0.0388 * VX)
-m.add("Collar", fast_union(collar + rivets), METAL, material="Metal", role="detail", tris=800, voxel=0.0264 * VX)
+m.add("Collar", fast_union(collar + rivets), METAL, material="Metal", role="detail", tris=800, voxel=0.0275 * VX)
 m.add("EyeTubes", union(*tubes, k=0.02), TUBE, material="Neon", role="glow", tris=500, voxel=0.0354 * VX)
 m.add("Bubbles", union(*lenses), LENS, material="Neon", role="glow", tris=400, voxel=0.0292 * VX)
 m.add("Pupils", union(*pupils, mouth), DARK, role="eye", tris=400, voxel=0.0164 * VX)

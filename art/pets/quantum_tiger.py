@@ -245,7 +245,7 @@ NAVY = (22, 20, 48)         # dorso delle orecchie, contorno degli occhi
 PATCH = (200, 192, 240)     # toppa lavanda cucita sulla spalla
 CYAN = (20, 230, 255)       # circuiti ciano
 MAGENTA = (255, 40, 205)    # circuiti magenta
-RING = (214, 176, 255)      # anelli olografici quantici (lavanda)
+RING = (196, 140, 255)      # anelli olografici quantici (lavanda)
 THIRD = (255, 140, 240)     # terzo occhio
 IRIS = (110, 220, 255)      # occhi azzurro ghiaccio
 INK = (16, 14, 36)          # pupille, naso, labbra
@@ -257,7 +257,7 @@ m = Model("QuantumTiger", "pet")
 rng = np.random.default_rng(47)
 
 # ============================================================ testa (spazio locale: muso verso -Y)
-HEAD_POS = np.array([0.0, -1.2, 2.72])
+HEAD_POS = np.array([0.0, -1.2, 2.66])
 HS = 1.36
 R_HEAD = euler(-4.0, 0.0, 10.0)       # mento alto e fiero, girata verso la camera 3/4
 
@@ -369,7 +369,7 @@ haunch = ellipsoid((0.47, 0.42, 0.45), (0, 0.64, 1.64))
 scap = [ell((sx * 0.31, -0.45, 1.98), (0.2, 0.26, 0.3), axis=(0, -0.3, 1.0)) for sx in (1, -1)]
 torso = union(union(chest, ribs, k=0.3), haunch, k=0.28)
 torso = union(torso, *scap, k=0.15)
-NECK = [(0, -0.55, 1.88), (0, -0.9, 2.3), (0, -1.08, 2.56)]
+NECK = [(0, -0.55, 1.88), (0, -0.9, 2.26), (0, -1.08, 2.5)]
 neck = tube(NECK, [0.44, 0.4, 0.36], k=0.08)
 PZ = DISC_TOP + 0.085
 FRONT = {1: dict(sh=np.array([0.36, -0.5, 1.62]), el=np.array([0.41, -0.6, 1.1]), wr=np.array([0.4, -0.77, 0.72]),
@@ -382,15 +382,15 @@ leg_parts = []
 for sx, L in FRONT.items():
     sh, el, wr, paw = L["sh"], L["el"], L["wr"], L["paw"]
     leg_parts += [
-        ell(mix(sh, el, 0.4) + np.array([sx * 0.04, 0.0, 0.0]), (0.29, 0.31, 0.38), axis=el - sh),
-        round_cone(sh, el, 0.27, 0.19),
-        round_cone(el, wr, 0.19, 0.145),
-        ell(mix(el, wr, 0.3), (0.19, 0.2, 0.26), axis=wr - el),
-        round_cone(wr, paw, 0.145, 0.15),
-        ellipsoid((0.23, 0.28, 0.11), tuple(paw + np.array([0, -0.05, 0.0]))),
+        ell(mix(sh, el, 0.4) + np.array([sx * 0.04, 0.0, 0.0]), (0.31, 0.33, 0.4), axis=el - sh),
+        round_cone(sh, el, 0.28, 0.21),
+        round_cone(el, wr, 0.21, 0.16),
+        ell(mix(el, wr, 0.3), (0.21, 0.22, 0.27), axis=wr - el),
+        round_cone(wr, paw, 0.16, 0.165),
+        ellipsoid((0.25, 0.3, 0.115), tuple(paw + np.array([0, -0.05, 0.0]))),
     ]
-    for dx in (-0.135, -0.045, 0.045, 0.135):
-        leg_parts.append(sphere(0.08, tuple(paw + np.array([dx, -0.25 + 0.6 * dx * dx, -0.02]))))
+    for dx in (-0.145, -0.048, 0.048, 0.145):
+        leg_parts.append(sphere(0.086, tuple(paw + np.array([dx, -0.265 + 0.6 * dx * dx, -0.02]))))
 for sx, L in HIND.items():
     hip, knee, hock, paw = L["hip"], L["knee"], L["hock"], L["paw"]
     leg_parts += [
@@ -451,10 +451,10 @@ for k_ in range(3):
 disc_magenta = []
 
 # ============================================================ anelli quantici attorno alla testa
-RING_C = hp((0.0, 0.04, 0.3))
+RING_C = hp((0.0, 0.04, 0.25))
 RING_R = 0.88
 rings, electrons_c, electrons_m = [], [], []
-for i, (phi, tilt, rr) in enumerate(((0.0, 27.0, RING_R), (-38.0, 31.0, RING_R - 0.05), (38.0, 31.0, RING_R - 0.1))):
+for i, (phi, tilt, rr) in enumerate(((0.0, 25.0, RING_R), (-38.0, 29.0, RING_R - 0.05), (38.0, 29.0, RING_R - 0.1))):
     f, t = math.radians(phi), math.radians(tilt)
     nrm = norm(hv((-math.sin(f) * math.sin(t), math.cos(f) * math.sin(t), math.cos(t))))
     Rm = orient(nrm)
@@ -528,8 +528,8 @@ for col, tr in ((0, ((0.0, -0.2, 0.45), (0.0, 0.0, 0.49), (0.0, 0.25, 0.44))),
 
 # ============================================================ parti: pelle
 HEAD_ZONE = H(ellipsoid((0.66, 0.62, 0.66), (0.0, -0.05, 0.08)))
-m.add("Body", core0.subtract(HEAD_ZONE.offset(-0.03)), FUR, tris=2100, voxel=0.0504)
-m.add("Head", core0.intersect(HEAD_ZONE.offset(0.03)), FUR, tris=2300, voxel=0.0330)
+m.add("Body", core0.subtract(HEAD_ZONE.offset(-0.03)), FUR, tris=2100, voxel=0.0507)
+m.add("Head", core0.intersect(HEAD_ZONE.offset(0.03)), FUR, tris=2300, voxel=0.0331)
 m.add("Tail", tail, FUR, tris=350, voxel=0.0363, group="Tail", pivot=TAIL_PIVOT)
 
 # ============================================================ pelo bianco (pezzi pieni): gorgiera, muso, sopra gli occhi, petto, pancia
@@ -554,7 +554,7 @@ for bx, bz, L in ((0.0, 1.46, 0.34), (0.15, 1.52, 0.28), (-0.15, 1.52, 0.28)):
     chest_tufts.append(horn(b - nb * 0.06, norm(nb * 0.5 + np.array((bx * 0.6, 0.0, -1.0))), L, 0.1,
                             curl=(0, 0.1, 0), n=4, r1=0.018))
 chest_fluff = fast_union(chest_tufts, k=0.03).subtract(body_only.offset(-0.08))
-m.add("WhiteFur", union(H(white_head), chest_fluff), WHITE, role="detail", tris=950, voxel=0.0438)
+m.add("WhiteFur", union(H(white_head), chest_fluff), WHITE, role="detail", tris=950, voxel=0.0440)
 
 # ============================================================ blu notte: dorso delle orecchie, contorno degli occhi
 rims = []
@@ -581,9 +581,9 @@ m.add("Stitches", fast_union(stitches), THREAD, role="detail", tris=350, voxel=0
 
 # ============================================================ circuiti luminosi (ciano = "Mane": scintille elettriche)
 m.add("Mane", fast_union(stripes[0] + [H(union(*head_traces[0]))] + electrons_c), CYAN, material="Neon",
-      role="glow", tris=1700, voxel=0.0257)
+      role="glow", tris=1700, voxel=0.0255)
 m.add("CircuitsMagenta", fast_union(stripes[1] + [H(union(*head_traces[1]))] + electrons_m), MAGENTA,
-      material="Neon", role="glow", tris=1150, voxel=0.0274)
+      material="Neon", role="glow", tris=1150, voxel=0.0275)
 m.add("DiscGlow", fast_union(disc_cyan), CYAN, material="Neon", role="glow", tris=1250, voxel=0.0284)
 m.add("TailGlow", tail_glow_s, MAGENTA, material="Neon", role="glow", tris=350, voxel=0.0276, group="Tail",
       pivot=TAIL_PIVOT)

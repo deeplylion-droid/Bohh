@@ -334,9 +334,10 @@ def flame_outline(L, w, bend=0.12, waves=1.5, phase=0.0, n=18):
 # ============================================================ colori
 FUR = (36, 30, 50)          # pelo nero con riflessi viola
 ACCENT = (74, 60, 104)      # muso, mento e interno delle orecchie grigio-viola scuro
-ROSETTE = (64, 44, 98)      # rosette "fantasma" viola scuro
+ROSETTE = (84, 58, 128)     # rosette "fantasma" viola scuro
 GLASS = (226, 214, 255)     # cupola di vetro
-BRAIN = (255, 92, 200)      # cervello rosa luminoso
+BRAIN = (255, 92, 200)      # circonvoluzioni rosa luminose
+BRAIN_CORE = (112, 18, 86)  # fondo dei solchi del cervello (magenta scuro, fa leggere le pieghe)
 EYE_GLOW = (196, 110, 255)  # occhi viola accesi
 PUPIL = (18, 6, 30)
 THREAD = (255, 130, 206)    # filo dei punti attorno alla cupola (e naso)
@@ -493,13 +494,13 @@ core0 = shrink(core.intersect(halfspace_z(0.0, above=True)))
 body_only = shrink(union(union(torso, neck, k=0.16), legs, k=0.08).intersect(halfspace_z(0.0, above=True)))
 
 # ============================================================ cervello rosa (lobi con circonvoluzioni) dentro la cupola
-BR_C = np.array((0.0, 0.04, CUT_Z + 0.06))
-HEMI_R = np.array((0.155, 0.275, 0.21))
-gyri = []
+BR_C = np.array((0.0, 0.04, CUT_Z + 0.07))
+HEMI_R = np.array((0.165, 0.29, 0.23))
+gyri, cores = [], []
 for sx in (1, -1):
-    hc = BR_C + np.array((sx * 0.13, 0.0, 0.0))
-    gyri.append(ellipsoid(tuple(HEMI_R - 0.062), tuple(hc)))
-    for j, lv in enumerate((-0.62, -0.33, -0.04, 0.25, 0.53, 0.8)):
+    hc = BR_C + np.array((sx * 0.135, 0.0, 0.0))
+    cores.append(ellipsoid(tuple(HEMI_R * 0.9 - 0.022), tuple(hc)))
+    for j, lv in enumerate((-0.58, -0.25, 0.08, 0.41, 0.72)):
         pts = []
         for yn in np.linspace(-0.93, 0.93, 17):
             zn = lv + 0.1 * math.sin(6.5 * yn + 1.9 * j + (0.8 if sx > 0 else 0.0))
@@ -509,8 +510,10 @@ for sx in (1, -1):
             xn = math.sqrt(xn2)
             pts.append(tuple(hc + HEMI_R * np.array((sx * xn, yn, zn)) * 0.9))
         if len(pts) > 2:
-            gyri.append(tube(pts, 0.034))
-brain = shrink(fast_union(gyri, k=0.008).intersect(halfspace_z(CUT_Z - 0.02, above=True)))
+            gyri.append(tube(pts, 0.031))
+ABOVE_CUT = halfspace_z(CUT_Z - 0.02, above=True)
+brain = shrink(fast_union(gyri, k=0.004).intersect(ABOVE_CUT))
+brain_core = union(*cores, k=0.02).intersect(ABOVE_CUT)
 
 # ============================================================ punti cuciti attorno alla cupola (+ naso rosa)
 stitch_base = union(head_final, DOME)
@@ -567,6 +570,8 @@ while len(ros_c) < 16 and tries < 1500:
     tries += 1
     sx = rng.choice((1, -1))
     y, z = rng.uniform(-0.1, 0.7), rng.uniform(0.35, 1.45)
+    if float(body_only(np.array([[0.0, y, z]], dtype=np.float32))[0]) > -0.03:
+        continue
     p, nr = surf(body_only, (0.0, y, z), (sx * 1.0, y + rng.uniform(-0.3, 0.6), z + rng.uniform(-0.2, 0.3)))
     if p[1] < -0.32 or any(np.linalg.norm(p - q) < 0.26 for q in ros_c):
         continue
@@ -575,25 +580,26 @@ while len(ros_c) < 16 and tries < 1500:
     t2 = np.cross(nr, t1)
     for k_ in range(5):
         a = 2 * math.pi * k_ / 5 + rng.uniform(-0.3, 0.3)
-        q = p + (t1 * math.cos(a) + t2 * math.sin(a)) * 0.075
+        q = p + (t1 * math.cos(a) + t2 * math.sin(a)) * 0.085
         q = on_surface(body_only, q, 0.0, 2)
-        r = rng.uniform(0.026, 0.034)
-        ros_blobs.append(ell(q - grad(body_only, q) * 0.012, (r * 1.3, r, 0.022), axis=grad(body_only, q),
+        r = rng.uniform(0.032, 0.04)
+        ros_blobs.append(ell(q + grad(body_only, q) * 0.004, (r * 1.3, r, 0.026), axis=grad(body_only, q),
                              side=t1 * math.cos(a + 1.57) + t2 * math.sin(a + 1.57)))
 rosettes = fast_union(ros_blobs).subtract(body_only.offset(-0.03))
 
 # ============================================================ parti
 HEAD_ZONE = H(ellipsoid((0.64, 0.62, 0.6), (0.0, -0.05, 0.04)))
-m.add("Body", core0.subtract(HEAD_ZONE.offset(-0.03)), FUR, tris=2350, voxel=0.0377)
-m.add("Head", core0.intersect(HEAD_ZONE.offset(0.03)), FUR, tris=2500, voxel=0.0297)
+m.add("Body", core0.subtract(HEAD_ZONE.offset(-0.03)), FUR, tris=2350, voxel=0.0388)
+m.add("Head", core0.intersect(HEAD_ZONE.offset(0.03)), FUR, tris=2500, voxel=0.0302)
 pad_solid = union(*[ellipsoid((0.098, 0.093, 0.083), (sx * 0.067, -0.383, -0.145)) for sx in (1, -1)],
                   ellipsoid((0.083, 0.083, 0.068), (0, -0.313, -0.257)), k=0.03)
 pad_solid = pad_solid.subtract(nostrils.offset(0.01)).subtract(union(*lip_tubes).offset(0.004), k=0.008)
-m.add("Rosettes", rosettes, ROSETTE, role="detail", tris=500, voxel=0.016)
-m.add("Accent", H(union(pad_solid.subtract(head0.offset(-0.09)), ear_fluff)), ACCENT, role="detail", tris=450,
-      voxel=0.0259)
-m.add("Dome", H(DOME), GLASS, material="Glass", role="detail", tris=900, voxel=0.0339, transparency=0.55)
-m.add("Brain", H(brain), BRAIN, material="Neon", role="glow", tris=1900, voxel=0.0217)
+m.add("Rosettes", rosettes, ROSETTE, role="detail", tris=450, voxel=0.0304)
+m.add("Accent", H(union(pad_solid.subtract(head0.offset(-0.09)), ear_fluff)), ACCENT, role="detail", tris=400,
+      voxel=0.0285)
+m.add("Dome", H(DOME), GLASS, material="Glass", role="detail", tris=900, voxel=0.0340, transparency=0.55)
+m.add("Brain", H(brain), BRAIN, material="Neon", role="glow", tris=1900, voxel=0.0231)
+m.add("BrainCore", H(brain_core), BRAIN_CORE, role="detail", tris=300, voxel=0.03)
 m.add("Stitches", union(H(fast_union(stitches)), H(nose)), THREAD, role="detail", tris=750, voxel=0.0249)
 
 whiskers = []
@@ -601,25 +607,25 @@ for sx in (1, -1):
     for j, (dz, L) in enumerate(((0.03, 0.42), (-0.01, 0.46), (-0.05, 0.4))):
         b = np.array((sx * 0.1, -0.43, -0.13 + dz))
         d = norm((sx * 1.0, 0.22, 0.12 - 0.22 * j))
-        whiskers.append(horn(b, d, L, 0.017, curl=(0.0, 0.18, -0.12), n=6, r1=0.01))
+        whiskers.append(horn(b, d, L, 0.017, curl=(0.0, 0.18, -0.12), n=6, r1=0.013))
 eyes, pupils, shines = [], [], []
 for sx in (1, -1):
     eyes.append(H(eye_place(ellipsoid((EA, EB, EC)).rot(0, sx * 12, 0), sx, (0, 0.03, 0))))
     look = -0.01
     pupils.append(H(eye_place(ellipsoid((0.017, 0.02, 0.056)), sx, (look, -0.016, -0.006))))
     shines.append(H(eye_place(sphere(0.018), sx, (look - 0.03, -0.024, -0.004))))
-m.add("EyeGlow", union(*eyes, H(union(*whiskers))), EYE_GLOW, material="Neon", role="glow", tris=850, voxel=0.017)
+m.add("EyeGlow", union(*eyes, H(union(*whiskers))), EYE_GLOW, material="Neon", role="glow", tris=1000, voxel=0.0179)
 m.add("Pupils", union(*pupils), PUPIL, role="eye", tris=400, voxel=0.0066)
 fangs = []
 for sx in (1, -1):
     b, _ = surf(head0, (sx * 0.035, -0.2, -0.19), (sx * 0.075, -0.8, -0.2))
     fangs.append(round_cone(tuple(b + np.array((0, 0.02, 0.005))), tuple(b + np.array((sx * -0.004, -0.012, -0.072))),
                             0.021, 0.005))
-m.add("Shine", union(H(union(*fangs)), *shines), TOOTH, role="shine", tris=500, voxel=0.007)
-m.add("Nebula", aura, AURA, material="Neon", role="glow", tris=2300, voxel=0.03)
-m.add("Sigil", fast_union(sigil), AURA, material="Neon", role="glow", tris=800, voxel=0.0235)
+m.add("Shine", union(H(union(*fangs)), *shines), TOOTH, role="shine", tris=500, voxel=0.0070)
+m.add("Nebula", aura, AURA, material="Neon", role="glow", tris=2200, voxel=0.0307)
+m.add("Sigil", fast_union(sigil), AURA, material="Neon", role="glow", tris=750, voxel=0.0246)
 m.add("Aura", fast_union(orb_core), ORB, material="Neon", role="glow", tris=1100, voxel=0.0231)
-m.add("OrbGlass", fast_union(orb_glass), ORB_GLASS, material="Glass", role="detail", tris=450, voxel=0.0307,
+m.add("OrbGlass", fast_union(orb_glass), ORB_GLASS, material="Glass", role="detail", tris=400, voxel=0.0354,
       transparency=0.45)
 
 

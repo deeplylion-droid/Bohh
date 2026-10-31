@@ -1,20 +1,24 @@
 """Leone Nebulosa (NebulaLion) - pet ULTRA del negozio Robux: il gigante piu' spettacolare del gioco.
 
-Re leone celeste colossale, ritto e fiero su un frammento di asteroide sospeso nel vuoto (roccia spigolosa
-che finisce a punta, schegge di cristallo luminose, sassi che gli orbitano attorno). La testa e' alta e
-ruggisce verso chi guarda; la zampa anteriore destra e' avanzata su uno sperone di roccia.
+Re leone celeste colossale, ritto e fiero su un frammento di asteroide sospeso nel vuoto: roccia spigolosa
+a facce piatte che sotto finisce a punta (con altre punte minori), schegge di cristallo luminose e una
+fascia di sassi che le orbita attorno. La testa e' alta e ruggisce verso chi guarda; la zampa anteriore
+destra (x > 0) e' avanzata su uno sperone di roccia.
 
-- Corpo blu notte con muscoli marcati e puntini di stelle; su spalle e fianchi la costellazione del Leone
-  in linee d'oro luminose (parte Neon "StarLines").
-- CRINIERA a galassia a spirale, molto piu' grande della testa: ciuffi a fiamma su piu' strati che girano
-  attorno al muso, dal nucleo luminoso (Neon "GalaxyCore") al magenta, al viola, fino ai bracci a spirale
-  ciano (Neon "Nebula": il gioco ci attacca la nebbiolina luminosa rosa/viola/ciano).
-- Occhi d'oro luminosi come stelle (con scintilla a quattro punte), zanne, sopracciglia possenti.
-- Corona: un sottile anello d'oro inclinato sospeso sopra la testa, con tre pianetini in orbita.
-- Coda con il ciuffo a cometa (Neon "Stars": il gioco ci attacca le scintille bianco-oro); la coda e'
-  il gruppo "Tail" e ondeggia attorno all'attaccatura.
-- Tocco "toy horror": sul petto una cucitura a punti incrociati mezza scucita da cui esce l'imbottitura
-  di polvere di stelle luminosa.
+- Corpo blu notte massiccio, con muscoli marcati e puntini di stelle; su spalle e fianchi la costellazione
+  del Leone in linee d'oro luminose (parte Neon "StarLines").
+- CRINIERA a galassia a spirale, molto piu' grande della testa: ciocche a fiamma su piu' strati che girano
+  in senso antiorario attorno al muso, dal nucleo luminoso (Neon "GalaxyCore") al magenta e al viola, fino a
+  tre grandi bracci a spirale ciano con stelline sospese (Neon "Nebula": il gioco ci attacca la nebbiolina
+  luminosa rosa/viola/ciano). Dietro al disco, anelli di ciocche sul collo e una cupola sulla nuca danno
+  volume nelle viste di 3/4 e di lato.
+- Occhi d'oro luminosi come stelle (pupilla a fessura e scintilla a quattro punte), zanne, sopracciglia
+  possenti, muso piu' chiaro.
+- Corona: un anello d'oro inclinato sospeso sopra la testa, con tre pianetini in orbita (uno con l'anello).
+- Coda con il ciuffo a cometa d'oro chiaro, testa tonda e scia lunga (Neon "Stars": il gioco ci attacca le
+  scintille bianco-oro); coda e cometa sono il gruppo "Tail" e ondeggiano attorno all'attaccatura.
+- Tocco "toy horror": sul petto una cucitura d'oro a punti incrociati mezza scucita, da cui esce
+  l'imbottitura di polvere di stelle luminosa.
 """
 import itertools
 import math
@@ -352,7 +356,7 @@ NAVY_LT = (62, 74, 180)       # pannello del petto, muso e mento (stoffa piu' ch
 SPECK = (214, 224, 255)       # puntini di stelle sul manto e nella galassia
 GOLD = (255, 194, 58)         # anello della corona, artigli, filo della cucitura
 STARLINE = (255, 212, 92)     # costellazioni d'oro luminose
-CORE = (255, 196, 244)        # nucleo luminoso della galassia + imbottitura di polvere di stelle
+CORE = (255, 184, 240)        # nucleo luminoso della galassia + imbottitura di polvere di stelle
 MAGENTA = (236, 38, 168)
 VIOLET = (112, 52, 226)
 CYAN = (60, 226, 255)
@@ -835,7 +839,7 @@ m.add("Specks", fast_union(specks), SPECK, role="detail", tris=1200, voxel=0.011
 def asteroid():
     r = np.random.default_rng(31)
     cx, cy, ax, ay, zr = 0.0, 0.1, 1.18, 1.56, 0.84
-    apex = np.array([0.06, 0.2, 0.0])
+    apex = np.array([0.06, 0.2, -0.03])    # un filo sotto terra: il taglio a z = 0 lascia una punta piatta
     N, D = [], []
 
     def plane(n, pt):

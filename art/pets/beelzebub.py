@@ -30,7 +30,7 @@ from scipy.spatial import cKDTree
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from lib.mesher import mesh_sdf  # noqa: E402
-from lib.sdf import (SDF, bezier, box, capsule, cylinder, ellipsoid, euler, halfspace_z, prism, project,  # noqa: E402
+from lib.sdf import (SDF, bezier, capsule, cylinder, ellipsoid, euler, halfspace_z, prism, project,  # noqa: E402
                      round_cone, smax, smin, sphere, torus, tube, union)
 from lib.toy import Model  # noqa: E402
 
@@ -867,6 +867,8 @@ for (c, rx, ry, (tx, ty), angs) in ORBITS:
         if pos[1] < -0.3 and 2.0 < pos[2] < 3.15 and abs(pos[0]) < 0.8:   # niente mosche davanti alla faccia
             continue
         if pos[1] < -0.2 and 0.5 < pos[2] < 2.0 and abs(pos[0]) < 0.62:   # ne' davanti alla pancia
+            continue
+        if np.linalg.norm(pos - HEAD_T) < 0.95:                            # ne' sopra gli occhi
             continue
         flies.append(fly(pos, Mo @ tan + np.array([0, 0, frng.uniform(-0.25, 0.25)]), frng.uniform(1.65, 2.05),
                          frng.uniform(-35, 35)))
