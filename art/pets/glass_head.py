@@ -19,7 +19,16 @@ from scipy.spatial import cKDTree
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from lib.sdf import (SDF, bezier, capsule, ellipsoid, euler, prism, round_cone, smin, sphere, torus,  # noqa: E402
                      tube, union)
+from lib.sdf import tube as _tube  # noqa: E402
 from lib.toy import Model  # noqa: E402
+
+
+def tube(points, radii, k=0.0):
+    """Come lib.sdf.tube, ma toglie i punti consecutivi coincidenti (un tratto lungo zero rovina il campo)."""
+    pts = [np.asarray(q, dtype=np.float64) for q in points]
+    rr = [float(radii)] * len(pts) if isinstance(radii, (int, float)) else [float(r) for r in radii]
+    keep = [0] + [i for i in range(1, len(pts)) if np.linalg.norm(pts[i] - pts[i - 1]) > 1e-6]
+    return _tube([tuple(pts[i]) for i in keep], [rr[i] for i in keep], k=k)
 
 DRAFT = os.environ.get("DRAFT", "") == "1"
 VX = 1.35 if DRAFT else 1.0
@@ -277,7 +286,7 @@ def ground(model):
 # ============================================================ palette
 BODY = (20, 32, 44)          # corpo scuro blu-petrolio
 BELLY = (58, 84, 98)         # ventre ardesia chiaro
-FIN = (28, 64, 78)           # membrane verde petrolio scuro
+FIN = (44, 128, 132)         # membrane traslucide verde acqua (pinne "fantasma")
 GLOW = (90, 255, 140)        # bordi delle pinne, linea laterale (Neon)
 TUBE = (50, 214, 104)        # occhi a tubo (Neon)
 LENS = (196, 255, 110)       # lenti degli occhi (Neon "Bubbles")
@@ -289,8 +298,8 @@ WHITE = (255, 255, 255)
 m = Model("GlassHead", "pet")
 
 # ============================================================ corpo affusolato che risale in diagonale, piegato a S
-SPINE_CTRL = [(0.0, -1.22, 3.0), (0.0, -0.82, 2.78), (0.04, -0.36, 2.48), (0.2, 0.06, 2.15), (0.42, 0.42, 1.85),
-              (0.52, 0.78, 1.57), (0.42, 1.06, 1.37)]
+SPINE_CTRL = [(0.12, -1.24, 2.9), (0.07, -0.85, 2.7), (0.06, -0.38, 2.43), (0.2, 0.05, 2.13), (0.42, 0.42, 1.86),
+              (0.52, 0.8, 1.6), (0.42, 1.1, 1.42)]
 sp = Spine(SPINE_CTRL)
 L = sp.len
 log(f"spina lunga {L:.2f}")
@@ -481,41 +490,38 @@ tail_glow = [tube([tuple(sp.world(a, 0.0, b)) for a, b in tail_poly[2:5]], 0.026
 ribbons = []
 
 
-def ribbon(pts, w0, w1, thick=0.026, twist=0.0):
-    """Nastro sottile lungo una curva (largo w0 all'inizio, w1 in fondo) con i bordi luminosi; ritorna (forma, bordi)."""
-    rs = Spine(pts, step=0.01, n_per=14, up=(0.0, 0.0, 1.0), up2=(1.0, 0.0, 0.0), twist=twist)
-    rl = rs.len
-
-    def hw_of(t):
-        return w1 + (w0 - w1) * (1.0 - t) ** 1.6
-
-    def f(p):
-        i, s, u, w = rs.coords(p)
-        t = np.clip(s / rl, 0, 1)
-        a = np.maximum(np.abs(w) - hw_of(t), np.maximum(-s, s - rl))
-        b = np.abs(u) - thick
-        return (np.minimum(np.maximum(a, b), 0.0) + np.sqrt(np.maximum(a, 0) ** 2 + np.maximum(b, 0) ** 2)).astype(np.float32)
-
-    shape = SDF(f, rs.P.min(0) - w0 - 0.05, rs.P.max(0) + w0 + 0.05)
-    idx = list(range(int(len(rs.P) * 0.08), len(rs.P), 7)) + [len(rs.P) - 1]
-    edges = []
-    for sg in (1, -1):
-        e = [tuple(rs.P[i] + rs.D[i] * sg * (hw_of(rs.S[i] / rl) - 0.014)) for i in idx]
-        edges.append(tube(e, 0.024))
-    edges.append(sphere(0.05, tuple(rs.P[-1])))
-    return shape, edges
+# coda a velo: una grande membrana increspata nel piano del pesce che scende all'indietro e finisce in tre nastri
+TC, TT, TD, TLa = sp.frame(L)
+V0 = sp.world(L + 0.08, 0.0, 0.0)
+veil_sp = Spine([tuple(V0), tuple(V0 + TT * 0.42 - np.array([0, 0, 0.06])), tuple(V0 + np.array([-0.14, 0.8, -0.4])),
+                 tuple(V0 + np.array([-0.3, 1.12, -0.7])), tuple(V0 + np.array([-0.38, 1.3, -0.98]))], step=0.01, n_per=14)
+VL = veil_sp.len
+VEIL = [(-0.1, -0.14), (0.25, -0.28), (0.55, -0.38), (0.85, -0.44), (1.1, -0.46), (1.38, -0.5), (1.7, -0.6),
+        (1.98, -0.66), (1.6, -0.44), (1.3, -0.26), (1.62, -0.14), (2.0, -0.06), (1.62, 0.04), (1.3, 0.16), (1.6, 0.34),
+        (1.9, 0.52), (1.5, 0.48), (1.16, 0.44), (0.84, 0.4), (0.52, 0.34), (0.24, 0.26), (-0.1, 0.14)]
 
 
-# lobo alto: sale all'indietro e poi ricade ondeggiando; lobo basso: scende ondeggiando fin quasi a terra
-LOBES = [(0.18, [(0.0, 0.0, 0.0), (-0.06, 0.38, -0.1), (-0.3, 0.76, -0.2), (-0.5, 1.08, -0.5), (-0.44, 1.36, -0.86),
-                 (-0.62, 1.6, -1.1)], 0.5),
-         (-0.18, [(0.0, 0.0, 0.0), (-0.04, 0.3, -0.3), (-0.24, 0.54, -0.62), (-0.46, 0.7, -0.96), (-0.42, 0.94, -1.28),
-                  (-0.6, 1.16, -1.46)], -0.55)]
-for dw, ctrl, tw in LOBES:
-    start = sp.world(L + 0.1, 0.0, dw)
-    shp, edges = ribbon([tuple(start + np.array(c_)) for c_ in ctrl], 0.26, 0.09, twist=tw)
-    ribbons.append(shp)
-    tail_glow += edges
+def ripple(s_, w_):
+    return 0.05 * np.sin(s_ * 3.0 + w_ * 3.5) * np.clip(s_ / 0.4, 0.0, 1.0)
+
+
+_vd2 = poly2d(VEIL)
+
+
+def veil_f(p):
+    i, s_, u, w = veil_sp.coords(p)
+    a = _vd2(s_, w)
+    b = np.abs(u - ripple(s_, w)) - 0.028 * (1.0 - 0.35 * np.clip(s_ / VL, 0, 1))
+    return (np.minimum(np.maximum(a, b), 0.0) + np.sqrt(np.maximum(a, 0) ** 2 + np.maximum(b, 0) ** 2)).astype(np.float32)
+
+
+_vp = np.array([veil_sp.world(a_, 0.0, b_) for a_, b_ in VEIL])
+ribbons.append(SDF(veil_f, _vp.min(0) - 0.2, _vp.max(0) + 0.2))
+edge = []
+for a_, b_ in VEIL[1:-1]:
+    c_, T_, D_, L_ = veil_sp.frame(a_)
+    edge.append(tuple(c_ + D_ * b_ * 0.97 + L_ * float(ripple(np.array([a_]), np.array([b_]))[0])))
+tail_glow.append(tube(edge, 0.026))
 log("code pronte")
 
 # ============================================================ parti
@@ -529,11 +535,11 @@ m.add("Pupils", union(*pupils, mouth), DARK, role="eye", tris=400, voxel=0.012 *
 m.add("Shine", union(*shines, *nares), WHITE, role="shine", tris=240, voxel=0.011 * VX)
 for nm in ("FinR", "FinL"):
     mem, piv = fins_mem[nm]
-    m.add(nm, mem, FIN, role="detail", tris=450, voxel=0.024 * VX, group=nm, pivot=piv)
+    m.add(nm, mem, FIN, role="detail", transparency=0.35, tris=450, voxel=0.024 * VX, group=nm, pivot=piv)
     m.add(nm + "Edge", fins_rim[nm], GLOW, material="Neon", role="glow", tris=300, voxel=0.016 * VX, group=nm, pivot=piv)
-m.add("Fins", fast_union(statics), FIN, role="detail", tris=700, voxel=0.024 * VX)
+m.add("Fins", fast_union(statics), FIN, role="detail", transparency=0.35, tris=700, voxel=0.024 * VX)
 m.add("FinGlow", fast_union(static_glow), GLOW, material="Neon", role="glow", tris=700, voxel=0.016 * VX)
-m.add("TailFin", fast_union([tail_fan] + ribbons), FIN, role="detail", tris=1300, voxel=0.022 * VX, group="Tail",
+m.add("TailFin", fast_union([tail_fan] + ribbons), FIN, role="detail", transparency=0.35, tris=1300, voxel=0.022 * VX, group="Tail",
       pivot=TAIL_PIVOT)
 m.add("TailGlow", fast_union(tail_glow), GLOW, material="Neon", role="glow", tris=500, voxel=0.016 * VX, group="Tail",
       pivot=TAIL_PIVOT)

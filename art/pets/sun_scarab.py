@@ -18,7 +18,7 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from lib.sdf import (SDF, bezier, box, capsule, cylinder, ellipsoid, euler, halfspace_z, prism, project,  # noqa: E402
+from lib.sdf import (SDF, bezier, capsule, cylinder, ellipsoid, euler, prism, project,  # noqa: E402
                      round_cone, smin, sphere, torus, tube, union)
 from lib.toy import Model  # noqa: E402
 
@@ -30,59 +30,6 @@ VX = 1.35 if DRAFT else 1.0   # bozza: voxel piu' grossi per iterare in fretta
 def norm(v):
     v = np.asarray(v, dtype=np.float64)
     return v / np.linalg.norm(v)
-
-
-def grad(sdf, p, eps=1e-3):
-    p = np.asarray(p, dtype=np.float64)
-    g = np.array([sdf((p + e)[None, :].astype(np.float32))[0] - sdf((p - e)[None, :].astype(np.float32))[0]
-                  for e in np.eye(3) * eps])
-    return g / max(np.linalg.norm(g), 1e-9)
-
-
-def grad_many(sdf, p, eps=1e-3):
-    p = np.asarray(p, dtype=np.float64).reshape(-1, 3)
-    g = np.zeros_like(p)
-    for ax in range(3):
-        e = np.zeros(3)
-        e[ax] = eps
-        g[:, ax] = sdf((p + e).astype(np.float32)) - sdf((p - e).astype(np.float32))
-    return g / np.maximum(np.linalg.norm(g, axis=1, keepdims=True), 1e-9)
-
-
-def project_many(sdf, origins, dirs, max_dist=2.0, steps=260, iters=24):
-    """Come project() della libreria, ma per tanti raggi insieme: ritorna (punti, normali)."""
-    o = np.asarray(origins, dtype=np.float64).reshape(-1, 3)
-    d = np.asarray(dirs, dtype=np.float64).reshape(-1, 3)
-    if len(d) == 1 and len(o) > 1:
-        d = np.repeat(d, len(o), axis=0)
-    if len(o) == 1 and len(d) > 1:
-        o = np.repeat(o, len(d), axis=0)
-    d = d / np.linalg.norm(d, axis=1, keepdims=True)
-    n = len(o)
-    ts = np.linspace(0.0, max_dist, steps)
-    pts = (o[:, None, :] + ts[None, :, None] * d[:, None, :]).reshape(-1, 3).astype(np.float32)
-    vals = sdf(pts).reshape(n, steps)
-    outside = vals > 0
-    if not outside.any(axis=1).all():
-        raise ValueError("project_many: un raggio non esce dalla forma")
-    first = np.argmax(outside, axis=1)
-    lo, hi = ts[np.maximum(first - 1, 0)], ts[first]
-    for _ in range(iters):
-        mid = 0.5 * (lo + hi)
-        out = sdf((o + mid[:, None] * d).astype(np.float32)) > 0
-        hi = np.where(out, mid, hi)
-        lo = np.where(out, lo, mid)
-    p = o + (0.5 * (lo + hi))[:, None] * d
-    return p, grad_many(sdf, p)
-
-
-def on_surface(sdf, p, lift=0.0, iters=4):
-    """Porta p sulla superficie (a distanza 'lift' verso l'esterno) seguendo il gradiente."""
-    p = np.asarray(p, dtype=np.float64)
-    for _ in range(iters):
-        d = float(sdf(p[None, :].astype(np.float32))[0])
-        p = p - grad(sdf, p) * (d - lift)
-    return p
 
 
 def fast_union(shapes, k=0.0, base=None, margin=0.06):
@@ -136,11 +83,6 @@ def flatten(shape, s, axis=1):
     return SDF(f, lo, hi)
 
 
-def thin(shape, out, inn):
-    """Guscio sottile di una forma (per disegni sopra altre parti)."""
-    return SDF(lambda p: (lambda d: np.maximum(d - out, -(d + inn)))(shape(p)), shape.lo - out, shape.hi + out)
-
-
 def frame(z_dir, y_hint):
     """Matrice di rotazione (colonne x, y, z) con z = z_dir e y il piu' vicino possibile a y_hint."""
     z = norm(z_dir)
@@ -152,18 +94,6 @@ def frame(z_dir, y_hint):
     return np.stack([np.cross(y, z), y, z], axis=1).astype(np.float32)
 
 
-def ell(c, radii, axis=(0, 0, 1), side=(1, 0, 0)):
-    """Ellissoide con il terzo raggio lungo 'axis' (il primo il piu' possibile verso 'side')."""
-    z = norm(axis)
-    x = np.asarray(side, dtype=np.float64)
-    x = x - z * float(np.dot(x, z))
-    if np.linalg.norm(x) < 1e-6:
-        x = np.array([0.0, 1.0, 0.0]) - z * z[1]
-    x = norm(x)
-    M = np.stack([x, np.cross(z, x), z], axis=1).astype(np.float32)
-    return ellipsoid(radii).rotate(M).translate(c)
-
-
 def taper(n, r0, r1, power=1.0):
     return [r0 + (r1 - r0) * (i / (n - 1)) ** power for i in range(n)]
 
@@ -171,33 +101,6 @@ def taper(n, r0, r1, power=1.0):
 def horn(p0, p1, p2, p3, r0, r1, n=12, power=0.9):
     """Corno/artiglio affusolato lungo una bezier."""
     return tube(bezier(p0, p1, p2, p3, n), taper(n + 1, r0, r1, power))
-
-
-def resample(points, step):
-    pts = np.asarray(points, dtype=np.float64)
-    seg = np.linalg.norm(np.diff(pts, axis=0), axis=1)
-    cum = np.concatenate([[0.0], np.cumsum(seg)])
-    n = max(int(round(cum[-1] / step)), 1)
-    out = []
-    for s in np.linspace(0.0, cum[-1], n + 1):
-        i = int(min(np.searchsorted(cum, s, side="right") - 1, len(seg) - 1))
-        t = (s - cum[i]) / max(seg[i], 1e-9)
-        out.append(pts[i] * (1 - t) + pts[i + 1] * t)
-    return out
-
-
-def slab(c, ax, h, reach=0.3):
-    """Fetta fra due piani perpendicolari ad 'ax' (spessore 2h), entro 'reach' dall'asse."""
-    c = np.asarray(c, np.float32)
-    ax = norm(ax).astype(np.float32)
-
-    def f(p):
-        q = p - c
-        t = q @ ax
-        rad = np.sqrt(np.maximum(np.einsum("ij,ij->i", q, q) - t * t, 0.0))
-        return np.maximum(np.abs(t) - h, rad - reach).astype(np.float32)
-
-    return SDF(f, c - reach - h, c + reach + h)
 
 
 # ============================================================ colori
@@ -289,7 +192,8 @@ for sx in (1, -1):
                                   0.014, 0.02))
 
     def inlay(p, sx=sx):
-        return np.maximum.reduce([np.abs(sx * p[:, 0] - 0.36) - 0.065, np.abs(p[:, 1] - 0.62) - 0.42]).astype(np.float32)
+        e = np.sqrt(((sx * p[:, 0] - 0.36) / 0.072) ** 2 + ((p[:, 1] - 0.6) / 0.44) ** 2)
+        return ((e - 1.0) * 0.07).astype(np.float32)                          # cella ovale di lapislazzuli
     ely_lapis.append(ely_paint(sx, inlay, 0.008, 0.02))
 # toppa carminio ricucita su un'elitra (lato +X del mondo, verso la camera 3/4)
 PSX = -1                 # elitra locale sinistra = lato +X del mondo, verso la camera 3/4
@@ -317,6 +221,11 @@ for i in range(4):
             patch_st.append(capsule(tuple(q1), tuple(q2), 0.011))
 patch_st = [elytron_local(PSX, union(*patch_st))]
 
+# ---- fasce d'oro sui segmenti dell'addome (si vedono nella V fra le elitre aperte)
+tergites = [paint(abdomen, SDF(lambda p, yk=yk: np.maximum(np.abs(p[:, 1] - yk) - 0.032, -p[:, 2]).astype(np.float32),
+                               (-0.7, yk - 0.1, -0.1), (0.7, yk + 0.1, 0.5)), out=0.018, inn=0.02)
+            for yk in (0.6, 0.84, 1.08)]
+
 # ---- pronoto: bordo d'oro, gemma di lapislazzuli incastonata
 pron_rim = paint(pronotum, SDF(lambda p: np.maximum(p[:, 2] + 0.01, -0.09 - p[:, 2]).astype(np.float32), (-1, -1, -0.1),
                                 (1, 1, 0.0)), out=0.016, inn=0.03)
@@ -337,7 +246,7 @@ for a in np.linspace(192, 348, 15):
     CLY.append((r * math.cos(math.radians(a)), -0.6 + r * math.sin(math.radians(a))))
 CLY += [(0.28, -0.5), (-0.28, -0.5)]
 clypeus = prism(CLY, -0.06, 0.0, round=0.016).rot(12, 0, 0, pivot=(0, -0.6, 0.0)).translate((0, 0, 0.03))
-eyes = [sphere(0.066, (sx * 0.24, -0.6, 0.0)) for sx in (1, -1)]
+eyes = [sphere(0.07, (sx * 0.235, -0.6, 0.035)) for sx in (1, -1)]
 antennae = []
 for sx in (1, -1):
     a0, a1 = np.array([sx * 0.2, -0.72, -0.09]), np.array([sx * 0.4, -0.84, -0.16])
@@ -355,18 +264,34 @@ for sx in (1, -1):   # mandibole a uncino agli angoli
     teeth.append(horn((sx * 0.16, -0.78, -0.1), (sx * 0.21, -0.86, -0.13), (sx * 0.16, -0.94, -0.15),
                       (sx * 0.08, -0.95, -0.16), 0.028, 0.007, n=8))
 
+# testa piu' grande (personaggio): tutto il gruppo della testa scalato attorno al suo centro
+HEAD_C = np.array([0.0, -0.6, -0.03])
+HEAD_S = 1.28
+
+
+def hscale(shape):
+    return shape.translate(tuple(-HEAD_C)).scale(HEAD_S).translate(tuple(HEAD_C))
+
+
+head = hscale(head)
+clypeus = hscale(clypeus)
+eyes = [hscale(e) for e in eyes]
+antennae = [hscale(x) for x in antennae]
+mouth = hscale(mouth)
+teeth = [hscale(t) for t in teeth]
+
 # ---- chiavetta della carica d'oro (impugnatura ad ankh) piantata sul ventre, cioe' sulla schiena del giocattolo
 KEY_B, KEY_N = project(abdomen, (0, 0.5, -0.05), (0, 0.15, -1.0))
-KEY_TOP = KEY_B + KEY_N * 0.3
-key = [cylinder(tuple(KEY_B - KEY_N * 0.06), tuple(KEY_TOP), 0.042),
-       cylinder(tuple(KEY_B + KEY_N * 0.01), tuple(KEY_B + KEY_N * 0.06), 0.095, round=0.015)]
+KEY_TOP = KEY_B + KEY_N * 0.36
+key = [cylinder(tuple(KEY_B - KEY_N * 0.06), tuple(KEY_TOP), 0.05),
+       cylinder(tuple(KEY_B + KEY_N * 0.01), tuple(KEY_B + KEY_N * 0.07), 0.11, round=0.018)]
 KM = frame(KEY_N, (1.0, 0.0, 0.0))    # z lungo la chiavetta, y di lato (l'ankh sta nel piano x-z locale)
-ankh_l = union(torus(0.1, 0.036).rot(90, 0, 0).translate((0, 0, 0.15)), capsule((-0.17, 0, 0.0), (0.17, 0, 0.0), 0.038),
-               capsule((0, 0, -0.18), (0, 0, 0.04), 0.04), k=0.02)
-key.append(flatten(ankh_l, 0.7, axis=1).rotate(np.stack([KM[:, 1], KM[:, 0], KM[:, 2]], axis=1)).translate(KEY_TOP + KEY_N * 0.04))
+ankh_l = union(torus(0.135, 0.05).rot(90, 0, 0).translate((0, 0, 0.2)), capsule((-0.23, 0, 0.0), (0.23, 0, 0.0), 0.052),
+               capsule((0, 0, -0.24), (0, 0, 0.06), 0.054), k=0.025)
+key.append(flatten(ankh_l, 0.7, axis=1).rotate(np.stack([KM[:, 1], KM[:, 0], KM[:, 2]], axis=1)).translate(KEY_TOP + KEY_N * 0.06))
 
 # ============================================================ disco solare sopra la testa: globo incandescente, anello d'oro, raggi
-CLY_TIP = wp((0, -1.02, 0.03))
+CLY_TIP = wp(HEAD_C + HEAD_S * (np.array([0, -1.02, 0.03]) - HEAD_C))
 SUN_R = 0.36
 RING_R = 0.44
 SUN_C = np.array([0.0, CLY_TIP[1] + 0.02, CLY_TIP[2] + 0.66])
@@ -448,7 +373,7 @@ WN = np.cross(WD, WE)
 WING_M = np.stack([WD, WE, WN], axis=1).astype(np.float32)   # x lungo l'ala, y largo, z normale
 WING_POLY = [(0.0, -0.06), (0.3, -0.15), (0.75, -0.21), (1.15, -0.2), (1.4, -0.1), (1.48, 0.02), (1.38, 0.15),
              (1.06, 0.25), (0.62, 0.25), (0.25, 0.15), (0.0, 0.06)]
-membrane_l = prism(WING_POLY, -0.014, 0.014, round=0.01)
+membrane_l = prism(WING_POLY, -0.026, 0.026, round=0.016)
 veins_l = [tube([(0.0, -0.04, 0), (0.5, -0.17, 0), (1.12, -0.19, 0), (1.42, -0.08, 0)], [0.055, 0.045, 0.034, 0.02])]
 for (ex, ey) in ((1.4, 0.08), (1.18, 0.2), (0.82, 0.24), (0.44, 0.19)):
     veins_l.append(tube([(0.04, 0.0, 0), (ex * 0.5, ey * 0.55 - 0.04, 0), (ex - 0.04, ey - 0.025, 0)], [0.034, 0.026, 0.018]))
@@ -462,7 +387,7 @@ def place_wing(shape, sx):
 
 
 # ============================================================ parti
-GS = float(os.environ.get("GS", 1.0))   # scala finale del modello
+GS = float(os.environ.get("GS", 0.94))   # scala finale del modello (altezza ~3.4)
 
 
 def add(name, sdf, color, voxel, **kw):
@@ -475,7 +400,7 @@ shell = fast_union([W(pronotum), W(head)] + [W(e) for e in elytra], k=0.0)
 add("Shell", shell, TURQ, 0.024, role="skin", reflectance=0.12, tris=3000)
 belly = W(union(union(abdomen, thorax, k=0.12), *sternites, k=0.04))
 add("Belly", belly, NAVY, 0.03, role="detail", tris=1000)
-gold = [W(x) for x in ely_gold + [pron_rim, bezel, clypeus] + antennae + pron_lines] + [sun_ring] + [W(k) for k in key]
+gold = [W(x) for x in ely_gold + tergites + [pron_rim, bezel, clypeus] + antennae + pron_lines] + [sun_ring] + [W(k) for k in key]
 add("Gold", fast_union(gold), GOLD, 0.016, material="Foil", role="detail", tris=3000)
 add("Legs", fast_union(leg_shapes), NAVY, 0.022, role="detail", tris=2000)
 add("Spikes", fast_union(leg_spikes), GOLD, 0.014, material="Foil", role="detail", tris=900)

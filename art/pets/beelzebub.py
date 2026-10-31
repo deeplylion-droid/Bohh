@@ -1,18 +1,21 @@
 """Belzebu' (Beelzebub) - ricompensa del Sentiero Estremo (demoni biblici).
 
 Il Signore delle Mosche: un re-mosca demoniaco ritto sulle zampe, tozzo e corazzato, con le spalle curve e la
-testa inclinata da sovrano annoiato. Due enormi occhi composti rosso rubino a faccette esagonali (parte "Eyes",
-facce piatte come un gioiello tagliato) occupano quasi tutta la testa; sotto, un ghigno largo da orecchio a
-orecchio pieno di denti aguzzi, fra due mandibole uncinate e due antenne piumate. In testa porta una corona
-d'oro storta, scivolata di lato, con le punte a sfera e tre gemme velenose che brillano. Corpo di chitina
-verde bottiglia metallizzato: torace massiccio con spallacci neri chiodati e corazza a placche bordate d'oro,
-addome a segmenti, zampe da insetto irte di setole con artigli neri. Con la mano artigliata sinistra stringe
-un piccolo scettro d'oro con una sfera luminosa in una gabbia d'artigli, la destra e' alzata con gli artigli
-aperti. Sulle spalle un mantello regale cremisi strappato, chiuso da una catenella d'oro, con l'alto colletto
-a ventaglio dietro la testa; dalla schiena escono due ali da mosca trasparenti, venate e sbrindellate (gruppi
-"WingR"/"WingL": il gioco le fa vibrare). Attorno gli ronza uno sciame di mosche su orbite inclinate (parte
-Neon "Shadow": il gioco ci attacca il fumo viola).
-Tocco "toy horror": la corona storta, il ghigno cucito di denti e una toppa viola ricucita a punti incrociati
+testa inclinata da sovrano annoiato. Due enormi occhi composti rosso rubino a faccette (parte "Eyes", facce piatte
+come un gioiello tagliato: celle di Voronoi sulla cupola) occupano quasi tutta la testa; sotto, sul muso
+sporgente, un ghigno pieno di denti aguzzi fra due mandibole uncinate, e due antenne piumate in mezzo agli occhi.
+In testa una corona d'oro storta, scivolata di lato, con le punte a sfera e tre gemme velenose (parte Neon
+"GemGlow"). Corpo di chitina blu notte metallizzata come una mosca carnaria: torace massiccio con spallacci neri
+chiodati e piastra a punta con nervatura d'oro, addome ad anelli segnati da bordini neri, zampe da insetto sottili
+e irte di setole con artigli neri, e un terzo paio di braccine ripiegate sotto il petto. Con la mano sinistra
+stringe un piccolo scettro d'oro con una sfera di veleno in una gabbia d'artigli (parte Neon "Venom": il gioco ci
+attacca le gocce verdi), la destra e' alzata con gli artigli aperti. Sulle spalle un mantello regale cremisi
+strappato e bucato, bordato d'oro e chiuso da una catenella, con l'alto colletto a ventaglio dietro la testa;
+dalla schiena escono due grandi ali da mosca trasparenti, venate e sbrindellate (gruppi "WingR"/"WingL": il gioco
+le fa vibrare). Attorno gli ronza uno sciame di mosche su tre orbite inclinate (parte Neon "Shadow": il gioco ci
+attacca il fumo viola).
+
+Tocco "toy horror": la corona storta, il ghigno di denti aguzzi e una toppa viola ricucita a punti incrociati
 sulla pancia.
 """
 import math
@@ -402,14 +405,13 @@ CAPE = (138, 16, 40)        # mantello cremisi
 EYE_RED = (200, 20, 32)     # occhi composti rosso rubino
 WING = (198, 192, 224)
 VEIN = (52, 34, 44)
-FLY = (128, 60, 210)        # sciame (Neon viola)
+FLY = (108, 46, 184)        # sciame (Neon viola scuro)
 GEM = (150, 255, 70)        # gemme velenose (Neon)
 MOUTH = (34, 8, 18)
 TOOTH = (250, 244, 228)
 CLAW = (28, 22, 28)
 PATCH = (104, 62, 156)
 THREAD = (242, 226, 184)
-WHITE = (255, 255, 255)
 
 m = Model("Beelzebub", "pet")
 
@@ -836,7 +838,7 @@ WING_M = wing_matrix(1)
 # ============================================================ sciame di mosche su orbite inclinate
 flies = []
 ORBITS = [  # (centro, raggio x, raggio y, inclinazione (gradi attorno a X, attorno a Y), angoli delle mosche)
-    ((0, 0.05, 1.3), 1.25, 1.02, (14, -10), (-150, -112, -68, -24, 18, 62, 118, 160)),
+    ((0, 0.05, 1.3), 1.25, 1.02, (14, -10), (-150, -112, -68, -24, 18, 40, 62, 90, 118, 140, 160, -178)),
     ((0, 0.05, 2.78), 1.02, 0.86, (-16, 14), (-150, -100, -30, 14, 58, 104, 150)),
     ((0, 0.0, 0.62), 0.95, 0.85, (6, 12), (-128, -60, 4, 70, 136)),
 ]
@@ -863,6 +865,8 @@ for (c, rx, ry, (tx, ty), angs) in ORBITS:
         tan = np.array([-rx * math.sin(a), ry * math.cos(a), 0.0])
         pos = c + Mo @ loc
         if pos[1] < -0.3 and 2.0 < pos[2] < 3.15 and abs(pos[0]) < 0.8:   # niente mosche davanti alla faccia
+            continue
+        if pos[1] < -0.2 and 0.5 < pos[2] < 2.0 and abs(pos[0]) < 0.62:   # ne' davanti alla pancia
             continue
         flies.append(fly(pos, Mo @ tan + np.array([0, 0, frng.uniform(-0.25, 0.25)]), frng.uniform(1.65, 2.05),
                          frng.uniform(-35, 35)))
@@ -927,14 +931,15 @@ m.add("Body", core0, CHITIN, tris=2600, voxel=0.03 * VX, reflectance=0.08)
 m.add("Head", head_w, CHITIN, role="skin", tris=1200, voxel=0.022 * VX, reflectance=0.08)
 m.add("Eyes", fast_union([Hd(e) for e in eye_parts]), EYE_RED, role="eye", tris=1500, voxel=0.016 * VX,
       reflectance=0.25, smooth=False)
-m.add("EyeShine", fast_union([Hd(e) for e in eye_shine]), WHITE, role="shine", tris=140, voxel=0.01 * VX)
 m.add("Mouth", Hd(mouth_dark), MOUTH, role="eye", tris=240, voxel=0.014 * VX)
-m.add("Teeth", Hd(fast_union(teeth)), TOOTH, role="shine", tris=380, voxel=0.011 * VX)
+# denti del ghigno e riflessi degli occhi (bianco: le mutazioni non li toccano)
+m.add("Shine", Hd(fast_union(teeth + eye_shine)), TOOTH, role="shine", tris=500, voxel=0.011 * VX)
 m.add("Armor", fast_union(armor), ARMOR, role="detail", tris=1000, voxel=0.024 * VX, reflectance=0.15)
 m.add("Regalia", fast_union(gold + [Cr(union(*crown_l))]), GOLD, material="Foil", role="detail", tris=1500,
       voxel=0.016 * VX)
-m.add("GemGlow", fast_union(gems + [Cr(g) for g in gems_l]), GEM, material="Neon", role="glow", tris=200,
-      voxel=0.012 * VX)
+m.add("GemGlow", fast_union([Cr(g) for g in gems_l]), GEM, material="Neon", role="glow", tris=120, voxel=0.01 * VX)
+# sfera dello scettro: il veleno che ne gocciola (il gioco ci attacca le gocce verdi)
+m.add("Venom", fast_union(gems), GEM, material="Neon", role="glow", tris=140, voxel=0.014 * VX)
 m.add("Cape", union(cape, collar), CAPE, material="Fabric", role="detail", tris=1700, voxel=0.024 * VX)
 for sx, nm in ((1, "WingR"), (-1, "WingL")):
     mem, veins = wing_local(sx)

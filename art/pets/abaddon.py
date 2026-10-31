@@ -1,19 +1,23 @@
 """Abaddon (Abaddon) - ricompensa del Sentiero Estremo (demoni biblici).
 
-Il Distruttore, re delle locuste dell'abisso: un destriero da guerra demoniaco con il corpo da cavallo
-corazzato come una locusta. Posa da parata di guerra: la zampa anteriore destra alzata, il collo inarcato e la
-testa alta che ringhia verso chi guarda. Il muso da cavallo e' coperto da una testiera di bronzo scuro con gli
-occhi di brace che bruciano nelle fessure, le fauci spalancate in un ringhio con zanne da leone, due lunghe
-antenne da locusta che si piegano all'indietro e una corona d'oro fra le orecchie. Una lunga criniera cremisi
-scuro fluttua all'indietro come al vento, con le punte che ardono. Corazza a placche di bronzo scuro bordate
-d'oro e borchiate (pettorale, collo a segmenti, fianchi e groppa ad anelli come l'addome di una locusta) con le
-fessure che brillano di brace; zampe posteriori da locusta con file di spine, zoccoli ferrati d'oro. Sulla
-schiena due paia d'ali da locusta: le anteriori strette e coriacee, le posteriori a ventaglio, ambrate e
-trasparenti (gruppi "WingR"/"WingL": il gioco le fa vibrare). Dalla groppa si alza una lunga coda da scorpione a
-segmenti bordati d'oro che si inarca sopra il dorso e finisce in un pungiglione velenoso che brilla (parte Neon
-"Venom": il gioco ci attacca le gocce di veleno; tutta la coda e' nel gruppo "Tail" e ondeggia).
-Tocco "toy horror": una grande chiave a molla d'oro piantata nel fianco, come un cavallo giocattolo caricato
-che ha preso vita, e la criniera cucita al collo con grossi punti a croce.
+Il Distruttore, re delle locuste dell'abisso: un destriero da guerra demoniaco dal corpo da cavallo corazzato come
+una locusta. Posa da parata di guerra: la zampa anteriore destra alzata, il collo inarcato e la testa alta che
+ringhia verso chi guarda. Pelle nera appena violacea; il muso da cavallo porta una testiera di bronzo scuro con un
+corno ricurvo, paraocchi d'oro e occhi di brace che bruciano sotto le arcate (parte Neon "EmberGlow"); le fauci
+spalancate mostrano zanne da leone. Fra le orecchie una corona d'oro a sette punte con tre gemme di brace. Una
+lunga criniera cremisi ricade a ciocche ondulate sui lati del collo, con le punte che ardono come braci (parte
+Neon "Flames": il gioco ci attacca il fuoco); ciuffi cremisi coprono anche i nodelli, come in un cavallo da
+guerra. Corazza di bronzo scuro bordata d'oro e borchiata: collo a segmenti, pettorale con medaglione e gemma di
+brace, spallacci con tre punte d'oro, anelli sul ventre come l'addome di una locusta (con le fessure che brillano
+di brace) e piastra sulla groppa; zampe posteriori da locusta con file di spine, zoccoli ferrati d'oro. Sulla
+schiena due paia d'ali da locusta: le anteriori strette, scure e coriacee, le posteriori a ventaglio, ambrate,
+trasparenti e un po' strappate (gruppi "WingR"/"WingL": il gioco le fa vibrare). Dalla groppa si alza una lunga
+coda da scorpione a segmenti di bronzo bordati d'oro e chiodati che si inarca sopra il dorso e finisce in un
+pungiglione velenoso che brilla (parte Neon "Venom": il gioco ci attacca le gocce di veleno; tutta la coda e' nel
+gruppo "Tail" e ondeggia attorno all'attaccatura).
+
+Tocco "toy horror": una grande chiave a molla d'oro piantata nel fianco, come un cavallo giocattolo caricato che
+ha preso vita, e la criniera cucita al collo con grossi punti a croce.
 """
 import math
 import os
@@ -394,17 +398,18 @@ def curve_frames(pts):
 
 
 # ============================================================ colori
-HIDE = (70, 34, 28)         # pelle rosso bruciato scuro
-BRONZE = (138, 88, 50)      # corazza di bronzo scuro
+HIDE = (40, 30, 40)         # pelle nera da locusta, appena violacea
+BRONZE = (158, 100, 54)     # corazza di bronzo scuro
 GOLD = (244, 188, 70)
-HAIR = (30, 20, 26)         # criniera nera (le punte ardono come braci)
+HAIR = (158, 24, 38)        # criniera cremisi (le punte ardono come braci)
 EMBER = (255, 112, 26)      # occhi e fessure di brace (Neon)
+FIRE = (255, 136, 30)       # punte della criniera che ardono (Neon)
 VENOM = (176, 255, 64)      # pungiglione velenoso (Neon)
 MOUTH = (40, 10, 14)
 TOOTH = (250, 244, 226)
-DARK = (34, 24, 26)         # zoccoli, antenne, spine
+DARK = (34, 24, 26)         # zoccoli e spine
 WING = (255, 176, 74)       # ali posteriori ambrate trasparenti
-FRAME = (78, 50, 34)        # ali anteriori coriacee e venature
+FRAME = (48, 30, 26)        # ali anteriori coriacee e venature
 THREAD = (242, 226, 184)
 
 m = Model("Abaddon", "pet")
@@ -415,7 +420,7 @@ HS = 1.4
 R_HEAD = euler(15.0, 6.0, 13.0)     # muso in basso come un destriero, girato e inclinato verso chi guarda
 JAW_Z = -0.13
 HINGE = (0.0, 0.02, JAW_Z)
-GAPE = 33.0
+GAPE = 28.0
 
 
 def Hd(shape):
@@ -435,22 +440,22 @@ def Jw(shape):
 
 
 cran = ellipsoid((0.2, 0.24, 0.22), (0, 0.06, 0.05))
-cheeks = [ellipsoid((0.11, 0.2, 0.17), (sx * 0.12, 0.0, -0.08)) for sx in (1, -1)]
-face = tbox(-0.02, -0.8, 0.17, 0.13, 0.2, 0.0, JAW_Z - 0.02, JAW_Z - 0.02, 0.07)
-nose = ellipsoid((0.15, 0.12, 0.12), (0, -0.78, -0.07))
+cheeks = [ellipsoid((0.13, 0.22, 0.2), (sx * 0.12, 0.0, -0.1)) for sx in (1, -1)]
+face = tbox(-0.02, -0.72, 0.17, 0.14, 0.2, 0.02, JAW_Z - 0.02, JAW_Z - 0.02, 0.07)
+nose = ellipsoid((0.16, 0.12, 0.13), (0, -0.7, -0.06))
 brows = [capsule((sx * 0.06, -0.2, 0.16), (sx * 0.2, -0.08, 0.2), 0.05) for sx in (1, -1)]
 upper = union(cran, *cheeks, k=0.1)
 upper = union(upper, face, k=0.12)
 upper = union(upper, nose, k=0.08)
 upper = union(upper, *brows, k=0.06)
-NOSTRILS = [(sx * 0.085, -0.88, -0.05) for sx in (1, -1)]
+NOSTRILS = [(sx * 0.09, -0.8, -0.04) for sx in (1, -1)]
 # labbro arricciato del ringhio: pieghe sul muso sopra i canini
 snarl = [tube([(sx * 0.15, -0.72, -0.02), (sx * 0.12, -0.6, 0.04), (sx * 0.13, -0.48, 0.03)], 0.028) for sx in (1, -1)]
 upper = union(upper, *snarl, k=0.03)
 upper = upper.subtract(union(*[ellipsoid((0.04, 0.05, 0.035), c) for c in NOSTRILS]), k=0.02)
 upper = upper.subtract(box((0.5, 0.6, 0.3), (0, HINGE[1] - 0.6, JAW_Z - 0.3)), k=0.01)
-jaw = union(tbox(0.0, -0.74, 0.15, 0.11, JAW_Z + 0.04, JAW_Z + 0.04, -0.27, -0.22, 0.06),
-            ellipsoid((0.11, 0.1, 0.07), (0, -0.66, -0.22)), k=0.05)
+jaw = union(tbox(0.0, -0.66, 0.16, 0.12, JAW_Z + 0.04, JAW_Z + 0.04, -0.29, -0.23, 0.06),
+            ellipsoid((0.12, 0.1, 0.075), (0, -0.58, -0.23)), k=0.05)
 jaw = jaw.subtract(box((0.5, 0.6, 0.3), (0, -0.4, JAW_Z + 0.3)), k=0.01)
 
 # occhi di brace (sotto la testiera di bronzo) con la palpebra arrabbiata
@@ -478,10 +483,10 @@ head_skin = union(head_skin, *ears, k=0.03)
 
 # bocca: palato e lingua scuri, gola
 pal_reg = SDF(lambda p: np.maximum(np.maximum(np.abs(p[:, 0]) - 0.125, p[:, 2] - (JAW_Z + 0.03)),
-                                   np.maximum(p[:, 1] - 0.0, -0.8 - p[:, 1])), (-0.13, -0.81, JAW_Z - 0.05),
+                                   np.maximum(p[:, 1] - 0.0, -0.72 - p[:, 1])), (-0.13, -0.73, JAW_Z - 0.05),
               (0.13, 0.0, JAW_Z + 0.03))
 jaw_reg = SDF(lambda p: np.maximum(np.maximum(np.abs(p[:, 0]) - 0.115, (JAW_Z - 0.03) - p[:, 2]),
-                                   np.maximum(p[:, 1] - 0.0, -0.72 - p[:, 1])), (-0.12, -0.73, JAW_Z - 0.03),
+                                   np.maximum(p[:, 1] - 0.0, -0.64 - p[:, 1])), (-0.12, -0.65, JAW_Z - 0.03),
               (0.12, 0.0, JAW_Z + 0.05))
 dark = [thin(upper, 0.005, 0.03).intersect(pal_reg), Jw(thin(jaw, 0.005, 0.03).intersect(jaw_reg))]
 Rinv = euler(-GAPE, 0, 0)
@@ -495,13 +500,13 @@ def wedge(p):
 
 
 dark.append(SDF(wedge, (-0.13, -0.12, JAW_Z - 0.3), (0.13, 0.03, JAW_Z + 0.01)))
-dark.append(Jw(ellipsoid((0.085, 0.3, 0.03), (0, -0.4, JAW_Z - 0.012))))     # lingua
-dark += [ellipsoid((0.03, 0.04, 0.026), (c[0] * 0.95, -0.85, c[2])) for c in NOSTRILS]
+dark.append(Jw(ellipsoid((0.085, 0.26, 0.03), (0, -0.36, JAW_Z - 0.012))))     # lingua
+dark += [ellipsoid((0.03, 0.04, 0.026), (c[0] * 0.95, -0.77, c[2])) for c in NOSTRILS]
 
 # zanne da leone: due canini grossi sopra e sotto, incisivi aguzzi davanti
 teeth, bases_up, bases_lo = [], [], []
-for y_, x_dir, big in ((-0.62, 1, True), (-0.62, -1, True), (-0.4, 1, False), (-0.4, -1, False), (-0.25, 1, False),
-                       (-0.25, -1, False)):
+for y_, x_dir, big in ((-0.55, 1, True), (-0.55, -1, True), (-0.36, 1, False), (-0.36, -1, False), (-0.22, 1, False),
+                       (-0.22, -1, False)):
     p, n = project(upper, (0, y_, JAW_Z + 0.012), (x_dir, 0, 0))
     b = p - np.array([x_dir * 0.025, 0, 0])
     L = 0.19 if big else 0.06
@@ -510,11 +515,11 @@ for y_, x_dir, big in ((-0.62, 1, True), (-0.62, -1, True), (-0.4, 1, False), (-
     bases_up.append((b[0], b[1], JAW_Z + 0.03))
 for a in (-40, -14, 14, 40):
     d = (math.sin(math.radians(a)), -math.cos(math.radians(a)), 0.0)
-    p, n = project(upper, (0, -0.6, JAW_Z + 0.012), d)
+    p, n = project(upper, (0, -0.53, JAW_Z + 0.012), d)
     b = p - norm((n[0], n[1], 0.0)) * 0.025
     teeth.append(round_cone((b[0], b[1], JAW_Z + 0.03), (b[0], b[1], JAW_Z - 0.065), 0.02, 0.007))
     bases_up.append((b[0], b[1], JAW_Z + 0.03))
-for y_, x_dir, big in ((-0.56, 1, True), (-0.56, -1, True), (-0.36, 1, False), (-0.36, -1, False)):
+for y_, x_dir, big in ((-0.5, 1, True), (-0.5, -1, True), (-0.32, 1, False), (-0.32, -1, False)):
     p, n = project(jaw, (0, y_, JAW_Z - 0.012), (x_dir, 0, 0))
     b = p - np.array([x_dir * 0.025, 0, 0])
     L = 0.16 if big else 0.055
@@ -523,7 +528,7 @@ for y_, x_dir, big in ((-0.56, 1, True), (-0.56, -1, True), (-0.36, 1, False), (
     bases_lo.append((b[0], b[1], JAW_Z - 0.03))
 for a in (-30, 0, 30):
     d = (math.sin(math.radians(a)), -math.cos(math.radians(a)), 0.0)
-    p, n = project(jaw, (0, -0.52, JAW_Z - 0.012), d)
+    p, n = project(jaw, (0, -0.46, JAW_Z - 0.012), d)
     b = p - norm((n[0], n[1], 0.0)) * 0.025
     teeth.append(Jw(round_cone((b[0], b[1], JAW_Z - 0.03), (b[0], b[1], JAW_Z + 0.06), 0.019, 0.007)))
     bases_lo.append((b[0], b[1], JAW_Z - 0.03))
@@ -539,12 +544,12 @@ teeth += [row_bar(bases_up), Jw(row_bar(bases_lo))]
 # testiera di bronzo sul muso (con cresta e paraocchi svasati) e corona d'oro fra le orecchie
 def chanfron_reg(p):
     x, y, z = p[:, 0], p[:, 1], p[:, 2]
-    w = 0.075 + 0.11 * np.clip((y + 0.62) / 0.6, 0, 1)
-    return np.maximum.reduce([np.abs(x) - w, -0.62 - y, y - 0.08, 0.02 - z]).astype(np.float32)
+    w = 0.075 + 0.11 * np.clip((y + 0.56) / 0.56, 0, 1)
+    return np.maximum.reduce([np.abs(x) - w, -0.56 - y, y - 0.08, 0.02 - z]).astype(np.float32)
 
 
 chanfron = paint(head_skin, SDF(chanfron_reg, (-0.3, -0.8, -0.1), (0.3, 0.1, 0.4)), out=0.04, inn=0.03, k=0.02)
-chanfron = union(chanfron, tube([(0, -0.58, 0.1), (0, -0.4, 0.17), (0, -0.12, 0.25), (0, 0.02, 0.28)],
+chanfron = union(chanfron, tube([(0, -0.52, 0.12), (0, -0.36, 0.18), (0, -0.12, 0.25), (0, 0.02, 0.28)],
                                 [0.022, 0.03, 0.034, 0.03]), k=0.02)
 # corno di bronzo sulla fronte della testiera, piegato in avanti
 chanfron = union(chanfron, horn((0, -0.3, 0.2), (0, -0.36, 0.3), (0, -0.4, 0.38), (0, -0.5, 0.44), 0.06, 0.012, n=8),
@@ -567,16 +572,6 @@ CROWN_M = euler(-8.0, 0.0, 0.0)
 crown_gems = [sphere(0.03, tuple(CROWN_M @ np.array([math.cos(math.radians(a)) * 0.184, math.sin(math.radians(a)) * 0.184,
                                                       0.0]) + CROWN_T)) for a in (-90, -38, -142)]
 crown = union(*crown_l).rotate(CROWN_M).translate(tuple(CROWN_T))
-
-# antenne da locusta: lunghe, a perline, piegate all'indietro sopra la criniera
-antennae = []
-for sx in (1, -1):
-    a0 = np.array([sx * 0.1, -0.12, 0.24])
-    pts = bezier(tuple(a0), tuple(a0 + (sx * 0.06, -0.06, 0.24)), tuple(a0 + (sx * 0.2, 0.2, 0.44)),
-                 tuple(a0 + (sx * 0.34, 0.62, 0.42)), 14)
-    antennae.append(tube(pts, taper(15, 0.036, 0.018)))
-    for j in range(1, 14):
-        antennae.append(sphere(0.042 - 0.0016 * j, pts[j]))
 
 # ============================================================ corpo da destriero (spazio Blender)
 chest = ellipsoid((0.5, 0.42, 0.54), (0, -0.54, 1.44))
@@ -640,12 +635,12 @@ armor, gold, embers = [], [], []
 armor.append(Hd(chanfron))
 gold += [Hd(g) for g in eye_guards] + [Hd(crown)]
 embers += [Hd(g) for g in crown_gems]
-for u in (0.18, 0.4, 0.62, 0.84):   # piastre del collo (solo sopra e ai lati, non sulla gola)
+for u in (0.12, 0.32, 0.52, 0.72, 0.9):   # piastre del collo a segmenti sulla gola, come il ventre di un insetto
     i = int(round(u * (len(NP) - 1)))
     c, t = NP[i], NT[i]
     throat = norm(np.array([0.0, -t[2], t[1]]))
     reg = SDF(lambda p, c=c.astype(np.float32), t=t.astype(np.float32), th=throat.astype(np.float32):
-              np.maximum(np.abs((p - c) @ t) - 0.085, (p - c) @ th - 0.06).astype(np.float32), c - 0.6, c + 0.6)
+              np.maximum(np.abs((p - c) @ t) - 0.075, 0.0 - (p - c) @ th).astype(np.float32), c - 0.6, c + 0.6)
     armor.append(paint(core0, reg, out=0.05, inn=0.03, k=0.02))
 
 
@@ -656,6 +651,11 @@ def peytral_reg(p):
 
 
 armor.append(paint(core0, SDF(peytral_reg, (-0.5, -1.1, 0.95), (0.5, -0.5, 1.9)), out=0.055, inn=0.03, k=0.02))
+pe = []
+for x in np.linspace(-0.43, 0.43, 15):
+    pe.append(np.array([x, -1.2, 1.04 + 0.3 * (x / 0.42) ** 2]))
+pp, pnn = project_many(core0, [(0, -0.3, 1.4)] * len(pe), [q - np.array([0, -0.3, 1.4]) for q in pe])
+gold.append(tube([tuple(q + n_ * 0.05) for q, n_ in zip(pp, pnn)], 0.026))
 pb, pn = project(core0, (0, -0.5, 1.45), (0, -1, 0.1))
 gold.append(cylinder(tuple(pb - pn * 0.02), tuple(pb + pn * 0.07), 0.11, round=0.02))       # medaglione
 embers.append(ellipsoid((0.05, 0.05, 0.05), tuple(pb + pn * 0.08)))
@@ -708,28 +708,46 @@ for i in range(1, len(NP) - 1, 1):
 crest.append((hp((0, 0.1, 0.24)), norm(hv((0, 0.5, 0.86)))))
 crest = crest[::-1]   # dalla nuca al garrese
 lrng = np.random.default_rng(4)
-BACK = norm((0.0, 1.0, 0.12))
+
+
+def hair_tuft(L, r0, bend=0.75, fork=0.0, flat=0.55):
+    """Ciocca a fiamma (locale: base nell'origine, sale lungo +Z e si piega all'indietro verso +Y, piatta lungo X):
+    ritorna (ciocca, punta che arde)."""
+    f = flame(L, r0, bend=bend, wig=0.05, flat=flat, fork=fork)
+    cut = 0.62 * L
+    body = f.intersect(SDF(lambda p, c=cut: (p[:, 2] - c).astype(np.float32), (-9, -9, -9), (9, 9, 9)))
+    tip = f.offset(0.006).intersect(SDF(lambda p, c=cut - 0.03: (c - p[:, 2]).astype(np.float32), (-9, -9, -9), (9, 9, 9)))
+    return body, tip
+
+
+# cresta a fiamme dalla nuca al garrese: ciocche grandi che si piegano all'indietro
 for j, (root, nrm_) in enumerate(crest):
-    u = j / max(len(crest) - 1, 1)
-    for sgn in ((1, -1) if j % 2 == 0 else (-1, 1)):
-        L = 1.05 - 0.35 * u + lrng.uniform(-0.08, 0.08)
-        side = np.array([sgn * (0.1 + 0.12 * u), 0.0, 0.0])
-        p0 = np.asarray(root, float) - nrm_ * 0.03
-        pts = bezier(tuple(p0), tuple(p0 + (nrm_ * 0.36 + side * 0.4) * L),
-                     tuple(p0 + (nrm_ * 0.46 + BACK * 0.42 + side * 1.0) * L),
-                     tuple(p0 + (nrm_ * 0.2 + BACK * 0.92 + side * 1.6 + np.array([0, 0, 0.1])) * L), 10)
-        rad = [0.105 * (1 - (k / 10) ** 1.3) + 0.016 for k in range(11)]
-        locks.append(tube(pts[:9], rad[:9]))
-        lock_tips.append(tube(pts[7:], rad[7:]).offset(0.007))      # punta di brace
+    u = j / max(len(crest) - 1, 1)                     # 0 = nuca, 1 = garrese
+    L = 0.74 - 0.3 * u + lrng.uniform(-0.04, 0.04)
+    up = norm(nrm_ * 0.75 + np.array([0.0, 0.25, 0.45]))
+    Mf = frame(up, (0, 1, 0))
+    body, tip = hair_tuft(L, 0.15 - 0.04 * u, bend=0.8, fork=0.5 if j % 2 == 0 else 0.0)
+    base = np.asarray(root, float) - nrm_ * 0.06
+    locks.append(body.rotate(Mf).translate(tuple(base)))
+    lock_tips.append(tip.rotate(Mf).translate(tuple(base)))
+    for sgn in (1, -1):   # ciocche laterali che ricadono sui due lati del collo
+        if j % 2 == 1 or j == 0:
+            continue
+        side_up = norm(nrm_ * 0.35 + np.array([sgn * 0.85, 0.3, 0.1]))
+        Ms = frame(side_up, (0, 1, 0))
+        b2, t2 = hair_tuft(L * 0.8, 0.12 - 0.03 * u, bend=1.0)
+        base2 = np.asarray(root, float) - nrm_ * 0.08 + np.array([sgn * 0.06, 0.0, 0.0])
+        locks.append(b2.rotate(Ms).translate(tuple(base2)))
+        lock_tips.append(t2.rotate(Ms).translate(tuple(base2)))
 # ciuffi di pelo sui nodelli (zampe "a calzino" da cavallo da guerra)
 for d, ax, raised in FETLOCKS:
     for a in np.linspace(0, 2 * math.pi, 9)[:-1]:
         side_v = np.array([math.cos(a), math.sin(a), 0.0])
         side_v = norm(side_v - ax * float(np.dot(side_v, ax)))
-        base = d + side_v * 0.12 + ax * 0.02
-        tipp = base + side_v * 0.07 + ax * 0.15
-        locks.append(round_cone(tuple(base), tuple(tipp), 0.06, 0.012))
-hair = fast_union(locks, k=0.03).intersect(halfspace_z(0.0))
+        base = d + side_v * 0.13 + ax * 0.0
+        tipp = base + side_v * 0.09 + ax * 0.17
+        locks.append(round_cone(tuple(base), tuple(tipp), 0.075, 0.014))
+hair = fast_union(locks, k=0.0).intersect(halfspace_z(0.0))
 
 # ============================================================ ali da locusta (2 paia per lato)
 WSCALE = 1.3
@@ -805,7 +823,7 @@ for d_, L_ in ((np.array([1.0, 0, 0]), 0.1), (np.array([-1.0, 0, 0]), 0.1)):   #
     seg_g.append(round_cone(tuple(BULB_C + d_ * 0.1), tuple(BULB_C + d_ * (0.1 + L_) + tdir * 0.05), 0.026, 0.006))
 
 # ============================================================ zoccoli ferrati, spine da locusta, chiave a molla, cuciture
-darks = list(antennae and [Hd(a) for a in antennae])
+darks = []
 for (hc, d, raised) in HOOVES:
     if raised:
         axis = d
@@ -842,14 +860,16 @@ for i in range(1, len(crest) - 1, 2):
         stitches.append(capsule(tuple(a), tuple(b), 0.018))
 
 # ============================================================ parti
-m.add("Body", core0, HIDE, tris=2500, voxel=0.03 * VX)
+m.add("Body", core0, HIDE, tris=2450, voxel=0.03 * VX)
 neck_end = fast_union([ell(NP[-1], (0.17, 0.22, 0.2), axis=NT[-1])], k=0.0)
 m.add("Head", shrink(fast_union([head_w], k=0.06, base=neck_end)), HIDE, role="skin", tris=1500, voxel=0.02 * VX)
 m.add("Armor", fast_union(armor), BRONZE, material="Metal", role="detail", tris=2600, voxel=0.026 * VX)
 m.add("Gold", fast_union(gold), GOLD, material="Foil", role="detail", tris=1700, voxel=0.018 * VX)
 m.add("Hair", hair, HAIR, role="detail", tris=1500, voxel=0.024 * VX)
-m.add("EmberGlow", fast_union([Hd(e) for e in eyes] + embers + lock_tips), EMBER, material="Neon", role="glow", tris=620,
+m.add("EmberGlow", fast_union([Hd(e) for e in eyes] + embers), EMBER, material="Neon", role="glow", tris=380,
       voxel=0.014 * VX)
+# punte della criniera che ardono come braci: il gioco ci attacca il fuoco
+m.add("Flames", fast_union(lock_tips), FIRE, material="Neon", role="glow", tris=420, voxel=0.016 * VX)
 m.add("Mouth", Hd(fast_union(dark)), MOUTH, role="eye", tris=320, voxel=0.018 * VX)
 m.add("Teeth", Hd(fast_union(teeth)), TOOTH, role="shine", tris=420, voxel=0.013 * VX)
 m.add("Dark", fast_union(darks).intersect(halfspace_z(0.0)), DARK, role="detail", tris=700, voxel=0.018 * VX)

@@ -3,9 +3,9 @@
 Un grande uovo rosso a macchie con una crepa a zig-zag tutt'intorno che si apre come una bocca:
 la calotta superiore si solleva all'indietro (cerniera sul retro, leggermente storta per un ghigno
 asimmetrico) e le punte della crepa sono dentini aguzzi bianchi su entrambe le "mascelle". Dentro e'
-buio (fodera scura) e due occhi gialli incandescenti con la pupilla a fessura e le palpebre aggrottate
-sbirciano fuori; un corpo scuro riempie il fondo della cavita'. Tocco "toy horror": due crepe ricucite
-con punti a X di filo bianco sul guscio.
+buio (due pieni scuri appena dentro il guscio e un corpo scuro sul fondo della cavita') e due occhi
+gialli incandescenti con la pupilla a fessura e le palpebre aggrottate sbirciano fuori. Tocco "toy
+horror": due crepe ricucite con punti a X di filo bianco sul guscio.
 
 Uso (dalla cartella art/): ../.tools/venv/bin/python promo/egg_monster.py
 Uscita: art/out/promo/EggMonster/ (EggMonster.blend/.fbx/.json e anteprime). Variabili: OPEN (gradi di
@@ -23,7 +23,7 @@ import numpy as np
 ART = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ART))
 sys.path.insert(0, str(ART / "eggs"))
-import eggs as E  # noqa: E402  (forma dell'uovo e macchie, riusate dagli uovi del gioco)
+import eggs as E  # noqa: E402  (forma dell'uovo e macchie, le stesse delle uova del gioco)
 from lib.sdf import SDF, Frame, capsule, ellipsoid, project, sphere, tube, union  # noqa: E402
 from lib.toy import Model  # noqa: E402
 

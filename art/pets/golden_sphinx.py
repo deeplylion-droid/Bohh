@@ -21,7 +21,7 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from lib.sdf import (SDF, bezier, box, capsule, ellipsoid, euler, halfspace_z, prism, project,  # noqa: E402
+from lib.sdf import (SDF, bezier, box, capsule, ellipsoid, euler, halfspace_z, project,  # noqa: E402
                      round_cone, smin, sphere, torus, tube, union)
 from lib.toy import Model  # noqa: E402
 
@@ -210,7 +210,6 @@ LAPIS = (26, 56, 188)        # lapislazzuli
 TURQ = (70, 255, 214)        # fregio di geroglifici (Neon "Frost")
 EYE_GLOW = (150, 255, 236)   # occhi e crepa (Neon)
 KOHL = (18, 22, 58)          # trucco degli occhi e pupille
-MOUTH = (44, 12, 34)
 TOOTH = (250, 246, 232)
 STONE = (206, 170, 116)      # arenaria del blocco
 THREAD = (132, 24, 40)       # filo rosso scuro
@@ -258,7 +257,7 @@ def paw(c, fwd, s=1.0, z_floor=0.0):
     return union(pad, *toes, k=0.04)
 
 
-legs = []
+legs, WRISTS = [], []
 for sx in (1, -1):
     sh, el, wr, pw = (np.array(v, float) for v in ((sx * 0.29, -0.4, 1.02), (sx * 0.31, -0.5, 0.68),
                                                     (sx * 0.27, -0.84, 0.48), (sx * 0.25, -0.96, BLK_TOP + 0.08)))
@@ -267,6 +266,7 @@ for sx in (1, -1):
              round_cone(el, wr, 0.14, 0.11),
              round_cone(wr, pw + np.array([0, 0.03, 0.03]), 0.11, 0.11)]
     legs.append(paw(pw, (sx * 0.08, -1.0), 1.0, BLK_TOP))
+    WRISTS.append((el * 0.35 + wr * 0.65, wr - el, el, wr))
 # zampe posteriori piegate a terra (coscia grossa, stinco sotto, zampa in avanti accanto alla pancia)
 for sx in (1, -1):
     legs += [ell((sx * 0.33, 0.6, 0.38), (0.22, 0.42, 0.33), axis=(0, 1.0, 0.25)),            # coscia
@@ -342,8 +342,8 @@ for sx in (1, -1):
     lower = [on_surface(head_skin, q, 0.002, 4) for q in lower]
     kohl.append(tube([tuple(q) for q in upper], taper(len(upper), 0.008, 0.007)))
     kohl.append(tube([tuple(q) for q in lower], taper(len(lower), 0.005, 0.006)))
-    brow = [c + a1 * x + a3 * (0.055 + 0.35 * (x + 0.07) * 0.5 + 0.012 * math.sin((x + 0.07) / 0.21 * math.pi))
-            for x in np.linspace(-0.07, 0.14, 8)]
+    brow = [c + a1 * x + a3 * (0.058 + 0.06 * (x + 0.07) + 0.01 * math.sin((x + 0.07) / 0.21 * math.pi))
+            for x in np.linspace(-0.06, 0.13, 8)]
     brow = [on_surface(head_skin, q, 0.004, 4) for q in brow]
     brows.append(tube([tuple(q) for q in brow], taper(8, 0.017, 0.01)))
 
@@ -416,7 +416,7 @@ beard_l = union(beard_l, ell(np.array(BEARD[-1]) + (0, -0.01, -0.01), (0.05, 0.0
 beard_bands_l = []
 for j in range(1, 8):
     q0, q1 = np.array(BEARD[j - 1]), np.array(BEARD[min(j + 1, 8)])
-    beard_bands_l.append(paint(beard_l, slab(np.array(BEARD[j]), q1 - q0, 0.012, 0.1), out=0.008, inn=0.02))
+    beard_bands_l.append(paint(beard_l, slab(np.array(BEARD[j]), q1 - q0, 0.013, 0.1), out=0.011, inn=0.03))
 
 
 def hp(p):
@@ -439,8 +439,8 @@ for sx in (1, -1):
     lappets.append(strip.scale(L / 0.66).rotate(frame(top - bot, (0.0, -1.0, 0.1))).translate(top))
 nemes_w = union(Hd(nemes_l), *lappets, k=0.04)
 
-STRIPE_F = np.array([0.0, -0.5, 0.06], dtype=np.float32)   # centro dei cerchi delle righe (davanti al volto)
-STRIPE_P = 0.12
+STRIPE_F = np.array([0.0, -0.62, 0.04], dtype=np.float32)  # centro dei cerchi delle righe (davanti al volto)
+STRIPE_P = 0.16
 
 
 CAVITY = ellipsoid((0.185, 0.3, 0.28), (0, -0.2, -0.06))
@@ -456,7 +456,7 @@ def stripe_region_w(p):
     return np.maximum(band, hidden * HS).astype(np.float32)
 
 
-nemes_stripes = paint(nemes_w, SDF(stripe_region_w, nemes_w.lo - 0.05, nemes_w.hi + 0.05), out=0.008, inn=0.016)
+nemes_stripes = paint(nemes_w, SDF(stripe_region_w, nemes_w.lo - 0.05, nemes_w.hi + 0.05), out=0.016, inn=0.04)
 
 # ============================================================ collare usekh sul petto (sotto le bande del nemes e la barba)
 SC_C = np.array([0.0, -0.55, 1.5], dtype=np.float32)            # base del collo
@@ -566,7 +566,7 @@ def flank_point(sx, s, t):
 
 def glyph_strokes():
     """Tratti dei geroglifici nel piano del fregio (s, t)."""
-    st = [[(0.0, -0.13), (0.52, -0.13)]]                                          # riga di base
+    st = [[(0.0, -0.13), (0.45, -0.13)]]                                          # riga di base
     c = 0.07                                                                     # ankh
     st += [[(c + 0.035 * math.cos(a), 0.05 + 0.04 * math.sin(a)) for a in np.linspace(0, 2 * math.pi, 13)],
            [(c, 0.01), (c, -0.09)], [(c - 0.04, 0.0), (c + 0.04, 0.0)]]
@@ -597,6 +597,8 @@ for tip, fwd, sz, zf in TOES:
     t0 = np.asarray(tip, dtype=np.float64)
     claws.append(horn(t0 + (0, 0, 0.012), t0 + fwd * 0.05 * sz + (0, 0, 0.025 * sz), t0 + fwd * 0.1 * sz,
                       t0 + fwd * 0.13 * sz + (0, 0, -0.035 * sz), 0.04 * sz, 0.012, n=7).intersect(halfspace_z(zf + 0.002)))
+front_legs = [union(round_cone(e_, w_, 0.15, 0.11), round_cone(w_, w_ + (w_ - e_) * 0.3, 0.11, 0.11)) for _, _, e_, w_ in WRISTS]
+bracelets = [paint(fl, slab(c, ax, 0.035, 0.25), out=0.026, inn=0.02) for fl, (c, ax, _, _) in zip(front_legs, WRISTS)]
 tuft_bands = [paint(tuft_core, slab(TAIL_END + TAIL_DIR * d, TAIL_DIR, 0.028, 0.3), out=0.012, inn=0.03)
               for d in (0.05, 0.16, 0.27)]
 
@@ -610,22 +612,21 @@ def add(name, sdf, color, voxel, **kw):
     m.add(name, sdf.scale(GS) if GS != 1.0 else sdf, color, voxel=voxel * GS * VX, **kw)
 
 
-add("Body", core, GOLD_BODY, 0.032, material="Foil", tris=2700)
+add("Body", fast_union([tuft_core], base=core), GOLD_BODY, 0.032, material="Foil", tris=2800)
 add("Face", Hd(head_skin), GOLD_BODY, 0.012, material="Foil", role="skin", tris=1300)
-add("Nemes", fast_union([nemes_w, Hd(union(headband_l, uraeus_l, beard_l))] + collar_rods + collar_drops), GOLD, 0.017,
-    material="Foil", role="detail", tris=1600)
+add("Nemes", fast_union([nemes_w, Hd(union(headband_l, uraeus_l, beard_l))]), GOLD, 0.017, material="Foil",
+    role="detail", tris=1500)
+add("CollarGold", fast_union(collar_rods + collar_drops), GOLD, 0.012, material="Foil", role="detail", tris=500)
 add("NemesStripes", nemes_stripes, LAPIS, 0.016, role="detail", tris=1600)
 add("Collar", collar_base, LAPIS, 0.022, role="detail", tris=600)
-lapis = [Hd(x) for x in brows + beard_bands_l + [hood_inlay_l]] + tuft_bands
-add("Lapis", fast_union(lapis), LAPIS, 0.009, role="detail", tris=600)
+lapis = [Hd(x) for x in brows + beard_bands_l + [hood_inlay_l]] + tuft_bands + claws + bracelets
+add("Lapis", fast_union(lapis), LAPIS, 0.009, role="detail", tris=900)
 add("Block", block, STONE, 0.03, role="detail", tris=250, smooth=False)
-add("Tuft", tuft_core, GOLD, 0.02, material="Foil", role="detail", tris=200)
 add("Frost", fast_union(frieze), TURQ, 0.012, material="Neon", role="glow", tris=900)
 add("EyeGlow", Hd(fast_union(eyes + [crack] + uraeus_eyes_l)), EYE_GLOW, 0.008, material="Neon", role="glow", tris=300)
 add("Kohl", Hd(fast_union(kohl + pupils + mouth_dark)), KOHL, 0.007, role="eye", tris=550)
 add("Teeth", Hd(fast_union(teeth)), TOOTH, 0.005, role="shine", tris=150)
 add("Stitches", Hd(fast_union(face_stitches)), THREAD, 0.005, role="detail", tris=150)
-add("Claws", fast_union(claws), LAPIS, 0.016, role="detail", tris=350)
 for sx, nm in ((1, "WingR"), (-1, "WingL")):
     piv = tuple(WING_SH * np.array([sx, 1, 1]))
     add(nm, place_wing(fast_union(wing_lapis_l), sx), LAPIS, 0.018, role="detail", tris=1000, group=nm, pivot=piv)

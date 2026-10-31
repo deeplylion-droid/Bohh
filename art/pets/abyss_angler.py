@@ -21,7 +21,16 @@ from scipy.spatial import cKDTree
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from lib.sdf import (SDF, bezier, capsule, ellipsoid, euler, prism, round_cone, smin, sphere, torus,  # noqa: E402
                      tube, union)
+from lib.sdf import tube as _tube  # noqa: E402
 from lib.toy import Model  # noqa: E402
+
+
+def tube(points, radii, k=0.0):
+    """Come lib.sdf.tube, ma toglie i punti consecutivi coincidenti (un tratto lungo zero rovina il campo)."""
+    pts = [np.asarray(q, dtype=np.float64) for q in points]
+    rr = [float(radii)] * len(pts) if isinstance(radii, (int, float)) else [float(r) for r in radii]
+    keep = [0] + [i for i in range(1, len(pts)) if np.linalg.norm(pts[i] - pts[i - 1]) > 1e-6]
+    return _tube([tuple(pts[i]) for i in keep], [rr[i] for i in keep], k=k)
 
 DRAFT = os.environ.get("DRAFT", "") == "1"
 VX = 1.35 if DRAFT else 1.0

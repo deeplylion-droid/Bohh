@@ -182,8 +182,9 @@ body{{width:{W}px;height:{H}px;background:#ece7df;font-family:'Patrick Hand';col
 .tiny img{{width:64px;height:64px;border-radius:8px}}
 .light{{background:#ffffff}}.dark{{background:#191b1d;color:#bbb}}
 </style></head><body><div class='t'>Climb &amp; Steal Eggs &mdash; proposte di icona</div><div class='note'>Ogni icona a 512 px (file vero) e ridotta a 150 px e 64 px con gli angoli arrotondati come nelle schede di Roblox, su sfondo chiaro e scuro.</div><div class='wrap'>{''.join(cols)}</div></body></html>"""
+    shot = shoot(html, WORK / "sheet.png", W, H)
     out = OUT / "sheet.png"
-    shoot(html, out, W, H)
+    shutil.copy(shot, out)
     return out
 
 

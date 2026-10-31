@@ -21,7 +21,7 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from lib.sdf import (SDF, bezier, box, capsule, cylinder, ellipsoid, euler, halfspace_z, prism, project,  # noqa: E402
+from lib.sdf import (SDF, bezier, box, capsule, ellipsoid, euler, halfspace_z, prism, project,  # noqa: E402
                      round_cone, smin, sphere, torus, tube, union)
 from lib.toy import Model  # noqa: E402
 
@@ -157,18 +157,6 @@ def tbox(y_back, y_front, w_back, w_front, top_back, top_front, bot_back, bot_fr
 
     w = max(w_back, w_front)
     return SDF(f, (-w, min(y_back, y_front), min(bot_back, bot_front)), (w, max(y_back, y_front), max(top_back, top_front)))
-
-
-def band(R, t, h, rr=0.012):
-    """Fascia (anello a sezione rettangolare arrotondata) nel piano XY: raggio R, spessore 2t, altezza 2h."""
-    def f(p):
-        rho = np.sqrt(p[:, 0] ** 2 + p[:, 1] ** 2) - R
-        qx = np.abs(rho) - (t - rr)
-        qz = np.abs(p[:, 2]) - (h - rr)
-        return np.sqrt(np.maximum(qx, 0) ** 2 + np.maximum(qz, 0) ** 2) + np.minimum(np.maximum(qx, qz), 0) - rr
-
-    e = R + t
-    return SDF(f, (-e, -e, -h), (e, e, h))
 
 
 def footprint(fx, fy, cy):
@@ -664,29 +652,6 @@ A = ARMS[1]
 SH_L, EL_L, WR_L = (np.array(A[k], float) for k in ("sh", "el", "wr"))
 
 
-def wraps_region(a, b, turns, width, t0=0.0, t1=1.0, phase=0.0, hint=(0.0, -1.0, 0.0)):
-    ax, u, v = limb_frame(a, b, hint)
-    a = np.asarray(a, np.float32)
-    L = float(np.linalg.norm(np.asarray(b) - np.asarray(a)))
-    pitch = L / turns
-    axf, uf, vf = (x.astype(np.float32) for x in (ax, u, v))
-
-    def f(p):
-        q = p - a
-        t = q @ axf
-        ang = np.arctan2(q @ vf, q @ uf)
-        s = turns * t / L - ang / (2 * math.pi) + phase
-        fr = s - np.floor(s) - 0.5
-        d_band = (np.abs(fr) - width * 0.5) * pitch * 0.9
-        d_ends = np.maximum(t0 * L - t, t - t1 * L)
-        rad = np.sqrt(np.maximum(np.einsum("ij,ij->i", q, q) - t * t, 0.0))
-        return np.maximum.reduce([d_band, d_ends, rad - 0.3]).astype(np.float32)
-
-    lo = np.minimum(a, b) - 0.35
-    hi = np.maximum(a, b) + 0.35
-    return SDF(f, lo, hi)
-
-
 # fasce di benda separate e storte (si vede il pelo nero fra una e l'altra)
 WRAPS = [(EL_L, WR_L, t, tilt, h) for t, tilt, h in ((0.12, 14, 0.04), (0.32, -12, 0.036), (0.52, 16, 0.04),
                                                       (0.72, -10, 0.034), (0.9, 12, 0.03))]
@@ -766,14 +731,14 @@ for tip, fwd, sz in TOES:
                       t0 + fwd * 0.13 * sz + (0, 0, -0.04 * sz), 0.04 * sz, 0.012, n=7))
 
 # ============================================================ parti
-GS = float(os.environ.get("GS", 0.92))   # scala finale del modello (altezza ~3.45)
+GS = float(os.environ.get("GS", 0.905))   # scala finale del modello (altezza ~3.45)
 
 
 def add(name, sdf, color, voxel, **kw):
     m.add(name, sdf.scale(GS) if GS != 1.0 else sdf, color, voxel=voxel * GS * VX, **kw)
 
 
-add("Body", body0.subtract(CARVE), BLACK, 0.03, tris=2900)
+add("Body", body0.subtract(CARVE), BLACK, 0.03, tris=2800)
 neck_top = round_cone((0, -0.0, 2.34), (0, -0.05, 2.47), 0.17, 0.15)
 add("Head", SDF(fast_union([head_w], k=0.08, base=neck_top).f, head_w.lo - 0.1, np.maximum(head_w.hi, neck_top.hi) + 0.1),
     BLACK, 0.022, role="skin", tris=2100)
@@ -785,11 +750,11 @@ add("Glyphs", fast_union(glyphs + [staff_gem]), BLUE_GLOW, 0.0095, material="Neo
 add("EyeGlow", Hd(union(*eyes)), BLUE_GLOW, 0.012, material="Neon", role="glow", tris=250)
 add("Collar", fast_union(collar_rods + beads), GOLD, 0.013, material="Foil", role="detail", tris=1450)
 gold = cuffs_gold + [belt, hem, apron, tail_ring] + [KH(fittings_l)] + staff_gold + claws
-add("Gold", fast_union(gold), GOLD, 0.02, material="Foil", role="detail", tris=1750)
+add("Gold", fast_union(gold), GOLD, 0.02, material="Foil", role="detail", tris=1650)
 add("HeadGold", Hd(fast_union(ear_gold + liners)), GOLD, 0.011, material="Foil", role="detail", tris=600)
 add("Lapis", fast_union(cuffs_lapis + APRON_STRIPES + [KH(grip_l)]), LAPIS, 0.014, role="detail", tris=700)
 add("Kilt", fast_union([kilt, collar_base, staff_shaft] + [Hd(x) for x in ear_lapis]), LAPIS, 0.022, role="detail",
-    tris=1500)
+    tris=1700)
 add("Khopesh", KH(blade_body_l), BRONZE, 0.014, material="Metal", role="detail", tris=450)
 add("Mane", KH(edge_l), EDGE_GLOW, 0.011, material="Neon", role="glow", tris=350)
 add("Bandages", fast_union(bandage_parts), LINEN, 0.013, material="Fabric", role="detail", tris=1000)

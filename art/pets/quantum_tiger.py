@@ -257,7 +257,7 @@ m = Model("QuantumTiger", "pet")
 rng = np.random.default_rng(47)
 
 # ============================================================ testa (spazio locale: muso verso -Y)
-HEAD_POS = np.array([0.0, -1.12, 2.5])
+HEAD_POS = np.array([0.0, -1.18, 2.62])
 HS = 1.42
 R_HEAD = euler(-4.0, 0.0, 10.0)       # mento alto e fiero, girata verso la camera 3/4
 
@@ -277,10 +277,10 @@ def hv(v):
 cran = ellipsoid((0.43, 0.39, 0.36), (0, 0.04, 0.06))
 brow_ridge = [ellipsoid((0.16, 0.12, 0.09), (sx * 0.16, -0.25, 0.15)) for sx in (1, -1)]
 cheeks = [ellipsoid((0.25, 0.22, 0.21), (sx * 0.22, -0.1, -0.1)) for sx in (1, -1)]
-muzzle = ellipsoid((0.21, 0.19, 0.16), (0, -0.27, -0.12))
-pads_l = [ellipsoid((0.115, 0.1, 0.095), (sx * 0.08, -0.37, -0.14)) for sx in (1, -1)]
-chin = ellipsoid((0.1, 0.09, 0.075), (0, -0.3, -0.27))
-bridge = capsule((0, -0.2, 0.1), (0, -0.41, -0.04), 0.085)
+muzzle = ellipsoid((0.21, 0.21, 0.16), (0, -0.3, -0.12))
+pads_l = [ellipsoid((0.115, 0.1, 0.095), (sx * 0.08, -0.41, -0.145)) for sx in (1, -1)]
+chin = ellipsoid((0.1, 0.09, 0.075), (0, -0.34, -0.275))
+bridge = capsule((0, -0.2, 0.1), (0, -0.45, -0.04), 0.085)
 head0 = union(cran, *cheeks, k=0.14)
 head0 = union(head0, muzzle, *brow_ridge, k=0.1)
 head0 = union(head0, *pads_l, chin, bridge, k=0.06)
@@ -325,8 +325,8 @@ def third_place(shape, offset=(0.0, 0.0, 0.0)):
     return shape.translate(offset).rotate(look_matrix(T_D, up=(0.0, 0.66, 0.72))).translate(T_C)
 
 
-head1 = head1.subtract(third_place(ellipsoid((0.058, 0.06, 0.092)), (0, 0.03, 0)), k=0.02)
-third_lid = third_place(ellipsoid((0.066, 0.07, 0.1)).subtract(ellipsoid((0.048, 0.2, 0.084))), (0, 0.035, 0))
+head1 = head1.subtract(third_place(ellipsoid((0.072, 0.07, 0.112)), (0, 0.03, 0)), k=0.02)
+third_lid = third_place(ellipsoid((0.08, 0.075, 0.12)).subtract(ellipsoid((0.06, 0.2, 0.102))), (0, 0.032, 0))
 head1 = union(head1, third_lid, k=0.008)
 
 
@@ -355,7 +355,7 @@ EAR_CUPS = [ear_pose(round_cone((0, -0.065, 0.0), (0, -0.065, 0.17), 0.11, 0.05)
 EAR_BACKS = [ear_pose(ear_shape().offset(0.013).intersect(SDF(lambda p: 0.004 - p[:, 1], (-1, -1, -1), (1, 1, 1)),
                                                           k=0.01), sx) for sx in (1, -1)]
 EAR_SPOTS = [ear_pose(ellipsoid((0.07, 0.03, 0.06), (0.0, 0.07, 0.07)), sx) for sx in (1, -1)]
-NOSE_C = np.array((0.0, -0.457, -0.05))
+NOSE_C = np.array((0.0, -0.497, -0.05))
 nostrils = union(*[ellipsoid((0.022, 0.03, 0.019)).rot(0, sx * 30, sx * 25).translate(NOSE_C + (sx * 0.036, -0.014, -0.016))
                    for sx in (1, -1)])
 head2 = union(head1, *ears, k=0.04)
@@ -363,13 +363,13 @@ head_final = shrink(head2.subtract(nostrils, k=0.01))
 
 # ============================================================ corpo (in piedi, petto in fuori, zampa destra avanti)
 DISC_TOP = 0.5
-chest = ellipsoid((0.52, 0.52, 0.52), (0, -0.42, 1.52))
+chest = ellipsoid((0.53, 0.53, 0.56), (0, -0.42, 1.52))
 ribs = ellipsoid((0.46, 0.56, 0.46), (0, 0.12, 1.5))
 haunch = ellipsoid((0.47, 0.42, 0.46), (0, 0.64, 1.48))
-scap = [ell((sx * 0.3, -0.45, 1.84), (0.18, 0.24, 0.28), axis=(0, -0.3, 1.0)) for sx in (1, -1)]
+scap = [ell((sx * 0.31, -0.45, 1.86), (0.2, 0.26, 0.3), axis=(0, -0.3, 1.0)) for sx in (1, -1)]
 torso = union(union(chest, ribs, k=0.3), haunch, k=0.28)
 torso = union(torso, *scap, k=0.15)
-NECK = [(0, -0.55, 1.75), (0, -0.84, 2.1), (0, -1.0, 2.34)]
+NECK = [(0, -0.55, 1.75), (0, -0.88, 2.18), (0, -1.07, 2.45)]
 neck = tube(NECK, [0.44, 0.4, 0.36], k=0.08)
 PZ = DISC_TOP + 0.085
 FRONT = {1: dict(sh=np.array([0.36, -0.5, 1.5]), el=np.array([0.41, -0.58, 1.02]), wr=np.array([0.4, -0.76, 0.7]),
@@ -439,32 +439,34 @@ tail_glow_s = fast_union(tail_glow)
 DC = np.array((0.0, -0.06, 0.0))
 DISC_R = 1.0
 disc = cylinder(tuple(DC + (0, 0, 0.38)), tuple(DC + (0, 0, DISC_TOP - 0.06)), DISC_R, round=0.06)
-disc = disc.subtract(torus(0.8, 0.04, tuple(DC + (0, 0, DISC_TOP))), k=0.01)
 thrusters = []
-disc_cyan = [torus(0.8, 0.032, tuple(DC + (0, 0, DISC_TOP - 0.006))),
-             sphere(0.3, tuple(DC + (0, 0, 0.36))).intersect(halfspace_z(0.33, above=False)),
-             torus(0.62, 0.03, tuple(DC + (0, 0, 0.03)))]
+disc_cyan = [torus(DISC_R + 0.005, 0.04, tuple(DC + (0, 0, 0.41))),
+             cylinder(tuple(DC + (0, 0, 0.27)), tuple(DC + (0, 0, 0.33)), 0.2, round=0.03),
+             torus(0.64, 0.036, tuple(DC + (0, 0, 0.036)))]
 for k_ in range(3):
     a = math.radians(90 + 120 * k_)
     c = DC + np.array((0.66 * math.cos(a), 0.66 * math.sin(a), 0.0))
     thrusters.append(capped_cone(tuple(c + (0, 0, 0.36)), tuple(c + (0, 0, 0.22)), 0.13, 0.09, round=0.015))
     disc_cyan.append(cylinder(tuple(c + (0, 0, 0.2)), tuple(c + (0, 0, 0.225)), 0.07))
-disc_magenta = [torus(DISC_R + 0.005, 0.038, tuple(DC + (0, 0, 0.41)))]
+disc_magenta = []
 
 # ============================================================ anelli quantici attorno alla testa
-RING_C = hp((0.0, 0.0, 0.08))
-RING_R = 0.9
-ring_normals = [norm((0.0, 0.42, 1.0)), norm((0.82, 0.25, 0.62)), norm((-0.82, 0.25, 0.62))]
+RING_C = hp((0.0, 0.04, 0.3))
+RING_R = 0.88
 rings, electrons_c, electrons_m = [], [], []
-for i, nrm in enumerate(ring_normals):
-    rings.append(torus(RING_R - 0.04 * i, 0.032).rotate(orient(nrm)).translate(tuple(RING_C)))
+for i, (phi, tilt, rr) in enumerate(((0.0, 27.0, RING_R), (-38.0, 31.0, RING_R - 0.05), (38.0, 31.0, RING_R - 0.1))):
+    f, t = math.radians(phi), math.radians(tilt)
+    nrm = norm(hv((-math.sin(f) * math.sin(t), math.cos(f) * math.sin(t), math.cos(t))))
     Rm = orient(nrm)
-    a = math.radians((40, 200, 320)[i])
-    e = rot_pts(Rm, ((RING_R - 0.04 * i) * math.cos(a), (RING_R - 0.04 * i) * math.sin(a), 0.0)) + RING_C
-    (electrons_c if i % 2 == 0 else electrons_m).append(sphere(0.065, tuple(e)))
+    rings.append(torus(rr, 0.03).rotate(Rm).translate(tuple(RING_C)))
+    # elettrone sul lato dell'anello rivolto verso la camera 3/4
+    best = max(np.linspace(0, 2 * math.pi, 73),
+               key=lambda a: float(rot_pts(Rm, (math.cos(a), math.sin(a), 0.0)) @ norm((0.55 + 0.3 * i, -1.0, 0.2 - 0.25 * i))))
+    e = rot_pts(Rm, (rr * math.cos(best), rr * math.sin(best), 0.0)) + RING_C
+    (electrons_c if i % 2 == 0 else electrons_m).append(sphere(0.058, tuple(e)))
 
 # ============================================================ strisce-circuito (ciano e magenta, si alternano)
-CR0, CR1 = 0.044, 0.025
+CR0, CR1 = 0.046, 0.032
 
 
 def stripe_on(base, pts_world_targets, origins, r0=CR0, r1=CR1, pad=True):
@@ -514,8 +516,6 @@ head_traces = {0: [], 1: []}
 for col, tr in ((0, ((0.0, -0.2, 0.45), (0.0, 0.0, 0.49), (0.0, 0.25, 0.44))),
                 (1, ((0.05, -0.27, 0.38), (0.12, -0.18, 0.44), (0.17, 0.0, 0.46), (0.2, 0.18, 0.4))),
                 (1, ((-0.05, -0.27, 0.38), (-0.12, -0.18, 0.44), (-0.17, 0.0, 0.46), (-0.2, 0.18, 0.4))),
-                (0, ((0.31, -0.18, 0.1), (0.36, -0.05, 0.16), (0.4, 0.1, 0.16))),
-                (0, ((-0.31, -0.18, 0.1), (-0.36, -0.05, 0.16), (-0.4, 0.1, 0.16))),
                 (1, ((0.36, -0.2, -0.04), (0.43, -0.08, -0.02), (0.45, 0.05, -0.08))),
                 (1, ((-0.36, -0.2, -0.04), (-0.43, -0.08, -0.02), (-0.45, 0.05, -0.08))),
                 (0, ((0.3, -0.16, -0.17), (0.38, -0.04, -0.2), (0.38, 0.08, -0.26))),
@@ -528,9 +528,9 @@ for col, tr in ((0, ((0.0, -0.2, 0.45), (0.0, 0.0, 0.49), (0.0, 0.25, 0.44))),
 
 # ============================================================ parti: pelle
 HEAD_ZONE = H(ellipsoid((0.66, 0.62, 0.66), (0.0, -0.05, 0.08)))
-m.add("Body", core0.subtract(HEAD_ZONE.offset(-0.03)), FUR, tris=2200, voxel=0.03)
-m.add("Head", core0.intersect(HEAD_ZONE.offset(0.03)), FUR, tris=2400, voxel=0.024)
-m.add("Tail", tail, FUR, tris=400, voxel=0.028, group="Tail", pivot=TAIL_PIVOT)
+m.add("Body", core0.subtract(HEAD_ZONE.offset(-0.03)), FUR, tris=2100, voxel=0.048)
+m.add("Head", core0.intersect(HEAD_ZONE.offset(0.03)), FUR, tris=2300, voxel=0.034)
+m.add("Tail", tail, FUR, tris=350, voxel=0.036, group="Tail", pivot=TAIL_PIVOT)
 
 # ============================================================ pelo bianco (pezzi pieni): gorgiera, muso, sopra gli occhi, petto, pancia
 ruff = []
@@ -539,8 +539,8 @@ for sx in (1, -1):
                           (-0.26, -1.25, 0.26, 0.1)):
         base = np.array((sx * (0.34 if bz > -0.2 else 0.26), -0.05, bz))
         ruff.append(horn(base, norm((sx * 0.9, 0.3, dz)), L, r0, curl=(0, 0.08, -0.08), n=4, r1=0.018))
-pad_solid = union(*[ellipsoid((0.118, 0.102, 0.097), (sx * 0.081, -0.373, -0.142)) for sx in (1, -1)],
-                  ellipsoid((0.104, 0.094, 0.078), (0, -0.303, -0.272)), k=0.03).subtract(nostrils.offset(0.01))
+pad_solid = union(*[ellipsoid((0.13, 0.11, 0.105), (sx * 0.084, -0.418, -0.15)) for sx in (1, -1)],
+                  ellipsoid((0.11, 0.1, 0.082), (0, -0.348, -0.28)), k=0.03).subtract(nostrils.offset(0.01))
 brow_spots = []
 for sx in (1, -1):
     c, n_ = surf(head0, (sx * 0.1, -0.1, 0.12), (sx * 0.24, -0.5, 0.36))
@@ -548,14 +548,13 @@ for sx in (1, -1):
 ear_fluff = union(*[ear_pose(round_cone((0, 0.0, 0.0), (0, 0.0, 0.15), 0.09, 0.04), sx) for sx in (1, -1)])
 white_head = union(union(*ruff).subtract(head0.offset(-0.08)), pad_solid.subtract(head0.offset(-0.09)),
                    union(*brow_spots).subtract(head0.offset(-0.05)), union(*EAR_SPOTS), ear_fluff)
-chest_tufts = [ell((0.0, -0.96, 1.5), (0.3, 0.14, 0.38), axis=(0, -0.35, 1.0)),
-               ellipsoid((0.34, 0.62, 0.16), (0.0, 0.08, 1.08))]
+chest_tufts = [ell((0.0, -0.97, 1.5), (0.31, 0.15, 0.4), axis=(0, -0.35, 1.0))]
 for bx, bz, L in ((0.0, 1.36, 0.32), (0.15, 1.42, 0.27), (-0.15, 1.42, 0.27)):
     b, nb = surf(body_only, (bx * 0.5, -0.6, bz), (bx, -1.5, bz))
     chest_tufts.append(horn(b - nb * 0.06, norm(nb * 0.5 + np.array((bx * 0.6, 0.0, -1.0))), L, 0.1,
                             curl=(0, 0.1, 0), n=4, r1=0.018))
 chest_fluff = fast_union(chest_tufts, k=0.03).subtract(body_only.offset(-0.08))
-m.add("WhiteFur", union(H(white_head), chest_fluff), WHITE, role="detail", tris=1000, voxel=0.02)
+m.add("WhiteFur", union(H(white_head), chest_fluff), WHITE, role="detail", tris=950, voxel=0.045)
 
 # ============================================================ blu notte: dorso delle orecchie, contorno degli occhi
 rims = []
@@ -563,32 +562,33 @@ for sx in (1, -1):
     pts = [(-(EA + 0.012) * math.cos(a), 0.018, (EC + 0.012) * math.sin(a)) for a in np.linspace(0, 2 * math.pi, 29)]
     R_ = look_matrix(EYE_D[sx])
     rims.append(tube([tuple(rot_pts(R_, (x, y + 0.03, z)) + EYE_C[sx]) for x, y, z in pts], 0.016))
-m.add("Navy", H(union(*EAR_BACKS, *rims)), NAVY, role="detail", tris=500, voxel=0.014)
+m.add("Navy", H(union(*EAR_BACKS)), NAVY, role="detail", tris=350, voxel=0.038)
 
 # ============================================================ toppa lavanda cucita sulla spalla destra (toy horror)
 PATCH_C, PATCH_N = surf(body_only, (0.1, -0.42, 1.6), (0.9, -0.5, 1.75))
 PR = orient(PATCH_N, side=(0.0, 1.0, 0.0))
 patch_box = box((0.17, 0.14, 0.05), round=0.035).rotate(PR).translate(tuple(PATCH_C - PATCH_N * 0.03))
 patch = patch_box.intersect(body_only.offset(0.022)).subtract(body_only.offset(-0.06))
-m.add("Patch", patch, PATCH, role="detail", tris=250, voxel=0.012)
+m.add("Patch", patch, PATCH, role="detail", tris=200, voxel=0.022)
 stitches = []
 patch_top = body_only.offset(0.022)
 for u, v in [(-0.17, y) for y in (-0.085, 0.0, 0.085)] + [(0.17, y) for y in (-0.085, 0.0, 0.085)] + \
             [(x, -0.14) for x in (-0.085, 0.0, 0.085)] + [(x, 0.14) for x in (-0.085, 0.0, 0.085)]:
     c = PATCH_C + PR[:, 0] * u + PR[:, 1] * v
     tang = PR[:, 1] if abs(u) > 0.1 else PR[:, 0]
-    stitches += stitch_cross(patch_top, on_surface(patch_top, c, 0.0), tang, size=0.065, r=0.016, lift=0.004)
-m.add("Stitches", fast_union(stitches), THREAD, role="detail", tris=300, voxel=0.01)
+    stitches += stitch_cross(patch_top, on_surface(patch_top, c, 0.0), tang, size=0.07, r=0.02, lift=0.004)
+m.add("Stitches", fast_union(stitches), THREAD, role="detail", tris=350, voxel=0.0195)
 
 # ============================================================ circuiti luminosi (ciano = "Mane": scintille elettriche)
-m.add("Mane", fast_union(stripes[0] + [H(union(*head_traces[0]))] + disc_cyan + electrons_c), CYAN, material="Neon",
-      role="glow", tris=2100, voxel=0.016)
-m.add("CircuitsMagenta", fast_union(stripes[1] + [H(union(*head_traces[1]))] + disc_magenta + electrons_m), MAGENTA,
-      material="Neon", role="glow", tris=1800, voxel=0.016)
-m.add("TailGlow", tail_glow_s, MAGENTA, material="Neon", role="glow", tris=350, voxel=0.016, group="Tail",
+m.add("Mane", fast_union(stripes[0] + [H(union(*head_traces[0]))] + electrons_c), CYAN, material="Neon",
+      role="glow", tris=1700, voxel=0.0272)
+m.add("CircuitsMagenta", fast_union(stripes[1] + [H(union(*head_traces[1]))] + electrons_m), MAGENTA,
+      material="Neon", role="glow", tris=1150, voxel=0.028)
+m.add("DiscGlow", fast_union(disc_cyan), CYAN, material="Neon", role="glow", tris=1250, voxel=0.0284)
+m.add("TailGlow", tail_glow_s, MAGENTA, material="Neon", role="glow", tris=350, voxel=0.0275, group="Tail",
       pivot=TAIL_PIVOT)
 # anelli quantici olografici attorno alla testa ("Stars": scintille che brillano)
-m.add("Stars", fast_union(rings), RING, material="Neon", role="glow", tris=1300, voxel=0.016)
+m.add("Stars", fast_union(rings), RING, material="Neon", role="glow", tris=1600, voxel=0.0272)
 
 # ============================================================ occhi, terzo occhio, naso, bocca
 irises, pupils, shines = [], [], []
@@ -597,29 +597,30 @@ for sx in (1, -1):
     look = -0.012
     pupils.append(H(eye_place(ellipsoid((0.034, 0.02, 0.036)), sx, (look, -0.014, -0.004))))
     shines.append(H(eye_place(sphere(0.02), sx, (look - 0.03, -0.022, -0.006))))
-m.add("Iris", union(*irises), IRIS, role="eye", tris=400, voxel=0.01)
-m.add("ThirdEye", H(third_place(ellipsoid((0.05, 0.045, 0.084)), (0, 0.032, 0))), THIRD, material="Neon", role="glow",
-      tris=400, voxel=0.009)
-third_slit = third_place(ellipsoid((0.014, 0.02, 0.062)), (0, -0.01, 0))
-nose = union(*[ellipsoid((0.04, 0.032, 0.028), tuple(NOSE_C + (sx * 0.034, 0.0, 0.012))) for sx in (1, -1)],
-             ellipsoid((0.028, 0.028, 0.026), tuple(NOSE_C + (0.0, -0.008, -0.034))), k=0.05).subtract(nostrils, k=0.008)
-LIP = [(0.0, -0.09), (0.0, -0.165), (0.06, -0.205), (0.13, -0.2), (0.2, -0.16), (0.235, -0.13)]
+m.add("Iris", union(*irises), IRIS, role="eye", tris=380, voxel=0.0175)
+m.add("ThirdEye", H(third_place(ellipsoid((0.064, 0.05, 0.104)), (0, 0.022, 0))), THIRD, material="Neon", role="glow",
+      tris=360, voxel=0.0123)
+third_slit = third_place(ellipsoid((0.013, 0.02, 0.07)), (0, -0.024, 0))
+nose = union(*[ellipsoid((0.05, 0.036, 0.032), tuple(NOSE_C + (sx * 0.04, -0.006, 0.014))) for sx in (1, -1)],
+             ellipsoid((0.032, 0.03, 0.028), tuple(NOSE_C + (0.0, -0.014, -0.034))), k=0.05).subtract(nostrils, k=0.008)
+LIP = [(0.0, -0.1), (0.0, -0.17), (0.05, -0.205), (0.11, -0.205), (0.17, -0.18), (0.2, -0.155)]
 lip_curves = []
 for sx in (1, -1):
     tg = resample([np.array((sx * x, -0.6, z)) for x, z in LIP], 0.015)
     q, _ = project_many(head0, [(sx * 0.4 * t[0], -0.1, t[2]) for t in tg], [(0.0, -1.0, 0.0)] * len(tg))
-    lip_curves.append(tube([tuple(p) for p in q], 0.018))
-m.add("Ink", union(*pupils, H(union(third_slit, nose, *lip_curves))), INK, role="eye", tris=550, voxel=0.01)
+    q = [p + np.array((0.0, -0.012, 0.0)) for p in q]
+    lip_curves.append(tube([tuple(p) for p in q], 0.012))
+m.add("Ink", union(*pupils, H(union(third_slit, nose, *lip_curves, *rims))), INK, role="eye", tris=700, voxel=0.0163)
 
 fangs = []
 for sx in (1, -1):
-    b, _ = surf(head0, (sx * 0.04, -0.2, -0.19), (sx * 0.085, -0.8, -0.2))
+    b, _ = surf(head0, (sx * 0.04, -0.24, -0.2), (sx * 0.085, -0.84, -0.21))
     fangs.append(round_cone(tuple(b + np.array((0, 0.02, 0.005))), tuple(b + np.array((sx * -0.004, -0.012, -0.09))),
                             0.026, 0.005))
-m.add("Shine", union(H(union(*fangs)), *shines), TOOTH, role="shine", tris=400, voxel=0.008)
+m.add("Shine", union(H(union(*fangs)), *shines), TOOTH, role="shine", tris=380, voxel=0.0092)
 
 # ============================================================ disco antigravita' (metallo) e propulsori
-m.add("HoverDisc", union(disc, fast_union(thrusters)), DISC, material="Metal", role="detail", tris=700, voxel=0.02)
+m.add("HoverDisc", union(disc, fast_union(thrusters)), DISC, material="Metal", role="detail", tris=800, voxel=0.053)
 
 
 if __name__ == "__main__":

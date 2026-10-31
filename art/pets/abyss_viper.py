@@ -20,7 +20,16 @@ from scipy.spatial import cKDTree
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from lib.sdf import (SDF, bezier, box, capsule, ellipsoid, euler, prism, project, round_cone, smin, sphere, torus,  # noqa: E402
                      tube, union)
+from lib.sdf import tube as _tube  # noqa: E402
 from lib.toy import Model  # noqa: E402
+
+
+def tube(points, radii, k=0.0):
+    """Come lib.sdf.tube, ma toglie i punti consecutivi coincidenti (un tratto lungo zero rovina il campo)."""
+    pts = [np.asarray(q, dtype=np.float64) for q in points]
+    rr = [float(radii)] * len(pts) if isinstance(radii, (int, float)) else [float(r) for r in radii]
+    keep = [0] + [i for i in range(1, len(pts)) if np.linalg.norm(pts[i] - pts[i - 1]) > 1e-6]
+    return _tube([tuple(pts[i]) for i in keep], [rr[i] for i in keep], k=k)
 
 DRAFT = os.environ.get("DRAFT", "") == "1"
 VX = 1.35 if DRAFT else 1.0
@@ -310,7 +319,7 @@ def thin(shape, out, inn):
 
 
 # ============================================================ palette
-SKIN = (18, 22, 54)          # blu-nero (un nero puro in gioco e' piatto)
+SKIN = (20, 26, 64)          # blu-nero (un nero puro in gioco e' piatto)
 SHEEN = (116, 74, 226)       # riflesso iridescente viola (Foil)
 BELLY = (92, 88, 150)        # ventre argento-lavanda
 FIN = (64, 42, 150)          # pinne a lama viola scuro
@@ -360,24 +369,24 @@ def jp(p):
     return euler(GAPE, 0, 0).astype(np.float64) @ q + HINGE
 
 
-cran = ellipsoid((0.25, 0.3, 0.24), (0, 0.04, 0.07))
+cran = ellipsoid((0.26, 0.3, 0.25), (0, 0.02, 0.07))
 occ = ellipsoid((0.21, 0.2, 0.2), (0, 0.24, 0.03))
-snout = tbox(0.0, -0.62, 0.2, 0.085, 0.19, 0.075, JAW_Z - 0.03, JAW_Z - 0.02, 0.05)
+snout = tbox(0.0, -0.52, 0.2, 0.1, 0.2, 0.09, JAW_Z - 0.03, JAW_Z - 0.02, 0.07)
 cheeks = [ellipsoid((0.1, 0.18, 0.12), (sx * 0.17, 0.0, 0.0)) for sx in (1, -1)]
-brows = [capsule((sx * 0.06, -0.3, 0.19), (sx * 0.24, -0.04, 0.27), 0.055) for sx in (1, -1)]
+brows = [capsule((sx * 0.07, -0.3, 0.2), (sx * 0.25, -0.05, 0.28), 0.058) for sx in (1, -1)]
 upper = union(cran, occ, k=0.12)
 upper = union(upper, snout, k=0.12)
 upper = union(upper, *cheeks, k=0.07)
 upper = union(upper, *brows, k=0.05)
 upper = upper.subtract(box((0.6, 0.5, 0.3), (0, HINGE[1] - 0.5, JAW_Z - 0.3)), k=0.012)
-jaw = union(tbox(0.14, -0.74, 0.19, 0.075, JAW_Z + 0.04, JAW_Z + 0.04, -0.18, -0.1, 0.045),
-            ellipsoid((0.18, 0.16, 0.1), (0, 0.08, -0.1)), ellipsoid((0.07, 0.07, 0.05), (0, -0.66, -0.12)), k=0.06)
+jaw = union(tbox(0.14, -0.7, 0.19, 0.085, JAW_Z + 0.04, JAW_Z + 0.04, -0.18, -0.11, 0.05),
+            ellipsoid((0.18, 0.16, 0.1), (0, 0.08, -0.1)), ellipsoid((0.08, 0.08, 0.055), (0, -0.62, -0.12)), k=0.06)
 jaw = jaw.subtract(box((0.6, 0.6, 0.3), (0, -0.4, JAW_Z + 0.3)), k=0.012)
 
 # occhi grandi a mandorla, luminosi, pupilla a fessura, palpebra arrabbiata; macchia luminosa dietro l'occhio
 eye_glow, pupils, shines, photo_head, lids = [], [], [], [], []
 for sx in (1, -1):
-    p, n = project(upper, (sx * 0.05, -0.14, 0.1), (sx * 0.85, -0.42, 0.22))
+    p, n = project(upper, (sx * 0.05, -0.16, 0.1), (sx * 0.82, -0.48, 0.24))
     a1 = sx * norm(np.cross((0.0, 0.0, 1.0), n))
     a2 = -sx * n
     a3 = np.cross(a1, a2)
@@ -385,12 +394,12 @@ for sx in (1, -1):
     a1, a3 = a1 * math.cos(sl) + a3 * math.sin(sl), a3 * math.cos(sl) - a1 * math.sin(sl)
     Me = np.stack([a1, a2, a3], axis=1).astype(np.float32)
     c = p - n * 0.024
-    eye = ellipsoid((0.125, 0.07, 0.085)).rotate(Me).translate(c)
+    eye = ellipsoid((0.15, 0.08, 0.1)).rotate(Me).translate(c)
     eye_glow.append(eye)
-    pupils.append(thin(eye, 0.007, 0.026).intersect(ellipsoid((0.024, 0.2, 0.07)).rotate(Me).translate(c)))
+    pupils.append(thin(eye, 0.007, 0.026).intersect(ellipsoid((0.03, 0.07, 0.086)).rotate(Me).translate(c + n * 0.075)))
     cutp = SDF(lambda q: (0.012 + 0.45 * q[:, 0] - q[:, 2]) / math.sqrt(1 + 0.45 ** 2), (-0.16, -0.16, -0.16), (0.16, 0.16, 0.16))
-    lids.append(ellipsoid((0.135, 0.082, 0.094)).intersect(cutp).rotate(Me).translate(c))
-    shines.append(sphere(0.022, tuple(c + n * 0.068 + a3 * 0.012 - a1 * sx * 0.045)))
+    lids.append(ellipsoid((0.162, 0.092, 0.11)).intersect(cutp).rotate(Me).translate(c))
+    shines.append(sphere(0.025, tuple(c + n * 0.078 + a3 * 0.014 - a1 * sx * 0.055)))
     q, nq = project(upper, (sx * 0.05, 0.12, 0.02), (sx * 0.9, 0.2, -0.1))
     photo_head.append(place(ellipsoid((0.07, 0.04, 0.025)), np.stack([norm(np.cross(nq, (0, 0, 1))), np.cross(nq, norm(np.cross(nq, (0, 0, 1)))), nq], axis=1).astype(np.float32), q))
 
@@ -570,9 +579,9 @@ for sx, nm in ((1, "FinR"), (-1, "FinL")):
     s0 = 0.1 * L
     base, n = surf(s0, -0.45, sx, sink=0.04)
     c, T, D, Lat = sp.frame(s0)
-    span = norm(T * 0.62 + Lat * sx * 0.78 - D * 0.18)
+    span = norm(T * 0.5 + Lat * sx * 0.86 - D * 0.1)
     Mf = basis(span, D * 1.0 + T * 0.2)
-    fins_pec[nm] = (place(blade(1.0, 0.24, sweep=-0.08), Mf, base), tuple(base))
+    fins_pec[nm] = (place(blade(1.2, 0.28, sweep=-0.1), Mf, base), tuple(base))
 
 fins = []
 # dorsale: alta lama all'indietro subito dietro la testa
@@ -626,26 +635,30 @@ for dx, dy in ((0.07, 0.03), (-0.06, 0.05), (0.0, -0.07)):
 log("barbiglio pronto")
 
 # ============================================================ parti
-m.add("Body", union(body, H(head_skin), k=0.06), SKIN, tris=5600, voxel=0.03 * VX, reflectance=0.15)
-m.add("Belly", belly, BELLY, role="detail", tris=1300, voxel=0.03 * VX)
-m.add("Sheen", sheen, SHEEN, material="Foil", role="detail", tris=900, voxel=0.03 * VX)
-m.add("Maw", H(fast_union(dark)), MAW, role="eye", tris=400, voxel=0.024 * VX)
-m.add("Fangs", H(fast_union(fangs)), FANG, role="shine", tris=900, voxel=0.014 * VX)
-m.add("TipGlow", fast_union([H(t) for t in fang_tips] + tip_glow), GLOW, material="Neon", role="glow", tris=420, voxel=0.013 * VX)
-m.add("EyeGlow", H(union(*eye_glow)), EYE, material="Neon", role="glow", tris=300, voxel=0.016 * VX)
-m.add("Pupils", H(union(*pupils)), PUPIL, role="eye", tris=300, voxel=0.01 * VX)
-m.add("Shine", H(union(*shines)), WHITE, role="shine", tris=80, voxel=0.008 * VX)
+m.add("Body", union(body, H(head_skin), k=0.06), SKIN, tris=5400, voxel=0.031 * VX, reflectance=0.15)
+m.add("Belly", belly, BELLY, role="detail", tris=1300, voxel=0.036 * VX)
+# la banda iridescente prosegue sulla testa, da dietro l'occhio alla nuca
+head_sheen = thin(upper, 0.016, 0.04).intersect(SDF(lambda q: np.maximum(np.maximum(np.abs(q[:, 2] - 0.13 - 0.12 * (q[:, 1] - 0.1)) - 0.045,
+                                                                             0.12 - np.abs(q[:, 0])), np.maximum(-0.06 - q[:, 1], q[:, 1] - 0.5)),
+                                                  (-0.4, -0.1, -0.1), (0.4, 0.5, 0.35)))
+m.add("Sheen", union(sheen, H(head_sheen)), SHEEN, material="Foil", role="detail", tris=1000, voxel=0.04 * VX)
+m.add("Maw", H(fast_union(dark)), MAW, role="eye", tris=500, voxel=0.034 * VX)
+m.add("Fangs", H(fast_union(fangs)), FANG, role="shine", tris=1000, voxel=0.026 * VX)
+m.add("TipGlow", fast_union([H(t) for t in fang_tips] + tip_glow), GLOW, material="Neon", role="glow", tris=500, voxel=0.0195 * VX)
+m.add("EyeGlow", H(union(*eye_glow)), EYE, material="Neon", role="glow", tris=300, voxel=0.031 * VX)
+m.add("Pupils", H(union(*pupils)), PUPIL, role="eye", tris=300, voxel=0.013 * VX)
+m.add("Shine", H(union(*shines)), WHITE, role="shine", tris=120, voxel=0.0115 * VX)
 m.add("Photophores", fast_union(photos + [H(x) for x in photo_head]), GLOW, material="Neon", role="glow", tris=1500,
-      voxel=0.014 * VX)
-m.add("Barbel", barbel, FIN, role="detail", tris=250, voxel=0.014 * VX)
-m.add("Bubbles", union(*bulb, k=0.02), GLOW, material="Neon", role="glow", tris=400, voxel=0.014 * VX)
+      voxel=0.0195 * VX)
+m.add("Barbel", barbel, FIN, role="detail", tris=250, voxel=0.015 * VX)
+m.add("Bubbles", union(*bulb, k=0.02), GLOW, material="Neon", role="glow", tris=400, voxel=0.015 * VX)
 for nm in ("FinR", "FinL"):
     shp, piv = fins_pec[nm]
-    m.add(nm, shp, FIN, material="Foil", role="detail", tris=300, voxel=0.024 * VX, group=nm, pivot=piv)
-m.add("Fins", fast_union(fins + [H(c_) for c_ in crest]), FIN, material="Foil", role="detail", tris=1100, voxel=0.024 * VX)
-m.add("TailFin", tail_fin, FIN, material="Foil", role="detail", tris=500, voxel=0.024 * VX, group="Tail", pivot=TAIL_PIVOT)
-m.add("TailGlow", union(*tail_glow), GLOW, material="Neon", role="glow", tris=160, voxel=0.013 * VX, group="Tail", pivot=TAIL_PIVOT)
-m.add("Stitches", H(fast_union(scar + stitches)), THREAD, role="detail", tris=300, voxel=0.012 * VX)
+    m.add(nm, shp, FIN, material="Foil", role="detail", tris=380, voxel=0.024 * VX, group=nm, pivot=piv)
+m.add("Fins", fast_union(fins + [H(c_) for c_ in crest]), FIN, material="Foil", role="detail", tris=1100, voxel=0.025 * VX)
+m.add("TailFin", tail_fin, FIN, material="Foil", role="detail", tris=500, voxel=0.025 * VX, group="Tail", pivot=TAIL_PIVOT)
+m.add("TailGlow", union(*tail_glow), GLOW, material="Neon", role="glow", tris=200, voxel=0.02 * VX, group="Tail", pivot=TAIL_PIVOT)
+m.add("Stitches", H(fast_union(scar + stitches)), THREAD, role="detail", tris=400, voxel=0.018 * VX)
 
 if __name__ == "__main__":
     only = [s for s in os.environ.get("ONLY", "").split(",") if s]

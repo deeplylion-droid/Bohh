@@ -257,8 +257,8 @@ m = Model("CyberLynx", "pet")
 rng = np.random.default_rng(31)
 
 # ============================================================ testa (spazio locale: muso verso -Y)
-HEAD_POS = np.array([0.0, -1.04, 1.92])
-HS = 1.36
+HEAD_POS = np.array([0.0, -1.06, 1.94])
+HS = 1.42
 R_HEAD = euler(-6.0, 0.0, 13.0)       # mento un po' alto (aria di superiorita'), girata verso la camera 3/4
 
 
@@ -371,9 +371,9 @@ head2 = union(head2, *ears, k=0.04)
 head_final = shrink(head2.subtract(nostrils, k=0.01))
 
 # ============================================================ corpo (acquattato: spalle alte, gomiti fuori, posteriore raccolto)
-chest = ellipsoid((0.44, 0.46, 0.46), (0, -0.45, 0.92))
-ribs = ellipsoid((0.38, 0.5, 0.38), (0, 0.1, 0.86))
-haunch = ellipsoid((0.44, 0.42, 0.42), (0, 0.62, 0.78))
+chest = ellipsoid((0.41, 0.45, 0.45), (0, -0.45, 0.92))
+ribs = ellipsoid((0.35, 0.5, 0.36), (0, 0.1, 0.87))
+haunch = ellipsoid((0.42, 0.42, 0.42), (0, 0.62, 0.8))
 scap = [ell((sx * 0.25, -0.47, 1.26), (0.15, 0.2, 0.24), axis=(0, -0.3, 1.0)) for sx in (1, -1)]
 torso = union(union(chest, ribs, k=0.3), haunch, k=0.28)
 torso = union(torso, *scap, k=0.15)
@@ -573,9 +573,9 @@ for sx in (1, -1):
 
 # ============================================================ parti: pelle
 HEAD_ZONE = H(ellipsoid((0.66, 0.62, 0.7), (0.0, -0.05, 0.12)))
-m.add("Body", core0.subtract(HEAD_ZONE.offset(-0.03)), FUR, tris=2400, voxel=0.03)
-m.add("Head", core0.intersect(HEAD_ZONE.offset(0.03)), FUR, tris=2800, voxel=0.024)
-m.add("Tail", tail_fur, FUR, tris=350, voxel=0.03, group="Tail", pivot=TAIL_PIVOT)
+m.add("Body", core0.subtract(HEAD_ZONE.offset(-0.03)), FUR, tris=2400, voxel=0.0427)
+m.add("Head", core0.intersect(HEAD_ZONE.offset(0.03)), FUR, tris=2800, voxel=0.0303)
+m.add("Tail", tail_fur, FUR, tris=350, voxel=0.0327, group="Tail", pivot=TAIL_PIVOT)
 
 # ============================================================ pelo chiaro: gorgiera (ciuffi pieni), muso, pettorina, orecchie interne
 pad_solid = union(*[ellipsoid((0.106, 0.094, 0.09), (sx * 0.074, -0.373, -0.15)) for sx in (1, -1)],
@@ -591,7 +591,7 @@ chest_fluff = fast_union(chest_tufts, k=0.03).subtract(body_only.offset(-0.08))
 ear_fluff = union(*[ear_pose(round_cone((0, 0.0, 0.03), (0, 0.0, 0.3), 0.09, 0.014), sx) for sx in (1, -1)])
 cream = union(H(ruff_solid.subtract(head0.offset(-0.08))), H(pad_solid.subtract(head0.offset(-0.09))), chest_fluff,
               H(ear_fluff))
-m.add("Cream", cream, CREAM, role="detail", tris=1200, voxel=0.02)
+m.add("Cream", cream, CREAM, role="detail", tris=1200, voxel=0.0377)
 
 # ============================================================ segni scuri dipinti: macchie e dorso delle orecchie
 spots = []
@@ -611,14 +611,16 @@ for p in spots:
     r = rng.uniform(0.065, 0.09)
     spot_discs.append(ellipsoid((r, r * rng.uniform(0.7, 1.0), 0.05)).rotate(orient(nr, side=(0.0, 1.0, 0.0)))
                       .translate(tuple(p - nr * 0.032)))
-bars = []
-for i in (1, 2, 5, 6):
+tips = []
+for i in (0, 1, 2, 4, 5, 6):
     base, d, L = RUFF_AX[i]
-    t = 0.6
-    rr = (0.115 if i in (1, 5) else 0.11) * (1 - t) + 0.014 * t
-    bars.append(torus(rr + 0.004, 0.03).rotate(orient(d)).translate(tuple(base + d * L * t + np.array((0, 0.05, -0.1)) * L * t * t)))
-marks = union(fast_union(spot_discs), H(union(*EAR_TIPS)), H(union(*bars)))
-m.add("Marks", marks, DARK, role="detail", tris=600, voxel=0.02)
+    r0 = (0.1, 0.115, 0.11, 0.1)[i % 4]
+    tufts_i = horn(base, d, L, r0, curl=(0, 0.05, -0.1), n=6, r1=0.014)
+    cut_c = base + d * L * 0.68 + np.array((0, 0.05, -0.1)) * L * 0.46
+    tips.append(tufts_i.offset(0.008).intersect(SDF(lambda p, c=cut_c, d=d: (c - p) @ d.astype(np.float32),
+                                                    cut_c - 1, cut_c + 1), k=0.01))
+marks = union(fast_union(spot_discs), H(union(*EAR_TIPS)), H(fast_union(tips)))
+m.add("Marks", marks, DARK, role="detail", tris=600, voxel=0.0321)
 
 # ============================================================ ciuffi-antenna, sopracciglia, cuciture (dettagli sottili scuri)
 brows = []
@@ -631,10 +633,10 @@ ear_axis = hv(ear_pt((0, 0, 1), 1) - ear_pt((0, 0, 0), 1))
 for z in (0.05, 0.14, 0.23):
     wp = hp(ear_pt(np.array((0.1, -0.05, z)), 1))
     stitches += stitch_cross(core0, on_surface(core0, wp, 0.0), ear_axis, size=0.07, r=0.016)
-m.add("Tufts", union(H(union(*brows, *antennas)), fast_union(stitches)), DARK, role="detail", tris=600, voxel=0.012)
+m.add("Tufts", union(H(union(*brows, *antennas)), fast_union(stitches)), DARK, role="detail", tris=600, voxel=0.0178)
 
 # ============================================================ visore, cromature, linee di dati
-m.add("Visor", H(visor_local), VISOR, material="Glass", role="detail", tris=550, voxel=0.014, transparency=0.55)
+m.add("Visor", H(visor_local), VISOR, material="Glass", role="detail", tris=550, voxel=0.0266, transparency=0.55)
 
 # chip luminoso sul petto (cornice cromata esagonale)
 chip_p, chip_n = surf(body_only, (0.0, -0.6, 1.0), (0.0, -1.6, 1.15))
@@ -650,9 +652,9 @@ def hexagon(r, h, round_=0.01):
 chest_frame = hexagon(0.11, 0.03).subtract(hexagon(0.075, 0.06, 0.0)).rotate(CH_R).translate(tuple(chip_p + chip_n * 0.005))
 chest_core = hexagon(0.078, 0.022).rotate(CH_R).translate(tuple(chip_p + chip_n * 0.004))
 m.add("Chrome", union(H(union(*chrome_head)), chest_frame), CHROME, material="Metal", role="detail", tris=800,
-      voxel=0.012)
+      voxel=0.0235)
 m.add("VisorGlow", union(H(union(fast_union(hud), *ant_tips)), chest_core), HUD, material="Neon", role="glow",
-      tris=900, voxel=0.01)
+      tris=900, voxel=0.0177)
 
 # ============================================================ circuiti luminosi sul pelo (parte Neon "Mane")
 
@@ -708,7 +710,7 @@ for tr in (((0.0, -0.2, 0.4), (0.0, 0.05, 0.45), (0.0, 0.26, 0.38)),
     head_circ.append(tube([tuple(p) for p in q], 0.02))
     head_circ.append(cylinder(tuple(q[-1] - nq[-1] * 0.03), tuple(q[-1] + nq[-1] * 0.01), 0.038, round=0.008))
 circuits.append(H(union(*head_circ)))
-m.add("Mane", fast_union(circuits), GLOW, material="Neon", role="glow", tris=1300, voxel=0.013)
+m.add("Mane", fast_union(circuits), GLOW, material="Neon", role="glow", tris=1300, voxel=0.0237)
 
 # ============================================================ occhi, pupille, bocca, naso
 whites, irises, slits, shines = [], [], [], []
@@ -718,12 +720,12 @@ for sx in (1, -1):
     irises.append(H(eye_place(ellipsoid((0.066, 0.03, 0.07)), sx, (look, 0.004, -0.008))))
     slits.append(H(eye_place(ellipsoid((0.02, 0.02, 0.056)), sx, (look, -0.016, -0.008))))
     shines.append(H(eye_place(sphere(0.02), sx, (look - 0.027, -0.026, -0.014))))
-m.add("EyeWhite", union(*whites), EYE_W, role="eye", tris=400, voxel=0.01)
-m.add("Iris", union(*irises), IRIS, role="eye", tris=400, voxel=0.009)
+m.add("EyeWhite", union(*whites), EYE_W, role="eye", tris=400, voxel=0.019)
+m.add("Iris", union(*irises), IRIS, role="eye", tris=400, voxel=0.0125)
 mouth = paint(head2, mouth_reg.offset(0.012), out=0.012, inn=0.03)
 nose = union(*[ellipsoid((0.034, 0.03, 0.026), tuple(NOSE_C + (sx * 0.03, 0.0, 0.012))) for sx in (1, -1)],
              ellipsoid((0.024, 0.026, 0.024), tuple(NOSE_C + (0.0, -0.008, -0.032))), k=0.045).subtract(nostrils, k=0.008)
-m.add("Ink", union(H(union(mouth, nose)), *slits), INK, role="eye", tris=700, voxel=0.01)
+m.add("Ink", union(H(union(mouth, nose)), *slits), INK, role="eye", tris=700, voxel=0.0172)
 
 # dentini aguzzi lungo il labbro superiore (e qualcuno sotto) + riflessi negli occhi
 teeth = []
@@ -737,14 +739,14 @@ for x in np.linspace(-0.17, 0.2, 5):
     z = float(np.interp(x, lx, lz))
     b, _ = surf(head1, (x * 0.5, -0.1, z), (x, -0.6, z))
     teeth.append(round_cone(tuple(b + np.array((0, 0.024, -0.004))), tuple(b + np.array((0, 0.004, 0.036))), 0.016, 0.004))
-m.add("Shine", union(H(union(*teeth)), *shines), TOOTH, role="shine", tris=650, voxel=0.008)
+m.add("Shine", union(H(union(*teeth)), *shines), TOOTH, role="shine", tris=650, voxel=0.0117)
 
 # ============================================================ coda robotica e ologramma (gruppo "Tail")
-m.add("TailTech", m_tail_tech, CHROME, material="Metal", role="detail", tris=650, voxel=0.013, group="Tail",
+m.add("TailTech", m_tail_tech, CHROME, material="Metal", role="detail", tris=650, voxel=0.0216, group="Tail",
       pivot=TAIL_PIVOT)
-m.add("Hologram", fast_union(holo), HOLO, material="Neon", role="glow", tris=1100, voxel=0.012, group="Tail",
+m.add("Hologram", fast_union(holo), HOLO, material="Neon", role="glow", tris=1100, voxel=0.0207, group="Tail",
       pivot=TAIL_PIVOT)
-m.add("HoloBeam", beam, HOLO, material="Glass", role="detail", tris=150, voxel=0.015, transparency=0.6,
+m.add("HoloBeam", beam, HOLO, material="Glass", role="detail", tris=150, voxel=0.0356, transparency=0.6,
       group="Tail", pivot=TAIL_PIVOT)
 
 

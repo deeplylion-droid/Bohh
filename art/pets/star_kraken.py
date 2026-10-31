@@ -30,18 +30,18 @@ from lib.toy import Model  # noqa: E402
 
 # ============================================================ colori
 VIOLET = (70, 30, 150)       # corpo: viola profondo
-MAGENTA = (236, 70, 196)     # lato inferiore dei tentacoli, labbra e nubi di nebulosa dipinte
-CYAN = (40, 206, 255)        # nubi ciano dipinte
+MAGENTA = (236, 70, 196)     # lato inferiore dei tentacoli, nubi di nebulosa dipinte, fascia del pianeta
+CYAN = (40, 206, 255)        # nubi ciano dipinte e pianetino
 STAR = (255, 240, 178)       # stelline (Neon)
 CUP = (255, 222, 110)        # ventose a stella (Neon)
 EYE = (255, 186, 30)         # occhi d'ambra (Neon)
-CRYSTAL = (96, 238, 255)     # corona di cristalli (Neon)
+CRYSTAL = (96, 238, 255)     # corona di cristalli e bracci ciano del vortice (Neon)
 NEBULA = (255, 80, 206)      # vortice di nebulosa (Neon)
 GALAXY = (255, 112, 236)     # bracci della galassia e gola (Neon)
 BEAK = (240, 226, 196)       # becco d'avorio
 DARK = (14, 8, 30)           # bocca, orbite, pupille, fondo dell'oblo'
 TOOTH = (255, 250, 238)
-BRASS = (226, 166, 58)
+BRASS = (226, 166, 58)       # cornice dell'oblo', chiave di carica, anello del pianeta
 PATCH = (172, 136, 246)
 GLASS = (176, 232, 255)
 
@@ -213,18 +213,6 @@ def resample(pts, step):
     n = max(int(round(cum[-1] / step)), 2)
     s = np.linspace(0.0, cum[-1], n + 1)
     return np.stack([np.interp(s, cum, pts[:, k]) for k in range(3)], axis=1)
-
-
-def diamond(h, w, d=None):
-    """Bipiramide (scheggia di cristallo) lungo Z: semi-altezza h, semi-larghezze w (X) e d (Y)."""
-    d = d or w
-    k = 1.0 / math.sqrt(1 / w ** 2 + 1 / d ** 2 + 1 / h ** 2)
-
-    def f(p):
-        q = np.abs(p)
-        return ((q[:, 0] / w + q[:, 1] / d + q[:, 2] / h - 1.0) * k).astype(np.float32)
-
-    return SDF(f, (-w, -d, -h), (w, d, h))
 
 
 def seg_tube(pts, radii):
@@ -419,8 +407,8 @@ EYES = [dict(d=(0.0, -0.85, 0.55), R=(0.31, 0.14, 0.26), sink=0.055, cut=0.1, sl
 
 def below(cut, slope, vee):
     """Semispazio sotto la linea della palpebra z = cut + slope*x + vee*|x| (coordinate locali)."""
-    return SDF(lambda p: (p[:, 2] - cut - slope * p[:, 0] - vee * np.abs(p[:, 0])) / math.sqrt(1 + slope ** 2 + vee ** 2),
-               (-2, -2, -2), (2, 2, 2))
+    k = 1.0 / math.sqrt(1 + slope ** 2 + vee ** 2)
+    return SDF(lambda p: (p[:, 2] - cut - slope * p[:, 0] - vee * np.abs(p[:, 0])) * k, (-2, -2, -2), (2, 2, 2))
 
 
 def front_of(y):
@@ -451,8 +439,8 @@ for e in EYES:
     else:
         inner = -1 if e["slope"] > 0 else 1
         zi = e["cut"] - abs(e["slope"]) * rx + 0.08
-        brows.append(place(round_cone((inner * rx * 0.95, -0.06, zi), (-inner * rx * 0.95, -0.02, zo - 0.02), 0.045, 0.026),
-                            M, p))
+        brow = round_cone((inner * rx * 0.95, -0.06, zi), (-inner * rx * 0.95, -0.02, zo - 0.02), 0.045, 0.026)
+        brows.append(place(brow, M, p))
     shines.append(place(sphere(rx * 0.14), M, p, (-rx * 0.45, sk - ry * 0.84, rz * 0.12)))
     shines.append(place(sphere(rx * 0.075), M, p, (rx * 0.42, sk - ry * 0.82, -rz * 0.45)))
 
@@ -499,7 +487,7 @@ for sx, tn in RT.items():
     stubs.append(tn.tube(0.0, tn.us + 0.02))
 
 body = sparse_union(stubs, k=0.24, base=face)
-body = body.subtract(recess, k=0.02).subtract(mouth_cav, k=0.025)
+body = body.subtract(recess, k=0.02).subtract(mouth_cav, k=0.025).intersect(GROUND)   # radici poggiate a z = 0
 m.add("Body", body, VIOLET, reflectance=0.12, tris=10200, voxel=0.022)
 
 
@@ -508,7 +496,7 @@ def ramp_dr(u0, du=0.04, a=-0.014, b=0.006):
 
 
 tents = [tn.tube(tn.us - 0.03, 1.0, dr=ramp_dr(tn.us - 0.03)) for tn in GT]
-m.add("Tentacles", sparse_union(tents).intersect(GROUND), VIOLET, reflectance=0.12, tris=9600, voxel=0.022)
+m.add("Tentacles", sparse_union(tents).intersect(GROUND), VIOLET, reflectance=0.12, tris=9400, voxel=0.022)
 
 for sx, nm in ((1, "TentacleR"), (-1, "TentacleL")):
     tn = RT[sx]
@@ -531,13 +519,13 @@ under_parts, cup_glow, specks = [], [], []
 for tn in GT:
     under_parts.append(shell_paint(tn.tube(tn.u_curl - 0.08, 1.0), tn.band(64, tn.u_curl - 0.07, 1.0),
                                    out=0.02, inn=0.08))
-    cup_glow += cup_stars(tn.cups(tn.u_curl - 0.02, 0.96, spacing=1.2, ang=30, size_k=0.66, rmin=0.064))
+    cup_glow += cup_stars(tn.cups(tn.u_curl - 0.02, 0.96, spacing=1.2, ang=30, size_k=0.7, rmin=0.085))
     specks += tn.dorsal(tn.us, tn.u_curl + 0.12, 0.3, rng)
 
 for sx, nm in ((1, "R"), (-1, "L")):
     tn = RT[sx]
     paint = shell_paint(tn.tube(tn.us, 1.0), tn.band(60, tn.us + 0.02, 1.0), out=0.02, inn=0.08)
-    stars = cup_stars(tn.cups(tn.us + 0.04, 0.96, spacing=1.15, ang=30, size_k=0.62, rmin=0.06))
+    stars = cup_stars(tn.cups(tn.us + 0.04, 0.96, spacing=1.15, ang=30, size_k=0.64, rmin=0.075))
     sp = tn.dorsal(tn.us + 0.05, 0.86, 0.32, rng)
     stars.append(blobs([c for c, _ in sp], [r for _, r in sp]))
     m.add(f"Tentacle{nm}Under", paint, MAGENTA, role="detail", tris=1300, voxel=0.03,
@@ -546,7 +534,7 @@ for sx, nm in ((1, "R"), (-1, "L")):
           group=f"Tentacle{nm}", pivot=tn.pivot)
 
 # ---- toppa cucita sul mantello (lato destro) e chiave di carica sulla schiena: posizioni
-PP, NP_, MP = surf_frame(core, MANT_C, (0.92, 0.1, 0.4))
+PP, _, MP = surf_frame(core, MANT_C, (0.92, 0.1, 0.4))
 PATCH_W, PATCH_H, PATCH_ROT = 0.2, 0.17, 12.0
 patch_reg = place(prism([(-PATCH_W, -PATCH_H), (PATCH_W, -PATCH_H), (PATCH_W, PATCH_H), (-PATCH_W, PATCH_H)], -0.5, 0.5)
                   .rot(90, 0, 0).rot(0, PATCH_ROT, 0), MP, PP)
@@ -747,7 +735,8 @@ for j in range(3):
     radc = 0.9 + 1.85 * tc
     cy_arms.append(seg_tube(np.stack([radc * np.cos(thc), radc * np.sin(thc), np.zeros_like(tc)], axis=1),
                             0.05 + 0.065 * np.sin(np.pi * tc / tc[-1])))
-nebula = union(flatten(sparse_union(neb_arms), 0.42), flatten(blobs(cl_c, cl_r, k=0.05), 0.85), k=0.04).intersect(GROUND)
+nebula = union(flatten(sparse_union(neb_arms), 0.42), flatten(blobs(cl_c, cl_r, k=0.05), 0.85), k=0.04)
+nebula = nebula.intersect(GROUND)
 cyan_swirl = flatten(sparse_union(cy_arms), 0.55).intersect(GROUND)
 
 # ============================================================ corona di schegge di cristallo fluttuanti
@@ -756,7 +745,7 @@ CROWN_UP = np.array([0.0, math.sin(math.radians(7)), math.cos(math.radians(7))])
 CC = TOP + np.array([0.0, -0.06, 0.1])
 FWD = norm(np.array([0.0, -1.0, 0.0]) - CROWN_UP * np.dot([0.0, -1.0, 0.0], CROWN_UP))
 SIDE = np.array([1.0, 0.0, 0.0])
-crystals = [torus(0.56, 0.026).rotate(frame(CROWN_UP, FWD)).translate(tuple(CC))]
+crystals = [torus(0.56, 0.036).rotate(frame(CROWN_UP, FWD)).translate(tuple(CC))]
 for psi, hh, rho in ((0, 0.33, 0.46), (36, 0.26, 0.5), (-36, 0.26, 0.5), (74, 0.22, 0.53), (-74, 0.22, 0.53),
                      (115, 0.18, 0.53), (-115, 0.18, 0.53), (152, 0.15, 0.5), (-152, 0.15, 0.5)):
     a = math.radians(psi)
@@ -764,13 +753,13 @@ for psi, hh, rho in ((0, 0.33, 0.46), (36, 0.26, 0.5), (-36, 0.26, 0.5), (74, 0.
     c = CC + radial * rho + CROWN_UP * hh * 0.8
     ax = norm(CROWN_UP + radial * 0.28)
     crystals.append(shard(hh, hh * 0.38).rotate(frame(ax, radial)).translate(tuple(c)))
-for psi, hh, rho, up in ((18, 0.08, 0.84, 0.1), (-58, 0.07, 0.83, 0.3), (105, 0.07, 0.8, 0.06),
-                         (-140, 0.06, 0.78, 0.2), (165, 0.065, 0.8, 0.34)):
+for psi, hh, rho, up in ((18, 0.1, 0.84, 0.1), (-58, 0.09, 0.83, 0.3), (105, 0.09, 0.8, 0.06),
+                         (-140, 0.08, 0.78, 0.2), (165, 0.085, 0.8, 0.34)):
     a = math.radians(psi)
     radial = math.cos(a) * FWD + math.sin(a) * SIDE
-    crystals.append(shard(hh, hh * 0.42).rotate(frame(norm(CROWN_UP + radial * 0.6), radial))
+    crystals.append(shard(hh, hh * 0.48).rotate(frame(norm(CROWN_UP + radial * 0.6), radial))
                     .translate(tuple(CC + radial * rho + CROWN_UP * up)))
-m.add("CrystalGlow", sparse_union(crystals), CRYSTAL, material="Neon", role="glow", tris=1100, voxel=0.016)
+m.add("CrystalGlow", sparse_union(crystals), CRYSTAL, material="Neon", role="glow", tris=1800, voxel=0.016)
 
 m.add("Cyan", union(shell_paint(core, cy_region, out=0.03, inn=0.07), planet), CYAN, role="detail", tris=1300,
       voxel=0.024)
@@ -779,7 +768,7 @@ m.add("Cyan", union(shell_paint(core, cy_region, out=0.03, inn=0.07), planet), C
 throat = place(sphere(0.09), MM, PM, (0, 0.22, -0.04))
 m.add("GalaxyGlow", sparse_union(gal_arms + [throat]), GALAXY, material="Neon", role="glow", tris=1000, voxel=0.012)
 
-# ============================================================ stelle (effetto "Stars"): puntini e scintille sul mantello
+# ============================================================ stelle (effetto "Stars"): puntini e costellazioni
 def slerp_dirs(d0, d1, n):
     d0, d1 = norm(d0), norm(d1)
     om = math.acos(float(np.clip(np.dot(d0, d1), -1.0, 1.0)))
@@ -796,7 +785,8 @@ def twinkle(c, nrm, L, r0=0.032, rc=0.044):
 # costellazioni: stelle unite da linee luminose che seguono la superficie del mantello
 CONST = [([(0.3, -0.55, 0.8), (0.55, -0.45, 0.72), (0.74, -0.36, 0.52), (0.68, -0.1, 0.74), (0.48, 0.04, 0.9)],
           [(0, 1), (1, 2), (2, 3), (3, 4), (1, 3)]),
-         ([(-0.76, 0.42, 0.48), (-0.58, 0.66, 0.52), (-0.76, 0.6, 0.12), (-0.42, 0.86, 0.24)], [(0, 1), (1, 2), (1, 3)]),
+         ([(-0.76, 0.42, 0.48), (-0.58, 0.66, 0.52), (-0.76, 0.6, 0.12), (-0.42, 0.86, 0.24)],
+          [(0, 1), (1, 2), (1, 3)]),
          ([(0.5, 0.78, -0.02), (0.76, 0.54, 0.02), (0.42, 0.9, 0.24)], [(0, 1), (0, 2)])]
 const_parts, const_pts = [], []
 for nodes, edges in CONST:
@@ -839,12 +829,13 @@ m.add("Stars", sparse_union([blobs(st_c, st_r), gal_core, *gal_stars, *twinkles,
       role="glow", tris=2800, voxel=0.0105)
 
 # ============================================================ vortice di nebulosa a terra (effetto "Nebula")
-for c, r in (((2.5, -1.25, 0.0), 0.06), ((-2.55, 0.9, 0.0), 0.05), ((0.6, 2.75, 0.0), 0.055), ((-1.4, -2.3, 0.0), 0.05)):
+for c, r in (((2.5, -1.25, 0.0), 0.06), ((-2.55, 0.9, 0.0), 0.05), ((0.6, 2.75, 0.0), 0.055),
+             ((-1.4, -2.3, 0.0), 0.05)):
     specks.append((np.array(c) + np.array([0, 0, 0.02]), r))
 m.add("Nebula", nebula, NEBULA, material="Neon", role="glow", tris=3400, voxel=0.04)
 m.add("SwirlGlow", cyan_swirl, CRYSTAL, material="Neon", role="glow", tris=1000, voxel=0.04)
 m.add("CupGlow", sparse_union(cup_glow + [blobs([c for c, _ in specks], [r for _, r in specks])])
-      .intersect(GROUND), CUP, material="Neon", role="glow", tris=3200, voxel=0.013)
+      .intersect(GROUND), CUP, material="Neon", role="glow", tris=2900, voxel=0.013)
 
 if __name__ == "__main__":
     m.build(views=tuple(os.environ.get("VIEWS", "3q,front").split(",")), res=int(os.environ.get("RES", 700)))

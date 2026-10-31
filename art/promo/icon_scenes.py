@@ -518,7 +518,8 @@ def finish(beauty: Path, glow: Path | None, out512: Path, bloom=0.55, radii=(0.0
 # =================================================================================== scena A
 def scene_guardiano(res: int, samples: int, tag: str):
     reset()
-    setup_render(res, samples, vt=env("VT", "AgX"), look=env("LOOK", "AgX - Punchy"), exposure=env("EXPO", 0.1))
+    # Standard: fiamme e uovo d'oro restano saturi (con AgX diventano color pesca); il cielo e' piu' scuro per compensare
+    setup_render(res, samples, vt=env("VT", "Standard"), look=env("LOOK", "None"), exposure=env("EXPO", -0.25))
     sc = bpy.context.scene
 
     # --- soggetti
@@ -535,14 +536,14 @@ def scene_guardiano(res: int, samples: int, tag: str):
         n = o.name.split(".")[0]
         b = principled(o)
         if n == "Flames":
-            fc = env("FLAME_C", (255.0, 84.0, 0.0))
+            fc = env("FLAME_C", (255.0, 90.0, 0.0))
             b.inputs["Emission Color"].default_value = lin(fc)
             b.inputs["Base Color"].default_value = lin(fc)
         if n in ("Flames", "LavaCracks", "EyeGlow"):
-            b.inputs["Emission Strength"].default_value = {"Flames": env("FLAME_E", 1.4), "LavaCracks": 1.8,
+            b.inputs["Emission Strength"].default_value = {"Flames": env("FLAME_E", 1.0), "LavaCracks": 1.8,
                                                            "EyeGlow": env("EYE_E", 2.5)}[n]
         if n in ("Body", "Heads"):
-            b.inputs["Base Color"].default_value = lin(env("BODY", (50, 44, 62)))
+            b.inputs["Base Color"].default_value = lin(env("BODY", (40, 34, 50)))
             b.inputs["Roughness"].default_value = 0.36
             b.inputs["Coat Weight"].default_value = 0.35
             b.inputs["Coat Roughness"].default_value = 0.12
@@ -557,8 +558,8 @@ def scene_guardiano(res: int, samples: int, tag: str):
         print(f"[guardiano] {pn}", np.round(lo, 2), np.round(hi, 2))
 
     # --- cielo del crepuscolo: zenit blu notte, orizzonte azzurro ghiaccio
-    world_sky([(0.0, lin("#d4ecf7")), (0.06, lin("#a3cbee")), (0.18, lin("#5d8fd2")), (0.36, lin("#2f5aa6")),
-               (0.62, lin("#173372")), (1.0, lin("#0c1a45"))],
+    world_sky([(0.0, lin("#cfe7f5")), (0.06, lin("#97c0ea")), (0.18, lin("#4f80c8")), (0.34, lin("#26499a")),
+               (0.55, lin("#132a66")), (1.0, lin("#081538"))],
               light_color=lin("#6f8fd0"), light_strength=0.55, stars=env("STARS", 3.0), star_scale=140.0, cam_strength=1.0)
 
     # --- neve: cresta sotto Cerbero, che scende dietro (la vetta) e ai lati
@@ -576,7 +577,7 @@ def scene_guardiano(res: int, samples: int, tag: str):
         return z
 
     snow = grid_object("Snow", -16, 16, -12, 20, 230, 230, ground)
-    snow.data.materials.append(snow_material("Snow", fog=(lin("#9cc4ea"), 0.012, 9.0)))
+    snow.data.materials.append(snow_material("Snow", tint=(212, 228, 252), fog=(lin("#9cc4ea"), 0.012, 9.0)))
 
     # --- montagne lontane (tre file, sempre piu' nella foschia)
     fogc = "#8fb6e3"
@@ -593,7 +594,7 @@ def scene_guardiano(res: int, samples: int, tag: str):
     # --- luci: cielo freddo, controluce azzurro per staccare la sagoma nera, calore dell'uovo e delle fiamme
     cx = (cer_lo + cer_hi) / 2
     tgt = Vector((cx[0], cx[1], cx[2]))
-    area_light("Key", (-5.0, -6.5, 5.5), tgt, env("KEY", 1500.0), 5.0, lin("#cfe0ff")[:3])
+    area_light("Key", (-5.0, -6.5, 5.5), tgt, env("KEY", 1000.0), 5.0, lin("#cfe0ff")[:3])
     area_light("RimL", (-5.0, 5.0, 5.5), tgt + Vector((0, -0.6, 1.0)), env("RIM", 2600.0), 3.0, lin("#9fd8ff")[:3])
     area_light("RimR", (5.5, 4.5, 5.0), tgt + Vector((0, -0.6, 1.0)), env("RIM", 2600.0) * 0.9, 3.0, lin("#b4e2ff")[:3])
     area_light("HeadRim", (0.0, 4.0, 7.5), tgt + Vector((0, -0.8, 1.2)), env("HEADRIM", 1800.0), 4.0, lin("#c4e6ff")[:3])

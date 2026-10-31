@@ -265,6 +265,72 @@ def catmull(points, n=6):
     return [tuple(float(x) for x in q) for q in out]
 
 
+def poly_d2(pts):
+    """Distanza con segno 2D da un poligono semplice (vertici Nx2)."""
+    pts = np.asarray(pts, dtype=np.float32)
+    keep = [i for i in range(len(pts)) if np.linalg.norm(pts[i] - pts[i - 1]) > 1e-6]
+    pts = pts[keep]
+    edges = [(pts[i], pts[i - 1]) for i in range(len(pts))]
+
+    def d2(px, py):
+        d = np.full(px.shape, np.inf, dtype=np.float32)
+        s_ = np.ones(px.shape, dtype=np.float32)
+        for vi, vj in edges:
+            ex, ey = vj[0] - vi[0], vj[1] - vi[1]
+            wx, wy = px - vi[0], py - vi[1]
+            t = np.clip((wx * ex + wy * ey) / (ex * ex + ey * ey), 0.0, 1.0)
+            bx, by = wx - ex * t, wy - ey * t
+            d = np.minimum(d, bx * bx + by * by)
+            c1 = py >= vi[1]
+            c2 = py < vj[1]
+            c3 = ex * wy > ey * wx
+            s_ = np.where((c1 & c2 & c3) | (~c1 & ~c2 & ~c3), -s_, s_)
+        return s_ * np.sqrt(d)
+
+    return d2
+
+
+def blade(outline, origin, u_dir, v_dir, t_edge=0.012, slope=0.5, t_max=None, r=0.006):
+    """Forma piatta: contorno 2D (u, v) estruso lungo n = u x v, sottile sul bordo e piu' spessa all'interno."""
+    U = norm(u_dir)
+    V = np.asarray(v_dir, dtype=np.float64)
+    V = norm(V - U * (V @ U))
+    N = np.cross(U, V)
+    M = np.stack([U, V, N], axis=1).astype(np.float32)
+    O = np.asarray(origin, dtype=np.float32)
+    d2 = poly_d2(outline)
+    pts = np.asarray(outline, dtype=np.float64)
+    ext = pts.max(0) - pts.min(0)
+    tm = t_edge + slope * 0.5 * float(min(ext))
+    if t_max is not None:
+        tm = min(tm, t_max)
+
+    def f(p):
+        q = (p - O) @ M
+        dd = d2(q[:, 0], q[:, 1])
+        th = t_edge + slope * np.maximum(-dd, 0.0)
+        if t_max is not None:
+            th = np.minimum(th, t_max)
+        a = dd + r
+        b = np.abs(q[:, 2]) - th + r
+        return np.minimum(np.maximum(a, b), 0.0) + np.sqrt(np.maximum(a, 0.0) ** 2 + np.maximum(b, 0.0) ** 2) - r
+
+    corners = np.array([O + U * u + V * v + N * sg * (tm + 0.01) for u, v in pts for sg in (-1, 1)])
+    return SDF(f, corners.min(0) - 0.01, corners.max(0) + 0.01)
+
+
+def flame_outline(L, w, bend=0.12, waves=1.5, phase=0.0, n=18):
+    """Contorno di una lingua di fiamma lungo +u: base arrotondata, fianchi ondulati, punta curva."""
+    left, right = [], []
+    for i in range(n + 1):
+        t = i / n
+        h = w * (math.sin(math.pi * t) ** 0.55) * (1.0 - 0.75 * t) * (1.0 + 0.16 * math.sin(2 * math.pi * waves * t + phase))
+        c = bend * L * math.sin(math.pi * t * 0.9) * t
+        left.append((L * t, c + h))
+        right.append((L * t, c - h))
+    return [(-0.02 * L, 0.0)] + left[1:] + right[::-1][1:-1]
+
+
 # ============================================================ colori
 FUR = (36, 30, 50)          # pelo nero con riflessi viola
 ACCENT = (74, 60, 104)      # muso, mento e interno delle orecchie grigio-viola scuro
@@ -282,8 +348,8 @@ m = Model("PsychicPanther", "pet")
 rng = np.random.default_rng(53)
 
 # ============================================================ testa (spazio locale: muso verso -Y)
-HEAD_POS = np.array([0.0, -0.5, 2.2])
-HS = 1.24
+HEAD_POS = np.array([0.0, -0.5, 2.16])
+HS = 1.44
 R_HEAD = euler(-8.0, 0.0, 12.0)       # mento alto, fiera, girata verso la camera 3/4
 
 
@@ -426,81 +492,85 @@ core0 = shrink(core.intersect(halfspace_z(0.0, above=True)))
 body_only = shrink(union(union(torso, neck, k=0.16), legs, k=0.08).intersect(halfspace_z(0.0, above=True)))
 
 # ============================================================ cervello rosa (lobi con circonvoluzioni) dentro la cupola
-BR_C = np.array((0.0, 0.04, CUT_Z + 0.05))
-
-
-def brain_f(p):
-    q = p - BR_C.astype(np.float32)
-    ax = np.abs(q[:, 0])
-    # due emisferi separati dalla scissura centrale
-    h = np.stack([ax - 0.128, q[:, 1], q[:, 2]], 1) / np.array((0.15, 0.27, 0.205), dtype=np.float32)
-    k0 = np.linalg.norm(h, axis=1)
-    k1 = np.linalg.norm(h / np.array((0.15, 0.27, 0.205), dtype=np.float32), axis=1)
-    d = k0 * (k0 - 1.0) / np.maximum(k1, 1e-6)
-    # circonvoluzioni: solchi ondulati che attraversano i lobi
-    u = 30.0 * q[:, 1] + 3.4 * np.sin(17.0 * ax + 1.0) + 2.6 * np.sin(15.0 * q[:, 2] + 0.5) + 1.4 * np.sin(29.0 * ax)
-    groove = np.maximum(0.0, 1.0 - np.abs(np.sin(u)) / 0.42)
-    return d + 0.022 * groove ** 2
-
-
-brain = SDF(brain_f, BR_C - (0.3, 0.3, 0.23), BR_C + (0.3, 0.3, 0.23))
+BR_C = np.array((0.0, 0.04, CUT_Z + 0.06))
+HEMI_R = np.array((0.155, 0.275, 0.21))
+gyri = []
+for sx in (1, -1):
+    hc = BR_C + np.array((sx * 0.13, 0.0, 0.0))
+    gyri.append(ellipsoid(tuple(HEMI_R - 0.035), tuple(hc)))
+    for j, lv in enumerate((-0.55, -0.2, 0.15, 0.48, 0.78)):
+        pts = []
+        for yn in np.linspace(-0.92, 0.92, 15):
+            zn = lv + 0.11 * math.sin(5.5 * yn + 1.7 * j + (0.8 if sx > 0 else 0.0))
+            xn2 = 1.0 - yn * yn - zn * zn
+            if xn2 <= 0.02:
+                continue
+            xn = math.sqrt(xn2)
+            pts.append(tuple(hc + HEMI_R * np.array((sx * xn, yn, zn)) * 0.97))
+        if len(pts) > 2:
+            gyri.append(tube(pts, 0.044))
+brain = shrink(fast_union(gyri, k=0.018).intersect(halfspace_z(CUT_Z - 0.02, above=True)))
 
 # ============================================================ punti cuciti attorno alla cupola (+ naso rosa)
 stitch_base = union(head_final, DOME)
 stitches = []
-NS = 16
+NS = 12
 for i in range(NS):
     th = 2 * math.pi * (i + 0.5) / NS
     c = np.array((0.375 * math.cos(th), 0.04 + 0.36 * math.sin(th), CUT_Z - 0.005))
     t = np.array((-math.sin(th), math.cos(th), 0.0))
-    stitches += stitch_cross(stitch_base, on_surface(stitch_base, c, 0.0), t, size=0.075, r=0.017, lift=0.01)
+    stitches += stitch_cross(stitch_base, on_surface(stitch_base, c, 0.0), t, size=0.085, r=0.021, lift=0.012)
 nose = union(*[ellipsoid((0.034, 0.03, 0.026), tuple(NOSE_C + (sx * 0.03, 0.0, 0.012))) for sx in (1, -1)],
              ellipsoid((0.024, 0.026, 0.024), tuple(NOSE_C + (0.0, -0.008, -0.032))), k=0.045).subtract(nostrils, k=0.008)
 
 # ============================================================ aura viola: lingue di energia dalla schiena + sigillo a terra
 flames = []
-for i, (a, L) in enumerate(((-62, 0.62), (-36, 0.85), (-12, 1.05), (12, 1.05), (36, 0.85), (62, 0.62))):
+FAN_C = np.array((0.0, 0.08, 1.52))
+for i, (a, L, w) in enumerate(((-74, 0.95, 0.15), (-50, 1.22, 0.17), (-25, 1.45, 0.18), (0, 1.58, 0.19),
+                               (25, 1.45, 0.18), (50, 1.22, 0.17), (74, 0.95, 0.15))):
     ar = math.radians(a)
-    c = np.array((0.0, 0.0, 1.42))
-    p, nr = surf(body_only, c, c + np.array((math.sin(ar) * 0.9, 0.55, math.cos(ar) * 0.5)))
-    d = norm(np.array((math.sin(ar) * 0.55, 0.45, 1.0)))
-    flames.append(wisp(p - nr * 0.05, d, L * rng.uniform(0.95, 1.05), 0.11, np.array((math.sin(ar) * 0.25, 0.3, -0.1)),
-                       wiggle=0.12 * (1 if i % 2 else -1), phase=rng.uniform(0, 3), r1=0.02))
-for a, L in ((-20, 0.55), (20, 0.55)):
+    U = norm(np.array((math.sin(ar), 0.18, math.cos(ar))))
+    base = FAN_C + np.array((math.sin(ar) * 0.22, 0.04 + 0.03 * abs(math.sin(ar)), math.cos(ar) * 0.08 - 0.05))
+    V = np.cross((0.0, -1.0, 0.0), U)
+    outline = flame_outline(L, w, bend=0.1 * (1 if a >= 0 else -1) * (1 if i % 2 else -1), waves=1.6, phase=0.9 * i)
+    flames.append(blade(outline, base, U, V, t_edge=0.018, slope=0.32, t_max=0.07, r=0.01))
+# lingue piu' piccole dai fianchi bassi della schiena
+for a, L, w in ((-38, 0.7, 0.13), (38, 0.7, 0.13)):
     ar = math.radians(a)
-    c = np.array((0.0, 0.25, 0.9))
-    p, nr = surf(body_only, c, c + np.array((math.sin(ar), 1.0, 0.25)))
-    flames.append(wisp(p - nr * 0.05, norm(np.array((math.sin(ar) * 0.3, 0.6, 1.0))), L, 0.09,
-                       np.array((0.0, 0.25, -0.05)), wiggle=0.12, phase=rng.uniform(0, 3), r1=0.02))
+    U = norm(np.array((math.sin(ar), 0.35, math.cos(ar))))
+    base = np.array((math.sin(ar) * 0.28, 0.42, 0.98))
+    V = np.cross((0.0, -1.0, 0.0), U)
+    flames.append(blade(flame_outline(L, w, bend=0.1, phase=2.0), base, U, V, t_edge=0.018, slope=0.32, t_max=0.065,
+                        r=0.01))
 SIG_C = np.array((0.0, -0.05, 0.0))
 sigil = [torus(1.0, 0.03, tuple(SIG_C + (0.0, 0.0, 0.03)))]
 for j in range(6):
     a = math.radians(30 + 60 * j)
     c = SIG_C + np.array((1.0 * math.cos(a), 1.0 * math.sin(a), 0.0))
     sigil.append(cylinder(tuple(c), tuple(c + (0, 0, 0.045)), 0.068, round=0.012))
-aura = union(fast_union(flames, k=0.03).subtract(body_only.offset(-0.05)), fast_union(sigil))
+aura = fast_union(flames, k=0.02).subtract(body_only.offset(-0.04))
 
 # ============================================================ tre sfere psichiche fluttuanti
-ORBS = [np.array((-0.86, -0.42, 1.3)), np.array((0.92, 0.05, 1.95)), np.array((-0.5, 0.55, 2.86))]
+ORBS = [np.array((-0.9, -0.42, 1.32)), np.array((0.95, 0.02, 2.0)), np.array((-0.62, 0.5, 2.92))]
 orb_core, orb_glass = [], []
 for i, c in enumerate(ORBS):
-    orb_core.append(sphere(0.1, tuple(c)))
+    orb_core.append(sphere(0.12, tuple(c)))
     nrm = norm((0.4 * (1 if i % 2 else -1), 0.3, 1.0))
-    orb_core.append(torus(0.205, 0.026).rotate(orient(nrm)).translate(tuple(c)))
-    orb_glass.append(sphere(0.158, tuple(c)))
+    orb_core.append(torus(0.25, 0.03).rotate(orient(nrm)).translate(tuple(c)))
+    orb_glass.append(sphere(0.19, tuple(c)))
 
 # ============================================================ parti
 HEAD_ZONE = H(ellipsoid((0.64, 0.62, 0.6), (0.0, -0.05, 0.04)))
-m.add("Body", core0.subtract(HEAD_ZONE.offset(-0.03)), FUR, tris=2700, voxel=0.03)
-m.add("Head", core0.intersect(HEAD_ZONE.offset(0.03)), FUR, tris=2700, voxel=0.022)
+m.add("Body", core0.subtract(HEAD_ZONE.offset(-0.03)), FUR, tris=2500, voxel=0.03)
+m.add("Head", core0.intersect(HEAD_ZONE.offset(0.03)), FUR, tris=2600, voxel=0.022)
 pad_solid = union(*[ellipsoid((0.098, 0.093, 0.083), (sx * 0.067, -0.383, -0.145)) for sx in (1, -1)],
                   ellipsoid((0.083, 0.083, 0.068), (0, -0.313, -0.257)), k=0.03)
 pad_solid = pad_solid.subtract(nostrils.offset(0.01)).subtract(union(*lip_tubes).offset(0.004), k=0.008)
-m.add("Accent", H(union(pad_solid.subtract(head0.offset(-0.09)), ear_fluff)), ACCENT, role="detail", tris=700,
+m.add("Accent", H(union(pad_solid.subtract(head0.offset(-0.09)), ear_fluff)), ACCENT, role="detail", tris=550,
       voxel=0.016)
 m.add("Dome", H(DOME), GLASS, material="Glass", role="detail", tris=900, voxel=0.018, transparency=0.45)
-m.add("Brain", H(brain), BRAIN, material="Neon", role="glow", tris=1600, voxel=0.01)
-m.add("Stitches", union(H(fast_union(stitches)), H(nose)), THREAD, role="detail", tris=700, voxel=0.01)
+m.add("Brain", H(brain), BRAIN, material="Neon", role="glow", tris=1900, voxel=0.016)
+m.add("Stitches", union(H(fast_union(stitches)), H(nose)), THREAD, role="detail", tris=750, voxel=0.016)
 
 eyes, pupils, shines = [], [], []
 for sx in (1, -1):
@@ -516,8 +586,9 @@ for sx in (1, -1):
     fangs.append(round_cone(tuple(b + np.array((0, 0.02, 0.005))), tuple(b + np.array((sx * -0.004, -0.012, -0.072))),
                             0.021, 0.005))
 m.add("Shine", union(H(union(*fangs)), *shines), TOOTH, role="shine", tris=500, voxel=0.008)
-m.add("Nebula", aura, AURA, material="Neon", role="glow", tris=2200, voxel=0.016)
-m.add("Aura", fast_union(orb_core), ORB, material="Neon", role="glow", tris=1000, voxel=0.014)
+m.add("Nebula", aura, AURA, material="Neon", role="glow", tris=2300, voxel=0.024)
+m.add("Sigil", fast_union(sigil), AURA, material="Neon", role="glow", tris=850, voxel=0.022)
+m.add("Aura", fast_union(orb_core), ORB, material="Neon", role="glow", tris=1100, voxel=0.02)
 m.add("OrbGlass", fast_union(orb_glass), ORB_GLASS, material="Glass", role="detail", tris=600, voxel=0.015,
       transparency=0.45)
 

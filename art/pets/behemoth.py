@@ -391,8 +391,8 @@ THREAD = (240, 224, 190)
 m = Model("Behemoth", "pet")
 
 # ============================================================ testa (spazio locale: muso verso -Y)
-HEAD_T = np.array([0.0, -1.32, 1.8], dtype=np.float32)
-HS = 1.2                           # scala della testa
+HEAD_T = np.array([0.0, -1.36, 1.84], dtype=np.float32)
+HS = 1.3                           # scala della testa
 R_HEAD = euler(16.0, -5.0, 9.0)    # muso abbassato nella carica, girato appena verso chi guarda
 JAW_Z = -0.17
 HINGE = (0.0, 0.06, JAW_Z)
