@@ -226,7 +226,8 @@ function HatchService.Hatch(player: Player, slot: string, skipRequirement: boole
 	end
 	-- serve un posto libero: un piedistallo, o il trono per i pet Ultra
 	if not S.PetService.HasRoomFor(player, entry.Rarity) then
-		S.StateService.Notify(player, if entry.Rarity == "Ultra" then "NoThrone" else "NoPedestal", nil, "Bad")
+		local giant = entry.Rarity == "Ultra" or entry.Rarity == "Galactic"
+		S.StateService.Notify(player, if giant then "NoThrone" else "NoPedestal", nil, "Bad")
 		return
 	end
 	local luck = S.MonetizationService.LuckMultiplier(player)

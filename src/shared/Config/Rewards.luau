@@ -43,6 +43,7 @@ Rewards.IndexRow = {
 	Primal = 2000000000,
 	Extreme = 3500000000,
 	Ultra = 5000000000,
+	Galactic = 10000000000,
 }
 
 -- Monete premio per i coin pack si calcolano in Products; le monete dei premi giornalieri crescono

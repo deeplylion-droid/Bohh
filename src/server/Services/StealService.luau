@@ -50,15 +50,16 @@ local function setHidden(model: Model?, hidden: boolean)
 	end
 end
 
+-- I giganti (Ultra e Galattici) vanno sul trono, non sui piedistalli
+local function isGiant(rarity: string?): boolean
+	return rarity == "Ultra" or rarity == "Galactic"
+end
+
 local function countStolen(thief: Player, kind: string, rarity: string?): number
 	local n = 0
 	for _, c in S.CarryService.Items(thief) do
 		-- i pet Ultra si contano a parte: vanno sul trono, non sui piedistalli
-		if
-			c.stolen
-			and c.stolen.kind == kind
-			and (kind ~= "Pet" or (c.stolen.rarity == "Ultra") == (rarity == "Ultra"))
-		then
+		if c.stolen and c.stolen.kind == kind and (kind ~= "Pet" or isGiant(c.stolen.rarity) == isGiant(rarity)) then
 			n += 1
 		end
 	end
@@ -70,8 +71,8 @@ local function freeCount(thief: Player, kind: string, rarity: string?): number
 	if not data then
 		return 0
 	end
-	if kind == "Pet" and rarity == "Ultra" then
-		-- un pet Ultra va solo sul trono
+	if kind == "Pet" and isGiant(rarity) then
+		-- un gigante va solo sul trono
 		return if S.PetService.HasRoomFor(thief, "Ultra") then 1 else 0
 	end
 	if kind == "Egg" then
@@ -151,6 +152,11 @@ local function startSteal(thief: Player, plot, base: BasePart, kind: "Egg" | "Pe
 	else
 		local pet = data.Pets[slotOrUid]
 		if not pet then
+			return
+		end
+		if pet.Bought then
+			-- i giganti comprati nel negozio non si rubano
+			S.StateService.Notify(thief, "CantStealBought", nil, "Bad")
 			return
 		end
 		local rarity = Pets.Get(pet.Id).rarity

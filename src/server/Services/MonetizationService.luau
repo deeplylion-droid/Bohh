@@ -80,7 +80,13 @@ end
 
 -- Accredito dei prodotti: ritorna true se l'acquisto e' stato applicato
 local function grant(player: Player, key: string): boolean
-	if key == "Luck15" then
+	if Products.Galactic[key] then
+		local ok = S.PetService.GrantBought(player, Products.Galactic[key])
+		if ok then
+			S.StateService.Effect(player, "Purchase", { big = true })
+		end
+		return ok
+	elseif key == "Luck15" then
 		MonetizationService.AddLuck(player, Products.LuckMinutes)
 		return true
 	elseif Products.SkipHatchTier[key] then

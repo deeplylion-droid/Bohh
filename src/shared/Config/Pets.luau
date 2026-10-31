@@ -1,5 +1,5 @@
 --!strict
--- I 59 pet (4 per rarita', 10 Primordiali, 12 Estremi, 5 Ultra). income = monete al secondo di base.
+-- I 62 pet (4 per rarita', 10 Primordiali, 12 Estremi, 5 Ultra, 3 Galattici). income = monete al secondo di base.
 -- chance = peso dentro la propria rarita' (il pet piu' raro della fascia guadagna di piu').
 -- I Primordiali hanno una zona: l'uovo Primordiale fa nascere uno dei due mostri della zona in cui
 -- e' stato trovato, cosi' quelli dei Prati arrivano subito ai nuovi giocatori senza rompere il gioco.
@@ -15,6 +15,7 @@ export type Pet = {
 	flying: boolean?, -- fluttua sul piedistallo
 	giant: boolean?, -- creatura Ultra: sta sul trono dietro al lotto, non su un piedistallo
 	zone: string?, -- Primordiali ed Estremi: zona in cui si trova il loro uovo
+	shop: boolean?, -- Galattici: solo nel negozio (nessun uovo li fa nascere)
 }
 
 local Pets = {}
@@ -42,6 +43,20 @@ local function extreme(id: string, zone: string, income: number, chance: number,
 		height = height,
 		flying = flying,
 		zone = zone,
+	}
+end
+
+-- Galattici: giganti del negozio, sul trono come gli Ultra
+local function galactic(id: string, income: number, height: number): Pet
+	return {
+		id = id,
+		rarity = "Galactic",
+		income = income,
+		chance = 1,
+		model = id,
+		height = height,
+		giant = true,
+		shop = true,
 	}
 end
 
@@ -129,6 +144,10 @@ Pets.List = {
 	pet("ThunderGriffin", "Ultra", 350000, 20, 38),
 	pet("TitanRex", "Ultra", 400000, 15, 40),
 	pet("PentaDragon", "Ultra", 500000, 10, 42),
+	-- Galattici: creature cosmiche di stazza mega galattica, in vendita nel negozio
+	galactic("NebulaLion", 650000, 46),
+	galactic("StarKraken", 800000, 48),
+	galactic("CosmicWhale", 1000000, 50),
 }
 
 Pets.ById = {} :: { [string]: Pet }

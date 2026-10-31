@@ -63,6 +63,8 @@ export type Piece = {
 	-- Pulse: aspetto ("Jet", "Crusher", "Laser", "Fire") e alzata della pressa
 	style: string?,
 	rise: number?,
+	-- sponde e pareti del canyon (fuori dai muri invisibili: non sono appoggi)
+	wall: boolean?,
 }
 
 Extreme.Sections = {
@@ -229,12 +231,92 @@ local function liquid(i: number, u0: number, u1: number, level: number, color: C
 	kill(i, u0, u1, level + 0.8)
 end
 
--- pareti visibili del canyon ai due lati (sopra c'e' il muro invisibile, per tutto il percorso)
+-- pareti visibili ai due lati (sale dei santuari, laboratorio); sopra c'e' il muro invisibile
 local function walls(i: number, u0: number, u1: number, bottom: number, top: number, color: Color3, material: string)
 	for _, side in { -1, 1 } do
 		local v0 = side * (Extreme.HalfWidth + 0.5)
 		local v1 = side * (Extreme.HalfWidth + 6)
-		slab(i, u0, u1, math.min(v0, v1), math.max(v0, v1), top, top - bottom, color, material)
+		local p = slab(i, u0, u1, math.min(v0, v1), math.max(v0, v1), top, top - bottom, color, material)
+		p.wall = true
+	end
+end
+
+local function shade(c: Color3, k: number): Color3
+	return Color3.new(math.clamp(c.R * k, 0, 1), math.clamp(c.G * k, 0, 1), math.clamp(c.B * k, 0, 1))
+end
+
+-- Sponde di roccia irregolari ai due lati: blocchi di lunghezza, altezza e colore diversi, inclinati
+-- verso l'esterno, alti 8-20 stud sopra il percorso (si vede il cielo; il confine vero e' il muro
+-- invisibile). floorAt(u) = quota del percorso in quel punto; cap = colore della cima (muschio...)
+local bankRng = Random.new(20261031)
+local function banks(
+	i: number,
+	u0: number,
+	u1: number,
+	floorAt: (number) -> number,
+	color: Color3,
+	material: string,
+	cap: Color3?,
+	capMaterial: string?
+)
+	for _, side in { -1, 1 } do
+		local u = u0
+		while u < u1 - 0.01 do
+			local uu = math.min(u + bankRng:NextNumber(9, 16), u1)
+			local f = floorAt((u + uu) / 2)
+			local top = f + bankRng:NextNumber(8, 20)
+			local bottom = f - 46
+			local inner = Extreme.HalfWidth + 0.6 + bankRng:NextNumber(0, 1.6)
+			local depth = bankRng:NextNumber(6, 10)
+			local v0, v1 = side * inner, side * (inner + depth)
+			local p = slab(
+				i,
+				u - 0.6,
+				uu + 0.6,
+				math.min(v0, v1),
+				math.max(v0, v1),
+				top,
+				top - bottom,
+				shade(color, bankRng:NextNumber(0.86, 1.12)),
+				material
+			)
+			p.wall = true
+			-- inclinata verso l'esterno (rotazione attorno all'asse del percorso) e un po' storta
+			local lean = math.rad(side * bankRng:NextNumber(1, 6))
+			local yaw = math.rad(bankRng:NextNumber(-4, 4))
+			p.cframe = p.cframe * CFrame.Angles(lean, yaw, 0)
+			if cap then
+				local c = add({
+					id = "",
+					kind = "Solid",
+					section = i,
+					cframe = p.cframe * CFrame.new(0, p.size.Y / 2 + 0.25, 0),
+					size = Vector3.new(p.size.X + 0.4, 0.8, p.size.Z + 0.4),
+					color = shade(cap, bankRng:NextNumber(0.9, 1.1)),
+					material = capMaterial or material,
+					deco = true,
+					collide = false,
+				})
+				c.wall = true
+			end
+			u = uu
+		end
+	end
+end
+
+-- Quota del percorso lungo la sezione: dalla partenza al pavimento del santuario, a tratti
+local function floorLine(points: { { number } }): (number) -> number
+	return function(u: number): number
+		if u <= points[1][1] then
+			return points[1][2]
+		end
+		for k = 1, #points - 1 do
+			local a, b = points[k], points[k + 1]
+			if u <= b[1] then
+				return a[2] + (b[2] - a[2]) * (u - a[1]) / (b[1] - a[1])
+			end
+		end
+		return points[#points][2]
 	end
 end
 
@@ -249,7 +331,16 @@ do
 	local DEEP = rgb(20, 70, 130)
 	local WOOD = rgb(132, 86, 48)
 
-	walls(1, -4, 396, 250, 352, ROCK, "Slate")
+	banks(
+		1,
+		0,
+		396,
+		floorLine({ { 0, 331 }, { 110, 321 }, { 120, 307 }, { 232, 304 }, { 240, 292 }, { 336, 290 }, { 340, 278 } }),
+		ROCK,
+		"Slate",
+		MOSS,
+		"Grass"
+	)
 	-- partenza: piattaforma di roccia collegata al ponte
 	slab(1, -4, 14, -10, 10, 331, 8, ROCK, "Slate")
 	slab(1, -4, 14, -10.5, 10.5, 331.2, 0.4, MOSS, "Grass", { deco = true, collide = false })
@@ -479,7 +570,16 @@ do
 	local GOLD = rgb(255, 196, 60)
 	local s2 = sec(2)
 
-	walls(2, 0, 360, 230, 300, STONE, "Sandstone")
+	banks(
+		2,
+		0,
+		360,
+		floorLine({ { 0, 278 }, { 92, 280 }, { 172, 278 }, { 176, 272 }, { 264, 272 }, { 270, 266 }, { 350, 263 } }),
+		STONE,
+		"Sandstone",
+		SAND,
+		"Sand"
+	)
 	slab(2, -2, 8, -8, 8, 278, 8, STONE, "Sandstone")
 
 	-- A) Pilastri sulle sabbie mobili, due presse che schiacciano a tempo
@@ -618,7 +718,19 @@ do
 	local LASER = rgb(255, 40, 90)
 	local s3 = sec(3)
 
-	walls(3, 0, 340, 220, 290, DARK, "DiamondPlate")
+	for _, side in { -1, 1 } do
+		local v0, v1 = side * (Extreme.HalfWidth + 0.5), side * (Extreme.HalfWidth + 4)
+		for k, seg in { { 0, 96, 278 }, { 96, 236, 286 }, { 236, 340, 268 } } do
+			local w = slab(3, seg[1], seg[2], math.min(v0, v1), math.max(v0, v1), seg[3], 60, DARK, "DiamondPlate")
+			w.wall = true
+			local strip = slab(3, seg[1], seg[2], math.min(v0, v1), math.max(v0, v1), seg[3] + 0.6, 0.6, NEON, "Neon", {
+				deco = true,
+				collide = false,
+			})
+			strip.wall = true
+			local _ = k
+		end
+	end
 	-- vuoto elettrico: griglia luminosa in basso
 	kill(3, 0, 340, 238)
 	slab(
@@ -740,7 +852,16 @@ do
 	local CHAIN = rgb(90, 84, 84)
 	local s4 = sec(4)
 
-	walls(4, 0, 360, 200, 280, BASALT_DARK, "Basalt")
+	banks(
+		4,
+		0,
+		360,
+		floorLine({ { 0, 246 }, { 96, 245 }, { 172, 244 }, { 262, 242 }, { 272, 240 }, { 360, 231 } }),
+		BASALT,
+		"Basalt",
+		rgb(255, 90, 30),
+		"Neon"
+	)
 
 	-- A) Fiume di lava con pietre di basalto (alcune sprofondano) e geyser di fuoco
 	liquid(4, -2, 92, 236, LAVA, "Neon", 0)
@@ -841,7 +962,8 @@ for i, s in Extreme.Sections do
 	slab(i, u0, u1, -Extreme.HalfWidth, Extreme.HalfWidth, y, 10, st.floor, st.material)
 	walls(i, u0, u1, y - 10, y + 26, st.wall, st.material)
 	-- tetto della sala
-	slab(i, u0, u1, -Extreme.HalfWidth - 6, Extreme.HalfWidth + 6, y + 28, 2, st.wall, st.material)
+	local roof = slab(i, u0, u1, -Extreme.HalfWidth - 6, Extreme.HalfWidth + 6, y + 28, 2, st.wall, st.material)
+	roof.wall = true
 	local mid = (u0 + u1) / 2
 	local shrine = {
 		section = i,
@@ -1018,7 +1140,7 @@ local SUPPORT_KINDS = { Solid = true, Mover = true, Spinner = true, Faller = tru
 -- Elementi su cui si puo' stare in piedi, divisi per sezione
 local supports: { [number]: { Piece } } = {}
 for _, p in pieces do
-	if SUPPORT_KINDS[p.kind] and p.collide ~= false and not p.deco then
+	if SUPPORT_KINDS[p.kind] and p.collide ~= false and not p.deco and not p.wall then
 		supports[p.section] = supports[p.section] or {}
 		table.insert(supports[p.section], p)
 	end

@@ -47,6 +47,7 @@ local T: { [string]: Entry } = {
 	Rarity_Secret = { en = "SECRET", it = "SEGRETO" },
 	Rarity_Primal = { en = "PRIMAL", it = "PRIMORDIALE" },
 	Rarity_Extreme = { en = "EXTREME", it = "ESTREMO" },
+	Rarity_Galactic = { en = "GALACTIC", it = "GALATTICO" },
 	Rarity_Ultra = { en = "ULTRA", it = "ULTRA" },
 
 	-- uova
@@ -122,6 +123,10 @@ local T: { [string]: Entry } = {
 	Pet_Behemoth = { en = "Behemoth", it = "Behemoth" },
 	Pet_Beelzebub = { en = "Beelzebub", it = "Belzebù" },
 	Pet_Abaddon = { en = "Abaddon", it = "Abaddon" },
+	-- Galattici (negozio)
+	Pet_NebulaLion = { en = "Nebula Lion", it = "Leone Nebulosa" },
+	Pet_StarKraken = { en = "Star Kraken", it = "Kraken Stellare" },
+	Pet_CosmicWhale = { en = "Cosmic Whale", it = "Balena Cosmica" },
 
 	-- mutazioni e taglie
 	Mutation_Gold = { en = "GOLD", it = "ORO" },
@@ -182,6 +187,12 @@ local T: { [string]: Entry } = {
 		en = "Extreme egg! Take the portal to bring it home",
 		it = "Uovo Estremo! Usa il portale per portarlo a casa",
 	},
+	GalacticArrived = {
+		en = "{pet} is on your throne! The giant that was there is in the storage",
+		it = "{pet} è sul tuo trono! Il gigante che c'era è nel deposito",
+	},
+	GiantSwapped = { en = "{pet} is on the throne", it = "{pet} è sul trono" },
+	CantStealBought = { en = "Galactic giants can't be stolen!", it = "I giganti galattici non si rubano!" },
 	ExtremeHudTitle = { en = "EXTREME TRAIL", it = "PERCORSO ESTREMO" },
 	ExtremeHudSection = { en = "Section {n}/{total}", it = "Sezione {n}/{total}" },
 	ExtremeHudBest = { en = "Best {time}", it = "Record {time}" },
@@ -192,6 +203,7 @@ local T: { [string]: Entry } = {
 	Prompt_Hatch = { en = "HATCH!", it = "SCHIUDI!" },
 	Prompt_Steal = { en = "STEAL", it = "RUBA" },
 	Prompt_Sell = { en = "SELL {price}", it = "VENDI {price}" },
+	Prompt_Swap = { en = "SWAP GIANT", it = "CAMBIA GIGANTE" },
 	Prompt_Barrier = { en = "LOCK BASE", it = "BLOCCA BASE" },
 	Prompt_Traps = { en = "TRAPS", it = "TRAPPOLE" },
 	Prompt_Upgrades = { en = "UPGRADES", it = "POTENZIAMENTI" },
@@ -315,6 +327,9 @@ local T: { [string]: Entry } = {
 
 	-- negozio
 	ShopPasses = { en = "GAME PASSES", it = "GAME PASS" },
+	ShopGalactic = { en = "GALACTIC", it = "GALATTICI" },
+	GalacticTag = { en = "Giant · can't be stolen", it = "Gigante · non si ruba" },
+	ComingSoon = { en = "SOON", it = "IN ARRIVO" },
 	ShopBoosts = { en = "BOOSTS", it = "POTENZIAMENTI" },
 	ShopBats = { en = "BATS", it = "MAZZE" },
 	Pass_VIP = { en = "VIP", it = "VIP" },
@@ -459,6 +474,10 @@ local T: { [string]: Entry } = {
 		it = "{name} ha preso un uovo Ultra nella Tana dei Mostri! Rubalo prima che arrivi in cima!",
 	},
 	AnnounceAdmin = { en = "{text}", it = "{text}" },
+	AnnounceGalactic = {
+		en = "{name} got the galactic giant {pet}!",
+		it = "{name} ha preso il gigante galattico {pet}!",
+	},
 	AnnounceExtreme = {
 		en = "{name} beat the EXTREME TRAIL in {time}!",
 		it = "{name} ha completato il PERCORSO ESTREMO in {time}!",

@@ -7,7 +7,10 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Combat = require(ReplicatedStorage.Shared.Config.Combat)
 local Format = require(ReplicatedStorage.Shared.Util.Format)
 local Net = require(ReplicatedStorage.Shared.Net)
+local Pets = require(ReplicatedStorage.Shared.Config.Pets)
 local Products = require(ReplicatedStorage.Shared.Config.Products)
+local Rarities = require(ReplicatedStorage.Shared.Config.Rarities)
+local Visuals = require(ReplicatedStorage.Shared.Visuals)
 local Kit = require(script.Parent.Parent.Kit)
 
 local Theme = Kit.Theme
@@ -73,11 +76,17 @@ function Panel.Build(parent: Instance, C)
 			tabButtons[n].SetColor(if n == name then "White" else "Yellow")
 		end
 	end
-	for i, info in { { "Passes", "ShopPasses" }, { "Boosts", "ShopBoosts" }, { "Bats", "ShopBats" } } do
+	local TABS = {
+		{ "Galactic", "ShopGalactic" },
+		{ "Passes", "ShopPasses" },
+		{ "Boosts", "ShopBoosts" },
+		{ "Bats", "ShopBats" },
+	}
+	for i, info in TABS do
 		local b = Kit.Button({
 			Text = T(info[2]),
 			Color = "Yellow",
-			Size = UDim2.fromOffset(220, 54),
+			Size = UDim2.fromOffset(190, 54),
 			LayoutOrder = i,
 			TextSize = 26,
 			Parent = tabsBar,
@@ -131,6 +140,98 @@ function Panel.Build(parent: Instance, C)
 		return c, title, desc
 	end
 
+	-- giganti galattici: schede piu' alte con il pet in 3D
+	local galacticGrid = pages.Galactic:FindFirstChildOfClass("UIGridLayout")
+	if galacticGrid then
+		galacticGrid.CellSize = UDim2.fromOffset(250, 340)
+	end
+	local galacticCards = {}
+	for i, key in Products.GalacticOrder do
+		local prod = Products.Products[key]
+		local petId = Products.Galactic[key]
+		local def = Pets.Get(petId)
+		local c = Kit.Card({ LayoutOrder = i, ZIndex = 1, Parent = pages.Galactic })
+		local glow = New("Frame", {
+			Name = "Sky",
+			BackgroundColor3 = Color3.fromRGB(34, 24, 70),
+			Size = UDim2.new(1, -20, 0, 168),
+			Position = UDim2.fromOffset(10, 10),
+			ZIndex = 2,
+			Parent = c,
+		}, { Kit.Corner(UDim.new(0, 14)), Kit.Stroke(3) })
+		New("UIGradient", {
+			Color = Rarities.Gradients.Galactic,
+			Rotation = 90,
+			Transparency = NumberSequence.new(0.55),
+			Parent = glow,
+		})
+		local vp = New("ViewportFrame", {
+			BackgroundTransparency = 1,
+			Size = UDim2.fromScale(1, 1),
+			Ambient = Color3.fromRGB(190, 180, 230),
+			LightColor = Color3.fromRGB(255, 250, 240),
+			LightDirection = Vector3.new(-0.5, -1, -0.6),
+			ZIndex = 3,
+			Parent = glow,
+		})
+		local ok, model = pcall(Visuals.MakePet, petId, "None", "Normal", 8)
+		if ok and model then
+			for _, d in model:GetDescendants() do
+				if d:IsA("ParticleEmitter") or d:IsA("PointLight") then
+					d:Destroy()
+				end
+			end
+			model:PivotTo(CFrame.new())
+			model.Parent = vp
+			local _, size = model:GetBoundingBox()
+			local cam = New("Camera", { FieldOfView = 32, Parent = vp })
+			local dist = math.max(size.X, size.Y, size.Z) * 2.2
+			local center = Vector3.new(0, size.Y / 2, 0)
+			cam.CFrame = CFrame.lookAt(center + Vector3.new(dist * 0.5, dist * 0.2, -dist), center)
+			vp.CurrentCamera = cam
+		end
+		local title = Kit.Text({
+			Size = UDim2.new(0.92, 0, 0, 30),
+			Position = UDim2.new(0.04, 0, 0, 184),
+			TextColor3 = Theme.Ink,
+			Stroke = false,
+			ZIndex = 3,
+			Parent = c,
+		})
+		local income = Kit.Text({
+			Font = Theme.BodyFont,
+			Size = UDim2.new(0.92, 0, 0, 24),
+			Position = UDim2.new(0.04, 0, 0, 214),
+			TextColor3 = Theme.GreenInk,
+			Stroke = false,
+			ZIndex = 3,
+			Parent = c,
+		})
+		local desc = Kit.Text({
+			Font = Theme.BodyFont,
+			Size = UDim2.new(0.92, 0, 0, 22),
+			Position = UDim2.new(0.04, 0, 0, 238),
+			TextColor3 = Theme.InkSoft,
+			Stroke = false,
+			ZIndex = 3,
+			Parent = c,
+		})
+		local buy = Kit.Button({
+			Text = "R$ " .. prod.price,
+			Color = "Purple",
+			Size = UDim2.new(0.8, 0, 0, 50),
+			Position = UDim2.new(0.1, 0, 1, -62),
+			TextSize = 26,
+			Parent = c,
+			OnClick = function()
+				if prod.id ~= 0 then
+					MarketplaceService:PromptProductPurchase(player, prod.id)
+				end
+			end,
+		})
+		galacticCards[key] = { card = c, title = title, income = income, desc = desc, buy = buy, def = def }
+	end
+
 	-- game pass
 	local passCards = {}
 	for i, key in Products.PassOrder do
@@ -154,6 +255,9 @@ function Panel.Build(parent: Instance, C)
 	-- prodotti
 	local productCards = {}
 	for i, key in Products.ProductOrder do
+		if Products.Galactic[key] then
+			continue -- hanno la loro scheda
+		end
 		local prod = Products.Products[key]
 		local c, title, desc = card(
 			pages.Boosts,
@@ -214,6 +318,34 @@ function Panel.Build(parent: Instance, C)
 	local function refresh()
 		local data = C.State.Data
 		p.Title.Text = T("MenuShop")
+		tabButtons.Galactic.SetText(T("ShopGalactic"))
+		-- giganti gia' posseduti (sul trono o nel deposito)
+		local owned = {}
+		if data then
+			for _, pet in data.Pets or {} do
+				owned[pet.Id] = true
+			end
+			for _, v in data.Vault or {} do
+				owned[v.Id] = true
+			end
+		end
+		for key, gc in galacticCards do
+			local prod = Products.Products[key]
+			local petId = Products.Galactic[key]
+			gc.title.Text = T("Pet_" .. petId)
+			gc.income.Text = "+" .. Format.Money(gc.def.income) .. T("PerSecond")
+			gc.desc.Text = T("GalacticTag")
+			if owned[petId] then
+				gc.buy.SetText(T("Owned"))
+				gc.buy.SetColor("White")
+			elseif prod.id == 0 then
+				gc.buy.SetText(T("ComingSoon"))
+				gc.buy.SetColor("Grey")
+			else
+				gc.buy.SetText("R$ " .. prod.price)
+				gc.buy.SetColor("Purple")
+			end
+		end
 		tabButtons.Passes.SetText(T("ShopPasses"))
 		tabButtons.Boosts.SetText(T("ShopBoosts"))
 		tabButtons.Bats.SetText(T("ShopBats"))
@@ -277,9 +409,10 @@ function Panel.Build(parent: Instance, C)
 		for _, pass in Products.Passes do
 			anyPass = anyPass or pass.id ~= 0
 		end
-		show(if anyPass then "Passes" else "Bats")
+		local _ = anyPass
+		show("Galactic")
 	end
-	for _, key in { "Coins", "Bats", "EquippedBat" } do
+	for _, key in { "Coins", "Bats", "EquippedBat", "Pets", "Vault" } do
 		C.State.Watch(key, function()
 			if p.Frame.Visible then
 				refresh()

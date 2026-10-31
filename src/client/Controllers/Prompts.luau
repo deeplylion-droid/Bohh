@@ -22,6 +22,7 @@ local STYLE = {
 	HatchPrompt = { key = "Prompt_Hatch", color = "Yellow" },
 	StealPrompt = { key = "Prompt_Steal", color = "Red" },
 	SellPrompt = { key = "Prompt_Sell", color = "Orange" },
+	SwapPrompt = { key = "Prompt_Swap", color = "Purple" },
 	BarrierPrompt = { key = "Prompt_Barrier", color = "Red" },
 	DenPrompt = { key = "Prompt_DenUnlock", color = "Red" },
 	WheelPrompt = { key = "Prompt_Wheel", color = "Orange" },
@@ -71,10 +72,13 @@ local function intended(prompt: ProximityPrompt): boolean
 	if name == "HatchPrompt" then
 		return base:GetAttribute("Ready") == true
 	elseif name == "SellPrompt" then
-		return base:GetAttribute("PetUid") ~= nil
+		return base:GetAttribute("PetUid") ~= nil and not base:GetAttribute("Bought")
 	elseif name == "StealPrompt" then
 		return (base:GetAttribute("PetUid") ~= nil or base:GetAttribute("EggRarity") ~= nil)
 			and not base:GetAttribute("BeingStolen")
+			and not base:GetAttribute("Bought")
+	elseif name == "SwapPrompt" then
+		return (base:GetAttribute("Vault") or 0) > 0
 	elseif name == "BarrierPrompt" then
 		return true
 	end
@@ -98,7 +102,7 @@ local function watch(prompt: Instance)
 	end)
 	local base = prompt.Parent
 	if base then
-		for _, attr in { "Ready", "PetUid", "EggRarity", "BeingStolen", "Locked" } do
+		for _, attr in { "Ready", "PetUid", "EggRarity", "BeingStolen", "Locked", "Bought", "Vault" } do
 			base:GetAttributeChangedSignal(attr):Connect(function()
 				enforce(prompt)
 			end)

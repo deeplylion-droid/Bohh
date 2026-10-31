@@ -18,6 +18,9 @@ Products.Passes = {
 } :: { [string]: Pass }
 
 Products.ProductOrder = {
+	"GalacticLion",
+	"GalacticKraken",
+	"GalacticWhale",
 	"SkipHatchSmall",
 	"SkipHatchMedium",
 	"SkipHatchLarge",
@@ -39,7 +42,19 @@ Products.Products = {
 	CoinsLarge = { key = "CoinsLarge", id = 3717390941, price = 399, icon = "CoinsLarge" },
 	WheelSpin1 = { key = "WheelSpin1", id = 3718229338, price = 29, icon = "Wheel" },
 	WheelSpins5 = { key = "WheelSpins5", id = 3718229344, price = 119, icon = "Wheel" },
+	-- giganti galattici (vanno subito sul trono)
+	GalacticLion = { key = "GalacticLion", id = 0, price = 399, icon = "NebulaLion" },
+	GalacticKraken = { key = "GalacticKraken", id = 0, price = 599, icon = "StarKraken" },
+	GalacticWhale = { key = "GalacticWhale", id = 0, price = 799, icon = "CosmicWhale" },
 } :: { [string]: Product }
+
+-- Pet galattici: prodotto -> pet
+Products.Galactic = {
+	GalacticLion = "NebulaLion",
+	GalacticKraken = "StarKraken",
+	GalacticWhale = "CosmicWhale",
+}
+Products.GalacticOrder = { "GalacticLion", "GalacticKraken", "GalacticWhale" }
 
 -- Giri della ruota della fortuna
 Products.WheelSpins = {

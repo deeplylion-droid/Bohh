@@ -19,8 +19,20 @@ export type Rarity = {
 
 local Rarities = {}
 
-Rarities.Order =
-	{ "Common", "Uncommon", "Rare", "Epic", "Legendary", "Mythic", "Divine", "Secret", "Primal", "Extreme", "Ultra" }
+Rarities.Order = {
+	"Common",
+	"Uncommon",
+	"Rare",
+	"Epic",
+	"Legendary",
+	"Mythic",
+	"Divine",
+	"Secret",
+	"Primal",
+	"Extreme",
+	"Ultra",
+	"Galactic",
+}
 
 Rarities.List = {
 	Common = {
@@ -140,9 +152,21 @@ Rarities.List = {
 		sell = 120,
 		announce = true,
 	},
+	-- giganti galattici: si comprano nel negozio (Robux), stanno sul trono come gli Ultra e non si
+	-- possono rubare ne' vendere (si scambiano col gigante che era sul trono)
+	Galactic = {
+		id = "Galactic",
+		order = 12,
+		color = Color3.fromRGB(150, 100, 255),
+		colorDark = Color3.fromRGB(40, 20, 110),
+		weight = 0.3,
+		hatch = 3600,
+		sell = 120,
+		announce = true,
+	},
 } :: { [string]: Rarity }
 
--- Divine, Secret, Primal, Extreme e Ultra usano un gradiente animato nell'interfaccia
+-- Divine, Secret, Primal, Extreme, Ultra e Galactic usano un gradiente animato nell'interfaccia
 Rarities.Gradients = {
 	Divine = ColorSequence.new({
 		ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 90, 90)),
@@ -156,6 +180,13 @@ Rarities.Gradients = {
 		ColorSequenceKeypoint.new(0, Color3.fromRGB(40, 255, 220)),
 		ColorSequenceKeypoint.new(0.5, Color3.fromRGB(160, 60, 255)),
 		ColorSequenceKeypoint.new(1, Color3.fromRGB(40, 255, 220)),
+	}),
+	Galactic = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, Color3.fromRGB(70, 90, 255)),
+		ColorSequenceKeypoint.new(0.35, Color3.fromRGB(200, 80, 255)),
+		ColorSequenceKeypoint.new(0.65, Color3.fromRGB(60, 230, 255)),
+		ColorSequenceKeypoint.new(0.85, Color3.fromRGB(255, 230, 140)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(70, 90, 255)),
 	}),
 	Extreme = ColorSequence.new({
 		ColorSequenceKeypoint.new(0, Color3.fromRGB(170, 255, 0)),

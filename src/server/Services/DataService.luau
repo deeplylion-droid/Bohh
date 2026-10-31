@@ -21,7 +21,8 @@ local TEMPLATE = {
 	Coins = GameConfig.StartingCoins,
 	TotalEarned = 0,
 	Upgrades = { Speed = 0, Strength = 0, Backpack = 0, Incubators = 0, HatchSpeed = 0, Pedestals = 0, Barrier = 0 },
-	Pets = {}, -- [uid] = { Id, Mutation, Size, Slot, Bank, Got }
+	Pets = {}, -- [uid] = { Id, Mutation, Size, Slot, Bank, Got, Bought? }
+	Vault = {}, -- giganti fuori dal trono: lista di { Id, Mutation, Size, Bought? } (si scambiano)
 	NextUid = 1,
 	Incubators = {}, -- ["1".."9"] = { Rarity, Start, Duration, Mutation?, Source? }
 	PendingEggs = {}, -- lista di { Rarity, Source } in attesa di incubatrice

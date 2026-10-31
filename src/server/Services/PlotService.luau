@@ -67,6 +67,7 @@ export type Plot = {
 		slot: number,
 		prompt: ProximityPrompt,
 		stealPrompt: ProximityPrompt,
+		swapPrompt: ProximityPrompt,
 		tower: BasePart,
 	},
 	gateBarrier: BasePart,
@@ -561,11 +562,21 @@ local function buildPlot(index: number, parent: Instance): Plot
 	CollectionService:AddTag(thronePad, "CollectPad")
 	local throneSell = prompt(altar, "SellPrompt", "SELL", 1, "Owner")
 	local throneSteal = prompt(altar, "StealPrompt", "STEAL", 2, "Others")
+	local throneSwap = prompt(altar, "SwapPrompt", "SWAP", 0.6, "Owner")
+	throneSwap.KeyboardKeyCode = Enum.KeyCode.F
+	throneSwap.UIOffset = Vector2.new(0, -70)
 	altar:SetAttribute("Slot", 0)
 	altar:SetAttribute("Throne", true)
 	CollectionService:AddTag(altar, "Pedestal")
-	local throne =
-		{ base = altar, pad = thronePad, slot = 0, prompt = throneSell, stealPrompt = throneSteal, tower = tower }
+	local throne = {
+		base = altar,
+		pad = thronePad,
+		slot = 0,
+		prompt = throneSell,
+		stealPrompt = throneSteal,
+		swapPrompt = throneSwap,
+		tower = tower,
+	}
 
 	-- console della barriera
 	local consoleCf = at(L.BarrierConsole)
