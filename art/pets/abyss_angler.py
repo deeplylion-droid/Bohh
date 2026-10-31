@@ -503,8 +503,9 @@ nodes = []
 for i in (8, 13, 18, 23):     # anelli luminosi lungo l'antenna (come gli anelli di una canna da pesca)
     tdir = norm(np.array(stalk_pts[i + 1]) - np.array(stalk_pts[i - 1]))
     r_st = taper(29, 0.08, 0.036, 0.8)[i]
-    nodes.append(place(torus(r_st + 0.016, 0.034), basis(norm(np.cross(tdir, (1.0, 0.0, 0.0))), (1.0, 0.0, 0.0)) @
-                       np.array([[0, 0, 1], [1, 0, 0], [0, 1, 0]], dtype=np.float32).T, np.array(stalk_pts[i])))
+    ex = norm(np.cross(tdir, (1.0, 0.0, 0.0)))
+    Mr = np.stack([ex, np.cross(tdir, ex), tdir], axis=1).astype(np.float32)   # asse del toro lungo l'antenna
+    nodes.append(place(torus(r_st + 0.016, 0.034), Mr, np.array(stalk_pts[i])))
 log("esca pronta")
 
 # ============================================================ bioluminescenza: branchie, strisce, puntini

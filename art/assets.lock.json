@@ -292,6 +292,10 @@
   }
  },
  "models": {
+  "AnubisGuard": {
+   "asset": 105285893738747,
+   "hash": "05024715f67ff2c7846cdec7c74591a55322bfd9"
+  },
   "ArancinoAstronauta": {
    "asset": 75194894811808,
    "hash": "d85caf7fd397ef7cd65f3834da9f89eaa5742499"
@@ -500,6 +504,10 @@
    "asset": 74754050625434,
    "hash": "156e6285ee6a0b1b8eed0170d0a4bf6fd039ecb0"
   },
+  "GoldenSphinx": {
+   "asset": 124158906518579,
+   "hash": "12396eaba87b63ddc641dfff73ea4afd6d60c29c"
+  },
   "Grass1": {
    "asset": 78460483304038,
    "hash": "3a1edd7a5e0b5c4c0a544e07f14b44ebba2f3af6"
@@ -659,6 +667,10 @@
   "StarKraken": {
    "asset": 140345255081765,
    "hash": "e6771c83d19f392e7fe3752f9efe4d9c00cfea79"
+  },
+  "SunScarab": {
+   "asset": 124651520359561,
+   "hash": "a5a88226b264d86a45776df4fe040cd8c3c80bba"
   },
   "ThunderGriffin": {
    "asset": 95993002597211,

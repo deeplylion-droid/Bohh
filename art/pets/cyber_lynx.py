@@ -573,8 +573,8 @@ for sx in (1, -1):
 
 # ============================================================ parti: pelle
 HEAD_ZONE = H(ellipsoid((0.66, 0.62, 0.7), (0.0, -0.05, 0.12)))
-m.add("Body", core0.subtract(HEAD_ZONE.offset(-0.03)), FUR, tris=2250, voxel=0.0427)
-m.add("Head", core0.intersect(HEAD_ZONE.offset(0.03)), FUR, tris=2700, voxel=0.0303)
+m.add("Body", core0.subtract(HEAD_ZONE.offset(-0.03)), FUR, tris=2250, voxel=0.0440)
+m.add("Head", core0.intersect(HEAD_ZONE.offset(0.03)), FUR, tris=2700, voxel=0.0308)
 m.add("Tail", tail_fur, FUR, tris=350, voxel=0.0327, group="Tail", pivot=TAIL_PIVOT)
 
 # ============================================================ pelo chiaro: gorgiera (ciuffi pieni), muso, pettorina, orecchie interne
@@ -716,7 +716,7 @@ for tr in (((0.0, -0.2, 0.4), (0.0, 0.05, 0.45), (0.0, 0.26, 0.38)),
     head_circ.append(tube([tuple(p) for p in q], 0.02))
     head_circ.append(cylinder(tuple(q[-1] - nq[-1] * 0.03), tuple(q[-1] + nq[-1] * 0.01), 0.038, round=0.008))
 circuits.append(H(union(*head_circ)))
-m.add("Mane", fast_union(circuits), GLOW, material="Neon", role="glow", tris=1650, voxel=0.0237)
+m.add("Mane", fast_union(circuits), GLOW, material="Neon", role="glow", tris=1650, voxel=0.0241)
 
 # ============================================================ occhi, pupille, bocca, naso
 whites, irises, slits, shines = [], [], [], []
@@ -750,9 +750,9 @@ m.add("Shine", union(H(union(*teeth)), *shines), TOOTH, role="shine", tris=650, 
 # ============================================================ coda robotica e ologramma (gruppo "Tail")
 m.add("TailTech", m_tail_tech, CHROME, material="Metal", role="detail", tris=650, voxel=0.0216, group="Tail",
       pivot=TAIL_PIVOT)
-m.add("Hologram", fast_union(holo), HOLO, material="Neon", role="glow", tris=1100, voxel=0.0207, group="Tail",
+m.add("Hologram", fast_union(holo), HOLO, material="Neon", role="glow", tris=1100, voxel=0.0222, group="Tail",
       pivot=TAIL_PIVOT)
-m.add("HoloBeam", beam, HOLO, material="Glass", role="detail", tris=150, voxel=0.0356, transparency=0.6,
+m.add("HoloBeam", beam, HOLO, material="Glass", role="detail", tris=150, voxel=0.0396, transparency=0.6,
       group="Tail", pivot=TAIL_PIVOT)
 
 
