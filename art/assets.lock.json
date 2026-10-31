@@ -408,6 +408,10 @@
    "asset": 73895074286810,
    "hash": "3343b26ea78be19cc28f6e879660155cd973e1ec"
   },
+  "CyberLynx": {
+   "asset": 78218266752844,
+   "hash": "c5525c7f052afef241bdff0622d6269c8aff2dd3"
+  },
   "DeadTree": {
    "asset": 122979684983032,
    "hash": "cfc5783d30ee8aee9a65777aea37b06840f10a1f"
@@ -651,6 +655,14 @@
   "PizzasauroRex": {
    "asset": 140654900127918,
    "hash": "b3c583c233bbd9ddb2f88a3b55847c5824528fea"
+  },
+  "PsychicPanther": {
+   "asset": 131945217216678,
+   "hash": "15bb248eef9333940a16492d8e79f408e5d9d67f"
+  },
+  "QuantumTiger": {
+   "asset": 120128935278760,
+   "hash": "c0988026a139259199cba023c0ae341db163dc3d"
   },
   "RageRam": {
    "asset": 102849466506445,

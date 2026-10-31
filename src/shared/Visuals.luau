@@ -366,7 +366,8 @@ function Visuals.ApplyMutation(model: Model, mutation: string)
 			local _, _, v = base:ToHSV()
 			d.Color = Color3.fromHSV(0.53, 0.32, math.clamp(0.75 + v * 0.25, 0, 1))
 			d.Material = Enum.Material.Glass
-			d.Transparency = 0.08
+			-- le parti gia' trasparenti (visiere, cupole di vetro) restano trasparenti come prima
+			d.Transparency = math.max(d.Transparency, 0.08)
 			d.Reflectance = 0.25
 		elseif mutation == "Rainbow" then
 			d.Material = if role == "glow" then Enum.Material.Neon else Enum.Material.SmoothPlastic
