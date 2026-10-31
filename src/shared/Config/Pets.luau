@@ -146,7 +146,7 @@ Pets.List = {
 	pet("PentaDragon", "Ultra", 500000, 10, 42),
 	-- Galattici: creature cosmiche di stazza mega galattica, in vendita nel negozio
 	galactic("NebulaLion", 650000, 46),
-	galactic("StarKraken", 800000, 48),
+	galactic("StarKraken", 800000, 44),
 	galactic("CosmicWhale", 1000000, 40),
 }
 
