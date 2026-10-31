@@ -61,6 +61,18 @@ do
 		giant:PivotTo(point.WorldCFrame)
 		giant.Parent = plot.model
 	end
+	-- lotto 2: i dodici pet Estremi sui piedistalli (per confrontare le taglie)
+	do
+		local plot2 = S.PlotService.ByIndex(2)
+		local Pets = require(ReplicatedStorage.Shared.Config.Pets)
+		for i, def in Pets.ByRarity.Extreme or {} do
+			local ped = plot2.pedestals[i]
+			local pet = Visuals.MakePet(def.id, "None", "Normal")
+			local point = ped.base:FindFirstChild("PetPoint") :: Attachment
+			pet:PivotTo(point.WorldCFrame + (if def.flying then Vector3.new(0, 1.5, 0) else Vector3.zero))
+			pet.Parent = plot2.model
+		end
+	end
 	for i, rarity in { "Common", "Epic", "Legendary" } do
 		local inc = plot.incubators[i]
 		local egg = Visuals.MakeEgg(rarity)

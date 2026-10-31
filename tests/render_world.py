@@ -359,6 +359,8 @@ VIEWS = {
     "xhooks": ((-1640, 256, -20), (-1700, 242, -36), 22),
     # lotto 1 dalla piazza: torre del primo trono e le due isole fluttuanti dei troni 2 e 3
     "islands": ((40, 376, 46), (120, 352, 142), 22),
+    # lotto 2 dalla piazza: i dodici pet Estremi sui piedistalli
+    "extremepets": ((72, 356, 8), (134, 333, 24), 24),
 }
 
 
