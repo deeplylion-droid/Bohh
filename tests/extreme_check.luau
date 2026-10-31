@@ -3,24 +3,13 @@
 -- piattaforme mobili campionate nel tempo), dalla partenza fino al santuario di ogni sezione.
 -- Stampa i salti piu' difficili del percorso migliore.
 -- Uso (dalla radice): .tools/bin/lune run tests/extreme_check.luau
-local fs = require("@lune/fs")
-local luau = require("@lune/luau")
 local process = require("@lune/process")
-local env = require("./roblox_env")
 local roblox = require("@lune/roblox")
 local Vector2 = (roblox :: any).Vector2
 local Vector3 = (roblox :: any).Vector3
 
-local function load(path: string)
-	local src = fs.readFile(path)
-	local g = setmetatable({}, { __index = _G })
-	env.install(g)
-	g.typeof = typeof
-	local fn = luau.load(src, { debugName = path, environment = g })
-	return fn()
-end
-
-local E = load("src/shared/Extreme.luau")
+-- con l'harness (require e script come in Roblox: Extreme usa Shared.Util.Rng)
+local E = require("./harness").require("ReplicatedStorage/Shared/Extreme")
 
 local G = 196.2
 local V0 = math.sqrt(2 * G * 7.2) -- salto normale (JumpHeight 7.2)
