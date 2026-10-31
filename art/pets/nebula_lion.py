@@ -277,7 +277,7 @@ def flame_profile(t, base=0.55, peak=0.3, tip=0.85):
     return rise * (1.0 - t) ** tip
 
 
-def flame(root, e1, e3, L, w, thick=0.42, curl=40.0, wig=0.0, n=8, pw=1.4, base=0.55, peak=0.3, tip=0.85):
+def flame(root, e1, e3, L, w, thick=0.58, curl=40.0, wig=0.0, n=8, pw=1.4, base=0.55, peak=0.3, tip=0.8, rmin=0.016):
     """Ciuffo a fiamma: tubo affusolato e schiacciato che parte da root verso e1 e si arriccia di 'curl' gradi
     verso e2 = e3 x e1 (wig = guizzo a S); e3 = normale della faccia larga (spessore = thick x larghezza).
     Ritorna la forma con l'attributo .line (linea mediana in coordinate mondo)."""
@@ -290,7 +290,7 @@ def flame(root, e1, e3, L, w, thick=0.42, curl=40.0, wig=0.0, n=8, pw=1.4, base=
         t = (i + 0.5) / n
         a = math.radians(curl) * t ** pw + math.radians(wig) * math.sin(2 * math.pi * t)
         pts.append(pts[-1] + (L / n) * np.array([math.cos(a), math.sin(a)]))
-    radii = [max(w * flame_profile(i / n, base, peak, tip), 0.007) for i in range(n + 1)]
+    radii = [max(w * flame_profile(i / n, base, peak, tip), rmin) for i in range(n + 1)]
     sh = flatten(tube([(float(x), float(y), 0.0) for x, y in pts], radii), thick, axis=2)
     M = np.stack([e1, e2, e3], axis=1)
     root = np.asarray(root, dtype=np.float64)
@@ -432,7 +432,7 @@ FRONT = {1: ((0.5, -0.74, 2.56), (0.57, -1.04, 2.02), (0.55, -1.42, 1.76), (0.55
          -1: ((-0.5, -0.7, 2.56), (-0.55, -0.7, 1.9), (-0.53, -0.86, 1.46), (-0.53, -1.02, RT + 0.12))}
 legs = [front_leg(sx, *FRONT[sx]) for sx in (1, -1)] + [hind_leg(sx) for sx in (1, -1)]
 body = fast_union(legs, k=0.1, base=trunk)
-m.add("Body", body.intersect(above(RT - 0.03)), NAVY, tris=9000, voxel=0.026)
+m.add("Body", body.intersect(above(RT - 0.03)), NAVY, tris=8400, voxel=0.026)
 
 # ============================================================ testa ruggente (coordinate locali: muso verso -Y)
 H_T = np.array([0.0, -1.44, 3.8])
@@ -596,20 +596,20 @@ def tuft(r0, th, b, L, w, alpha, tilt, curl, top_tilt=True, **kw):
 core, inner, outer, neb = [], [], [], []
 for i in range(24):                       # nucleo luminoso attorno al muso
     th = 2 * math.pi * i / 24 + rng.uniform(-0.05, 0.05)
-    core.append(tuft(0.34, th, -0.16, 0.4 * rng.uniform(0.9, 1.1), 0.13, 28, 10, 45, thick=0.5, base=0.8))
+    core.append(tuft(0.34, th, -0.16, 0.4 * rng.uniform(0.9, 1.1), 0.13, 28, 10, 45, thick=0.64, base=0.8))
 for i in range(22):                       # magenta
     th = 2 * math.pi * (i + 0.5) / 22 + rng.uniform(-0.05, 0.05)
-    inner.append(tuft(0.5, th, -0.07, 0.86 * rng.uniform(0.9, 1.1), 0.21, 30, 16, 52, thick=0.5, base=0.8))
+    inner.append(tuft(0.5, th, -0.07, 0.86 * rng.uniform(0.9, 1.1), 0.21, 30, 16, 52, thick=0.64, base=0.8))
 for j, (r0, b, L, w, n_t) in enumerate(((0.74, 0.03, 0.96, 0.22, 20), (0.82, 0.1, 1.0, 0.2, 16))):   # viola (due giri)
     for i in range(n_t):
         th = 2 * math.pi * (i + 0.5 * j) / n_t + 0.12 + rng.uniform(-0.05, 0.05)
-        outer.append(tuft(r0, th, b, L * rng.uniform(0.9, 1.1), w, 40 + 4 * j, 24 + 4 * j, 70, thick=0.46, base=0.8))
+        outer.append(tuft(r0, th, b, L * rng.uniform(0.9, 1.1), w, 40 + 4 * j, 24 + 4 * j, 70, thick=0.62, base=0.8))
 for i in range(9):                        # punte ciano fra i bracci
     th = 2 * math.pi * (i + 0.3) / 9
     neb.append(tuft(0.9, th, 0.16, 0.5 * rng.uniform(0.9, 1.1), 0.13, 50, 28, 55, base=0.8))
 ARMS = [(-32.0, 1.0), (88.0, 0.92), (208.0, 0.86)]
 for a0, f in ARMS:                        # grandi bracci a spirale
-    arm = tuft(0.84, math.radians(a0), 0.16, 2.05 * f, 0.33, 62, 18, 100, n=18, thick=0.42, base=0.85, peak=0.22,
+    arm = tuft(0.84, math.radians(a0), 0.16, 2.05 * f, 0.33, 62, 18, 100, n=18, thick=0.56, base=0.85, peak=0.22,
                top_tilt=False)
     neb.append(arm)
     for u, L in ((0.26, 0.5), (0.46, 0.44), (0.64, 0.36), (0.8, 0.26)):
@@ -631,7 +631,7 @@ for k, (s_ax, R, L, w, n_t, a_lo, a_hi) in enumerate(((0.1, 0.62, 0.92, 0.28, 14
         rad = math.cos(th) * NU + math.sin(th) * NV
         root = C + rad * MS * R * 0.62
         e1 = norm(rad * 0.6 + NAX * 1.0 + np.cross(NAX, rad) * 0.25)
-        sh = flame(root, e1, rad, MS * L * rng.uniform(0.9, 1.1), MS * w, curl=28, thick=0.5, base=0.85)
+        sh = flame(root, e1, rad, MS * L * rng.uniform(0.9, 1.1), MS * w, curl=28, thick=0.64, base=0.85)
         (inner if (i + k) % 3 == 0 else outer).append(sh)
         if k == 3 and i % 2 == 0:   # qualche punta ciano anche dietro
             tip = sh.line[-3]
@@ -643,7 +643,7 @@ dome_dirs = [d for d in fib_dirs(70, np.random.default_rng(5), jitter=0.08) if d
 for i, d in enumerate(dome_dirs):
     root = DOME_C + d * MS * 0.42
     e1 = norm(d + BK * 0.7 + np.array([0.0, 0.0, -0.15]))
-    (outer if i % 3 else inner).append(flame(root, e1, d, MS * 0.82 * rng.uniform(0.9, 1.1), MS * 0.27, curl=25, thick=0.5,
+    (outer if i % 3 else inner).append(flame(root, e1, d, MS * 0.82 * rng.uniform(0.9, 1.1), MS * 0.27, curl=25, thick=0.64,
                                              base=0.85))
 
 # stelline a quattro punte sospese attorno alla galassia, fra un braccio e l'altro (parte "Nebula")
@@ -652,13 +652,12 @@ for a_, rr, L in ((32.0, 1.95, 0.17), (150.0, 2.0, 0.15), (255.0, 1.75, 0.13), (
     th = math.radians(a_)
     c = G + MS * rr * ell(th) * rdir(th) + BK * 0.05
     neb.append(sparkle(c, -BK, L * MS, 0.036, rot=a_ * 0.5))
-m.add("ManeInner", fast_union(inner, k=0.02), MAGENTA, role="detail", tris=5800, voxel=0.018)
-m.add("ManeOuter", fast_union(outer, k=0.02), VIOLET, role="detail", tris=6600, voxel=0.019)
-m.add("Nebula", fast_union(neb), CYAN, material="Neon", role="glow", tris=5200, voxel=0.018)
+m.add("ManeInner", fast_union(inner, k=0.02), MAGENTA, role="detail", tris=6300, voxel=0.018)
+m.add("ManeOuter", fast_union(outer, k=0.02), VIOLET, role="detail", tris=7200, voxel=0.019)
+m.add("Nebula", fast_union(neb), CYAN, material="Neon", role="glow", tris=5600, voxel=0.018)
 
 # ============================================================ facce: occhi, bocca, denti
 m.add("EyeGlow", HW(union(*eye_glow)), EYE_GOLD, material="Neon", role="glow", tris=500, voxel=0.009)
-m.add("Mouth", HW(fast_union(mouth_dark + eye_dark)), MOUTH, role="eye", tris=1400, voxel=0.01)
 m.add("Teeth", HW(fast_union(teeth)), TOOTH, role="shine", tris=1300, voxel=0.008)
 m.add("Tongue", HW(union(tongue, *ear_in)), TONGUE, role="detail", tris=600, voxel=0.012)
 m.add("Shine", HW(union(*eye_shine)), WHITE, role="shine", tris=240, voxel=0.006)
@@ -666,7 +665,7 @@ m.add("Shine", HW(union(*eye_shine)), WHITE, role="shine", tris=240, voxel=0.006
 # ============================================================ pancia chiara, cucitura scucita sul petto, polvere di stelle
 belly_reg = ellipsoid((0.36, 0.9, 0.3), (0, -0.3, 1.9))                 # pancia
 m.add("Belly", union(shell_paint(trunk, belly_reg, out=0.018, inn=0.05), HW(union(*head_paint))), NAVY_LT, role="detail",
-      tris=2200, voxel=0.018)
+      tris=1700, voxel=0.018)
 
 SEAM = [project(trunk, (0, -0.7, z), (0, -1, 0)) for z in np.linspace(2.72, 1.98, 16)]
 SPLIT = (2.2, 2.48)   # tratto scucito (quote)
@@ -683,11 +682,22 @@ for i, p in enumerate(seam_line):
         q0 = on_surface(trunk, p + side * w * a + t * h, 0.006, 3)
         q1 = on_surface(trunk, p - side * w * a - t * h * b_, 0.006, 3)
         gold.append(capsule(tuple(q0), tuple(q1), 0.0135))
-    if split:   # imbottitura di polvere di stelle che esce dalla cucitura
-        stuffing.append(sphere(rng.uniform(0.05, 0.075), tuple(p + nrm * 0.03 + side * rng.uniform(-0.02, 0.02))))
+    if split:   # imbottitura di polvere di stelle che esce dalla cucitura: batuffoli d'ovatta luminosa
+        for _ in range(2):
+            stuffing.append(sphere(rng.uniform(0.035, 0.06), tuple(p + nrm * rng.uniform(0.015, 0.05)
+                                                                  + side * rng.uniform(-0.04, 0.04) + t * rng.uniform(-0.03, 0.03))))
 for z, dx, s in ((2.08, 0.06, 0.9), (1.98, -0.05, 0.75)):   # granelli di stelle che cadono
     p, n = project(trunk, (0, -0.7, z), (dx, -1, 0))
     starlines.append(sparkle(p + n * 0.012, n, 0.06 * s, 0.014 * s, rot=20))
+for z, dx in ((2.3, 0.05), (2.4, -0.04)):                  # stelline impigliate nell'ovatta
+    p, n = project(trunk, (0, -0.7, z), (dx, -1, 0))
+    starlines.append(sparkle(p + n * 0.07, n, 0.05, 0.012, rot=35))
+# fessura scura della cucitura aperta (parte "Mouth"): si vede l'interno da cui esce l'ovatta
+SPLIT_C = project(trunk, (0, -0.7, sum(SPLIT) / 2), (0, -1, 0))[0]
+slit = shell_paint(trunk, ellipsoid((0.085, 0.3, 0.19), tuple(SPLIT_C)), out=0.01, inn=0.04)
+
+# bocca, naso, contorno e pupille degli occhi + fessura scura della cucitura
+m.add("Mouth", union(HW(fast_union(mouth_dark + eye_dark)), slit), MOUTH, role="eye", tris=1500, voxel=0.01)
 
 # ============================================================ costellazione del Leone sui fianchi e sulle spalle
 LEO = {"eps": (0.0, 0.9), "mu": (0.2, 1.04), "zeta": (0.44, 0.96), "gam": (0.5, 0.66), "eta": (0.37, 0.4),
@@ -733,22 +743,22 @@ TT = np.array(TAIL[-1])
 TD = norm(np.array(TAIL[-1]) - np.array(TAIL[-3]))
 s1 = norm(np.cross(TD, (0.0, 0.0, 1.0)))
 s2 = np.cross(TD, s1)
-NUC = TT + TD * 0.12
-comet = [sphere(0.23, tuple(NUC))]
-PL = norm((0.3, 1.0, -0.12))                 # direzione della scia (all'indietro, come spinta dal vento solare)
+NUC = TT + TD * 0.14
+comet = [sphere(0.27, tuple(NUC))]
+PL = norm((0.3, 1.0, -0.1))                  # direzione della scia (all'indietro, come spinta dal vento solare)
 PU = norm(np.cross(PL, np.cross((0.0, 0.0, 1.0), PL)))   # "su" perpendicolare alla scia
 PS = np.cross(PL, PU)
-for i, (up, sd, L, w) in enumerate(((0.0, 0.0, 1.35, 0.26), (0.42, 0.1, 1.05, 0.21), (-0.38, -0.1, 1.1, 0.21),
-                                    (0.2, -0.38, 0.9, 0.18), (-0.15, 0.4, 0.95, 0.18), (0.7, -0.2, 0.7, 0.15),
-                                    (-0.65, 0.25, 0.75, 0.15))):
+for i, (up, sd, L, w) in enumerate(((0.0, 0.0, 1.55, 0.25), (0.2, 0.04, 1.3, 0.2), (-0.18, -0.04, 1.35, 0.2),
+                                    (0.08, -0.2, 1.15, 0.17), (-0.06, 0.2, 1.2, 0.17), (0.34, -0.1, 0.9, 0.14),
+                                    (-0.32, 0.12, 0.95, 0.14))):
     d = norm(PL + PU * up + PS * sd)
-    comet.append(flame(NUC + d * 0.08, d, PS if abs(sd) < 0.3 else PU, L, w, curl=12 * (1 if up >= 0 else -1),
-                       thick=0.5, base=0.9, peak=0.18))
-for i in range(7):            # chioma: fiammelle corte attorno al nucleo
-    a_ = 2 * math.pi * i / 7 + 0.4
+    comet.append(flame(NUC + d * 0.12, d, PS if abs(sd) < 0.15 else PU, L, w, curl=10 * (1 if up >= 0 else -1),
+                       thick=0.62, base=0.95, peak=0.12, tip=0.9))
+for i in range(8):            # chioma: fiammelle corte tutt'attorno alla testa della cometa
+    a_ = 2 * math.pi * i / 8 + 0.4
     rad = math.cos(a_) * s1 + math.sin(a_) * s2
-    d = norm(rad + TD * 0.45 - PL * 0.3)
-    comet.append(flame(NUC + d * 0.1, d, np.cross(d, s1) + 0.01, 0.34, 0.12, curl=30, n=6, base=0.85))
+    d = norm(rad + TD * 0.25 - PL * 0.2)
+    comet.append(flame(NUC + d * 0.16, d, np.cross(d, s1) + 0.01, 0.26, 0.11, curl=30, n=6, base=0.85))
 m.add("Tail", tail, NAVY, role="skin", tris=1500, voxel=0.02, group="Tail", pivot=TAIL_PIVOT)
 m.add("Stars", fast_union(comet), COMET, material="Neon", role="glow", tris=2000, voxel=0.016, group="Tail", pivot=TAIL_PIVOT)
 
@@ -765,7 +775,7 @@ def ring_pt(a):
 
 
 PA, PB, PC = ring_pt(205), ring_pt(325), ring_pt(85)
-gold.append(torus(0.22, 0.017).rot(28, -24, 0).translate(tuple(PB)))     # anello di Saturno
+gold.append(torus(0.24, 0.024).rot(28, -24, 0).translate(tuple(PB)))     # anello di Saturno
 m.add("PlanetA", sphere(0.16, tuple(PA)), PLANET_A, role="detail", tris=360, voxel=0.012)
 m.add("PlanetB", sphere(0.12, tuple(PB)), PLANET_B, role="detail", tris=300, voxel=0.012)
 m.add("PlanetC", sphere(0.105, tuple(PC)), PLANET_C, role="detail", tris=260, voxel=0.012)
@@ -896,7 +906,7 @@ for i in range(7):
     c = BELT_C + BELT_M @ np.array([1.5 * math.cos(a_), 1.8 * math.sin(a_), belt_rng.uniform(-0.06, 0.06)])
     sz = belt_rng.uniform(0.12, 0.19)
     rock.append(chunk(c, (sz, sz * 0.82, sz * 0.7), seed=40 + i, rot=tuple(belt_rng.uniform(-40, 40, 3))))
-m.add("Rock", fast_union(rock).intersect(above(0.0)), ROCK, material="Slate", role="detail", tris=4200, voxel=0.026,
+m.add("Rock", fast_union(rock).intersect(above(0.0)), ROCK, material="Slate", role="detail", tris=3800, voxel=0.026,
       smooth=False)
 
 crystals = []

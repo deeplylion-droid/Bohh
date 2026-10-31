@@ -408,7 +408,7 @@ VENOM = (176, 255, 64)      # pungiglione velenoso (Neon)
 MOUTH = (40, 10, 14)
 TOOTH = (250, 244, 226)
 DARK = (34, 24, 26)         # zoccoli e spine
-WING = (255, 176, 74)       # ali posteriori ambrate trasparenti
+WING = (255, 156, 40)       # ali posteriori ambrate trasparenti
 FRAME = (48, 30, 26)        # ali anteriori coriacee e venature
 THREAD = (242, 226, 184)
 
@@ -459,19 +459,21 @@ jaw = union(tbox(0.0, -0.66, 0.16, 0.12, JAW_Z + 0.04, JAW_Z + 0.04, -0.29, -0.2
 jaw = jaw.subtract(box((0.5, 0.6, 0.3), (0, -0.4, JAW_Z + 0.3)), k=0.01)
 
 # occhi di brace (sotto la testiera di bronzo) con la palpebra arrabbiata
-eyes, lids = [], []
+eyes, lids, brow_plates, EYE_PN = [], [], [], {}
 for sx in (1, -1):
-    p, n = project(upper, (sx * 0.1, -0.14, 0.07), (sx * 0.62, -0.75, 0.1))
-    a1 = sx * norm(np.cross((0.0, 0.0, 1.0), n))
-    a2 = -sx * n
-    a3 = np.cross(a1, a2)
-    sl = math.radians(24)
-    a1, a3 = a1 * math.cos(sl) + a3 * math.sin(sl), a3 * math.cos(sl) - a1 * math.sin(sl)
-    M = np.stack([a1, a2, a3], axis=1).astype(np.float32)
-    c = p - n * 0.02
-    eyes.append(ellipsoid((0.088, 0.05, 0.05)).rotate(M).translate(c))
-    cutp = SDF(lambda q: (0.01 + 0.45 * q[:, 0] - q[:, 2]) / math.sqrt(1.2025), (-0.12, -0.12, -0.12), (0.12, 0.12, 0.12))
-    lids.append(ellipsoid((0.085, 0.056, 0.054)).intersect(cutp).rotate(M).translate(c))
+    p, n = project(upper, (sx * 0.1, -0.13, 0.06), (sx * 0.8, -0.58, 0.12))
+    EYE_PN[sx] = (p, n)
+    a1 = norm(np.cross((0.0, 0.0, 1.0), n)) * sx       # orizzontale lungo la testa (verso la nuca)
+    a3 = norm(np.cross(n, a1)) * sx                      # verso l'alto
+    if a3[2] < 0:
+        a3 = -a3
+    M = np.stack([a1, norm(np.cross(a3, a1)), a3], axis=1).astype(np.float32)
+    c = p - n * 0.012
+    eyes.append(ellipsoid((0.125, 0.085, 0.105)).rotate(M).translate(c))
+    # arcata di bronzo arrabbiata: bassa verso il naso, alta verso la nuca
+    pts = [c + M @ np.array(q, dtype=np.float32) + n * 0.03 for q in ((-0.15, 0.0, 0.05), (-0.05, 0.0, 0.11),
+                                                                   (0.06, 0.0, 0.14), (0.15, 0.0, 0.15))]
+    brow_plates.append(tube([tuple(q) for q in pts], [0.03, 0.045, 0.045, 0.03]))
 
 ears = []
 for sx in (1, -1):
@@ -544,8 +546,8 @@ teeth += [row_bar(bases_up), Jw(row_bar(bases_lo))]
 # testiera di bronzo sul muso (con cresta e paraocchi svasati) e corona d'oro fra le orecchie
 def chanfron_reg(p):
     x, y, z = p[:, 0], p[:, 1], p[:, 2]
-    w = 0.075 + 0.11 * np.clip((y + 0.56) / 0.56, 0, 1)
-    return np.maximum.reduce([np.abs(x) - w, -0.56 - y, y - 0.08, 0.02 - z]).astype(np.float32)
+    w = 0.065 + 0.075 * np.clip((y + 0.52) / 0.5, 0, 1)
+    return np.maximum.reduce([np.abs(x) - w, -0.52 - y, y - 0.08, 0.06 - z]).astype(np.float32)
 
 
 chanfron = paint(head_skin, SDF(chanfron_reg, (-0.3, -0.8, -0.1), (0.3, 0.1, 0.4)), out=0.04, inn=0.03, k=0.02)
@@ -556,8 +558,8 @@ chanfron = union(chanfron, horn((0, -0.3, 0.2), (0, -0.36, 0.3), (0, -0.4, 0.38)
                  k=0.02)
 eye_guards = []
 for sx in (1, -1):
-    p, n = project(upper, (sx * 0.1, -0.14, 0.07), (sx * 0.62, -0.75, 0.1))
-    eye_guards.append(torus(0.085, 0.022).rotate(frame(n, (0, 0, 1))).translate(tuple(p + n * 0.02)))
+    p, n = EYE_PN[sx]
+    eye_guards.append(torus(0.13, 0.022).rotate(frame(n, (0, 0, 1))).translate(tuple(p - n * 0.005)))
 crown_l = [band(0.16, 0.024, 0.045).translate((0, 0, 0.0)), torus(0.16, 0.018).translate((0, 0, -0.042))]
 for k in range(7):
     a = math.radians(-90 + 360 / 7 * k)
@@ -596,7 +598,7 @@ LEGS = {
     (1, "h"): [(0.36, 0.62, 1.4), (0.42, 0.42, 0.98), (0.4, 0.84, 0.6), (0.39, 0.72, 0.2)],
     (-1, "h"): [(-0.36, 0.62, 1.4), (-0.42, 0.38, 0.98), (-0.4, 0.82, 0.6), (-0.39, 0.7, 0.2)],
 }
-leg_parts, HOOVES, SPINE_LEGS, FETLOCKS = [], [], [], []
+leg_parts, HOOVES, SPINE_LEGS, FETLOCKS, CANNONS = [], [], [], [], []
 for (sx, kind), pts in LEGS.items():
     a, b, c, d = (np.array(q, dtype=np.float64) for q in pts)
     if kind == "f":
@@ -617,6 +619,7 @@ for (sx, kind), pts in LEGS.items():
     else:
         HOOVES.append((d + np.array([0, -0.02, -0.12]), np.array([0, 0, -1.0]), False))
     leg_parts.append(sphere(0.16, tuple(d)))   # nodello
+    CANNONS.append((c, d, sx))
     FETLOCKS.append((d, norm(d - c), (sx, kind) == (1, "f")))
 
 # coda da scorpione: si alza dalla groppa e si inarca sopra il dorso (gruppo "Tail")
@@ -633,6 +636,7 @@ log("corpo pronto")
 # ============================================================ corazza di bronzo: collo a segmenti, pettorale, anelli, groppa
 armor, gold, embers = [], [], []
 armor.append(Hd(chanfron))
+armor += [Hd(b) for b in brow_plates]
 gold += [Hd(g) for g in eye_guards] + [Hd(crown)]
 embers += [Hd(g) for g in crown_gems]
 for u in (0.12, 0.32, 0.52, 0.72, 0.9):   # piastre del collo a segmenti sulla gola, come il ventre di un insetto
@@ -646,14 +650,14 @@ for u in (0.12, 0.32, 0.52, 0.72, 0.9):   # piastre del collo a segmenti sulla g
 
 def peytral_reg(p):
     x, y, z = p[:, 0], p[:, 1], p[:, 2]
-    bot = 1.02 + 0.3 * (x / 0.42) ** 2
-    return np.maximum.reduce([y + 0.66, np.abs(x) - 0.44, bot - z, z - 1.82]).astype(np.float32)
+    bot = 1.14 + 0.32 * (x / 0.38) ** 2
+    return np.maximum.reduce([y + 0.72, np.abs(x) - 0.38, bot - z, z - 1.74]).astype(np.float32)
 
 
 armor.append(paint(core0, SDF(peytral_reg, (-0.5, -1.1, 0.95), (0.5, -0.5, 1.9)), out=0.055, inn=0.03, k=0.02))
 pe = []
-for x in np.linspace(-0.43, 0.43, 15):
-    pe.append(np.array([x, -1.2, 1.04 + 0.3 * (x / 0.42) ** 2]))
+for x in np.linspace(-0.37, 0.37, 15):
+    pe.append(np.array([x, -1.2, 1.16 + 0.32 * (x / 0.38) ** 2]))
 pp, pnn = project_many(core0, [(0, -0.3, 1.4)] * len(pe), [q - np.array([0, -0.3, 1.4]) for q in pe])
 gold.append(tube([tuple(q + n_ * 0.05) for q, n_ in zip(pp, pnn)], 0.026))
 pb, pn = project(core0, (0, -0.5, 1.45), (0, -1, 0.1))
@@ -690,6 +694,30 @@ for sx in (1, -1):
         gold.append(round_cone(tuple(b - d * 0.04), tuple(b + d * L), 0.05, 0.008))
 
 
+# spine d'oro da locusta lungo il dorso, fra le ali e la coda
+for y0, L in ((-0.02, 0.24), (0.2, 0.3), (0.42, 0.28), (0.64, 0.22)):
+    q, n_ = project(core0, (0, y0, 1.4), (0, 0.12, 1.0))
+    d = norm(n_ + np.array([0, 0.55, 0.0]))
+    gold.append(round_cone(tuple(q - d * 0.03), tuple(q + d * L), 0.06, 0.01))
+
+
+# schinieri di bronzo sugli stinchi, con l'anello d'oro in alto e una punta sul ginocchio
+for c, d, sx in CANNONS:
+    ax = norm(d - c)
+
+    def greave_reg(p, c=c.astype(np.float32), ax=ax.astype(np.float32), L=float(np.linalg.norm(d - c))):
+        t = (p - c) @ ax
+        radial = np.linalg.norm((p - c) - t[:, None] * ax[None, :], axis=1) - 0.3     # solo attorno a questa zampa
+        return np.maximum(np.maximum(0.12 * L - t, t - 0.8 * L), radial).astype(np.float32)
+
+    armor.append(paint(core0, SDF(greave_reg, np.minimum(c, d) - 0.3, np.maximum(c, d) + 0.3), out=0.04, inn=0.03,
+                       k=0.015))
+    top = c + ax * float(np.linalg.norm(d - c)) * 0.14
+    gold.append(torus(0.165, 0.024).rotate(frame(ax, (0, 1, 0))).translate(tuple(top)))
+    fwd = norm(np.array([sx * 0.25, -1.0, 0.0]) - ax * float(np.dot((sx * 0.25, -1.0, 0.0), ax)))
+    gold.append(round_cone(tuple(c + fwd * 0.12), tuple(c + fwd * 0.3 - ax * 0.04), 0.05, 0.008))
+
+
 def crupper_reg(p):
     x, y, z = p[:, 0], p[:, 1], p[:, 2]
     return np.maximum.reduce([0.46 - y, 1.52 - z + 0.25 * (x / 0.4) ** 2, y - 1.02]).astype(np.float32)
@@ -723,7 +751,7 @@ def hair_tuft(L, r0, bend=0.75, fork=0.0, flat=0.55):
 # cresta a fiamme dalla nuca al garrese: ciocche grandi che si piegano all'indietro
 for j, (root, nrm_) in enumerate(crest):
     u = j / max(len(crest) - 1, 1)                     # 0 = nuca, 1 = garrese
-    L = 0.74 - 0.3 * u + lrng.uniform(-0.04, 0.04)
+    L = (0.74 - 0.3 * u + lrng.uniform(-0.04, 0.04)) * (0.62 if j == 0 else 1.0)
     up = norm(nrm_ * 0.75 + np.array([0.0, 0.25, 0.45]))
     Mf = frame(up, (0, 1, 0))
     body, tip = hair_tuft(L, 0.15 - 0.04 * u, bend=0.8, fork=0.5 if j % 2 == 0 else 0.0)
@@ -878,7 +906,7 @@ for sx, nm in ((1, "WingR"), (-1, "WingL")):
     place = (lambda s: s.rotate(WING_M).translate(tuple(WING_ROOT[1]))) if sx > 0 else \
         (lambda s: s.rotate(WING_M).translate(tuple(WING_ROOT[1])).mirrored())
     piv = tuple(float(v) for v in WING_ROOT[sx])
-    m.add(nm, place(hind), WING, role="detail", tris=460, voxel=0.02 * VX, transparency=0.35, reflectance=0.1,
+    m.add(nm, place(hind), WING, role="detail", tris=460, voxel=0.02 * VX, transparency=0.25, reflectance=0.1,
           group=nm, pivot=piv)
     m.add(nm + "Frame", place(frame_), FRAME, role="detail", tris=420, voxel=0.016 * VX, group=nm, pivot=piv)
 m.add("Tail", fast_union(seg_l, k=0.04), BRONZE, material="Metal", role="detail", tris=1100, voxel=0.024 * VX,

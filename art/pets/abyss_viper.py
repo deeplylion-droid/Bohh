@@ -2,7 +2,8 @@
 
 Un pesce vipera lunghissimo, sospeso nel buio come un serpente marino: il corpo blu-nero iridescente si avvolge
 in una grande S verticale, con la testa in alto protesa verso chi guarda e la coda a forbice in basso. Le fauci sono
-spalancate e le zanne, enormi e ricurve come sciabole, non ci stanno in bocca: le punte brillano di magenta. Una fila
+spalancate e le zanne, enormi e ricurve come sciabole, non ci stanno in bocca: le punte brillano di magenta (parte Neon
+"Aura": il gioco ci attacca le scintille rosa-viola); brillano anche le punte delle pinne. Una fila
 di fotofori magenta corre lungo tutto il ventre seguendo la S, una banda viola metallizzata (il riflesso iridescente)
 segue il fianco, le pinne sono lame affilate. Dal mento pende un barbiglio sottile con un bulbo luminoso in fondo
 (parte Neon "Bubbles": il gioco ci attacca le bollicine). Occhi grandi e luminosi sotto sopracciglia aggrottate.
@@ -644,11 +645,11 @@ head_sheen = thin(upper, 0.016, 0.04).intersect(SDF(lambda q: np.maximum(np.maxi
 m.add("Sheen", union(sheen, H(head_sheen)), SHEEN, material="Foil", role="detail", tris=1000, voxel=0.04 * VX)
 m.add("Maw", H(fast_union(dark)), MAW, role="eye", tris=500, voxel=0.034 * VX)
 m.add("Fangs", H(fast_union(fangs)), FANG, role="shine", tris=1000, voxel=0.026 * VX)
-m.add("TipGlow", fast_union([H(t) for t in fang_tips] + tip_glow), GLOW, material="Neon", role="glow", tris=500, voxel=0.0195 * VX)
+m.add("Aura", H(fast_union(fang_tips)), GLOW, material="Neon", role="glow", tris=360, voxel=0.0185 * VX)
 m.add("EyeGlow", H(union(*eye_glow)), EYE, material="Neon", role="glow", tris=300, voxel=0.031 * VX)
 m.add("Pupils", H(union(*pupils)), PUPIL, role="eye", tris=300, voxel=0.013 * VX)
 m.add("Shine", H(union(*shines)), WHITE, role="shine", tris=120, voxel=0.0115 * VX)
-m.add("Photophores", fast_union(photos + [H(x) for x in photo_head]), GLOW, material="Neon", role="glow", tris=1500,
+m.add("Photophores", fast_union(photos + [H(x) for x in photo_head] + tip_glow), GLOW, material="Neon", role="glow", tris=1700,
       voxel=0.0195 * VX)
 m.add("Barbel", barbel, FIN, role="detail", tris=250, voxel=0.015 * VX)
 m.add("Bubbles", union(*bulb, k=0.02), GLOW, material="Neon", role="glow", tris=400, voxel=0.015 * VX)

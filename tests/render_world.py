@@ -357,6 +357,8 @@ VIEWS = {
     "xbeams": ((-1252, 288, -16), (-1290, 268, -36), 22),
     "xinferno": ((-1472, 262, -16), (-1560, 240, -36), 22),
     "xhooks": ((-1640, 256, -20), (-1700, 242, -36), 22),
+    # lotto 1 dalla piazza: torre del primo trono e le due isole fluttuanti dei troni 2 e 3
+    "islands": ((40, 376, 46), (120, 352, 142), 22),
 }
 
 

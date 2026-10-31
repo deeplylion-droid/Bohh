@@ -257,8 +257,8 @@ m = Model("QuantumTiger", "pet")
 rng = np.random.default_rng(47)
 
 # ============================================================ testa (spazio locale: muso verso -Y)
-HEAD_POS = np.array([0.0, -1.18, 2.62])
-HS = 1.42
+HEAD_POS = np.array([0.0, -1.2, 2.72])
+HS = 1.36
 R_HEAD = euler(-4.0, 0.0, 10.0)       # mento alto e fiero, girata verso la camera 3/4
 
 
@@ -325,8 +325,8 @@ def third_place(shape, offset=(0.0, 0.0, 0.0)):
     return shape.translate(offset).rotate(look_matrix(T_D, up=(0.0, 0.66, 0.72))).translate(T_C)
 
 
-head1 = head1.subtract(third_place(ellipsoid((0.072, 0.07, 0.112)), (0, 0.03, 0)), k=0.02)
-third_lid = third_place(ellipsoid((0.08, 0.075, 0.12)).subtract(ellipsoid((0.06, 0.2, 0.102))), (0, 0.032, 0))
+head1 = head1.subtract(third_place(ellipsoid((0.078, 0.07, 0.122)), (0, 0.03, 0)), k=0.02)
+third_lid = third_place(ellipsoid((0.088, 0.072, 0.132)).subtract(ellipsoid((0.068, 0.2, 0.114))), (0, 0.036, 0))
 head1 = union(head1, third_lid, k=0.008)
 
 
@@ -363,21 +363,21 @@ head_final = shrink(head2.subtract(nostrils, k=0.01))
 
 # ============================================================ corpo (in piedi, petto in fuori, zampa destra avanti)
 DISC_TOP = 0.5
-chest = ellipsoid((0.53, 0.53, 0.56), (0, -0.42, 1.52))
-ribs = ellipsoid((0.46, 0.56, 0.46), (0, 0.12, 1.5))
-haunch = ellipsoid((0.47, 0.42, 0.46), (0, 0.64, 1.48))
-scap = [ell((sx * 0.31, -0.45, 1.86), (0.2, 0.26, 0.3), axis=(0, -0.3, 1.0)) for sx in (1, -1)]
+chest = ellipsoid((0.53, 0.54, 0.58), (0, -0.42, 1.62))
+ribs = ellipsoid((0.44, 0.56, 0.42), (0, 0.12, 1.68))
+haunch = ellipsoid((0.47, 0.42, 0.45), (0, 0.64, 1.64))
+scap = [ell((sx * 0.31, -0.45, 1.98), (0.2, 0.26, 0.3), axis=(0, -0.3, 1.0)) for sx in (1, -1)]
 torso = union(union(chest, ribs, k=0.3), haunch, k=0.28)
 torso = union(torso, *scap, k=0.15)
-NECK = [(0, -0.55, 1.75), (0, -0.88, 2.18), (0, -1.07, 2.45)]
+NECK = [(0, -0.55, 1.88), (0, -0.9, 2.3), (0, -1.08, 2.56)]
 neck = tube(NECK, [0.44, 0.4, 0.36], k=0.08)
 PZ = DISC_TOP + 0.085
-FRONT = {1: dict(sh=np.array([0.36, -0.5, 1.5]), el=np.array([0.41, -0.58, 1.02]), wr=np.array([0.4, -0.76, 0.7]),
-                 paw=np.array([0.4, -0.8, PZ])),
-         -1: dict(sh=np.array([-0.36, -0.5, 1.5]), el=np.array([-0.4, -0.44, 1.02]), wr=np.array([-0.39, -0.56, 0.69]),
-                  paw=np.array([-0.39, -0.6, PZ]))}
-HIND = {sx: dict(hip=np.array([sx * 0.36, 0.62, 1.45]), knee=np.array([sx * 0.44, 0.36, 1.0]),
-                 hock=np.array([sx * 0.41, 0.82, 0.77]), paw=np.array([sx * 0.41, 0.7, PZ])) for sx in (1, -1)}
+FRONT = {1: dict(sh=np.array([0.36, -0.5, 1.62]), el=np.array([0.41, -0.6, 1.1]), wr=np.array([0.4, -0.77, 0.72]),
+                 paw=np.array([0.4, -0.82, PZ])),
+         -1: dict(sh=np.array([-0.36, -0.5, 1.62]), el=np.array([-0.4, -0.46, 1.1]), wr=np.array([-0.39, -0.57, 0.71]),
+                  paw=np.array([-0.39, -0.62, PZ]))}
+HIND = {sx: dict(hip=np.array([sx * 0.36, 0.62, 1.6]), knee=np.array([sx * 0.44, 0.34, 1.08]),
+                 hock=np.array([sx * 0.41, 0.84, 0.8]), paw=np.array([sx * 0.41, 0.71, PZ])) for sx in (1, -1)}
 leg_parts = []
 for sx, L in FRONT.items():
     sh, el, wr, paw = L["sh"], L["el"], L["wr"], L["paw"]
@@ -413,8 +413,8 @@ core0 = shrink(core.intersect(ABOVE_DISC))
 body_only = shrink(union(union(torso, neck, k=0.18), legs, k=0.08).intersect(ABOVE_DISC))
 
 # ============================================================ coda a S alzata (gruppo "Tail")
-TAIL_PTS = bezier((0.0, 0.98, 1.62), (0.0, 1.5, 1.5), (0.0, 1.78, 2.1), (0.0, 1.45, 2.58), 18)
-TAIL_PIVOT = (0.0, 1.0, 1.62)
+TAIL_PTS = bezier((0.0, 0.98, 1.76), (0.0, 1.5, 1.64), (0.0, 1.78, 2.22), (0.0, 1.45, 2.68), 18)
+TAIL_PIVOT = (0.0, 1.0, 1.76)
 NT = len(TAIL_PTS) - 1
 tail_r = [0.14 - 0.04 * (i / NT) for i in range(NT + 1)]
 tail_r[-1] = 0.07
@@ -482,7 +482,7 @@ def stripe_on(base, pts_world_targets, origins, r0=CR0, r1=CR1, pad=True):
 
 
 stripes = {0: [], 1: []}
-BODY_ZC = 1.47
+BODY_ZC = 1.62
 for sx in (1, -1):
     for j, y0 in enumerate((-0.36, -0.07, 0.22, 0.5, 0.78)):
         jog = 0.07 * (1 if j % 2 == 0 else -1)
@@ -548,8 +548,8 @@ for sx in (1, -1):
 ear_fluff = union(*[ear_pose(round_cone((0, 0.0, 0.0), (0, 0.0, 0.15), 0.09, 0.04), sx) for sx in (1, -1)])
 white_head = union(union(*ruff).subtract(head0.offset(-0.08)), pad_solid.subtract(head0.offset(-0.09)),
                    union(*brow_spots).subtract(head0.offset(-0.05)), union(*EAR_SPOTS), ear_fluff)
-chest_tufts = [ell((0.0, -0.97, 1.5), (0.31, 0.15, 0.4), axis=(0, -0.35, 1.0))]
-for bx, bz, L in ((0.0, 1.36, 0.32), (0.15, 1.42, 0.27), (-0.15, 1.42, 0.27)):
+chest_tufts = [ell((0.0, -0.98, 1.62), (0.31, 0.15, 0.42), axis=(0, -0.35, 1.0))]
+for bx, bz, L in ((0.0, 1.46, 0.34), (0.15, 1.52, 0.28), (-0.15, 1.52, 0.28)):
     b, nb = surf(body_only, (bx * 0.5, -0.6, bz), (bx, -1.5, bz))
     chest_tufts.append(horn(b - nb * 0.06, norm(nb * 0.5 + np.array((bx * 0.6, 0.0, -1.0))), L, 0.1,
                             curl=(0, 0.1, 0), n=4, r1=0.018))
@@ -565,7 +565,7 @@ for sx in (1, -1):
 m.add("Navy", H(union(*EAR_BACKS)), NAVY, role="detail", tris=350, voxel=0.038)
 
 # ============================================================ toppa lavanda cucita sulla spalla destra (toy horror)
-PATCH_C, PATCH_N = surf(body_only, (0.1, -0.42, 1.6), (0.9, -0.5, 1.75))
+PATCH_C, PATCH_N = surf(body_only, (0.1, -0.42, 1.74), (0.9, -0.5, 1.89))
 PR = orient(PATCH_N, side=(0.0, 1.0, 0.0))
 patch_box = box((0.17, 0.14, 0.05), round=0.035).rotate(PR).translate(tuple(PATCH_C - PATCH_N * 0.03))
 patch = patch_box.intersect(body_only.offset(0.022)).subtract(body_only.offset(-0.06))
@@ -598,9 +598,9 @@ for sx in (1, -1):
     pupils.append(H(eye_place(ellipsoid((0.034, 0.02, 0.036)), sx, (look, -0.014, -0.004))))
     shines.append(H(eye_place(sphere(0.02), sx, (look - 0.03, -0.022, -0.006))))
 m.add("Iris", union(*irises), IRIS, role="eye", tris=380, voxel=0.0175)
-m.add("ThirdEye", H(third_place(ellipsoid((0.064, 0.05, 0.104)), (0, 0.022, 0))), THIRD, material="Neon", role="glow",
+m.add("ThirdEye", H(third_place(ellipsoid((0.072, 0.052, 0.116)), (0, 0.014, 0))), THIRD, material="Neon", role="glow",
       tris=360, voxel=0.0123)
-third_slit = third_place(ellipsoid((0.013, 0.02, 0.07)), (0, -0.024, 0))
+third_slit = third_place(ellipsoid((0.009, 0.02, 0.05)), (0, -0.034, 0))
 nose = union(*[ellipsoid((0.05, 0.036, 0.032), tuple(NOSE_C + (sx * 0.04, -0.006, 0.014))) for sx in (1, -1)],
              ellipsoid((0.032, 0.03, 0.028), tuple(NOSE_C + (0.0, -0.014, -0.034))), k=0.05).subtract(nostrils, k=0.008)
 LIP = [(0.0, -0.1), (0.0, -0.17), (0.05, -0.205), (0.11, -0.205), (0.17, -0.18), (0.2, -0.155)]

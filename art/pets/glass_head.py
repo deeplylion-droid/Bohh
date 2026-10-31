@@ -291,11 +291,12 @@ GLOW = (90, 255, 140)        # bordi delle pinne, linea laterale (Neon)
 TUBE = (50, 214, 104)        # occhi a tubo (Neon)
 LENS = (196, 255, 110)       # lenti degli occhi (Neon "Bubbles")
 DOME = (206, 255, 238)       # cupola di vetro
-METAL = (150, 166, 176)      # collare e chiodi
+METAL = (214, 136, 70)       # collare e chiodi di rame (come un casco da palombaro)
 DARK = (12, 10, 18)          # narici, bocca, pupille
 WHITE = (255, 255, 255)
 
 m = Model("GlassHead", "pet")
+SCALE = 0.94
 
 # ============================================================ corpo affusolato che risale in diagonale, piegato a S
 SPINE_CTRL = [(0.12, -1.24, 2.9), (0.07, -0.85, 2.7), (0.06, -0.38, 2.43), (0.2, 0.05, 2.13), (0.42, 0.42, 1.86),
@@ -353,7 +354,7 @@ def angle_f(p):
 
 
 belly = shell_paint(body, SDF(lambda p: (lambda s, th, r: np.maximum((th + 0.55) * r, np.maximum(0.04 * L - s, s - 0.93 * L)))(
-    *angle_f(p)).astype(np.float32), body.lo, body.hi), out=0.02, inn=0.05)
+    *angle_f(p)).astype(np.float32), body.lo, body.hi), out=0.02, inn=0.1)
 
 # ============================================================ cupola di vetro sulla testa, occhi a tubo dentro
 DS = 0.24 * L
@@ -429,7 +430,7 @@ mouth = tube([tuple(p) for p in mouth_pts], [0.022, 0.03, 0.036, 0.04, 0.04, 0.0
 log("faccia pronta")
 
 # ============================================================ pinne con il bordo luminoso
-def fan(angs, lengths, base_w=0.12, thick=0.03, notch=0.8):
+def fan(angs, lengths, base_w=0.12, thick=0.045, notch=0.8):
     angs = np.radians(angs)
     poly, edge = [(0.0, -base_w)], []
     for k_, (ang, Ln) in enumerate(zip(angs, lengths)):
@@ -443,7 +444,7 @@ def fan(angs, lengths, base_w=0.12, thick=0.03, notch=0.8):
     poly.append((0.0, base_w))
     mem = prism(poly, -thick, thick, round=thick * 0.9)
     rays = [round_cone((0, 0, 0), (math.cos(a) * Ln * 0.86, math.sin(a) * Ln * 0.86, 0), 0.04, 0.02) for a, Ln in zip(angs, lengths)]
-    rim = tube([(x, y, 0.0) for x, y in edge], 0.03)
+    rim = tube([(x, y, 0.0) for x, y in edge], 0.034)
     return union(mem, *rays, k=0.02), rim
 
 
@@ -464,37 +465,37 @@ for s0, s1, h, sgn in ((0.5 * L, 0.68 * L, 0.36, 1), (0.74 * L, 0.86 * L, 0.3, -
     top = [(s0 + (s1 - s0) * t, sgn * ((BT if sgn > 0 else BB)(s0 + (s1 - s0) * t) - 0.04 + h * math.sin(math.pi * t ** 0.7)))
            for t in np.linspace(0, 1, 9)]
     base_l = [(s, sgn * ((BT if sgn > 0 else BB)(s) - 0.08)) for s in np.linspace(s1, s0, 6)]
-    statics.append(spine_fin(sp, top + base_l, 0.028, (s0 - 0.2, s1 + 0.2), (-1.2, 1.2)))
-    static_glow.append(tube([tuple(sp.world(a, 0.0, b + 0.01 * sgn)) for a, b in top[1:-1]], 0.026))
+    statics.append(spine_fin(sp, top + base_l, 0.036, (s0 - 0.2, s1 + 0.2), (-1.2, 1.2)))
+    static_glow.append(tube([tuple(sp.world(a, 0.0, b + 0.01 * sgn)) for a, b in top[1:-1]], 0.03))
 # ventrali (pelviche)
 for sx in (1, -1):
     s3 = 0.58 * L
     base, n = surf(s3, -1.05, sx, sink=0.03)
     c, T, D, Lat = sp.frame(s3)
     Mv = basis(norm(T * 0.7 - D * 0.6 + Lat * sx * 0.35), Lat * sx)
-    mem, rim = fan(np.linspace(-30, 30, 3), [0.4, 0.46, 0.4], base_w=0.07, thick=0.024)
+    mem, rim = fan(np.linspace(-30, 30, 3), [0.4, 0.46, 0.4], base_w=0.07, thick=0.034)
     statics.append(place(mem, Mv, base))
     static_glow.append(place(rim, Mv, base))
 # linea laterale luminosa
 for sx in (1, -1):
     pts = [surf(s, 0.05 + 0.05 * math.sin(s * 4.0), sx, sink=0.012)[0] for s in np.linspace(0.42 * L, 0.95 * L, 14)]
-    static_glow.append(tube([tuple(p) for p in pts], taper(14, 0.028, 0.014)))
+    static_glow.append(tube([tuple(p) for p in pts], taper(14, 0.032, 0.02)))
 log("pinne pronte")
 
 # ============================================================ coda a velo: due lobi lunghi come nastri (gruppo "Tail")
 TAIL_PIVOT = tuple(sp.world(L - 0.04, 0.0, 0.0))
 tail_poly = [(L - 0.12, -0.14), (L + 0.12, -0.3), (L + 0.3, -0.24), (L + 0.24, 0.0), (L + 0.3, 0.24), (L + 0.12, 0.3),
              (L - 0.12, 0.14)]
-tail_fan = spine_fin(sp, tail_poly, 0.03, (L - 0.3, L + 0.6), (-0.5, 0.5))
-tail_glow = [tube([tuple(sp.world(a, 0.0, b)) for a, b in tail_poly[2:5]], 0.026)]
+tail_fan = spine_fin(sp, tail_poly, 0.038, (L - 0.3, L + 0.6), (-0.5, 0.5))
+tail_glow = [tube([tuple(sp.world(a, 0.0, b)) for a, b in tail_poly[2:5]], 0.032)]
 ribbons = []
 
 
 # coda a velo: una grande membrana increspata nel piano del pesce che scende all'indietro e finisce in tre nastri
 TC, TT, TD, TLa = sp.frame(L)
 V0 = sp.world(L + 0.08, 0.0, 0.0)
-veil_sp = Spine([tuple(V0), tuple(V0 + TT * 0.42 - np.array([0, 0, 0.06])), tuple(V0 + np.array([-0.14, 0.8, -0.4])),
-                 tuple(V0 + np.array([-0.3, 1.12, -0.7])), tuple(V0 + np.array([-0.38, 1.3, -0.98]))], step=0.01, n_per=14)
+veil_sp = Spine([tuple(V0), tuple(V0 + TT * 0.42 - np.array([0, 0, 0.04])), tuple(V0 + np.array([-0.14, 0.8, -0.32])),
+                 tuple(V0 + np.array([-0.3, 1.12, -0.56])), tuple(V0 + np.array([-0.38, 1.3, -0.78]))], step=0.01, n_per=14)
 VL = veil_sp.len
 VEIL = [(-0.1, -0.14), (0.25, -0.28), (0.55, -0.38), (0.85, -0.44), (1.1, -0.46), (1.38, -0.5), (1.7, -0.6),
         (1.98, -0.66), (1.6, -0.44), (1.3, -0.26), (1.62, -0.14), (2.0, -0.06), (1.62, 0.04), (1.3, 0.16), (1.6, 0.34),
@@ -511,7 +512,7 @@ _vd2 = poly2d(VEIL)
 def veil_f(p):
     i, s_, u, w = veil_sp.coords(p)
     a = _vd2(s_, w)
-    b = np.abs(u - ripple(s_, w)) - 0.028 * (1.0 - 0.35 * np.clip(s_ / VL, 0, 1))
+    b = np.abs(u - ripple(s_, w)) - 0.04 * (1.0 - 0.3 * np.clip(s_ / VL, 0, 1))
     return (np.minimum(np.maximum(a, b), 0.0) + np.sqrt(np.maximum(a, 0) ** 2 + np.maximum(b, 0) ** 2)).astype(np.float32)
 
 
@@ -521,33 +522,37 @@ edge = []
 for a_, b_ in VEIL[1:-1]:
     c_, T_, D_, L_ = veil_sp.frame(a_)
     edge.append(tuple(c_ + D_ * b_ * 0.97 + L_ * float(ripple(np.array([a_]), np.array([b_]))[0])))
-tail_glow.append(tube(edge, 0.026))
+tail_glow.append(tube(edge, 0.032))
 log("code pronte")
 
 # ============================================================ parti
-m.add("Body", union(body, *brows, k=0.03), BODY, tris=4400, voxel=0.028 * VX, reflectance=0.12)
-m.add("Belly", belly, BELLY, role="detail", tris=800, voxel=0.03 * VX)
-m.add("Dome", dome, DOME, material="Glass", role="detail", transparency=0.55, tris=1400, voxel=0.022 * VX)
-m.add("Collar", fast_union(collar + rivets), METAL, material="Metal", role="detail", tris=900, voxel=0.018 * VX)
-m.add("EyeTubes", union(*tubes, k=0.02), TUBE, material="Neon", role="glow", tris=500, voxel=0.018 * VX)
-m.add("Bubbles", union(*lenses), LENS, material="Neon", role="glow", tris=400, voxel=0.016 * VX)
-m.add("Pupils", union(*pupils, mouth), DARK, role="eye", tris=400, voxel=0.012 * VX)
-m.add("Shine", union(*shines, *nares), WHITE, role="shine", tris=240, voxel=0.011 * VX)
+m.add("Body", union(body, *brows, k=0.03), BODY, tris=4100, voxel=0.0292 * VX, reflectance=0.12)
+m.add("Belly", belly, BELLY, role="detail", tris=1000, voxel=0.0478 * VX)
+m.add("Dome", dome, DOME, material="Glass", role="detail", transparency=0.55, tris=1300, voxel=0.0388 * VX)
+m.add("Collar", fast_union(collar + rivets), METAL, material="Metal", role="detail", tris=800, voxel=0.0264 * VX)
+m.add("EyeTubes", union(*tubes, k=0.02), TUBE, material="Neon", role="glow", tris=500, voxel=0.0354 * VX)
+m.add("Bubbles", union(*lenses), LENS, material="Neon", role="glow", tris=400, voxel=0.0292 * VX)
+m.add("Pupils", union(*pupils, mouth), DARK, role="eye", tris=400, voxel=0.0164 * VX)
+m.add("Shine", union(*shines, *nares), WHITE, role="shine", tris=300, voxel=0.0188 * VX)
 for nm in ("FinR", "FinL"):
     mem, piv = fins_mem[nm]
-    m.add(nm, mem, FIN, role="detail", transparency=0.35, tris=450, voxel=0.024 * VX, group=nm, pivot=piv)
-    m.add(nm + "Edge", fins_rim[nm], GLOW, material="Neon", role="glow", tris=300, voxel=0.016 * VX, group=nm, pivot=piv)
-m.add("Fins", fast_union(statics), FIN, role="detail", transparency=0.35, tris=700, voxel=0.024 * VX)
-m.add("FinGlow", fast_union(static_glow), GLOW, material="Neon", role="glow", tris=700, voxel=0.016 * VX)
-m.add("TailFin", fast_union([tail_fan] + ribbons), FIN, role="detail", transparency=0.35, tris=1300, voxel=0.022 * VX, group="Tail",
+    m.add(nm, mem, FIN, role="detail", transparency=0.35, tris=800, voxel=0.0412 * VX, group=nm, pivot=piv)
+    m.add(nm + "Edge", fins_rim[nm], GLOW, material="Neon", role="glow", tris=600, voxel=0.021 * VX, group=nm, pivot=piv)
+m.add("Fins", fast_union(statics), FIN, role="detail", transparency=0.35, tris=700, voxel=0.026 * VX)
+m.add("FinGlow", fast_union(static_glow), GLOW, material="Neon", role="glow", tris=900, voxel=0.0218 * VX)
+m.add("TailFin", fast_union([tail_fan] + ribbons), FIN, role="detail", transparency=0.35, tris=1500, voxel=0.0296 * VX, group="Tail",
       pivot=TAIL_PIVOT)
-m.add("TailGlow", fast_union(tail_glow), GLOW, material="Neon", role="glow", tris=500, voxel=0.016 * VX, group="Tail",
+m.add("TailGlow", fast_union(tail_glow), GLOW, material="Neon", role="glow", tris=900, voxel=0.0248 * VX, group="Tail",
       pivot=TAIL_PIVOT)
 
 if __name__ == "__main__":
     only = [s for s in os.environ.get("ONLY", "").split(",") if s]
     if only:
         m.parts = [p for p in m.parts if p.name in only]
+    for part in m.parts:          # scala finale: altezza nativa ~3.45
+        part.sdf = part.sdf.scale(SCALE)
+        if part.pivot is not None:
+            part.pivot = tuple(float(v) * SCALE for v in part.pivot)
     ground(m)
     m.build(views=tuple(os.environ.get("VIEWS", "3q,front").split(",")), res=int(os.environ.get("RES", 700)))
     log("fatto")

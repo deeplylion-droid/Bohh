@@ -402,9 +402,9 @@ def lip_fp(q, inset):
 
 
 pal_reg = SDF(lambda p: (lambda q: np.maximum(lip_fp(q, 0.1), np.abs(q[:, 2]) - 0.08))(to_mouth(p)), upper.lo, upper.hi)
-maw = [shell_paint(upper, pal_reg, out=0.012, inn=0.04, margin=0.03)]
+maw = [shell_paint(upper, pal_reg, out=0.012, inn=0.12, margin=0.03)]
 floor_reg = SDF(lambda q: np.maximum(lip_fp(q, 0.14), np.abs(q[:, 2]) - 0.08), (-1.2, -2.0, -0.1), (1.2, 0.1, 0.1))
-maw.append(M(J(shell_paint(jaw_local, floor_reg, out=0.012, inn=0.04, margin=0.03))))
+maw.append(M(J(shell_paint(jaw_local, floor_reg, out=0.012, inn=0.12, margin=0.03))))
 _Rinv = euler(-GAPE, 0, 0).astype(np.float32)
 
 
@@ -453,8 +453,8 @@ for j, b in enumerate(LO_RIM):
                            bend=-inward * 0.07 + rng.uniform(-0.035, 0.035, 3), n=6))))
 log(f"{len(teeth)} denti")
 # gengive luminose: una linea ciano dove spuntano i denti (il ghigno brilla nel buio)
-gums = [M(tube([tuple(b + norm(np.array([-b[0], -0.55 - b[1], 0.0])) * 0.03 + np.array([0, 0, 0.02])) for b in UP_RIM], 0.03)),
-        M(J(tube([tuple(b + norm(np.array([-b[0], -0.75 - b[1], 0.0])) * 0.03 - np.array([0, 0, 0.02])) for b in LO_RIM], 0.03)))]
+gums = [M(tube([tuple(b + norm(np.array([-b[0], -0.55 - b[1], 0.0])) * 0.03 + np.array([0, 0, 0.02])) for b in UP_RIM], 0.034)),
+        M(J(tube([tuple(b + norm(np.array([-b[0], -0.75 - b[1], 0.0])) * 0.03 - np.array([0, 0, 0.02])) for b in LO_RIM], 0.034)))]
 
 # ============================================================ occhietti cattivi luminosi sotto arcate chiodate
 eye_glow, pupils, shines, armor = [], [], [], []
@@ -503,7 +503,7 @@ nodes = []
 for i in (8, 13, 18, 23):     # anelli luminosi lungo l'antenna (come gli anelli di una canna da pesca)
     tdir = norm(np.array(stalk_pts[i + 1]) - np.array(stalk_pts[i - 1]))
     r_st = taper(29, 0.08, 0.036, 0.8)[i]
-    nodes.append(place(torus(r_st + 0.012, 0.026), basis(norm(np.cross(tdir, (1.0, 0.0, 0.0))), (1.0, 0.0, 0.0)) @
+    nodes.append(place(torus(r_st + 0.016, 0.034), basis(norm(np.cross(tdir, (1.0, 0.0, 0.0))), (1.0, 0.0, 0.0)) @
                        np.array([[0, 0, 1], [1, 0, 0], [0, 1, 0]], dtype=np.float32).T, np.array(stalk_pts[i])))
 log("esca pronta")
 
@@ -516,7 +516,7 @@ for sx in (1, -1):
             s = sn * L + 0.07 * math.cos(th * 2.4)
             p, n = surf(s, th, sx, sink=0.012)
             pts.append(tuple(p))
-        glow.append(tube(pts, [0.02, 0.03, 0.036, 0.04, 0.04, 0.04, 0.036, 0.03, 0.02]))
+        glow.append(tube(pts, [0.026, 0.032, 0.038, 0.042, 0.042, 0.042, 0.038, 0.032, 0.026]))
     # due strisce ondulate sul fianco
     for th0, amp, ph, s0, s1 in ((0.38, 0.1, 0.0, 0.55, 0.96), (-0.25, 0.1, 1.9, 0.57, 0.92)):
         pts, rad = [], []
@@ -524,7 +524,7 @@ for sx in (1, -1):
             sn = s0 + (s1 - s0) * t
             p, n = surf(sn * L, th0 + amp * math.sin(sn * 19.0 + ph), sx, sink=0.012)
             pts.append(tuple(p))
-            rad.append(0.012 + 0.03 * math.sin(math.pi * t) ** 0.7)
+            rad.append(0.026 + 0.022 * math.sin(math.pi * t) ** 0.7)
         glow.append(tube(pts, rad))
     # fila di puntini lungo la linea laterale
     for t in np.linspace(0.0, 1.0, 9):
@@ -552,7 +552,7 @@ log("bioluminescenza pronta")
 
 
 # ============================================================ pinne corazzate a raggi appuntiti
-def fan_fin(angs, lengths, base_w=0.12, thick=0.035, notch=0.68, ray_r=0.05, tip_ext=0.14):
+def fan_fin(angs, lengths, base_w=0.12, thick=0.042, notch=0.68, ray_r=0.05, tip_ext=0.14):
     """Pinna a ventaglio nel piano XY locale (base nell'origine, si apre verso +X): membrana + raggi a spina."""
     angs = np.radians(angs)
     poly = [(0.0, -base_w)]
@@ -614,7 +614,7 @@ anal = spine_fin(sp, an_poly, 0.032, (A_S0 - 0.2, A_S1 + 0.4), (-1.3, 0.0))
 # coda a ventaglio con raggi a spina (gruppo "Tail")
 TAIL_PIVOT = tuple(sp.world(L - 0.05, 0.0, 0.0))
 T_ANG = np.radians(np.linspace(-56, 56, 7))
-T_LEN = [1.0, 1.16, 1.02, 0.9, 1.02, 1.16, 1.0]
+T_LEN = [0.98, 1.12, 0.98, 0.86, 0.98, 1.12, 0.98]
 tail_poly = [(L - 0.14, -0.2)]
 tail_rays, tail_tips = [], []
 for k_, (ang, Ln) in enumerate(zip(T_ANG, T_LEN)):
@@ -623,7 +623,7 @@ for k_, (ang, Ln) in enumerate(zip(T_ANG, T_LEN)):
         lm = 0.5 * (T_LEN[k_ - 1] + Ln) * 0.66
         tail_poly.append((L - 0.06 + math.cos(am) * lm, math.sin(am) * lm))
     tail_poly.append((L - 0.06 + math.cos(ang) * Ln, math.sin(ang) * Ln))
-    ta, tb = sp.world(L - 0.12, 0.0, 0.0), sp.world(L - 0.06 + math.cos(ang) * (Ln + 0.14), 0.0, math.sin(ang) * (Ln + 0.14))
+    ta, tb = sp.world(L - 0.12, 0.0, 0.0), sp.world(L - 0.06 + math.cos(ang) * (Ln + 0.07), 0.0, math.sin(ang) * (Ln + 0.07))
     tail_rays.append(spike(ta, tb, 0.055, 0.006))
     tail_tips.append(glow_tip(ta, tb, 0.055, 0.006, frac=0.22, extra=0.014))
 tail_poly.append((L - 0.14, 0.2))
@@ -645,28 +645,28 @@ key.append(place(ellipsoid((0.1, 0.05, 0.08)), Mk, key_top + key_dir * 0.08))
 log("chiave pronta")
 
 # ============================================================ parti
-m.add("Body", skin_body, INDIGO, tris=4800, voxel=0.045 * VX, reflectance=0.1)
-m.add("Maw", fast_union(maw), MAW, role="eye", tris=800, voxel=0.045 * VX)
-m.add("Teeth", fast_union(teeth), TOOTH, material="Glass", role="shine", transparency=0.1, tris=1500, voxel=0.02 * VX)
-m.add("EyeGlow", union(*eye_glow), EYE, material="Neon", role="glow", tris=240, voxel=0.022 * VX)
+m.add("Body", skin_body, INDIGO, tris=4000, voxel=0.045 * VX, reflectance=0.1)
+m.add("Maw", fast_union(maw), MAW, role="eye", tris=850, voxel=0.06 * VX)
+m.add("Teeth", fast_union(teeth), TOOTH, material="Glass", role="shine", transparency=0.1, tris=1500, voxel=0.0235 * VX)
+m.add("EyeGlow", union(*eye_glow), EYE, material="Neon", role="glow", tris=240, voxel=0.025 * VX)
 m.add("Pupils", union(*pupils), PUPIL, role="eye", tris=120, voxel=0.012 * VX)
-m.add("Shine", union(*shines), WHITE, role="shine", tris=120, voxel=0.012 * VX)
+m.add("Shine", union(*shines), WHITE, role="shine", tris=140, voxel=0.012 * VX)
 m.add("Armor", fast_union(armor + dor_rays + an_rays + [stalk, cup]), ARMOR, material="Metal", role="detail", tris=1700,
-      voxel=0.022 * VX)
+      voxel=0.0292 * VX)
 m.add("Biolume", fast_union(glow + gums + nodes + dor_tips), BIOLUM, material="Neon",
-      role="glow", tris=1400, voxel=0.024 * VX)
-m.add("Bubbles", union(lure, *filaments, k=0.03), LURE, material="Neon", role="glow", tris=600, voxel=0.024 * VX)
+      role="glow", tris=2100, voxel=0.0305 * VX)
+m.add("Bubbles", union(lure, *filaments, k=0.03), LURE, material="Neon", role="glow", tris=600, voxel=0.027 * VX)
 for nm in ("FinR", "FinL"):
     mem, piv = fins_mem[nm]
-    m.add(nm, mem, FIN, role="detail", tris=450, voxel=0.03 * VX, group=nm, pivot=piv)
-    m.add(nm + "Rays", fins_ray[nm], ARMOR, material="Metal", role="detail", tris=300, voxel=0.026 * VX, group=nm, pivot=piv)
+    m.add(nm, mem, FIN, role="detail", tris=560, voxel=0.0395 * VX, group=nm, pivot=piv)
+    m.add(nm + "Rays", fins_ray[nm], ARMOR, material="Metal", role="detail", tris=360, voxel=0.029 * VX, group=nm, pivot=piv)
 m.add("Fins", fast_union([dorsal, anal]), FIN, role="detail", tris=800, voxel=0.028 * VX)
-m.add("TailFin", tail_fin, FIN, role="detail", tris=550, voxel=0.028 * VX, group="Tail", pivot=TAIL_PIVOT)
-m.add("TailRays", fast_union(tail_rays), ARMOR, material="Metal", role="detail", tris=400, voxel=0.026 * VX, group="Tail",
+m.add("TailFin", tail_fin, FIN, role="detail", tris=700, voxel=0.0323 * VX, group="Tail", pivot=TAIL_PIVOT)
+m.add("TailRays", fast_union(tail_rays), ARMOR, material="Metal", role="detail", tris=420, voxel=0.0306 * VX, group="Tail",
       pivot=TAIL_PIVOT)
-m.add("TailGlow", fast_union(tail_tips), BIOLUM, material="Neon", role="glow", tris=200, voxel=0.016 * VX, group="Tail",
+m.add("TailGlow", fast_union(tail_tips), BIOLUM, material="Neon", role="glow", tris=240, voxel=0.0215 * VX, group="Tail",
       pivot=TAIL_PIVOT)
-m.add("WindKey", fast_union(key), BRASS, material="Metal", role="detail", tris=600, voxel=0.02 * VX)
+m.add("WindKey", fast_union(key), BRASS, material="Metal", role="detail", tris=550, voxel=0.0253 * VX)
 
 if __name__ == "__main__":
     only = [s for s in os.environ.get("ONLY", "").split(",") if s]
