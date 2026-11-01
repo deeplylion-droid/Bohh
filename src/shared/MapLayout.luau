@@ -49,7 +49,9 @@ MapLayout.Plot = {
 	-- centrali dell'ultima fila sono degli altari dei troni: quei piedistalli stanno davanti a destra.
 	Pedestals = (function()
 		local list = {}
-		local moved = { [1] = Vector3.new(24, 0, -14), [2] = Vector3.new(12, 0, -14), [3] = Vector3.new(14, 0, -27) }
+		-- il 19 e' a -24.5 (non -27): la sua pedana, 4.5 piu' avanti, deve restare fuori dallo zoccolo del muro
+		-- davanti (che arriva a -31)
+		local moved = { [1] = Vector3.new(24, 0, -14), [2] = Vector3.new(12, 0, -14), [3] = Vector3.new(14, 0, -24.5) }
 		for row = 0, 3 do
 			for col = 0, 4 do
 				if row == 3 and moved[col] then
