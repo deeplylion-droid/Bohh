@@ -1423,6 +1423,34 @@ local SMALL = {
 	GlowShroom = true,
 }
 
+-- Ingombro a terra dei lotti, da cui stanno lontani alberi e sassi della vetta: il pavimento, il recinto
+-- che ne sporge fino a 0.4 stud e la torre del trono con il basamento a gradoni (fino a 3.3 stud oltre
+-- il raggio della torre, come in PlotService), piu' un margine
+local PLOT_FENCE_OUT = 0.4
+local TOWER_BASE_OUT = 3.3
+local PLOT_MARGIN = 0.6
+
+-- Vero se il modello (gia' al suo posto) arriva nell'ingombro di un lotto
+local function touchesPlot(model: Model): boolean
+	local cf, size = model:GetBoundingBox()
+	local reach = math.sqrt(size.X * size.X + size.Z * size.Z) / 2 + PLOT_MARGIN
+	local hx = MapLayout.PlotSize.X / 2 + PLOT_FENCE_OUT
+	local hz = MapLayout.PlotSize.Z / 2 + PLOT_FENCE_OUT
+	local throne = MapLayout.Plot.Throne
+	for i = 1, MapLayout.PlotCount do
+		local p = MapLayout.PlotFrame(i):PointToObjectSpace(cf.Position)
+		local dx, dz = math.max(math.abs(p.X) - hx, 0), math.max(math.abs(p.Z) - hz, 0)
+		if dx * dx + dz * dz < reach * reach then
+			return true
+		end
+		local tx, tz = p.X - throne.Tower.X, p.Z - throne.Tower.Z
+		if math.sqrt(tx * tx + tz * tz) < throne.TowerRadius + TOWER_BASE_OUT + reach then
+			return true
+		end
+	end
+	return false
+end
+
 function Scenery.Decor(parent: Instance, assets, terrainHeight: (number, number) -> (number, string, string))
 	local folder = Build.Model("Decor", parent)
 	local rng = Random.new(7)
@@ -1486,6 +1514,14 @@ function Scenery.Decor(parent: Instance, assets, terrainHeight: (number, number)
 				model:ScaleTo(s)
 				local sink = if item.cliff then 1.6 * s else 0.4
 				model:PivotTo(CFrame.new(x, h - sink, z) * CFrame.Angles(0, rng:NextNumber(0, math.pi * 2), 0))
+				-- in vetta niente alberi o sassi contro i recinti dei lotti o le torri dei troni: il modello si
+				-- scarta dopo le estrazioni casuali (e conta come messo), cosi' la sequenza dei numeri non
+				-- cambia e tutte le altre decorazioni restano esattamente dov'erano
+				if zone == "Summit" and touchesPlot(model) then
+					model:Destroy()
+					placed += 1
+					continue
+				end
 				if item.tint then
 					for _, d in model:GetDescendants() do
 						if d:IsA("BasePart") and d:GetAttribute("Role") == "skin" then
