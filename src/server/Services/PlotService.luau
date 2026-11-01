@@ -22,21 +22,21 @@ PlotService.Plots = {}
 local S
 local L = MapLayout.Plot
 local THEMES = {
-	-- colori pieni ma meno "caramella": legno verniciato con rifiniture scure
-	{ wall = Color3.fromRGB(196, 62, 62), trim = Color3.fromRGB(110, 34, 38) },
-	{ wall = Color3.fromRGB(214, 118, 46), trim = Color3.fromRGB(122, 62, 26) },
-	{ wall = Color3.fromRGB(218, 172, 52), trim = Color3.fromRGB(120, 88, 24) },
-	{ wall = Color3.fromRGB(82, 160, 78), trim = Color3.fromRGB(38, 88, 44) },
-	{ wall = Color3.fromRGB(46, 150, 164), trim = Color3.fromRGB(24, 84, 96) },
-	{ wall = Color3.fromRGB(66, 100, 196), trim = Color3.fromRGB(34, 52, 112) },
-	{ wall = Color3.fromRGB(128, 82, 196), trim = Color3.fromRGB(70, 42, 116) },
-	{ wall = Color3.fromRGB(198, 86, 152), trim = Color3.fromRGB(112, 42, 86) },
+	-- colori pieni e brillanti (come l'interfaccia "Vetta Pop"), con una rifinitura scura per i contorni
+	{ wall = Color3.fromRGB(232, 70, 76), trim = Color3.fromRGB(150, 32, 48) },
+	{ wall = Color3.fromRGB(246, 140, 44), trim = Color3.fromRGB(158, 72, 20) },
+	{ wall = Color3.fromRGB(250, 200, 50), trim = Color3.fromRGB(160, 108, 16) },
+	{ wall = Color3.fromRGB(92, 192, 86), trim = Color3.fromRGB(36, 112, 52) },
+	{ wall = Color3.fromRGB(40, 184, 200), trim = Color3.fromRGB(16, 104, 122) },
+	{ wall = Color3.fromRGB(70, 124, 236), trim = Color3.fromRGB(34, 62, 150) },
+	{ wall = Color3.fromRGB(150, 96, 234), trim = Color3.fromRGB(82, 44, 150) },
+	{ wall = Color3.fromRGB(238, 96, 172), trim = Color3.fromRGB(146, 40, 104) },
 }
 
-local WOOD = Color3.fromRGB(176, 128, 84)
 local STONE = Color3.fromRGB(196, 190, 180)
 local STONE_GATE = Color3.fromRGB(150, 144, 136)
-local CAP = Color3.fromRGB(214, 210, 202)
+local WHITE = Color3.fromRGB(252, 250, 245) -- bianco caldo di pilastri, cornici e insegna
+local GOLD = Color3.fromRGB(255, 196, 60) -- pomelli in cima ai pilastri e alle aste
 
 export type Plot = {
 	index: number,
@@ -138,182 +138,318 @@ local function buildPlot(index: number, parent: Instance): Plot
 		return base * CFrame.new(v)
 	end
 	local W, D, H = MapLayout.PlotSize.X, MapLayout.PlotSize.Z, L.WallHeight
-	-- pavimento in legno con tappeto del colore del lotto e bordo
+	-- pavimento: lastra del colore chiaro del lotto con una scacchiera di piastrelle grandi allineata alla
+	-- griglia dei piedistalli (colonne ogni 11 stud, file ogni 10): pedana e piedistallo di un posto stanno
+	-- nella stessa piastrella. Le piastrelle scure sono sottili e non solide: si cammina sulla lastra, alla
+	-- quota di sempre
 	Build.Part({
 		name = "Floor",
 		size = Vector3.new(W, L.FloorHeight + 2, D),
 		cframe = at(Vector3.new(0, -(L.FloorHeight + 2) / 2, 0)),
-		color = WOOD,
-		material = Enum.Material.WoodPlanks,
+		color = theme.wall:Lerp(WHITE, 0.78),
 		parent = model,
 	})
-	Build.Part({
-		name = "FloorInset",
-		size = Vector3.new(W - 9, 0.2, D - 9),
-		cframe = at(Vector3.new(0, 0.06, 0)),
-		color = theme.wall:Lerp(Color3.new(1, 1, 1), 0.35),
-		material = Enum.Material.Fabric,
-		collide = false,
-		parent = model,
-	})
-	for _, edge in
-		{
-			{ W - 7, 1, 0, -(D - 8) / 2 },
-			{ W - 7, 1, 0, (D - 8) / 2 },
-			{ 1, D - 9, -(W - 8) / 2, 0 },
-			{ 1, D - 9, (W - 8) / 2, 0 },
-		}
-	do
-		Build.Part({
-			name = "FloorBorder",
-			size = Vector3.new(edge[1], 0.3, edge[2]),
-			cframe = at(Vector3.new(edge[3], 0.1, edge[4])),
-			color = theme.trim,
-			collide = false,
-			parent = model,
-		})
+	local TILE_X = { -(W / 2 - 2), -16.5, -5.5, 5.5, 16.5, W / 2 - 2 }
+	local TILE_Z = { -(D / 2 - 2), -20.2, -10.2, -0.2, 9.8, 19.8, D / 2 - 2 }
+	for c = 1, #TILE_X - 1 do
+		for r = 1, #TILE_Z - 1 do
+			-- quella davanti al cancello (colonna centrale, prima fila) resta chiara
+			if (c + r) % 2 == 1 then
+				local x0, x1, z0, z1 = TILE_X[c], TILE_X[c + 1], TILE_Z[r], TILE_Z[r + 1]
+				Build.Part({
+					name = "FloorTile",
+					size = Vector3.new(x1 - x0, 0.1, z1 - z0),
+					cframe = at(Vector3.new((x0 + x1) / 2, 0, (z0 + z1) / 2)),
+					color = theme.wall:Lerp(WHITE, 0.55),
+					collide = false,
+					castShadow = false,
+					parent = model,
+				})
+			end
+		end
 	end
-	-- mura a vetrina: zoccolo pieno, vetri colorati, corrimano e pilastri (i pet si vedono da fuori)
+	-- recinzione a vetrina (i pet si vedono da fuori): zoccolo del colore del lotto con pannelli in
+	-- rilievo e una fascia scura alla base, cornice bianca, vetri con due riflessi per campata, corrimano
+	-- colorato col bordo bianco, pilastri bianchi col pomello dorato (piu' grossi negli angoli). Le
+	-- decorazioni non sono solide; verso l'interno sporgono di poco solo cornice e bordo del corrimano (in
+	-- alto) e i pannelli sullo zoccolo (0.15, non sul fronte), lontani da piedistalli e incubatrici
 	local walls = Build.Model("Walls", model)
 	local BASE_H, GLASS_H = 3.5, 7
-	local glassColor = theme.wall:Lerp(Color3.new(1, 1, 1), 0.55)
-	-- ends = { inizio, fine }: +1 il pezzo si allunga di mezzo spessore (copre l'angolo), -1 si
-	-- accorcia di mezzo spessore (si ferma contro il muro perpendicolare): negli angoli nessun pezzo
-	-- si sovrappone a un altro con le facce sullo stesso piano (sfarfallio)
+	local POST_W, CORNER_W = 2.2, 2.8
+	local glassColor = theme.wall:Lerp(WHITE, 0.7)
+	local panelColor = theme.wall:Lerp(WHITE, 0.22)
+	-- pilastro col cappello colorato e il pomello: tutto sotto quota 14, dove stanno i giganti sul trono
+	-- dietro il muro di fondo
+	local function post(pos: Vector3, corner: boolean)
+		local w = if corner then CORNER_W else POST_W
+		local h, capH = H + 0.3, 0.45
+		Build.Part({
+			name = if corner then "CornerPost" else "Post",
+			size = Vector3.new(w, h, w),
+			cframe = at(pos + Vector3.new(0, h / 2, 0)),
+			color = WHITE,
+			parent = walls,
+		})
+		Build.Part({
+			name = "PostCap",
+			size = Vector3.new(w + 0.5, capH, w + 0.5),
+			cframe = at(pos + Vector3.new(0, h + capH / 2, 0)),
+			color = theme.wall,
+			parent = walls,
+		})
+		local knob = if corner then 1.25 else 1.1
+		Build.Part({
+			name = "PostKnob",
+			size = Vector3.new(knob, knob, knob),
+			cframe = at(pos + Vector3.new(0, h + capH - 0.05 + knob / 2, 0)),
+			color = GOLD,
+			material = Enum.Material.Foil,
+			shape = Enum.PartType.Ball,
+			collide = false,
+			parent = walls,
+		})
+	end
+	-- Un tratto di recinzione lungo X (alongX) o Z; out = +1/-1: verso l'esterno sull'altro asse.
+	-- ends = { inizio, fine }: +1 il pezzo si allunga di mezzo spessore (copre l'angolo), -1 si accorcia di
+	-- mezzo spessore (si ferma contro il muro perpendicolare): negli angoli nessun pezzo si sovrappone a un
+	-- altro con le facce sullo stesso piano (sfarfallio). band = di quanto la fascia scura esterna va oltre
+	-- le due estremita'. stops = pilastri (o torre del cancello) che chiudono le campate, in ordine:
+	-- { posizione lungo il tratto, mezzo ingombro, "post" / "corner" se li costruisce questo tratto }.
+	-- innerPanels: pannelli anche dentro (non sul fronte: li' lo zoccolo resta liscio verso la pedana del 19)
 	local function wallRun(
 		name: string,
 		center: Vector3,
 		length: number,
 		alongX: boolean,
-		skipEnds: boolean?,
-		ends: { number }?
+		out: number,
+		ends: { number },
+		band: { number },
+		stops: { { any } },
+		innerPanels: boolean
 	)
-		local e0, e1 = (ends or { 0, 0 })[1], (ends or { 0, 0 })[2]
+		local e0, e1 = ends[1], ends[2]
+		local axis = if alongX then Vector3.xAxis else Vector3.zAxis
+		local normal = (if alongX then Vector3.zAxis else Vector3.xAxis) * out
 		local function piece(thick: number, h: number, y: number): (Vector3, CFrame)
 			local len = length + (e0 + e1) * thick / 2
 			local shift = (e1 - e0) * thick / 4
 			local size = if alongX then Vector3.new(len, h, thick) else Vector3.new(thick, h, len)
-			local offset = if alongX then Vector3.new(shift, y, 0) else Vector3.new(0, y, shift)
-			return size, at(center + offset)
+			return size, at(center + axis * shift + Vector3.yAxis * y)
 		end
-		local baseSize, baseCf = piece(2, BASE_H, BASE_H / 2)
-		Build.Part({
-			name = name .. "Base",
-			size = baseSize,
-			cframe = baseCf,
-			color = theme.wall,
-			material = Enum.Material.WoodPlanks,
-			parent = walls,
-		})
-		local glassSize, glassCf = piece(0.6, GLASS_H, BASE_H + GLASS_H / 2)
-		local glass = Build.Part({
+		-- pezzo sottile appoggiato allo zoccolo, fuori (side = 1) o dentro (-1), lungo il tratto da a a b
+		local function onBase(a: number, b: number, thick: number, y0: number, y1: number, side: number?)
+			local size = if alongX then Vector3.new(b - a, y1 - y0, thick) else Vector3.new(thick, y1 - y0, b - a)
+			local face = normal * (side or 1) * (1 + thick / 2)
+			return size, at(center + axis * ((a + b) / 2) + Vector3.yAxis * ((y0 + y1) / 2) + face)
+		end
+		local function part(props: { [string]: any }, size: Vector3, cf: CFrame): BasePart
+			props.size = size
+			props.cframe = cf
+			props.parent = walls
+			return Build.Part(props :: any)
+		end
+		part({ name = name .. "Base", color = theme.wall }, piece(2, BASE_H, BASE_H / 2))
+		-- fascia scura alla base: copre il bordo della lastra del pavimento fino a sotto il terreno
+		part(
+			{ name = name .. "Kick", color = theme.wall:Lerp(theme.trim, 0.7), collide = false },
+			onBase(-length / 2 - band[1], length / 2 + band[2], 0.25, -L.FloorHeight - 2, 0.6)
+		)
+		part({ name = name .. "Molding", color = WHITE, collide = false }, piece(2.5, 0.4, BASE_H + 0.2))
+		-- il vetro entra nella cornice e nel corrimano: i suoi bordi non si vedono
+		local glass = part({
 			name = name .. "Glass",
-			size = glassSize,
-			cframe = glassCf,
 			color = glassColor,
 			material = Enum.Material.Glass,
 			transparency = 0.55,
 			castShadow = false,
-			parent = walls,
-		})
-		glass.Reflectance = 0.08
-		local railSize, railCf = piece(2.4, 1.2, BASE_H + GLASS_H + 0.6)
-		Build.Part({
-			name = name .. "Rail",
-			size = railSize,
-			cframe = railCf,
-			color = theme.trim,
-			material = Enum.Material.Wood,
-			parent = walls,
-		})
-		-- pilastri ogni ~10 stud lungo il tratto
-		local count = math.max(1, math.floor(length / 10))
-		for k = if skipEnds then 1 else 0, if skipEnds then count - 1 else count do
-			local t = -length / 2 + length * k / count
-			local offset = if alongX then Vector3.new(t, 0, 0) else Vector3.new(0, 0, t)
-			Build.Part({
-				name = "Post",
-				size = Vector3.new(1.8, H, 1.8),
-				cframe = at(center + offset + Vector3.new(0, H / 2, 0)),
-				color = theme.trim,
-				material = Enum.Material.Wood,
-				parent = walls,
-			})
-			Build.Part({
-				name = "PostCap",
-				size = Vector3.new(2.4, 0.8, 2.4),
-				cframe = at(center + offset + Vector3.new(0, H + 0.4, 0)),
-				color = CAP,
-				material = Enum.Material.Slate,
-				parent = walls,
-			})
+		}, piece(0.6, GLASS_H, BASE_H + 0.2 + GLASS_H / 2))
+		glass.Reflectance = 0.12
+		part({ name = name .. "Rail", color = theme.wall }, piece(2, 1, BASE_H + GLASS_H + 0.5))
+		part({ name = name .. "RailCap", color = WHITE, collide = false }, piece(2.6, 0.35, BASE_H + GLASS_H + 1.175))
+		-- campate: pannello in rilievo sullo zoccolo e due riflessi sul vetro, visti da fuori (la destra di
+		-- chi guarda il muro da fuori e' right)
+		local right = (-normal):Cross(Vector3.yAxis)
+		local tilt = math.rad(35)
+		local streakUp = Vector3.yAxis * math.cos(tilt) + right * math.sin(tilt)
+		local streakAcross = right * math.cos(tilt) - Vector3.yAxis * math.sin(tilt)
+		for k = 1, #stops - 1 do
+			local a = stops[k][1] + stops[k][2]
+			local b = stops[k + 1][1] - stops[k + 1][2]
+			part({ name = "WallPanel", color = panelColor, collide = false }, onBase(a + 0.6, b - 0.6, 0.15, 1, 3.1))
+			if innerPanels then
+				part(
+					{ name = "WallPanel", color = panelColor, collide = false },
+					onBase(a + 0.6, b - 0.6, 0.15, 1, 3.1, -1)
+				)
+			end
+			local mid = center + axis * ((a + b) / 2) + normal * 0.355
+			for j, streak in { { 4, 0.45, 0 }, { 2.4, 0.24, 1.15 } } do
+				local pos = mid + right * (-0.18 * (b - a) + streak[3]) + Vector3.yAxis * (7.6 + (j - 1) * 0.3)
+				Build.Part({
+					name = "GlassShine",
+					size = Vector3.new(streak[2], streak[1], 0.05),
+					cframe = base * CFrame.fromMatrix(pos, streakAcross, streakUp),
+					color = WHITE,
+					collide = false,
+					castShadow = false,
+					parent = walls,
+				})
+			end
+		end
+		for _, s in stops do
+			if s[3] then
+				post(center + axis * s[1], s[3] == "corner")
+			end
 		end
 	end
-	wallRun("Back", Vector3.new(0, 0, D / 2 - 1), W - 2, true, false, { 1, 1 })
+	-- pilastri ogni ~10 stud; quelli d'angolo li mettono il retro e il fronte (niente doppioni)
+	local function stopsAlong(length: number, ownEnds: boolean): { { any } }
+		local count = math.max(1, math.floor(length / 10))
+		local list = {}
+		for k = 0, count do
+			local isEnd = k == 0 or k == count
+			local kind = if isEnd then (if ownEnds then "corner" else nil) else "post"
+			table.insert(list, { -length / 2 + length * k / count, (if isEnd then CORNER_W else POST_W) / 2, kind })
+		end
+		return list
+	end
+	wallRun(
+		"Back",
+		Vector3.new(0, 0, D / 2 - 1),
+		W - 2,
+		true,
+		1,
+		{ 1, 1 },
+		{ 1.25, 1.25 },
+		stopsAlong(W - 2, true),
+		true
+	)
+	-- torri del cancello: centro e faccia esterna
+	local gateX = L.GateWidth / 2 + 2
+	local towerOut = L.GateWidth / 2 + 4
 	for _, sx in { -1, 1 } do
-		-- i pilastri d'angolo li mettono il retro e il fronte (niente doppioni sovrapposti)
-		wallRun("Side", Vector3.new(sx * (W / 2 - 1), 0, 0), D - 2, false, true, { -1, -1 })
-		local inner = L.GateWidth / 2 + 4
-		local seg = (W / 2 - 1) - inner
-		-- il tratto davanti copre l'angolo solo dalla parte esterna (verso il cancello si ferma)
+		wallRun(
+			"Side",
+			Vector3.new(sx * (W / 2 - 1), 0, 0),
+			D - 2,
+			false,
+			sx,
+			{ -1, -1 },
+			{ 1, 1 },
+			stopsAlong(D - 2, false),
+			true
+		)
+		-- il tratto davanti va dalla torre del cancello (niente pilastro: la torre chiude il tratto e i
+		-- pezzi ci entrano dentro di mezzo spessore) all'angolo; la fascia esterna avvolge solo l'angolo
+		local seg = (W / 2 - 1) - towerOut
+		local tower = { -sx * seg / 2, 0.35 }
+		local corner = { sx * seg / 2, CORNER_W / 2, "corner" }
 		wallRun(
 			"Front",
-			Vector3.new(sx * (inner + seg / 2), 0, -D / 2 + 1),
+			Vector3.new(sx * (towerOut + seg / 2), 0, -D / 2 + 1),
 			seg,
 			true,
-			false,
-			if sx < 0 then { 1, 0 } else { 0, 1 }
+			-1,
+			{ 1, 1 },
+			if sx < 0 then { 1.25, 0 } else { 0, 1.25 },
+			if sx < 0 then { corner, tower } else { tower, corner },
+			false
 		)
-		-- torri ai lati del cancello con bandierine
+		-- torri bianche ai lati del cancello: zoccolo e fascia del colore del lotto (sporgono davanti,
+		-- dietro e fuori; dalla parte del cancello restano dentro la torre, cosi' l'apertura e la barriera
+		-- non cambiano), cappello colorato col bordo bianco, bandierina con il pomello dorato
 		Build.Part({
 			name = "GatePost",
 			size = Vector3.new(4, H + 4, 4),
-			cframe = at(Vector3.new(sx * (L.GateWidth / 2 + 2), (H + 4) / 2, -D / 2 + 1)),
-			color = STONE_GATE,
-			material = Enum.Material.Cobblestone,
+			cframe = at(Vector3.new(sx * gateX, (H + 4) / 2, -D / 2 + 1)),
+			color = WHITE,
+			parent = walls,
+		})
+		-- verso l'interno del lotto sporgono solo 0.1 (l'anello dell'incubatrice 3 e' a 0.2 dalla torre)
+		for _, b in { { "GateBase", -1.2, 4.3 }, { "GateBand", H - 0.7, H + 0.3 } } do
+			local x0, x1 = L.GateWidth / 2 + 0.05, towerOut + 0.35
+			local z0, z1 = -D / 2 - 1.35, -D / 2 + 3.1
+			Build.Part({
+				name = b[1],
+				size = Vector3.new(x1 - x0, b[3] - b[2], z1 - z0),
+				cframe = at(Vector3.new(sx * (x0 + x1) / 2, (b[2] + b[3]) / 2, (z0 + z1) / 2)),
+				color = theme.wall,
+				collide = false,
+				parent = walls,
+			})
+		end
+		Build.Part({
+			name = "GateCapTrim",
+			size = Vector3.new(4.5, 0.5, 4.5),
+			cframe = at(Vector3.new(sx * gateX, H + 3.85, -D / 2 + 1)),
+			color = WHITE,
+			collide = false,
 			parent = walls,
 		})
 		Build.Part({
 			name = "GateCap",
 			size = Vector3.new(5, 1.6, 5),
-			cframe = at(Vector3.new(sx * (L.GateWidth / 2 + 2), H + 4.8, -D / 2 + 1)),
-			color = CAP,
-			material = Enum.Material.Slate,
+			cframe = at(Vector3.new(sx * gateX, H + 4.8, -D / 2 + 1)),
+			color = theme.wall,
 			parent = walls,
 		})
 		Build.Part({
 			name = "FlagPole",
 			size = Vector3.new(6, 0.35, 0.35),
-			cframe = at(Vector3.new(sx * (L.GateWidth / 2 + 2), H + 8.6, -D / 2 + 1))
-				* CFrame.Angles(0, 0, math.rad(90)),
-			color = Color3.fromRGB(255, 255, 255),
+			cframe = at(Vector3.new(sx * gateX, H + 8.6, -D / 2 + 1)) * CFrame.Angles(0, 0, math.rad(90)),
+			color = WHITE,
 			shape = Enum.PartType.Cylinder,
+			parent = walls,
+		})
+		Build.Part({
+			name = "FlagKnob",
+			size = Vector3.new(0.8, 0.8, 0.8),
+			cframe = at(Vector3.new(sx * gateX, H + 11.95, -D / 2 + 1)),
+			color = GOLD,
+			material = Enum.Material.Foil,
+			shape = Enum.PartType.Ball,
+			collide = false,
 			parent = walls,
 		})
 		Build.Part({
 			name = "Flag",
 			size = Vector3.new(3.2, 2, 0.2),
-			cframe = at(Vector3.new(sx * (L.GateWidth / 2 + 2) + sx * 1.6, H + 10.4, -D / 2 + 1)),
+			cframe = at(Vector3.new(sx * gateX + sx * 1.6, H + 10.4, -D / 2 + 1)),
 			color = theme.wall,
 			collide = false,
 			parent = walls,
 		})
 	end
-	-- trave sopra il cancello con insegna del proprietario
+	-- trave sopra il cancello (con un filo bianco sotto) e insegna del proprietario, bianca con il bordo
+	-- del colore del lotto sopra e sotto (il bordo riempie anche lo spiraglio fra trave e insegna)
 	Build.Part({
 		name = "GateBeam",
 		size = Vector3.new(L.GateWidth + 4, 3, 3),
 		cframe = at(Vector3.new(0, H + 2, -D / 2 + 1)),
-		color = theme.trim,
-		material = Enum.Material.Wood,
+		color = theme.wall,
+		parent = walls,
+	})
+	Build.Part({
+		name = "GateBeamTrim",
+		size = Vector3.new(L.GateWidth + 4.4, 0.45, 3.3),
+		cframe = at(Vector3.new(0, H + 0.575, -D / 2 + 1)),
+		color = WHITE,
+		collide = false,
+		parent = walls,
+	})
+	Build.Part({
+		name = "SignFrame",
+		size = Vector3.new(L.GateWidth + 3.6, 5.9, 0.5),
+		cframe = at(Vector3.new(0, H + 6.3, -D / 2 + 1.15)),
+		color = theme.wall,
+		collide = false,
 		parent = walls,
 	})
 	local sign = Build.Part({
 		name = "OwnerSign",
 		size = Vector3.new(L.GateWidth + 4, 5, 0.6),
 		cframe = at(Vector3.new(0, H + 6.3, -D / 2 + 0.6)),
-		color = Color3.fromRGB(236, 212, 170),
-		material = Enum.Material.Wood,
+		color = WHITE,
 		parent = walls,
 	})
 	local gui = Instance.new("SurfaceGui")
@@ -916,7 +1052,8 @@ function PlotService.ShowThroneLock(t, locked: boolean)
 	t.base:SetAttribute("Locked", locked)
 	t.base.Transparency = if locked then 0.6 else 0
 	for _, d in t.base:GetChildren() do
-		if d:IsA("BasePart") and d ~= t.pad then
+		-- il cartello resta invisibile: si vede solo la scritta della sua SurfaceGui
+		if d:IsA("BasePart") and d ~= t.pad and d.Name ~= "ThroneSign" then
 			d.Transparency = if locked then 0.75 else 0
 		end
 	end
