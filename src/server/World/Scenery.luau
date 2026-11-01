@@ -19,6 +19,745 @@ local ROOF = Color3.fromRGB(226, 72, 54)
 ---------------------------------------------------------------------------------------------
 -- Piazza della vetta
 ---------------------------------------------------------------------------------------------
+-- Colori: lastre chiare e pulite con accenti accesi, come l'interfaccia "Vetta Pop"
+local PZ = {
+	paving = Color3.fromRGB(246, 238, 222), -- lastre della piazza e del viale
+	inner = Color3.fromRGB(240, 226, 202), -- disco centrale attorno al monumento
+	stone = Color3.fromRGB(250, 246, 238), -- monumento, bordi delle aiuole, vasche
+	stoneShade = Color3.fromRGB(230, 220, 202),
+	white = Color3.fromRGB(255, 255, 255),
+	gold = Color3.fromRGB(255, 198, 46),
+	goldDark = Color3.fromRGB(240, 146, 30),
+	sky = Color3.fromRGB(96, 194, 255),
+	skyDark = Color3.fromRGB(40, 136, 226),
+	skyPale = Color3.fromRGB(190, 230, 252),
+	royal = Color3.fromRGB(48, 86, 186),
+	silver = Color3.fromRGB(212, 222, 240),
+	coral = Color3.fromRGB(244, 100, 84),
+	velvet = Color3.fromRGB(206, 38, 72),
+	leaf = Color3.fromRGB(96, 196, 84),
+	water = Color3.fromRGB(110, 206, 255),
+	pool = Color3.fromRGB(40, 150, 226),
+	ink = Color3.fromRGB(40, 30, 72),
+}
+-- vialetti verso i cancelli: le tinte dei lotti (i temi di PlotService), un po' piu' accese
+local PLOT_TINTS = {
+	Color3.fromRGB(240, 94, 94),
+	Color3.fromRGB(250, 150, 62),
+	Color3.fromRGB(250, 204, 70),
+	Color3.fromRGB(104, 200, 98),
+	Color3.fromRGB(60, 192, 204),
+	Color3.fromRGB(86, 134, 236),
+	Color3.fromRGB(160, 108, 232),
+	Color3.fromRGB(238, 112, 184),
+}
+-- stendardi e bandierine
+local FESTIVE = { PZ.coral, PZ.gold, PZ.sky, Color3.fromRGB(72, 206, 150), Color3.fromRGB(160, 108, 236) }
+local GEMS = {
+	Color3.fromRGB(236, 52, 76),
+	Color3.fromRGB(60, 144, 255),
+	Color3.fromRGB(64, 204, 112),
+	Color3.fromRGB(172, 92, 244),
+}
+
+-- Direzione orizzontale a 'deg' gradi da +Z verso +X (come gli angoli dei lotti)
+local function dirAt(deg: number): Vector3
+	local a = math.rad(deg)
+	return Vector3.new(math.sin(a), 0, math.cos(a))
+end
+
+-- Cilindro con l'asse verticale fra due quote (dischi stesi a terra, pali, vasche)
+type Cyl = {
+	name: string,
+	at: Vector3, -- centro (contano solo x e z)
+	radius: number,
+	bottom: number,
+	top: number,
+	color: Color3,
+	material: Enum.Material?,
+	collide: boolean?,
+	castShadow: boolean?,
+	transparency: number?,
+	parent: Instance,
+}
+local function vcyl(p: Cyl): BasePart
+	return Build.Part({
+		name = p.name,
+		size = Vector3.new(p.top - p.bottom, p.radius * 2, p.radius * 2),
+		cframe = CFrame.new(p.at.X, (p.top + p.bottom) / 2, p.at.Z) * CFrame.Angles(0, 0, math.rad(90)),
+		color = p.color,
+		material = p.material,
+		shape = Enum.PartType.Cylinder,
+		collide = p.collide,
+		castShadow = p.castShadow,
+		transparency = p.transparency,
+		parent = p.parent,
+	})
+end
+
+-- Intarsio rotondo nel pavimento: non si tocca, non ferma i raggi e non fa ombra. La faccia di sopra
+-- sta a quota 'top' (qualche centesimo sopra le lastre, mai alla stessa quota: niente sfarfallio), il
+-- resto e' affondato nelle lastre
+local function inlayDisc(
+	parent: Instance,
+	name: string,
+	at: Vector3,
+	radius: number,
+	top: number,
+	color: Color3,
+	material: Enum.Material?
+): BasePart
+	return vcyl({
+		name = name,
+		at = at,
+		radius = radius,
+		bottom = top - 0.3,
+		top = top,
+		color = color,
+		material = material,
+		collide = false,
+		castShadow = false,
+		parent = parent,
+	})
+end
+
+-- Striscia dritta nel pavimento (intarsio come sopra) lungo la direzione orizzontale d, da 'from' a
+-- 'to' stud dal punto o, larga 'width'
+local function inlayStrip(
+	parent: Instance,
+	name: string,
+	o: Vector3,
+	d: Vector3,
+	from: number,
+	to: number,
+	width: number,
+	top: number,
+	color: Color3
+): BasePart
+	local mid = o + d * ((from + to) / 2)
+	local pos = Vector3.new(mid.X, top - 0.15, mid.Z)
+	return Build.Part({
+		name = name,
+		size = Vector3.new(width, 0.3, to - from),
+		cframe = CFrame.lookAt(pos, pos + d),
+		color = color,
+		collide = false,
+		castShadow = false,
+		parent = parent,
+	})
+end
+
+-- Triangolo (WedgePart) con l'angolo retto in p e gli altri due vertici in a e b (a - p e b - p
+-- perpendicolari), spesso 'depth' attorno al piano dei tre punti
+local function triangle(
+	parent: Instance,
+	name: string,
+	p: Vector3,
+	a: Vector3,
+	b: Vector3,
+	depth: number,
+	color: Color3,
+	material: Enum.Material?,
+	collide: boolean?
+): BasePart
+	local d1, d2 = a - p, b - p
+	return Build.Part({
+		name = name,
+		class = "WedgePart",
+		size = Vector3.new(depth, d2.Magnitude, d1.Magnitude),
+		cframe = CFrame.fromMatrix(p + d1 / 2 + d2 / 2, d2.Unit:Cross(-d1.Unit), d2.Unit),
+		color = color,
+		material = material,
+		collide = collide == true,
+		castShadow = collide == true,
+		parent = parent,
+	})
+end
+
+-- Triangolo isoscele (due triangoli rettangoli, uno per meta' con il suo colore): base da b1 a b2,
+-- punta in tip
+local function spike(
+	parent: Instance,
+	name: string,
+	b1: Vector3,
+	b2: Vector3,
+	tip: Vector3,
+	depth: number,
+	colorA: Color3,
+	colorB: Color3,
+	material: Enum.Material?,
+	collide: boolean?
+)
+	local m = (b1 + b2) / 2
+	triangle(parent, name, m, tip, b1, depth, colorA, material, collide)
+	triangle(parent, name, m, tip, b2, depth, colorB, material, collide)
+end
+
+-- Muretto dritto fra due punti (contano solo x e z), dalla quota bottom alla quota top
+local function wallBetween(
+	parent: Instance,
+	name: string,
+	a: Vector3,
+	b: Vector3,
+	thick: number,
+	bottom: number,
+	top: number,
+	color: Color3,
+	material: Enum.Material?
+): BasePart
+	local flat = Vector3.new(b.X - a.X, 0, b.Z - a.Z)
+	local mid = Vector3.new((a.X + b.X) / 2, (bottom + top) / 2, (a.Z + b.Z) / 2)
+	return Build.Part({
+		name = name,
+		size = Vector3.new(thick, top - bottom, flat.Magnitude),
+		cframe = CFrame.lookAt(mid, mid + flat),
+		color = color,
+		material = material,
+		parent = parent,
+	})
+end
+
+-- Sfera decorativa (non si tocca)
+local function ball(
+	parent: Instance,
+	name: string,
+	at: Vector3,
+	diameter: number,
+	color: Color3,
+	material: Enum.Material?
+)
+	return Build.Part({
+		name = name,
+		size = Vector3.one * diameter,
+		cframe = CFrame.new(at),
+		color = color,
+		material = material,
+		shape = Enum.PartType.Ball,
+		collide = false,
+		parent = parent,
+	})
+end
+
+-- Uovo (sfera allungata con una SpecialMesh) appoggiato con la punta in basso nel punto 'at'
+local function eggShape(parent: Instance, name: string, at: Vector3, width: number, height: number, color: Color3)
+	local part = Build.Part({
+		name = name,
+		size = Vector3.new(width, height, width),
+		cframe = CFrame.new(at + Vector3.new(0, height / 2, 0)),
+		color = color,
+		material = Enum.Material.Foil,
+		collide = false,
+		parent = parent,
+	})
+	local mesh = Instance.new("SpecialMesh")
+	mesh.MeshType = Enum.MeshType.Sphere
+	mesh.Parent = part
+	return part
+end
+
+-- Stendardo appeso a un braccio orizzontale: rettangolo di stoffa con la punta in basso. 'top' e' il
+-- punto del braccio sopra il centro dello stendardo, 'along' la direzione del braccio (orizzontale)
+local function banner(parent: Instance, top: Vector3, along: Vector3, width: number, height: number, color: Color3)
+	local frame = CFrame.fromMatrix(top, along, Vector3.yAxis)
+	-- il bordo di sopra sta dentro il braccio, come una stoffa infilata nell'asta
+	Build.Part({
+		name = "Banner",
+		size = Vector3.new(width, height, 0.16),
+		cframe = frame * CFrame.new(0, -height / 2, 0),
+		color = color,
+		material = Enum.Material.Fabric,
+		collide = false,
+		parent = parent,
+	})
+	local m = frame.Position - Vector3.yAxis * height
+	local tip = m - Vector3.yAxis * (width * 0.42)
+	spike(
+		parent,
+		"BannerTip",
+		m - along * (width / 2),
+		m + along * (width / 2),
+		tip,
+		0.16,
+		color,
+		color,
+		Enum.Material.Fabric
+	)
+end
+
+-- Pavimento decorato: bordo bianco del disco centrale, rosa dei venti attorno al monumento,
+-- vialetti colorati verso i cancelli dei lotti e passatoia del viale fino all'arco del sentiero.
+-- Sono intarsi che non si toccano: si cammina sulle lastre di sempre, alla stessa quota
+local function paving(folder: Instance, c: Vector3, top: number, innerTop: number, avenueTop: number, slope: number)
+	local model = Build.Model("Paving", folder)
+	-- bordo bianco attorno al disco centrale (affiora fra 60 e 61 stud dal centro)
+	inlayDisc(model, "InnerEdge", c, 61, top + 0.06, PZ.white)
+	-- rosa dei venti: 8 punte corte (sotto), 4 medie sotto le scale del monumento e 4 lunghe sui punti
+	-- cardinali (sopra); la base di ogni punta e' nascosta sotto il collare del monumento
+	local rose = Build.Model("CompassRose", model)
+	local kinds = {
+		{ from = 22.5, step = 45, length = 34, top = innerTop + 0.05, a = PZ.sky, b = PZ.skyDark },
+		{ from = 45, step = 90, length = 41, top = innerTop + 0.1, a = PZ.white, b = PZ.silver },
+		{ from = 0, step = 90, length = 50, top = innerTop + 0.15, a = PZ.gold, b = PZ.goldDark },
+	}
+	for _, kind in kinds do
+		local y = kind.top - 0.15
+		local o = Vector3.new(c.X, y, c.Z)
+		for deg = kind.from, 359, kind.step do
+			spike(
+				rose,
+				"RosePoint",
+				o + dirAt(deg - 45) * 20,
+				o + dirAt(deg + 45) * 20,
+				o + dirAt(deg) * kind.length,
+				0.3,
+				kind.a,
+				kind.b
+			)
+		end
+	end
+	-- collare blu attorno al monumento: ci poggiano le scale e le aiuole
+	inlayDisc(model, "Collar", c, 27, innerTop + 0.2, PZ.royal)
+	-- vialetti dal disco centrale ai cancelli, del colore del lotto, su una striscia bianca piu' larga
+	-- (sotto) che fa da bordo
+	for i = 1, MapLayout.PlotCount do
+		local d = dirAt(40 * i)
+		inlayStrip(model, "PlotPathBorder", c, d, 61.7, 95.4, 12.4, top + 0.06, PZ.white)
+		inlayStrip(model, "PlotPath", c, d, 62.2, 95, 11, top + 0.12, PLOT_TINTS[i])
+	end
+	-- passatoia blu del viale (come il collare del monumento): dal disco centrale alla fine del viale,
+	-- poi un tratto sulla discesa lastricata
+	inlayStrip(model, "RunnerBorder", c, Vector3.zAxis, 61.7, 150, 13.4, top + 0.06, PZ.white)
+	inlayStrip(model, "Runner", c, Vector3.zAxis, 62.2, 149.9, 12, top + 0.12, PZ.royal)
+	-- sulla discesa (inclinate come le lastre): la striscia blu comincia e finisce un filo dentro quella
+	-- bianca, cosi' le teste delle due strisce non stanno sullo stesso piano
+	local ramp = CFrame.new(c.X, avenueTop, 150) * CFrame.Angles(slope, 0, 0)
+	local function rampStrip(name: string, width: number, lift: number, from: number, to: number, color: Color3)
+		Build.Part({
+			name = name,
+			size = Vector3.new(width, 0.3, to - from),
+			cframe = ramp * CFrame.new(0, lift - 0.15, (from + to) / 2),
+			color = color,
+			collide = false,
+			castShadow = false,
+			parent = model,
+		})
+	end
+	rampStrip("RunnerRampBorder", 13.4, 0.1, 0, 6, PZ.white)
+	rampStrip("RunnerRamp", 12, 0.16, 0.1, 5.5, PZ.royal)
+end
+
+-- Monumento del re della collina: tappeto rosso e oro in cima, gemme sul tamburo e quattro aiuole
+-- fiorite fra le scale (le scale le costruisce Scenery.Plaza: qui si lascia libero il loro spicchio)
+local function monumentDecor(folder: Instance, c: Vector3, innerTop: number, assets)
+	local model = Build.Model("MonumentDecor", folder)
+	local hillTop = c.Y + 6 -- cima del monumento (KingService.TopY)
+	inlayDisc(model, "TopTrim", c, 13, hillTop + 0.05, PZ.gold)
+	inlayDisc(model, "TopCarpet", c, 12.3, hillTop + 0.1, PZ.velvet, Enum.Material.Fabric)
+	local center = inlayDisc(model, "TopCenter", c, 7, hillTop + 0.15, PZ.gold)
+	-- luce calda sotto l'uovo d'oro
+	local glow = Instance.new("PointLight")
+	glow.Color = Color3.fromRGB(255, 206, 120)
+	glow.Range = 20
+	glow.Brightness = 1
+	glow.Shadows = false
+	glow.Parent = center
+	-- gemme incastonate nel tamburo, tre per ogni spicchio fra le scale
+	for k = 0, 3 do
+		for j = -1, 1 do
+			local d = dirAt(90 * k + 15 * j)
+			local pos = c + d * 15 + Vector3.new(0, 3.9, 0)
+			Build.Part({
+				name = "Gem",
+				size = Vector3.new(1.3, 1.3, 0.5),
+				cframe = CFrame.lookAt(pos, pos + d) * CFrame.Angles(0, 0, math.rad(45)),
+				color = GEMS[(k + j + 4) % #GEMS + 1],
+				material = Enum.Material.Glass,
+				collide = false,
+				parent = model,
+			})
+		end
+	end
+	-- aiuole: spicchi di prato fra le scale (a 0, 90, 180 e 270 gradi), con il bordo di pietra bianca
+	-- a segmenti, i paletti negli angoli (sfere d'oro ai lati delle scale) e i fiori
+	local RIM_R, LAWN_R = 21, 20.9
+	local SEG, HALF = 4, 26 -- segmenti del bordo e mezza apertura dello spicchio (gradi)
+	local rimTop, lawnTop = innerTop + 1.15, innerTop + 0.75
+	local base = innerTop - 0.4
+	for k = 0, 3 do
+		local bed = Build.Model("Flowerbed", model)
+		local angles = {}
+		for j = 0, SEG do
+			table.insert(angles, 90 * k - HALF + 2 * HALF * j / SEG)
+		end
+		for j = 1, SEG + 1 do
+			local p = c + dirAt(angles[j]) * RIM_R
+			vcyl({
+				name = "BedPost",
+				at = p,
+				radius = 0.62,
+				bottom = base,
+				top = rimTop + 0.3,
+				color = PZ.stone,
+				material = Enum.Material.Slate,
+				parent = bed,
+			})
+			if j == 1 or j == SEG + 1 then
+				ball(bed, "BedFinial", Vector3.new(p.X, rimTop + 0.68, p.Z), 0.95, PZ.gold, Enum.Material.Foil)
+				-- lato verso la scala: muretto dritto fino al tamburo
+				wallBetween(
+					bed,
+					"BedEnd",
+					c + dirAt(angles[j]) * 14.6,
+					p,
+					0.8,
+					base,
+					rimTop,
+					PZ.stone,
+					Enum.Material.Slate
+				)
+			end
+			if j <= SEG then
+				local q = c + dirAt(angles[j + 1]) * RIM_R
+				wallBetween(bed, "BedRim", p, q, 0.8, base, rimTop, PZ.stone, Enum.Material.Slate)
+				-- prato: triangoli dal centro del monumento fino a dentro il bordo (le punte sono nel tamburo)
+				local o = Vector3.new(c.X, lawnTop - 0.45, c.Z)
+				spike(
+					bed,
+					"Lawn",
+					o + dirAt(angles[j]) * LAWN_R,
+					o + dirAt(angles[j + 1]) * LAWN_R,
+					o,
+					0.9,
+					PZ.leaf,
+					PZ.leaf,
+					Enum.Material.Grass,
+					true
+				)
+			end
+		end
+		-- quattro mazzi di fiori in fila (posizioni e misura scelte perche' i petali restino ad almeno
+		-- 0.2 stud dal bordo, dal tamburo e dal mazzo vicino)
+		for j, off in { -17.5, -6, 6, 17.5 } do
+			local flowers = assets.Clone("Props", if (j + k) % 2 == 0 then "Flowers1" else "Flowers2")
+			if flowers then
+				flowers:ScaleTo(1.4)
+				local deg = 90 * k + off
+				local p = c + dirAt(deg) * 18.2
+				-- asse X del modello lungo la tangente (Angles(0, a, 0) porta X in (cos a, 0, -sin a))
+				local turn = math.rad(deg) + (if j % 2 == 0 then math.pi else 0)
+				flowers:PivotTo(CFrame.new(p.X, lawnTop - 0.05, p.Z) * CFrame.Angles(0, turn, 0))
+				CollectionService:AddTag(flowers, "SmallDecor")
+				flowers.Parent = bed
+			end
+		end
+	end
+end
+
+-- Fontana ottagonale: vasca di marmo bianco con paletti e sfere d'oro, acqua azzurra, colonna con il
+-- piatto e un uovo d'oro in cima che zampilla. 'center' e' alla quota del pavimento
+local function fountain(folder: Instance, center: Vector3, toward: Vector3, assets)
+	local model = Build.Model("Fountain", folder)
+	local floor = center.Y
+	local RC, THICK = 7, 0.9 -- distanza dal centro alla mezzeria dei muretti, spessore dei muretti
+	local vertex = RC / math.cos(math.rad(22.5)) -- distanza dei vertici (e dei paletti)
+	local wallTop = floor + 1.6
+	inlayDisc(model, "FountainApron", center, 10.6, floor + 0.06, PZ.skyPale)
+	-- fondo della vasca (ci si puo' entrare: l'acqua non si tocca); il bordo e' nascosto nei muretti
+	vcyl({
+		name = "PoolFloor",
+		at = center,
+		radius = RC + 0.3,
+		bottom = floor - 0.4,
+		top = floor + 0.2,
+		color = PZ.pool,
+		parent = model,
+	})
+	-- bordo: otto muretti fra i vertici dell'ottagono, con un paletto e una sfera d'oro su ogni vertice
+	-- (le teste dei muretti finiscono dentro i paletti)
+	for k = 0, 7 do
+		local v1 = center + dirAt(45 * k - 22.5) * vertex
+		local v2 = center + dirAt(45 * k + 22.5) * vertex
+		wallBetween(model, "BasinWall", v1, v2, THICK, floor - 0.4, wallTop, PZ.stone, Enum.Material.Marble)
+		vcyl({
+			name = "BasinPost",
+			at = v2,
+			radius = 0.7,
+			bottom = floor - 0.4,
+			top = wallTop + 0.3,
+			color = PZ.stone,
+			material = Enum.Material.Marble,
+			parent = model,
+		})
+		ball(model, "BasinFinial", Vector3.new(v2.X, wallTop + 0.7, v2.Z), 0.95, PZ.gold, Enum.Material.Foil)
+	end
+	-- acqua: arriva negli angoli dell'ottagono, il bordo del disco resta dentro i muretti e i paletti
+	local water = vcyl({
+		name = "Water",
+		at = center,
+		radius = RC + 0.25,
+		bottom = floor + 0.35,
+		top = wallTop - 0.45,
+		color = PZ.water,
+		material = Enum.Material.Glass,
+		transparency = 0.35,
+		collide = false,
+		castShadow = false,
+		parent = model,
+	})
+	water.Reflectance = 0.15
+	local light = Instance.new("PointLight")
+	light.Color = Color3.fromRGB(170, 226, 255)
+	light.Range = 16
+	light.Brightness = 1.2
+	light.Shadows = false
+	light.Parent = water
+	-- colonna, piatto con l'acqua e uovo d'oro
+	vcyl({
+		name = "Column",
+		at = center,
+		radius = 0.85,
+		bottom = floor - 0.2,
+		top = floor + 4.6,
+		color = PZ.stone,
+		material = Enum.Material.Marble,
+		parent = model,
+	})
+	vcyl({
+		name = "Dish",
+		at = center,
+		radius = 3,
+		bottom = floor + 4.2,
+		top = floor + 4.8,
+		color = PZ.gold,
+		collide = false,
+		parent = model,
+	})
+	local dishWater = vcyl({
+		name = "DishWater",
+		at = center,
+		radius = 2.65,
+		bottom = floor + 4.7,
+		top = floor + 4.95,
+		color = PZ.water,
+		material = Enum.Material.Glass,
+		transparency = 0.3,
+		collide = false,
+		castShadow = false,
+		parent = model,
+	})
+	dishWater.Reflectance = 0.15
+	vcyl({
+		name = "Spout",
+		at = center,
+		radius = 0.48,
+		bottom = floor + 4.8,
+		top = floor + 6,
+		color = PZ.stone,
+		material = Enum.Material.Marble,
+		collide = false,
+		parent = model,
+	})
+	eggShape(model, "FountainEgg", Vector3.new(center.X, floor + 5.95, center.Z), 1.7, 2.3, PZ.gold)
+	-- zampillo dall'uovo e velo d'acqua che cade dal piatto (particelle: niente parti in piu' da vedere)
+	local jet = Build.Part({
+		name = "JetEmitter",
+		size = Vector3.new(0.4, 0.4, 0.4),
+		cframe = CFrame.new(center.X, floor + 8.2, center.Z),
+		transparency = 1,
+		collide = false,
+		castShadow = false,
+		parent = model,
+	})
+	local spray = Instance.new("ParticleEmitter")
+	spray.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+	spray.Color = ColorSequence.new(Color3.fromRGB(232, 248, 255), Color3.fromRGB(150, 214, 255))
+	spray.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.38), NumberSequenceKeypoint.new(1, 0.16) })
+	spray.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0.1),
+		NumberSequenceKeypoint.new(0.8, 0.35),
+		NumberSequenceKeypoint.new(1, 1),
+	})
+	spray.Lifetime = NumberRange.new(0.9, 1.1)
+	spray.Rate = 40
+	spray.Speed = NumberRange.new(9, 11)
+	spray.SpreadAngle = Vector2.new(14, 14)
+	spray.Acceleration = Vector3.new(0, -26, 0)
+	spray.EmissionDirection = Enum.NormalId.Top
+	spray.LightEmission = 0.4
+	spray.LightInfluence = 0.6
+	spray.Parent = jet
+	local rim = Build.Part({
+		name = "CurtainEmitter",
+		size = Vector3.new(0.2, 5.8, 5.8),
+		cframe = CFrame.new(center.X, floor + 4.75, center.Z) * CFrame.Angles(0, 0, math.rad(90)),
+		transparency = 1,
+		collide = false,
+		castShadow = false,
+		shape = Enum.PartType.Cylinder,
+		parent = model,
+	})
+	local curtain = spray:Clone()
+	curtain.Shape = Enum.ParticleEmitterShape.Disc
+	curtain.ShapeStyle = Enum.ParticleEmitterShapeStyle.Surface
+	curtain.ShapeInOut = Enum.ParticleEmitterShapeInOut.Outward
+	curtain.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.3), NumberSequenceKeypoint.new(1, 0.2) })
+	curtain.Lifetime = NumberRange.new(0.5, 0.55)
+	curtain.Rate = 60
+	curtain.Speed = NumberRange.new(1.5, 2.5)
+	curtain.Parent = rim
+	-- due panchine rivolte alla fontana, ai lati verso il monumento
+	local inward = (toward - center).Unit
+	for _, side in { -1, 1 } do
+		local bench = assets.Clone("Props", "Bench")
+		if bench then
+			bench:ScaleTo(1.2)
+			local p = center + inward:Cross(Vector3.yAxis) * side * 16.5 + inward * 3
+			local at = Vector3.new(p.X, floor - 0.2, p.Z)
+			bench:PivotTo(CFrame.lookAt(at, Vector3.new(center.X, at.Y, center.Z)))
+			bench.Parent = model
+		end
+	end
+end
+
+-- Aiuola rotonda con un alberello potato a due palle (vaso bianco su un anello blu)
+local function topiary(folder: Instance, at: Vector3)
+	local model = Build.Model("Topiary", folder)
+	local floor = at.Y
+	vcyl({
+		name = "PotBase",
+		at = at,
+		radius = 2.75,
+		bottom = floor - 0.4,
+		top = floor + 0.45,
+		color = PZ.royal,
+		material = Enum.Material.Slate,
+		parent = model,
+	})
+	vcyl({
+		name = "Pot",
+		at = at,
+		radius = 2.45,
+		bottom = floor - 0.4,
+		top = floor + 1.8,
+		color = PZ.stone,
+		material = Enum.Material.Slate,
+		parent = model,
+	})
+	vcyl({
+		name = "PotSoil",
+		at = at,
+		radius = 2.1,
+		bottom = floor + 1.6,
+		top = floor + 1.9,
+		color = PZ.leaf,
+		material = Enum.Material.Grass,
+		parent = model,
+	})
+	-- il tronco passa nella palla grande e finisce in quella piccola: fra le due resta un pezzo di tronco
+	vcyl({
+		name = "Trunk",
+		at = at,
+		radius = 0.34,
+		bottom = floor + 1.7,
+		top = floor + 11,
+		color = WOOD,
+		material = Enum.Material.Wood,
+		parent = model,
+	})
+	ball(model, "Crown", at + Vector3.new(0, 7.6, 0), 4.6, Color3.fromRGB(70, 176, 76))
+	ball(model, "CrownTop", at + Vector3.new(0, 11.7, 0), 2.6, PZ.leaf)
+end
+
+-- Viale verso il sentiero: pali con gli stendardi ai due lati e festoni di bandierine sopra il
+-- passaggio (in alto, non si toccano)
+local function avenueFlags(folder: Instance, c: Vector3)
+	local model = Build.Model("AvenueFlags", folder)
+	local X = 21.8 -- sulla neve, appena fuori dalle lastre del viale (larghe 40)
+	local snow = c.Y - 1
+	local poleTop = c.Y + 14.6
+	for zi, z in { 112, 136 } do
+		for _, sx in { -1, 1 } do
+			local at = Vector3.new(sx * X, 0, z)
+			vcyl({
+				name = "FlagFooting",
+				at = at,
+				radius = 0.95,
+				bottom = snow - 0.6,
+				top = snow + 0.5,
+				color = PZ.stoneShade,
+				material = Enum.Material.Slate,
+				parent = model,
+			})
+			vcyl({
+				name = "FlagPole",
+				at = at,
+				radius = 0.32,
+				bottom = snow + 0.3,
+				top = poleTop,
+				color = PZ.white,
+				parent = model,
+			})
+			ball(model, "FlagPoleCap", Vector3.new(at.X, poleTop + 0.4, z), 1, PZ.gold, Enum.Material.Foil)
+			-- braccio verso il centro del viale e stendardo
+			local inward = Vector3.new(-sx, 0, 0)
+			local armY = poleTop - 1.2
+			Build.Part({
+				name = "FlagArm",
+				size = Vector3.new(3.4, 0.24, 0.24),
+				cframe = CFrame.new(at.X + inward.X * 1.7, armY, z),
+				color = PZ.gold,
+				shape = Enum.PartType.Cylinder,
+				collide = false,
+				parent = model,
+			})
+			banner(
+				model,
+				Vector3.new(at.X + inward.X * 1.95, armY, z),
+				inward,
+				2.6,
+				4.2,
+				if zi == 1 then PZ.sky else PZ.coral
+			)
+		end
+		-- festone di bandierine a rombo fra i due pali (la corda entra nei pali e fa la pancia)
+		local half = X - 0.1
+		local y0, sag = poleTop - 0.35, 1.8
+		local function cordY(x: number): number
+			return y0 - sag * (1 - (x / half) ^ 2)
+		end
+		local SEGS = 6
+		for s = 0, SEGS - 1 do
+			local x0 = -half + 2 * half * s / SEGS
+			local x1 = -half + 2 * half * (s + 1) / SEGS
+			local a, b = Vector3.new(x0, cordY(x0), z), Vector3.new(x1, cordY(x1), z)
+			Build.Part({
+				name = "BuntingCord",
+				size = Vector3.new((b - a).Magnitude, 0.12, 0.12),
+				cframe = CFrame.fromMatrix((a + b) / 2, (b - a).Unit, Vector3.zAxis:Cross((b - a).Unit)),
+				color = PZ.ink,
+				shape = Enum.PartType.Cylinder,
+				collide = false,
+				castShadow = false,
+				parent = model,
+			})
+		end
+		local FLAGS, reach = 14, 17.2 -- fra gli stendardi (il bordo interno e' a 18.55 dal centro)
+		for f = 0, FLAGS - 1 do
+			local x = -reach + 2 * reach * f / (FLAGS - 1)
+			Build.Part({
+				name = "Bunting",
+				size = Vector3.new(1.3, 1.3, 0.1),
+				cframe = CFrame.new(x, cordY(x) - 0.92, z) * CFrame.Angles(0, 0, math.rad(45)),
+				color = FESTIVE[(f + zi) % #FESTIVE + 1],
+				material = Enum.Material.Fabric,
+				collide = false,
+				castShadow = false,
+				parent = model,
+			})
+		end
+	end
+end
+
 function Scenery.Summit(parent: Instance, assets)
 	local folder = Build.Model("Summit", parent)
 	local c = MapLayout.SummitCenter
@@ -30,21 +769,22 @@ function Scenery.Summit(parent: Instance, assets)
 		name = "Plaza",
 		size = Vector3.new(4, 206, 206),
 		cframe = CFrame.new(c.X, top - 2, c.Z) * CFrame.Angles(0, 0, math.rad(90)),
-		color = Color3.fromRGB(236, 222, 196),
+		color = PZ.paving,
 		material = Enum.Material.Slate,
 		shape = Enum.PartType.Cylinder,
 		parent = folder,
 	})
-	-- anello decorativo
+	-- disco centrale, un filo piu' alto (0.1 stud) e di un tono piu' caldo
 	Build.Part({
 		name = "PlazaRing",
 		size = Vector3.new(1.3, 120, 120),
 		cframe = CFrame.new(c + Vector3.new(0, 0.25, 0)) * CFrame.Angles(0, 0, math.rad(90)),
-		color = Color3.fromRGB(210, 190, 160),
+		color = PZ.inner,
 		material = Enum.Material.Slate,
 		shape = Enum.PartType.Cylinder,
 		parent = folder,
 	})
+	local innerTop = c.Y + 0.9
 	-- viale verso la rampa del sentiero (un filo piu' basso della piazza dove si sovrappongono,
 	-- cosi' le due superfici non sfarfallano)
 	local avenueTop = top - 0.04
@@ -52,21 +792,23 @@ function Scenery.Summit(parent: Instance, assets)
 		name = "Avenue",
 		size = Vector3.new(40, 4, 52),
 		cframe = CFrame.new(c.X, avenueTop - 2, 124),
-		color = Color3.fromRGB(236, 222, 196),
+		color = PZ.paving,
 		material = Enum.Material.Slate,
 		parent = folder,
 	})
 	-- discesa lastricata: dalla fine del viale (z=150) scende piu' ripida della rampa di terra
-	-- e ci si infila sotto verso z=161, cosi' non resta nessun gradino sospeso
+	-- e ci si infila sotto verso z=161, cosi' non resta nessun gradino sospeso (un filo piu' stretta del
+	-- viale: dove si sovrappongono i fianchi non stanno sullo stesso piano)
 	local slope = math.atan(0.25)
 	Build.Part({
 		name = "AvenueRamp",
-		size = Vector3.new(40, 4, 28),
+		size = Vector3.new(39.9, 4, 28),
 		cframe = CFrame.new(c.X, avenueTop, 150) * CFrame.Angles(slope, 0, 0) * CFrame.new(0, -2, 14),
-		color = Color3.fromRGB(236, 222, 196),
+		color = PZ.paving,
 		material = Enum.Material.Slate,
 		parent = folder,
 	})
+	paving(folder, c, top, innerTop, avenueTop, slope)
 	-- arco d'ingresso al sentiero con il nome del gioco (i pali affondano nella rampa di terra)
 	for _, sx in { -1, 1 } do
 		Build.Part({
@@ -90,12 +832,13 @@ function Scenery.Summit(parent: Instance, assets)
 		bg = Color3.fromRGB(255, 214, 72),
 		text = Color3.fromRGB(70, 36, 10),
 	})
+	avenueFlags(folder, c)
 	-- monumento centrale: piedistallo con uovo gigante (rotazione animata dal client)
 	Build.Part({
 		name = "MonumentBase",
 		size = Vector3.new(6, 30, 30),
 		cframe = CFrame.new(c + Vector3.new(0, 3, 0)) * CFrame.Angles(0, 0, math.rad(90)),
-		color = Color3.fromRGB(196, 176, 150),
+		color = PZ.stone,
 		material = Enum.Material.Slate,
 		shape = Enum.PartType.Cylinder,
 		parent = folder,
@@ -104,14 +847,26 @@ function Scenery.Summit(parent: Instance, assets)
 	if egg then
 		egg.Name = "MonumentEgg"
 		egg:ScaleTo(5)
-		egg:PivotTo(CFrame.new(c + Vector3.new(0, 6, 0)))
+		-- appoggiato sul disco d'oro in cima al monumento (MonumentDecor)
+		egg:PivotTo(CFrame.new(c + Vector3.new(0, 6.15, 0)))
 		egg.Parent = folder
 		CollectionService:AddTag(egg, "Spinner")
 	end
-	-- lampioni fra i cancelli dei lotti e panchine attorno al monumento (se i modelli ci sono)
+	monumentDecor(folder, c, innerTop, assets)
+	-- alberelli fra i tabelloni delle classifiche (a 125, 180 e 235 gradi, 58 stud dal centro)
+	for _, deg in { 152.5, 207.5 } do
+		local p = c + dirAt(deg) * 58
+		topiary(folder, Vector3.new(p.X, innerTop, p.Z))
+	end
+	-- fontane a est e a ovest, fra i cancelli dei lotti
+	for _, deg in { 100, 260 } do
+		local p = c + dirAt(deg) * 76
+		fountain(folder, Vector3.new(p.X, top, p.Z), Vector3.new(c.X, top, c.Z), assets)
+	end
+	-- lampioni fra i cancelli dei lotti (ognuno con il suo stendardo) e panchine rivolte al monumento
 	for k = 0, 8 do
-		local a = math.rad(20 + 40 * k)
-		local dir = Vector3.new(math.sin(a), 0, math.cos(a))
+		local deg = 20 + 40 * k
+		local dir = dirAt(deg)
 		local lamp = assets.Clone("Props", "LampPost")
 		if lamp then
 			lamp:ScaleTo(1.25)
@@ -123,10 +878,23 @@ function Scenery.Summit(parent: Instance, assets)
 			light.Shadows = false
 			light.Parent = lamp.PrimaryPart or lamp:FindFirstChildWhichIsA("BasePart")
 			lamp.Parent = folder
+			-- braccio sotto la lanterna con lo stendardo (simmetrici rispetto al viale: verso l'esterno
+			-- ai due lati del viale, stesso colore per ogni coppia), sopra la testa di chi passa
+			local along = dirAt(if deg < 180 then deg + 90 else deg - 90)
+			local armAt = c + dir * 92 + Vector3.new(0, 9, 0)
+			Build.Part({
+				name = "LampArm",
+				size = Vector3.new(3, 0.2, 0.2),
+				cframe = CFrame.fromMatrix(armAt + along * 1.5, along, Vector3.yAxis),
+				color = PZ.ink,
+				shape = Enum.PartType.Cylinder,
+				collide = false,
+				parent = folder,
+			})
+			banner(folder, armAt + along * 1.85, along, 1.9, 2.1, FESTIVE[math.min(k, 8 - k) + 1])
 		end
-		local deg = (20 + 40 * k) % 360
-		local nearBoards = deg > 110 and deg < 250
-		if k < 8 and not nearBoards then
+		-- panchine dove non ci sono la ruota, la bacheca, i tabelloni o le fontane
+		if deg == 20 or deg == 60 or deg == 300 or deg == 340 then
 			local bench = assets.Clone("Props", "Bench")
 			if bench then
 				bench:ScaleTo(1.2)
@@ -267,10 +1035,46 @@ function Scenery.Plaza(parent: Instance, _assets)
 		shape = Enum.PartType.Ball,
 		parent = wheel,
 	})
-	Build.Sign(wheel, base * CFrame.new(0, signY + 1.2 - floorY, 0.6), Vector3.new(17, 3.6, 0.8), "WheelSign", nil, {
+	local signCf = base * CFrame.new(0, signY + 1.2 - floorY, 0.6)
+	Build.Sign(wheel, signCf, Vector3.new(17, 3.6, 0.8), "WheelSign", nil, {
 		bg = GOLD,
 		text = Color3.fromRGB(90, 30, 10),
 	})
+	-- cornice da giostra dietro l'insegna, con le lampadine accese sul bordo che sporge
+	Build.Part({
+		name = "SignFrame",
+		size = Vector3.new(18.6, 5.2, 0.5),
+		cframe = signCf * CFrame.new(0, 0, 0.65),
+		color = PURPLE,
+		collide = false,
+		parent = wheel,
+	})
+	local bulbs = {}
+	for i = 0, 8 do
+		local x = -8.9 + 17.8 * i / 8
+		table.insert(bulbs, Vector3.new(x, 2.2, 0.4))
+		if i ~= 4 then -- in basso al centro passa il pilastro che regge l'insegna
+			table.insert(bulbs, Vector3.new(x, -2.2, 0.4))
+		end
+	end
+	for _, sx in { -8.9, 8.9 } do
+		for _, y in { -0.75, 0.75 } do
+			table.insert(bulbs, Vector3.new(sx, y, 0.4))
+		end
+	end
+	for i, p in bulbs do
+		Build.Part({
+			name = "Bulb",
+			size = Vector3.new(0.5, 0.5, 0.5),
+			cframe = signCf * CFrame.new(p),
+			color = if i % 2 == 0 then Color3.fromRGB(255, 244, 200) else GOLD,
+			material = Enum.Material.Neon,
+			shape = Enum.PartType.Ball,
+			collide = false,
+			castShadow = false,
+			parent = wheel,
+		})
+	end
 	local light = Instance.new("PointLight")
 	light.Color = Color3.fromRGB(255, 220, 160)
 	light.Range = 18
@@ -354,7 +1158,10 @@ function Scenery.Plaza(parent: Instance, _assets)
 		for k = 1, kcfg.Steps do
 			-- l'ultimo scalino un filo sotto la cima: dove entra nel monumento le due facce non sfarfallano
 			local stepTop = floorY + rise * k - (if k == kcfg.Steps then 0.04 else 0)
-			local r0, r1 = 13.5, 15 + (kcfg.Steps + 1 - k) * 1.5
+			-- ogni scalino occupa solo la sua pedata (dal bordo dello scalino sopra al suo): i fianchi
+			-- di due scalini vicini non si sovrappongono sullo stesso piano
+			local r0 = if k == kcfg.Steps then 13.5 else 15 + (kcfg.Steps - k) * 1.5
+			local r1 = 15 + (kcfg.Steps + 1 - k) * 1.5
 			local rc = (r0 + r1) / 2
 			local h = stepTop - (floorY - 1)
 			local pos = Vector3.new(c.X, (stepTop + floorY - 1) / 2, c.Z) + dir * rc
@@ -362,7 +1169,7 @@ function Scenery.Plaza(parent: Instance, _assets)
 				name = "Step",
 				size = Vector3.new(7, h, r1 - r0),
 				cframe = CFrame.lookAt(pos, pos + dir),
-				color = if k % 2 == 0 then Color3.fromRGB(214, 196, 168) else Color3.fromRGB(196, 176, 150),
+				color = if k % 2 == 0 then Color3.fromRGB(232, 222, 204) else Color3.fromRGB(250, 246, 238),
 				material = Enum.Material.Slate,
 				parent = folder,
 			})
