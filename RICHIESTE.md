@@ -12,6 +12,7 @@ Legenda: ⏳ in corso · 📋 da fare · ✅ fatto (con la versione pubblicata)
 | 3 | La **miniatura quadrata** (icona del gioco) non piace: proporne una diversa. | ⏳ (3 proposte) |
 | 9 | **Miniatura**: piace la B (uovo-mostro) ma deve dare l'idea che sia **su un picco montuoso**, senza rimpicciolirla troppo. | ⏳ pronte due versioni (con e senza bandierina) in `art/promo/final/`: si carica a mano su Creator Hub (le API non lo permettono) |
 | 15 | **Copertine** nuove in Blender (1920×1080) in `art/promo/final/cover_1..4.png`: "STEAL THE EGGS!" (Bacon Hair vero in fuga con l'uovo, Titan Rex), "HATCH GIANT PETS!" (i cinque giganti Ultra e la Balena Cosmica), "EXTREME TRAIL!" (Bacon Hair sulla lava con i diavoli Estremi), "HATCH MONSTERS!" (uovo Primordiale da cui esce il King Cobra). | ⏳ pronte: si caricano a mano su Creator Hub → Thumbnails |
+| 16 | **Lotti dei giocatori** più belli (recinzione esterna, pavimento) e **piazza** più bella; poi un **controllo che le pedane funzionino ancora**. | ⏳ due agenti (lotti, piazza) + controllo di funzionamento sul server |
 | 7 | Lavorare **in parallelo con gli agenti** e **segnare tutto quello che chiede**, senza perdere nulla. | ⏳ (questo file) |
 
 ## Fatte
